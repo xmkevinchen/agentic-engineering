@@ -1,5 +1,5 @@
 ---
-name: "cross-family-review"
+name: ae:cross-family-review
 description: "Cross-family review guide (Claude + Codex + Gemini). Reference this when invoking cross-family review tools. Passive knowledge skill, not a slash command."
 ---
 

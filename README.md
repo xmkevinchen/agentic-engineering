@@ -55,14 +55,9 @@ A Claude Code plugin for multi-agent, cross-family software engineering workflow
 
 ## Installation
 
-### Local (recommended for now)
-
-Clone this repo and install as a local plugin:
-
 ```bash
-git clone <repo-url> ~/path/to/agentic-engineering
-cd ~/path/to/agentic-engineering
-claude plugin install --local .
+claude plugin marketplace add <repo-url>
+claude plugin install ae
 ```
 
 ### Project Setup

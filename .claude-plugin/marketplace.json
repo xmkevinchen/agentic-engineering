@@ -1,0 +1,21 @@
+{
+  "name": "agentic-engineering",
+  "owner": {
+    "name": "ckai"
+  },
+  "metadata": {
+    "description": "Agentic Engineering plugin marketplace",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ae",
+      "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review, structured planning and analysis.",
+      "author": {
+        "name": "ckai"
+      },
+      "tags": ["agentic-engineering", "tdd", "code-review", "multi-agent", "workflow-automation"],
+      "source": "./plugins/ae"
+    }
+  ]
+}
