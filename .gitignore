@@ -4,3 +4,6 @@
 *~
 node_modules/
 dist/
+.claude/settings.json
+.claude/settings.local.json
+.claude/cross-family-status.json
