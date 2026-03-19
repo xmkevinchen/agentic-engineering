@@ -59,14 +59,32 @@ A Claude Code plugin for multi-agent, cross-family software engineering workflow
 
 ## Installation
 
+### Prerequisites
+
+- [Claude Code](https://code.claude.com) v1.0.33+
+- [Node.js](https://nodejs.org) (for Gemini MCP server)
+
+### Cross-family (optional but recommended)
+
+| Family | Requirement | Install |
+|--------|------------|---------|
+| Codex (OpenAI) | `codex` CLI | `npm install -g @openai/codex` |
+| Gemini (Google) | API key or OAuth | Set `GEMINI_API_KEY` or run `gemini auth` |
+
+Without these, the plugin still works but loses cross-family blind spot coverage.
+
+### Install plugin
+
 ```bash
 claude plugin marketplace add <repo-url>
 claude plugin install ae
 ```
 
+A SessionStart hook automatically checks dependencies and writes status to `.claude/cross-family-status.json`.
+
 ### Project Setup
 
-After installing the plugin, in your project:
+In your project:
 
 ```
 /ae:setup
