@@ -12,8 +12,8 @@ Three model families, different training biases, covering each other's blind spo
 | Family | MCP Tool | Role |
 |--------|----------|------|
 | **Claude** | (current runtime) | Primary development, agent review |
-| **Codex** | `mcp__codex__codex` | Cross-family primary, full repo access |
-| **Gemini** | `mcp__ae-gemini__chat` | Targeted review, architecture debate |
+| **Codex** | `mcp__plugin_ae_codex__codex` | Cross-family primary, full repo access |
+| **Gemini** | `mcp__plugin_ae_gemini__chat` | Targeted review, architecture debate |
 
 **Why cross-family**: Claude review agents (security-reviewer, simplicity-reviewer, etc.) are all Claude family, sharing training biases. Codex (OpenAI) and Gemini (Google) provide genuinely different perspectives.
 
@@ -27,13 +27,13 @@ Via MCP — the Codex MCP server has full local repo access:
 
 ```
 # Code review
-mcp__codex__codex(prompt: "Review these changes for security and correctness:\n\n<diff or context>")
+mcp__plugin_ae_codex__codex(prompt: "Review these changes for security and correctness:\n\n<diff or context>")
 
 # Testgen / second opinion
-mcp__codex__codex(prompt: "Suggest edge case tests for this function:\n\n<code>")
+mcp__plugin_ae_codex__codex(prompt: "Suggest edge case tests for this function:\n\n<code>")
 
 # Challenge a design decision
-mcp__codex__codex(prompt: "Challenge this approach: <description>. What could go wrong?")
+mcp__plugin_ae_codex__codex(prompt: "Challenge this approach: <description>. What could go wrong?")
 ```
 
 ### Characteristics
@@ -60,33 +60,31 @@ Via the ae plugin's built-in Gemini MCP server (multi-turn capable):
 
 ```
 # Start a conversation — returns sessionId for follow-ups
-mcp__ae-gemini__chat(
+mcp__plugin_ae_gemini__chat(
   prompt: "Review this code for [concern]:\n\n<code>",
   model: "gemini-2.5-flash"
 )
 
 # Continue the conversation (multi-turn)
-mcp__ae-gemini__reply(
+mcp__plugin_ae_gemini__reply(
   sessionId: "<from previous chat>",
   prompt: "Now focus on the error handling in lines 42-60"
 )
 
 # Switch to pro model mid-conversation for deeper analysis
-mcp__ae-gemini__reply(
+mcp__plugin_ae_gemini__reply(
   sessionId: "<same session>",
   prompt: "Analyze the architecture implications",
   model: "gemini-2.5-pro"
 )
 
 # Check server status + active sessions
-mcp__ae-gemini__info()
+mcp__plugin_ae_gemini__info()
 ```
 
 ### Auth
 
-The server supports two auth methods (auto-detected at startup):
-1. `GEMINI_API_KEY` env var — simplest, check first
-2. OAuth — reads `~/.gemini/oauth_creds.json` (shared with `gemini` CLI)
+Set `GEMINI_API_KEY` environment variable. The plugin's `.mcp.json` passes it to the server automatically.
 
 ### Usage Principles
 
@@ -100,13 +98,13 @@ The server supports two auth methods (auto-detected at startup):
 
 | Stage | Claude | Codex (required) | Gemini (optional) |
 |-------|--------|-------------------|-------------------|
-| Each commit | `code-reviewer` agent | `mcp__codex__codex` review | — |
-| Plan review | `architect` / `simplicity-reviewer` | `mcp__codex__codex` plan review | — |
-| TDD red light | Write test list | `mcp__codex__codex` testgen | — |
-| After implementation | Claude review | `mcp__codex__codex` review | — |
-| Feature complete | Review agents (parallel) | `mcp__codex__codex` deep review | `mcp__ae-gemini__chat` security audit |
-| Architecture decision | Propose approach | `mcp__codex__codex` challenge | `mcp__ae-gemini__chat` debate |
-| Debugging stuck | Investigate | `mcp__codex__codex` analyze | — |
+| Each commit | `code-reviewer` agent | `mcp__plugin_ae_codex__codex` review | — |
+| Plan review | `architect` / `simplicity-reviewer` | `mcp__plugin_ae_codex__codex` plan review | — |
+| TDD red light | Write test list | `mcp__plugin_ae_codex__codex` testgen | — |
+| After implementation | Claude review | `mcp__plugin_ae_codex__codex` review | — |
+| Feature complete | Review agents (parallel) | `mcp__plugin_ae_codex__codex` deep review | `mcp__plugin_ae_gemini__chat` security audit |
+| Architecture decision | Propose approach | `mcp__plugin_ae_codex__codex` challenge | `mcp__plugin_ae_gemini__chat` debate |
+| Debugging stuck | Investigate | `mcp__plugin_ae_codex__codex` analyze | — |
 
 ### Tool Selection Rules (Hard Rules)
 
