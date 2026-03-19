@@ -25,14 +25,10 @@ agents:
   # Matched by file type from git diff --stat
   code_reviewers: []       # e.g., [python-reviewer, swift-reviewer, ts-reviewer]
 
-# --- Cross-Family Review ---
-# Codex: direct CLI call (avoids 300s MCP timeout)
-# Gemini: PAL MCP tools or Gemini CLI
+# --- Cross-Family Review (MCP-native) ---
+# Codex: mcp__codex__codex / mcp__codex__codex-reply
+# Gemini: mcp__ae-gemini__chat / mcp__ae-gemini__reply (bundled with ae plugin)
 cross_family:
-  primary: codex
-  codex_profile: review    # -p review for review tasks
-  commit_review: codex     # codex -p review review --uncommitted
-  plan_review: codex       # codex -p review exec -s read-only "..."
-  deep_review: codex       # codex -p review review --base main
-  security_audit: codex    # codex review (required) + gemini (optional)
-  testgen: codex           # codex -p review exec -s read-only "..."
+  codex: true              # Codex MCP required (baseline)
+  gemini: true             # Gemini MCP optional (bundled with ae plugin)
+  gemini_model: "gemini-2.5-flash"  # default model for Gemini calls

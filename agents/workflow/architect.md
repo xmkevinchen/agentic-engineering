@@ -54,9 +54,9 @@ For each parallel step group, answer:
 ### Phase 1: After completing design
 1. **SendMessage to `dependency-analyst`**: send full step decomposition + dependency assumptions + parallel marks
 2. **SendMessage to `simplicity-reviewer`**: send step decomposition for complexity review
-3. Also call Codex directly for cross-family perspective:
-   ```bash
-   codex -p review exec -s read-only "Review this plan for hidden dependencies and over-engineering: <plan text>"
+3. Also call Codex via MCP for cross-family perspective:
+   ```
+   mcp__codex__codex(prompt: "Review this plan for hidden dependencies and over-engineering: <plan text>")
    ```
 
 ### Phase 2: Respond to feedback

@@ -1,0 +1,20 @@
+# .claude/pipeline.yml — Agentic Engineering (self-hosted)
+
+test:
+  command: "cd mcp-servers/gemini && npm run build"
+
+lint:
+  command: ""
+
+output:
+  review: "results/reviews/"
+  plans: "docs/milestones/"
+
+agents:
+  developers: []
+  code_reviewers: []
+
+cross_family:
+  codex: true
+  gemini: true
+  gemini_model: "gemini-2.5-flash"

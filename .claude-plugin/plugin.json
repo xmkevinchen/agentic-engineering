@@ -1,7 +1,7 @@
 {
   "name": "agentic-engineering",
-  "version": "0.1.0",
-  "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
+  "version": "0.2.0",
+  "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis. 7 commands, 11 agents, 1 skill, 2 MCP servers.",
   "author": {
     "name": "ckai"
   },
@@ -15,5 +15,13 @@
     "multi-agent",
     "workflow-automation",
     "agent-teams"
-  ]
+  ],
+  "mcpServers": {
+    "gemini": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["mcp-servers/gemini/dist/index.js"],
+      "env": {}
+    }
+  }
 }

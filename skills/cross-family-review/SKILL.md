@@ -9,11 +9,11 @@ Three model families, different training biases, covering each other's blind spo
 
 ## Three Model Families
 
-| Family | Access | Role |
-|--------|--------|------|
-| **Claude** | Claude Code (current runtime) | Primary development, agent review |
-| **Codex** | CLI / MCP | Cross-family primary, full repo access |
-| **Gemini** | Gemini CLI / PAL MCP | Targeted review, architecture debate |
+| Family | MCP Tool | Role |
+|--------|----------|------|
+| **Claude** | (current runtime) | Primary development, agent review |
+| **Codex** | `mcp__codex__codex` | Cross-family primary, full repo access |
+| **Gemini** | `mcp__ae-gemini__chat` | Targeted review, architecture debate |
 
 **Why cross-family**: Claude review agents (security-reviewer, simplicity-reviewer, etc.) are all Claude family, sharing training biases. Codex (OpenAI) and Gemini (Google) provide genuinely different perspectives.
 
@@ -23,30 +23,24 @@ Three model families, different training biases, covering each other's blind spo
 
 ### Invocation
 
-**Prefer Bash direct call to Codex CLI** (avoids PAL `clink` 300s MCP timeout):
+Via MCP — the Codex MCP server has full local repo access:
 
-```bash
-# Code Review (uncommitted changes)
-codex review --uncommitted "Review focus: [context]"
-
-# Code Review (branch changes)
-codex review --base main
-
-# Testgen / Planner / Second opinion (read-only tasks)
-codex exec -s read-only "prompt"
-
-# With working directory
-codex exec -s read-only -C /path/to/dir "prompt"
 ```
+# Code review
+mcp__codex__codex(prompt: "Review these changes for security and correctness:\n\n<diff or context>")
 
-> **Do not use PAL `clink codex`** — MCP tool layer has 300s hard timeout, Codex deep analysis can exceed it.
-> Bash tool timeout 600s, and supports `run_in_background`.
+# Testgen / second opinion
+mcp__codex__codex(prompt: "Suggest edge case tests for this function:\n\n<code>")
+
+# Challenge a design decision
+mcp__codex__codex(prompt: "Challenge this approach: <description>. What could go wrong?")
+```
 
 ### Characteristics
 
-- Runs locally via Codex CLI
 - OpenAI family — training bias distinctly different from Claude and Gemini
-- **Has full local file access** — can read entire repo
+- Has full local file access via its MCP server
+- Can read entire repo for context
 
 ### Usage Principles
 
@@ -58,39 +52,47 @@ codex exec -s read-only -C /path/to/dir "prompt"
 
 ---
 
-## Gemini (Targeted Review, Has Quota)
+## Gemini (Targeted Review)
 
-Two invocation methods with **independent quotas**:
+### Invocation
 
-### Method 1: Gemini CLI
-
-```bash
-gemini -p "Review this code for [concern]:
-
-$(cat /path/to/file.py)
-
-Keep feedback concise (max 10 lines)."
-```
-
-- `-p` = single prompt mode, returns plain text
-- May hit 429, auto-retry usually succeeds
-- **No file access** — must `cat` file contents into prompt
-
-### Method 2: PAL MCP Tools
-
-PAL's `codereview`, `challenge`, `consensus` tools support Gemini models:
+Via the ae plugin's built-in Gemini MCP server (multi-turn capable):
 
 ```
-mcp__pal__codereview:
+# Start a conversation — returns sessionId for follow-ups
+mcp__ae-gemini__chat(
+  prompt: "Review this code for [concern]:\n\n<code>",
+  model: "gemini-2.5-flash"
+)
+
+# Continue the conversation (multi-turn)
+mcp__ae-gemini__reply(
+  sessionId: "<from previous chat>",
+  prompt: "Now focus on the error handling in lines 42-60"
+)
+
+# Switch to pro model mid-conversation for deeper analysis
+mcp__ae-gemini__reply(
+  sessionId: "<same session>",
+  prompt: "Analyze the architecture implications",
   model: "gemini-2.5-pro"
-  ...
+)
+
+# Check server status + active sessions
+mcp__ae-gemini__info()
 ```
+
+### Auth
+
+The server supports two auth methods (auto-detected at startup):
+1. `GEMINI_API_KEY` env var — simplest, check first
+2. OAuth — reads `~/.gemini/oauth_creds.json` (shared with `gemini` CLI)
 
 ### Usage Principles
 
-- **Has quota, save for high-value scenarios** — architecture decisions + security audit (~1-2 per feature)
-- **Targeted, not sweeping** — only send 3-5 high-risk files (auth, data processing), not entire feature diff
-- **CLI and PAL quotas are independent** — one exhausted, the other may still work
+- **May have quota limits** — save for high-value scenarios (architecture decisions + security audit)
+- **Targeted, not sweeping** — only send high-risk files (auth, data processing), not entire feature diff
+- **Use flash for quick reviews, pro for deep analysis**
 
 ---
 
@@ -98,54 +100,30 @@ mcp__pal__codereview:
 
 | Stage | Claude | Codex (required) | Gemini (optional) |
 |-------|--------|-------------------|-------------------|
-| Each commit | `code-reviewer` agent | `codex review --uncommitted` | — |
-| Plan review | `architecture-reviewer` / `simplicity-reviewer` | `codex exec -s read-only "Review plan..."` | — |
-| TDD red light | Write test list | `codex exec -s read-only "Suggest edge cases..."` | — |
-| After implementation | Claude review | `codex review --uncommitted` | — |
-| Feature complete | Project review agents (parallel) | `codex review --base main` | Security audit add-on (if auth/data involved) |
-| Architecture decision | Propose approach | `codex exec -s read-only "Challenge approach..."` | `consensus` debate (optional) |
-| Debugging stuck | Investigate | `codex exec -s read-only "Analyze problem..."` | — |
+| Each commit | `code-reviewer` agent | `mcp__codex__codex` review | — |
+| Plan review | `architect` / `simplicity-reviewer` | `mcp__codex__codex` plan review | — |
+| TDD red light | Write test list | `mcp__codex__codex` testgen | — |
+| After implementation | Claude review | `mcp__codex__codex` review | — |
+| Feature complete | Review agents (parallel) | `mcp__codex__codex` deep review | `mcp__ae-gemini__chat` security audit |
+| Architecture decision | Propose approach | `mcp__codex__codex` challenge | `mcp__ae-gemini__chat` debate |
+| Debugging stuck | Investigate | `mcp__codex__codex` analyze | — |
 
 ### Tool Selection Rules (Hard Rules)
 
 ```
-All cross-family review → must go through Codex CLI (baseline)
-Codex → use Bash direct call: codex review / codex exec (not PAL clink, avoids 300s timeout)
-Gemini → optional add-on layer, after codex (security audit, architecture debate, etc.)
-Gemini → use PAL clink(gemini) or PAL codereview/secaudit tools
-Never skip codex and go straight to gemini
+All cross-family review → must include Codex MCP (baseline)
+Gemini → optional add-on layer, after Codex
+Never skip Codex and go straight to Gemini
+Both tools are MCP-native — no Bash CLI or PAL needed
 ```
 
-**Principle**: Codex is required baseline (fixed subscription, use liberally). Gemini is optional add-on (has quota, nice to have).
-
----
-
-## PAL Tool Quick Reference
-
-### Codex Tools (Primary, direct CLI, use liberally)
-
-| Invocation | Purpose | Stage |
-|------------|---------|-------|
-| `codex review --uncommitted` | Code review (uncommitted) | commit review, after implementation |
-| `codex review --base main` | Code review (branch) | feature complete |
-| `codex exec -s read-only "..."` | General read-only task | testgen, planner, challenge, debug, second opinion |
-
-> **Don't use PAL `clink codex`** — 300s MCP timeout too short. Bash CLI directly, 600s timeout.
-
-### Gemini Tools (Optional add-on, after Codex)
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| `codereview` | Gemini structured review | Optional after Codex review |
-| `secaudit` | Security audit | Optional after Codex review (high-risk files) |
-| `consensus` | Multi-model debate | Optional for architecture decisions |
-| `thinkdeep` | Deep reasoning | Optional when debugging is stuck |
+**Principle**: Codex is required baseline (use liberally). Gemini is optional add-on (targeted, high-value).
 
 ---
 
 ## Common Pitfalls
 
-1. **Gemini CLI 429** → capacity limit; auto-retry usually succeeds
-2. **Gemini CLI has no repo context** → must paste code; Codex has full access. Match tool to need
-3. **PAL continuation_id** → multi-step reviews lose context without reuse
-4. **Same-family blind spots** → Claude review agents are all Claude family; use Codex/Gemini for perspective
+1. **Gemini 429** → quota/capacity limit; retry or switch to flash model
+2. **Codex MCP not available** → ensure Codex MCP server is configured in Claude Code settings
+3. **Same-family blind spots** → Claude review agents are all Claude family; use Codex/Gemini for perspective
+4. **Sending too much context to Gemini** → keep prompts focused; Codex has full repo access, Gemini gets only what you send

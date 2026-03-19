@@ -16,16 +16,14 @@ You are the team's Challenger / Devil's Advocate, and the cross-family (Codex/Ge
 
 ## Cross-family Invocation
 
-Prefer Codex MCP (if `mcp__codex__*` tools are available), otherwise fall back to Bash CLI.
-
-```bash
-# Codex fallback (Bash CLI, only when MCP unavailable)
-codex -p review exec -s read-only "..."
-```
+Both via MCP — no external CLI needed:
 
 ```
-# Gemini (PAL MCP)
-mcp__pal__clink(cli_name="gemini", role="codereviewer", prompt="...")
+# Codex (MCP)
+mcp__codex__codex(prompt: "Review these changes for...")
+
+# Gemini (MCP)
+mcp__ae-gemini__chat(prompt: "Review these changes for...", model: "gemini-2.5-flash")
 ```
 
 Use both, compare opinion differences.

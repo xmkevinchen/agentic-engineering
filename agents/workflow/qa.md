@@ -57,20 +57,17 @@ Review code after each step completion, call cross-family for external opinions.
 
 ## Cross-family Invocation
 
-```bash
-# Codex quick review (Bash)
-codex -p review review --uncommitted
-
-# Codex second opinion (Bash)
-codex -p review exec -s read-only "Review these changes: ..."
-```
+Both via MCP:
 
 ```
+# Codex review (MCP)
+mcp__codex__codex(prompt: "Review these uncommitted changes: ...")
+
 # Gemini review (MCP)
-mcp__pal__clink(cli_name="gemini", role="codereviewer", prompt="Review...")
+mcp__ae-gemini__chat(prompt: "Review these changes: ...", model: "gemini-2.5-flash")
 ```
 
-Prefer Codex (local CLI, fast), Gemini as supplement.
+Prefer Codex (primary baseline), Gemini as supplement.
 
 ## Output Format
 

@@ -85,17 +85,26 @@ agents:
   code_reviewers: [python-reviewer, swift-reviewer]  # for /ae:code-review
 ```
 
-## Cross-Family Requirements
+## Cross-Family Review (MCP-native)
 
-The workflow uses three model families:
+The workflow uses three model families, all via MCP — no CLI tools needed:
 
-| Family | Required | How |
-|--------|----------|-----|
-| Claude | Yes | Claude Code (you're already here) |
-| Codex | Recommended | [Codex CLI](https://github.com/openai/codex) installed locally |
-| Gemini | Optional | [Gemini CLI](https://github.com/google-gemini/gemini-cli) or PAL MCP |
+| Family | MCP Server | Role |
+|--------|------------|------|
+| Claude | (built-in) | Primary development, agent review |
+| Codex | `mcp__codex__codex` | Cross-family baseline (multi-turn via `codex-reply`) |
+| Gemini | `mcp__ae-gemini__chat` | Targeted review (multi-turn via `reply`, bundled with plugin) |
 
-Without Codex/Gemini, the workflow still functions but loses cross-family blind spot coverage.
+### Gemini MCP Server
+
+Bundled in `mcp-servers/gemini/`. Features:
+- Multi-turn conversations (`chat` → `reply` with sessionId)
+- Switch models mid-conversation (flash → pro)
+- Dual auth: `GEMINI_API_KEY` env var or OAuth (shared with `gemini` CLI)
+- Auto session cleanup (30 min TTL)
+- Graceful shutdown
+
+Without Codex/Gemini MCP servers, the workflow still functions but loses cross-family blind spot coverage.
 
 ## License
 

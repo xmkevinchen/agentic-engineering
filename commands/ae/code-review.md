@@ -27,15 +27,14 @@ Review `git diff` + `git diff --cached`.
 
 ### Track 2: Cross-family Review
 
-**Codex** (required baseline) — direct Bash call to Codex CLI:
-```bash
-codex -p review review --uncommitted "Review focus: [context]"
+**Codex** (required baseline) — via MCP:
 ```
-> Note: do not use PAL `clink` (300s MCP timeout limit). Bash timeout 600s is sufficient.
+mcp__codex__codex(prompt: "Review these uncommitted changes. Focus: [context]\n\n<diff>")
+```
 
-**Gemini** (optional add-on) — PAL `clink` (codereviewer role):
+**Gemini** (optional add-on) — via MCP:
 ```
-mcp__pal__clink(cli_name=gemini, role=codereviewer, ...)
+mcp__ae-gemini__chat(prompt: "Review these changes for [concern]:\n\n<diff>", model: "gemini-2.5-flash")
 ```
 
 **Both tracks launch in parallel.**
