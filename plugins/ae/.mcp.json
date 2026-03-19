@@ -2,13 +2,11 @@
   "mcpServers": {
     "codex": {
       "command": "codex",
-      "args": ["mcp-server"],
-      "env": {}
+      "args": ["mcp-server"]
     },
     "gemini": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.js"],
-      "env": {}
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.js"]
     }
   }
 }
