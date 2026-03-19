@@ -16,12 +16,5 @@
     "workflow-automation",
     "agent-teams"
   ],
-  "mcpServers": {
-    "gemini": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["mcp-servers/gemini/dist/index.js"],
-      "env": {}
-    }
-  }
+  "mcpServers": {}
 }
