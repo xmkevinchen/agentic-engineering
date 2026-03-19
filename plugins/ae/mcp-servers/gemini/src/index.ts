@@ -26,9 +26,11 @@ interface Session {
 }
 
 interface OAuthCreds {
-  client_id: string;
-  client_secret: string;
-  refresh_token: string;
+  client_id?: string;
+  client_secret?: string;
+  refresh_token?: string;
+  access_token?: string;
+  expiry_date?: number;
 }
 
 interface TokenCache {
@@ -59,7 +61,8 @@ async function loadOAuthCreds(): Promise<OAuthCreds | null> {
       "utf-8"
     );
     const parsed = JSON.parse(raw);
-    if (parsed.client_id && parsed.client_secret && parsed.refresh_token) {
+    // Support both formats: gemini CLI (access_token + refresh_token) and full OAuth (client_id + client_secret + refresh_token)
+    if (parsed.access_token || (parsed.client_id && parsed.client_secret && parsed.refresh_token)) {
       return parsed as OAuthCreds;
     }
     return null;
@@ -73,32 +76,47 @@ async function getAccessToken(creds: OAuthCreds): Promise<string> {
     return tokenCache.accessToken;
   }
 
-  const resp = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: creds.client_id,
-      client_secret: creds.client_secret,
-      refresh_token: creds.refresh_token,
-      grant_type: "refresh_token",
-    }),
-  });
+  // If we have client_id/secret, we can refresh the token
+  if (creds.client_id && creds.client_secret && creds.refresh_token) {
+    const resp = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: creds.client_id,
+        client_secret: creds.client_secret,
+        refresh_token: creds.refresh_token,
+        grant_type: "refresh_token",
+      }),
+    });
 
-  if (!resp.ok) {
-    throw new Error(
-      `OAuth token refresh failed: ${resp.status} ${await resp.text()}`
-    );
+    if (!resp.ok) {
+      throw new Error(
+        `OAuth token refresh failed: ${resp.status} ${await resp.text()}`
+      );
+    }
+
+    const data = (await resp.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
+    tokenCache = {
+      accessToken: data.access_token,
+      expiresAt: Date.now() + data.expires_in * 1000,
+    };
+    return tokenCache.accessToken;
   }
 
-  const data = (await resp.json()) as {
-    access_token: string;
-    expires_in: number;
-  };
-  tokenCache = {
-    accessToken: data.access_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
-  };
-  return tokenCache.accessToken;
+  // Gemini CLI format: use access_token directly (no refresh capability)
+  if (creds.access_token) {
+    const expiresAt = creds.expiry_date ?? Date.now() + 3600_000;
+    tokenCache = {
+      accessToken: creds.access_token,
+      expiresAt,
+    };
+    return tokenCache.accessToken;
+  }
+
+  throw new Error("No valid token or refresh credentials found");
 }
 
 async function initAuth(): Promise<void> {
@@ -111,8 +129,11 @@ async function initAuth(): Promise<void> {
 
   oauthCreds = await loadOAuthCreds();
   if (oauthCreds) {
-    // Verify token works
-    await getAccessToken(oauthCreds);
+    const token = await getAccessToken(oauthCreds);
+    sdkClient = new GoogleGenAI({
+      apiKey: "OAUTH_PLACEHOLDER",
+      httpOptions: { headers: { Authorization: `Bearer ${token}` } },
+    });
     authMode = "oauth";
     return;
   }
