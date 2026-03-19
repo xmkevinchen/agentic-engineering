@@ -27,6 +27,10 @@ A Claude Code plugin for multi-agent, cross-family software engineering workflow
 | `/ae:work` | Execute plan (TDD + commit + review loop) |
 | `/ae:code-review` | Quick pre-commit review (Claude + Codex + Gemini) |
 | `/ae:review` | Deep multi-agent review + fixup (feature gate) |
+| `/ae:think` | Deep multi-agent analysis for hard problems |
+| `/ae:consensus` | Structured debate (for/against/neutral) on proposals |
+| `/ae:testgen` | Generate test suites with edge case coverage |
+| `/ae:trace` | Trace execution flow or map dependencies |
 
 ## Agents (11)
 
