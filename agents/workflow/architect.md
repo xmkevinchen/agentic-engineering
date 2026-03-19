@@ -54,11 +54,6 @@ For each parallel step group, answer:
 ### Phase 1: After completing design
 1. **SendMessage to `dependency-analyst`**: send full step decomposition + dependency assumptions + parallel marks
 2. **SendMessage to `simplicity-reviewer`**: send step decomposition for complexity review
-3. Also call Codex via MCP for cross-family perspective:
-   ```
-   mcp__codex__codex(prompt: "Review this plan for hidden dependencies and over-engineering: <plan text>")
-   ```
-
 ### Phase 2: Respond to feedback
 When `dependency-analyst` finds hidden dependencies:
 1. Assess impact: adjust parallel strategy? add Foundation step?
@@ -68,12 +63,7 @@ When `simplicity-reviewer` suggests removing/merging steps:
 1. Assess: can ACs still be met after removal? is commit granularity reasonable?
 2. **SendMessage back with your decision** (agree and modify / disagree with rationale)
 
-When Codex results arrive:
-1. **Focus on**: issues Codex found but Claude-family didn't (cross-family blind spot coverage)
-2. Assess each finding: does the plan need modification?
-3. Incorporate valid findings into plan revisions
-
 ### Phase 3: Final proposal
 After dependency-analyst and simplicity-reviewer have both responded:
 1. Integrate feedback, generate final plan
-2. **SendMessage to Lead**: send final proposal (with revision log, noting Claude-family vs cross-family findings)
+2. **SendMessage to Lead**: send final proposal (with revision log)

@@ -38,7 +38,9 @@ TaskCreate("Architecture review")
 TaskCreate("Cross-family challenge + synthesis")
 ```
 
-### 3. Launch 4 Teammates in Parallel
+### 3. Launch Teammates in Parallel
+
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy agent fails to connect to its MCP server, it should SendMessage to Lead and exit gracefully — do not block the team.
 
 In **one message** launch all (`run_in_background: true`):
 
@@ -65,9 +67,23 @@ Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
       prompt: "Operate in /review mode per Team Communication Protocol.
                Review scope: <diff-range>.
-               Step 1: parallel launch — independent review + Codex independent review + Gemini independent review.
-               Step 2: wait for all 3 reviewer findings, then compare and merge.
+               Teammates: security-reviewer, performance-reviewer, architecture-reviewer,
+                          codex-proxy, gemini-proxy.
+               Step 1: independent review of blind spots.
+               Step 2: wait for all reviewer + proxy findings, then compare and merge.
                Step 3: targeted challenges. Step 4: synthesize final report and send to Lead.")
+
+Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review <diff-range> via Codex MCP. Focus on security, correctness, and edge cases.
+               Teammates: challenger, security-reviewer, performance-reviewer, architecture-reviewer.
+               SendMessage findings to challenger when done.")
+
+Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review <diff-range> via Gemini MCP. Focus on architecture, patterns, and best practices.
+               Teammates: challenger, security-reviewer, performance-reviewer, architecture-reviewer.
+               SendMessage findings to challenger when done.")
 ```
 
 **No worktree isolation** — teammates need SendMessage communication.

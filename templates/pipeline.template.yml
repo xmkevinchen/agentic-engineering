@@ -18,17 +18,16 @@ output:
 # The ae: commands will use these roles for team workflows.
 agents:
   # Developer agents for /ae:work parallel execution
-  # Each should be a .claude/agents/<name>.md file
   developers: []           # e.g., [backend-dev, ios-dev, frontend-dev]
 
   # Code reviewer agents for /ae:code-review
-  # Matched by file type from git diff --stat
-  code_reviewers: []       # e.g., [python-reviewer, swift-reviewer, ts-reviewer]
+  code_reviewers: []       # e.g., [python-reviewer, swift-reviewer]
 
-# --- Cross-Family Review (MCP-native) ---
-# Codex: mcp__codex__codex / mcp__codex__codex-reply
-# Gemini: mcp__ae-gemini__chat / mcp__ae-gemini__reply (bundled with ae plugin)
+# --- Cross-Family Review ---
+# Enable/disable cross-family proxy agents in Agent Teams.
+# When enabled, the corresponding proxy agent joins every team.
+# When disabled or MCP unavailable, the proxy is simply skipped.
 cross_family:
-  codex: true              # Codex MCP required (baseline)
-  gemini: true             # Gemini MCP optional (bundled with ae plugin)
-  gemini_model: "gemini-2.5-flash"  # default model for Gemini calls
+  codex: true              # Include codex-proxy in teams (requires Codex MCP server)
+  gemini: true             # Include gemini-proxy in teams (requires ae-gemini MCP server)
+  gemini_model: "gemini-2.5-flash"  # Default Gemini model for proxy calls

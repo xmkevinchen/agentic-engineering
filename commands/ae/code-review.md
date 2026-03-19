@@ -13,7 +13,9 @@ Quick code review on current uncommitted changes.
 1. **Auto** — `/ae:work` calls this before each commit
 2. **Manual** — run `/ae:code-review` anytime
 
-## Execution (two parallel tracks)
+## Execution (three parallel tracks)
+
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. If a proxy fails to connect, skip it — do not block the review.
 
 ### Track 1: Claude Review
 
@@ -25,19 +27,13 @@ Check `git diff --stat` to determine change scope. Then:
 
 Review `git diff` + `git diff --cached`.
 
-### Track 2: Cross-family Review
+### Track 2: Codex Review
 
-**Codex** (required baseline) — via MCP:
-```
-mcp__codex__codex(prompt: "Review these uncommitted changes. Focus: [context]\n\n<diff>")
-```
+Launch `codex-proxy` agent to review the same diff via Codex MCP.
 
-**Gemini** (optional add-on) — via MCP:
-```
-mcp__ae-gemini__chat(prompt: "Review these changes for [concern]:\n\n<diff>", model: "gemini-2.5-flash")
-```
+### Track 3: Gemini Review
 
-**Both tracks launch in parallel.**
+Launch `gemini-proxy` agent to review the same diff via Gemini MCP.
 
 ## Results
 

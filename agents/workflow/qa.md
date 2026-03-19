@@ -55,19 +55,6 @@ Review code after each step completion, call cross-family for external opinions.
 - Clear data flow
 - Appropriate error handling
 
-## Cross-family Invocation
-
-Both via MCP:
-
-```
-# Codex review (MCP)
-mcp__codex__codex(prompt: "Review these uncommitted changes: ...")
-
-# Gemini review (MCP)
-mcp__ae-gemini__chat(prompt: "Review these changes: ...", model: "gemini-2.5-flash")
-```
-
-Prefer Codex (primary baseline), Gemini as supplement.
 
 ## Output Format
 

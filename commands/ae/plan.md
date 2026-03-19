@@ -63,7 +63,9 @@ One sentence: what problem does this feature solve.
 
 ## Step 3: Agent Teams Plan Review
 
-After the plan is written, create a Team for parallel review:
+After the plan is written, create a Team for parallel review.
+
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it exits gracefully.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")
@@ -72,7 +74,7 @@ Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
                Follow Team Communication Protocol.
-               Teammates: dependency-analyst, simplicity-reviewer.
+               Teammates: dependency-analyst, simplicity-reviewer, codex-proxy, gemini-proxy.
                Produce step dependency graph and parallel strategy.
                SendMessage to dependency-analyst and simplicity-reviewer when done.")
 
@@ -90,6 +92,18 @@ Agent(subagent_type: "simplicity-reviewer", name: "simplicity-reviewer",
                Review the architect's step decomposition for complexity.
                Wait for architect's proposal before reviewing.
                Overly complex steps → SendMessage to architect with simplification suggestions.")
+
+Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review this plan via Codex MCP for hidden dependencies and over-engineering: <plan full text>.
+               Teammates: architect, dependency-analyst, simplicity-reviewer.
+               SendMessage findings to architect when done.")
+
+Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review this plan via Gemini MCP for architecture quality and industry practices: <plan full text>.
+               Teammates: architect, dependency-analyst, simplicity-reviewer.
+               SendMessage findings to architect when done.")
 ```
 
 ### Merge Results

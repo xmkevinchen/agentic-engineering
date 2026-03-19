@@ -51,7 +51,9 @@ If `index.md` already exists, update `pipeline.analyze` to `done` and add the an
 
 ### 3. Agent Teams Research
 
-Create a Team and launch 3 Teammates in parallel:
+Create a Team and launch Teammates in parallel.
+
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it exits gracefully.
 
 ```
 TeamCreate(team_name: "<topic>-analyze")
@@ -75,9 +77,22 @@ Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
       prompt: "Operate in /analyze mode per Team Communication Protocol.
                Topic: <$ARGUMENTS>.
-               Step 1: parallel launch — wait for teammate analysis + Codex/Gemini independent research.
-               Step 2: challenge teammate findings + cross-family opinions.
-               Step 3: discussion. Step 4: synthesize and send to Lead.")
+               Teammates: archaeologist, standards-expert, codex-proxy, gemini-proxy.
+               Step 1: independent blind-spot review.
+               Step 2: wait for all teammate + proxy findings, compare and merge.
+               Step 3: challenge. Step 4: synthesize and send to Lead.")
+
+Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Research <$ARGUMENTS> via Codex MCP. Focus on code patterns and hidden issues.
+               Teammates: challenger, archaeologist, standards-expert.
+               SendMessage findings to challenger when done.")
+
+Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Research <$ARGUMENTS> via Gemini MCP. Focus on industry practices and architecture.
+               Teammates: challenger, archaeologist, standards-expert.
+               SendMessage findings to challenger when done.")
 ```
 
 Also read project context files (CLAUDE.md, docs/) for background.
