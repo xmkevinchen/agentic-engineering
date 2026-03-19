@@ -4,9 +4,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 
 // --- Types ---
@@ -25,19 +22,6 @@ interface Session {
   lastAccessedAt: number;
 }
 
-interface OAuthCreds {
-  client_id?: string;
-  client_secret?: string;
-  refresh_token?: string;
-  access_token?: string;
-  expiry_date?: number;
-}
-
-interface TokenCache {
-  accessToken: string;
-  expiresAt: number;
-}
-
 // --- Config ---
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -47,100 +31,16 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
 // --- State ---
 
 const sessions = new Map<string, Session>();
-let oauthCreds: OAuthCreds | null = null;
-let tokenCache: TokenCache | null = null;
-let authMode: "api_key" | "oauth" | "none" = "none";
 let sdkClient: GoogleGenAI | null = null;
 
 // --- Auth ---
 
-async function loadOAuthCreds(): Promise<OAuthCreds | null> {
-  try {
-    const raw = await readFile(
-      join(homedir(), ".gemini", "oauth_creds.json"),
-      "utf-8"
-    );
-    const parsed = JSON.parse(raw);
-    // Support both formats: gemini CLI (access_token + refresh_token) and full OAuth (client_id + client_secret + refresh_token)
-    if (parsed.access_token || (parsed.client_id && parsed.client_secret && parsed.refresh_token)) {
-      return parsed as OAuthCreds;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function getAccessToken(creds: OAuthCreds): Promise<string> {
-  if (tokenCache && Date.now() < tokenCache.expiresAt - 60_000) {
-    return tokenCache.accessToken;
-  }
-
-  // If we have client_id/secret, we can refresh the token
-  if (creds.client_id && creds.client_secret && creds.refresh_token) {
-    const resp = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: creds.client_id,
-        client_secret: creds.client_secret,
-        refresh_token: creds.refresh_token,
-        grant_type: "refresh_token",
-      }),
-    });
-
-    if (!resp.ok) {
-      throw new Error(
-        `OAuth token refresh failed: ${resp.status} ${await resp.text()}`
-      );
-    }
-
-    const data = (await resp.json()) as {
-      access_token: string;
-      expires_in: number;
-    };
-    tokenCache = {
-      accessToken: data.access_token,
-      expiresAt: Date.now() + data.expires_in * 1000,
-    };
-    return tokenCache.accessToken;
-  }
-
-  // Gemini CLI format: use access_token directly (no refresh capability)
-  if (creds.access_token) {
-    const expiresAt = creds.expiry_date ?? Date.now() + 3600_000;
-    tokenCache = {
-      accessToken: creds.access_token,
-      expiresAt,
-    };
-    return tokenCache.accessToken;
-  }
-
-  throw new Error("No valid token or refresh credentials found");
-}
-
 async function initAuth(): Promise<void> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (apiKey) {
-    sdkClient = new GoogleGenAI({ apiKey });
-    authMode = "api_key";
-    return;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is required.");
   }
-
-  oauthCreds = await loadOAuthCreds();
-  if (oauthCreds) {
-    const token = await getAccessToken(oauthCreds);
-    sdkClient = new GoogleGenAI({
-      apiKey: "OAUTH_PLACEHOLDER",
-      httpOptions: { headers: { Authorization: `Bearer ${token}` } },
-    });
-    authMode = "oauth";
-    return;
-  }
-
-  throw new Error(
-    "No Gemini credentials found. Set GEMINI_API_KEY env var or run `gemini auth`."
-  );
+  sdkClient = new GoogleGenAI({ apiKey });
 }
 
 // --- Gemini API ---
@@ -150,10 +50,7 @@ async function callGemini(
   history: Message[],
   systemPrompt?: string
 ): Promise<string> {
-  if (authMode === "api_key" && sdkClient) {
-    return callGeminiSDK(model, history, systemPrompt);
-  }
-  return callGeminiREST(model, history, systemPrompt);
+  return callGeminiSDK(model, history, systemPrompt);
 }
 
 async function callGeminiSDK(
@@ -175,49 +72,6 @@ async function callGeminiSDK(
   });
 
   return response.text ?? "(empty response)";
-}
-
-async function callGeminiREST(
-  model: string,
-  history: Message[],
-  systemPrompt?: string
-): Promise<string> {
-  const token = await getAccessToken(oauthCreds!);
-
-  const body: Record<string, unknown> = {
-    contents: history.map((m) => ({
-      role: m.role,
-      parts: [{ text: m.text }],
-    })),
-  };
-
-  if (systemPrompt) {
-    body.systemInstruction = { parts: [{ text: systemPrompt }] };
-  }
-
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    }
-  );
-
-  if (!resp.ok) {
-    throw new Error(`Gemini API error: ${resp.status} ${await resp.text()}`);
-  }
-
-  const data = (await resp.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-    }>;
-  };
-
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "(empty response)";
 }
 
 // --- Session Management ---
@@ -385,7 +239,7 @@ server.registerTool(
           text: JSON.stringify(
             {
               version: "0.2.0",
-              authMode,
+              authMode: "api_key",
               defaultModel: DEFAULT_MODEL,
               activeSessions: sessions.size,
               sessionTTL: "30m",
