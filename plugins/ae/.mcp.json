@@ -6,7 +6,10 @@
     },
     "gemini": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.js"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      }
     }
   }
 }
