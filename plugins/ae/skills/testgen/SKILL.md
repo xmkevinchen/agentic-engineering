@@ -1,0 +1,76 @@
+---
+name: ae:testgen
+description: Generate comprehensive test suites with edge case coverage for specific code
+argument-hint: "<file, function, or module to test>"
+---
+
+# /ae:testgen — Test Generation
+
+Generate tests for: **$ARGUMENTS**
+
+## Pre-check
+
+1. Confirm `.claude/pipeline.yml` exists
+2. Read `test_command` and `test_framework` from pipeline.yml
+
+## Step 1: Analyze
+
+1. Read the target code thoroughly
+2. Map code paths: happy path, error paths, edge cases
+3. Identify boundary conditions, null/empty inputs, type coercions
+4. Check existing tests for patterns and conventions
+5. Note dependencies that need mocking
+
+## Step 2: Agent Teams Review
+
+Create a Team for parallel test planning review. **Lead: qa** (collects and validates coverage).
+
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents.
+
+```
+TeamCreate(team_name: "<target>-testgen")
+
+Agent(subagent_type: "qa", name: "qa",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review this test plan for completeness: <target code summary + proposed test cases>.
+               Follow Team Communication Protocol.
+               Teammates: security-reviewer, codex-proxy, gemini-proxy.
+               Check: all code paths covered? Edge cases? Error handling?
+               Missing scenarios → list them.
+               SendMessage to Lead when done.")
+
+Agent(subagent_type: "security-reviewer", name: "security-reviewer",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review test plan for security-relevant test cases: <target code + test cases>.
+               Follow Team Communication Protocol.
+               Teammates: qa, codex-proxy, gemini-proxy.
+               Check: injection, auth bypass, data leaks tested?
+               Missing security tests → list them.
+               SendMessage to qa when done.")
+
+Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review test coverage via Codex MCP. Find untested paths and edge cases: <target code + test cases>.
+               Teammates: qa, security-reviewer.
+               SendMessage findings to qa when done.")
+
+Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Review test coverage via Gemini MCP. Suggest additional scenarios and boundary tests: <target code + test cases>.
+               Teammates: qa, security-reviewer.
+               SendMessage findings to qa when done.")
+```
+
+## Step 3: Generate
+
+Write tests following project conventions:
+- Match existing test file naming and structure
+- Use project's test framework
+- Group by: happy path → edge cases → error cases → security
+- Each test: clear name describing the scenario
+
+## Step 4: Verify
+
+Run `test_command` from pipeline.yml. All new tests must pass.
+
+Show summary: number of tests generated, coverage areas, any skipped scenarios.

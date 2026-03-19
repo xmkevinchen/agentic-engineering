@@ -1,0 +1,85 @@
+---
+name: ae:consensus
+description: Multi-agent structured debate (for/against/neutral) to evaluate proposals and decisions
+argument-hint: "<proposal or decision to evaluate>"
+---
+
+# /ae:consensus — Structured Debate
+
+Build multi-perspective consensus on: **$ARGUMENTS**
+
+## Pre-check
+
+1. Confirm `.claude/pipeline.yml` exists (needed for cross-family config)
+2. If missing → suggest `/ae:setup`
+
+## Step 1: Frame the Proposal
+
+1. Read project CLAUDE.md and relevant code/docs
+2. Formulate the proposal as a clear evaluatable statement
+3. Identify what's at stake (reversibility, blast radius, complexity)
+
+## Step 2: Agent Teams Debate
+
+Create a Team with explicit stances. **Lead: mediator** (collects and synthesizes). Each agent argues from their assigned position.
+
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents as additional neutral evaluators.
+
+```
+TeamCreate(team_name: "<topic>-consensus")
+
+Agent(subagent_type: "architect", name: "advocate",
+      team_name: "<team>", run_in_background: true,
+      prompt: "STANCE: FOR. Argue in favor of this proposal: <proposal + context>.
+               Follow Team Communication Protocol.
+               Teammates: critic, mediator, codex-proxy, gemini-proxy.
+               Present strongest arguments with evidence from codebase.
+               Acknowledge weaknesses honestly.
+               SendMessage to mediator when done.")
+
+Agent(subagent_type: "challenger", name: "critic",
+      team_name: "<team>", run_in_background: true,
+      prompt: "STANCE: AGAINST. Argue against this proposal: <proposal + context>.
+               Follow Team Communication Protocol.
+               Teammates: advocate, mediator, codex-proxy, gemini-proxy.
+               Find risks, hidden costs, better alternatives.
+               Acknowledge strengths honestly.
+               SendMessage to mediator when done.")
+
+Agent(subagent_type: "simplicity-reviewer", name: "mediator",
+      team_name: "<team>", run_in_background: true,
+      prompt: "STANCE: NEUTRAL. Evaluate both sides of this proposal: <proposal>.
+               Follow Team Communication Protocol.
+               Teammates: advocate, critic, codex-proxy, gemini-proxy.
+               Wait for both advocate and critic to finish.
+               Identify: areas of agreement, genuine disagreements, and missing considerations.
+               Synthesize a recommendation. SendMessage to advocate and critic for final response.")
+
+Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Independent evaluation of this proposal via Codex MCP: <proposal + context>.
+               Teammates: advocate, critic, mediator.
+               SendMessage findings to mediator when done.")
+
+Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Independent evaluation of this proposal via Gemini MCP: <proposal + context>.
+               Teammates: advocate, critic, mediator.
+               SendMessage findings to mediator when done.")
+```
+
+## Step 3: Verdict
+
+Mediator produces final recommendation:
+
+- **Consensus**: all sides agree → proceed / reject
+- **Majority**: 2/3+ agree → proceed with noted risks
+- **Split**: no clear winner → present both paths, ask user to decide
+
+Include:
+- Strongest argument for
+- Strongest argument against
+- Cross-family perspective
+- Final recommendation
+
+Close the Team. Show verdict to user.
