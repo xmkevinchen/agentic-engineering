@@ -1,5 +1,5 @@
 ---
-name: ae:review
+name: review
 description: Deep multi-agent review + fixup (feature completion gate)
 argument-hint: "<plan file path>"
 ---

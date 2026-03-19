@@ -1,5 +1,5 @@
 ---
-name: ae:code-review
+name: code-review
 description: Quick code review before each commit (Claude + cross-family)
 argument-hint: "[files or directory]"
 ---

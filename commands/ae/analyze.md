@@ -1,5 +1,5 @@
 ---
-name: ae:analyze
+name: analyze
 description: Research and analyze a topic, module, or problem domain in the codebase
 argument-hint: "<topic or question>"
 ---

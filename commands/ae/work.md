@@ -1,5 +1,5 @@
 ---
-name: ae:work
+name: work
 description: Execute plan (TDD + commit + review, pre-checks chain)
 argument-hint: "<plan file path>"
 ---

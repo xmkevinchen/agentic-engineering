@@ -1,5 +1,5 @@
 ---
-name: ae:plan
+name: plan
 description: Generate a feature plan with acceptance criteria + plan review
 argument-hint: "<feature description>"
 ---

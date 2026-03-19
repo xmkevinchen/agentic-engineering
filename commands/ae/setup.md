@@ -1,5 +1,5 @@
 ---
-name: ae:setup
+name: setup
 description: Initialize or update project pipeline config (.claude/pipeline.yml)
 argument-hint: "[update]"
 ---

@@ -1,7 +1,7 @@
 {
-  "name": "agentic-engineering",
+  "name": "ae",
   "version": "0.2.0",
-  "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis. 7 commands, 11 agents, 1 skill, 2 MCP servers.",
+  "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
   "author": {
     "name": "ckai"
   },
