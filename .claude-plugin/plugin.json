@@ -1,0 +1,19 @@
+{
+  "name": "agentic-engineering",
+  "version": "0.1.0",
+  "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
+  "author": {
+    "name": "ckai"
+  },
+  "repository": "",
+  "license": "MIT",
+  "keywords": [
+    "agentic-engineering",
+    "tdd",
+    "code-review",
+    "cross-family",
+    "multi-agent",
+    "workflow-automation",
+    "agent-teams"
+  ]
+}

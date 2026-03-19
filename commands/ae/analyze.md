@@ -1,0 +1,136 @@
+---
+name: ae:analyze
+description: Research and analyze a topic, module, or problem domain in the codebase
+argument-hint: "<topic or question>"
+---
+
+# /ae:analyze — Codebase Analysis
+
+Research the codebase and generate a structured analysis for: **$ARGUMENTS**
+
+## Flow
+
+### 1. Find or Create Discussion Directory
+
+Check `docs/discussions/` for an existing related directory (match by topic).
+- **Exists**: add analysis to that directory.
+- **New**: find the highest existing number, take next sequential (zero-padded 3 digits, starting `001`). Create `docs/discussions/NNN-slug/`.
+
+### 2. Create or Update index.md
+
+If no `index.md` in the directory, create:
+
+```markdown
+---
+id: "NNN"
+title: "[short topic title]"
+status: active
+created: YYYY-MM-DD
+pipeline:
+  analyze: done
+  discuss: pending
+  plan: pending
+  work: pending
+plan: ""
+tags: [relevant, tags]
+---
+
+# [Title]
+
+[One-sentence description]
+
+## Topics
+*Created by `/ae:discuss`*
+
+## Documents
+- [Analysis](analysis.md)
+- [Plan](../../milestones/vX.X.X/xxx.md) *(linked after plan creation)*
+```
+
+If `index.md` already exists, update `pipeline.analyze` to `done` and add the analysis link.
+
+### 3. Agent Teams Research
+
+Create a Team and launch 3 Teammates in parallel:
+
+```
+TeamCreate(team_name: "<topic>-analyze")
+
+Agent(subagent_type: "archaeologist", name: "archaeologist",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Deeply investigate existing code for: <$ARGUMENTS>.
+               Follow Team Communication Protocol.
+               Teammates: standards-expert, challenger.
+               SendMessage findings to challenger and standards-expert when done.")
+
+Agent(subagent_type: "standards-expert", name: "standards-expert",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Research industry best practices for: <$ARGUMENTS>.
+               Follow Team Communication Protocol.
+               Teammates: archaeologist, challenger.
+               Wait for archaeologist's code analysis before comparing.
+               SendMessage findings to challenger and archaeologist when done.")
+
+Agent(subagent_type: "challenger", name: "challenger",
+      team_name: "<team>", run_in_background: true,
+      prompt: "Operate in /analyze mode per Team Communication Protocol.
+               Topic: <$ARGUMENTS>.
+               Step 1: parallel launch — wait for teammate analysis + Codex/Gemini independent research.
+               Step 2: challenge teammate findings + cross-family opinions.
+               Step 3: discussion. Step 4: synthesize and send to Lead.")
+```
+
+Also read project context files (CLAUDE.md, docs/) for background.
+
+### 4. Generate Analysis Document
+
+After Challenger sends the synthesized report, create `docs/discussions/NNN-slug/analysis.md`:
+
+```markdown
+---
+id: "NNN"
+title: "Analysis: [topic]"
+type: analysis
+created: YYYY-MM-DD
+tags: [relevant, tags]
+---
+
+# Analysis: [topic]
+
+## Question
+[Original topic or question]
+
+## Findings
+
+### Relevant Code
+[Key files and modules with paths (from Archaeologist)]
+
+### Architecture & Patterns
+[How the codebase handles similar scenarios. Design patterns used.]
+
+### Industry Practice Comparison
+[Project status vs industry standards (from Standards Expert)]
+
+### Challenges & Disagreements
+[Challenger's challenges + cross-family opinions (from Challenger)]
+
+## Summary
+[Concise answer to the original question. Key takeaways.]
+
+## Possible Next Steps
+[Suggest `/ae:discuss` or `/ae:plan`]
+```
+
+### 5. Close Team + Present
+
+Send shutdown_request to all teammates. Show the user:
+1. Key findings in concise form
+2. Where the full analysis is saved
+3. **Suggested next step based on findings**
+
+## Principles
+
+- Include file path references with line numbers where possible
+- Focus on facts and code evidence, not speculation
+- Keep analysis focused on the question asked
+- If analysis reveals the problem is more complex than expected, state it clearly
