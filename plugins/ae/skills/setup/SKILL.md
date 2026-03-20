@@ -38,8 +38,28 @@ Read current `.claude/pipeline.yml`, compare with template:
 2. Check for deprecated fields
 3. Show diff, use AskUserQuestion to confirm
 
+## Cross-Family Setup
+
+After writing pipeline.yml, check cross-family dependencies:
+
+1. **Codex**: run `which codex` — if not found, suggest `npm install -g @openai/codex`
+2. **Gemini**: check `GEMINI_API_KEY` env var — if not set, prompt user:
+   ```
+   To enable Gemini cross-family review, add to .claude/settings.local.json:
+   {
+     "env": {
+       "GEMINI_API_KEY": "<your-api-key>"
+     }
+   }
+   Get a key at https://aistudio.google.com/apikey
+   ```
+3. Write status to `.claude/cross-family-status.json`
+
+Cross-family is optional — the plugin works without it but loses blind spot coverage.
+
 ## Output
 
 1. `.claude/pipeline.yml` written to project
-2. Show final config to user
-3. Prompt: "Pipeline ready. Use `/ae:plan <feature>` to start."
+2. Cross-family status checked and reported
+3. Show final config to user
+4. Prompt: "Pipeline ready. Use `/ae:plan <feature>` to start."
