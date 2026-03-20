@@ -48,7 +48,7 @@ async function initAuth(): Promise<void> {
 async function callGemini(
   model: string,
   history: Message[],
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<string> {
   return callGeminiSDK(model, history, systemPrompt);
 }
@@ -56,7 +56,7 @@ async function callGemini(
 async function callGeminiSDK(
   model: string,
   history: Message[],
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<string> {
   const contents = history.map((m) => ({
     role: m.role,
@@ -66,9 +66,7 @@ async function callGeminiSDK(
   const response = await sdkClient!.models.generateContent({
     model,
     contents,
-    ...(systemPrompt
-      ? { config: { systemInstruction: systemPrompt } }
-      : {}),
+    ...(systemPrompt ? { config: { systemInstruction: systemPrompt } } : {}),
   });
 
   return response.text ?? "(empty response)";
@@ -109,7 +107,7 @@ server.registerTool(
         .string()
         .optional()
         .describe(
-          "System instruction that persists across the entire conversation"
+          "System instruction that persists across the entire conversation",
         ),
     }),
   },
@@ -145,7 +143,7 @@ server.registerTool(
         isError: true,
       };
     }
-  }
+  },
 );
 
 // Tool 2: reply — continue an existing conversation (like codex's `codex-reply`)
@@ -162,7 +160,7 @@ server.registerTool(
         .string()
         .optional()
         .describe(
-          "Override model for this turn (e.g., switch to gemini-2.5-pro for deeper analysis)"
+          "Override model for this turn (e.g., switch to gemini-2.5-pro for deeper analysis)",
         ),
     }),
   },
@@ -190,7 +188,7 @@ server.registerTool(
       const responseText = await callGemini(
         useModel,
         session.history,
-        session.systemPrompt
+        session.systemPrompt,
       );
       session.history.push({ role: "model", text: responseText });
       session.lastAccessedAt = Date.now();
@@ -210,7 +208,7 @@ server.registerTool(
         isError: true,
       };
     }
-  }
+  },
 );
 
 // Tool 3: info — server status + active sessions
@@ -246,12 +244,12 @@ server.registerTool(
               sessions: sessionList,
             },
             null,
-            2
+            2,
           ),
         },
       ],
     };
-  }
+  },
 );
 
 // --- Main ---
