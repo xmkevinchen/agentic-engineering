@@ -71,7 +71,9 @@ Agent(subagent_type: "challenger", name: "challenger",
                           codex-proxy, gemini-proxy.
                Step 1: independent review of blind spots.
                Step 2: wait for all reviewer + proxy findings, then compare and merge.
-               Step 3: targeted challenges. Step 4: synthesize final report and send to Lead.")
+               Step 3: targeted challenges — if reviewers disagree on a finding, YOU make the call. Do not let reviewers debate each other indefinitely.
+               Step 4: route cross-domain findings to the relevant reviewer if needed (max one round — if unresolved, you decide).
+               Step 5: synthesize final report and send to Lead.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
