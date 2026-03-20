@@ -61,3 +61,11 @@ Return a concise summary:
 ```
 
 Keep it concise. Focus on real issues, don't nitpick code style (pre-commit handles formatting).
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.

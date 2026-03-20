@@ -57,3 +57,11 @@ When `challenger` questions your recommendations:
 1. Provide specific references (links, doc sections, mature project examples)
 2. If challenger's challenge is valid (e.g., "this practice doesn't apply to our scenario"), honestly acknowledge and adjust recommendation
 3. Distinguish "universally accepted practice" from "context-specific best practice"
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.

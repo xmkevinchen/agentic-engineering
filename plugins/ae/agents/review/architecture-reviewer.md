@@ -83,3 +83,12 @@ When other reviewers flag a finding that may involve architecture:
 1. Review the code they reference
 2. Assess from architecture perspective (module boundary, dependency direction, responsibility)
 3. SendMessage back with your assessment
+
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.

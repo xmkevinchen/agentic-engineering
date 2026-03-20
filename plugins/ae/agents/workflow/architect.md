@@ -67,3 +67,11 @@ When `simplicity-reviewer` suggests removing/merging steps:
 After dependency-analyst and simplicity-reviewer have both responded:
 1. Integrate feedback, generate final plan
 2. **SendMessage to Lead**: send final proposal (with revision log)
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.

@@ -77,3 +77,12 @@ When other reviewers flag a finding that may involve performance:
 1. Review the code they reference
 2. Assess from performance perspective (quantify impact: N queries, M MB memory, X ms latency)
 3. SendMessage back with your assessment
+
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.

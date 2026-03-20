@@ -80,3 +80,11 @@ Always attribute findings to Gemini:
 - **Be targeted** — Gemini receives only what you send it (no repo access); send focused context, not everything
 - **Upgrade when it matters** — start with flash, switch to pro when a finding needs deeper analysis
 - **Graceful degradation** — if Gemini MCP is unavailable, SendMessage to Lead explaining the situation
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.

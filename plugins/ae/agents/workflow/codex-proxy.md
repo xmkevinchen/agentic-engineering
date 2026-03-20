@@ -64,3 +64,11 @@ Always attribute findings to Codex:
 - **Flag disagreements explicitly** — when Codex disagrees with a Claude agent's finding, that's your highest-value contribution
 - **Don't over-query** — one focused session per task; follow up only when needed
 - **Graceful degradation** — if Codex MCP is unavailable, SendMessage to Lead explaining the situation
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.

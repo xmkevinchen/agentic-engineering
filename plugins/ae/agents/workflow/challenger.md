@@ -113,3 +113,12 @@ For each finding/decision:
 - **Final judgment**: agree / adjust to [new severity] / disagree
 - **Rationale**: [specific, citing code or facts]
 ```
+
+
+## Shutdown
+
+When you receive a shutdown_request, respond with the proper protocol:
+```
+SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
+```
+Do NOT send a custom JSON — use the exact shutdown_response format above.
