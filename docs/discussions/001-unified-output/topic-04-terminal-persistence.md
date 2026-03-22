@@ -1,65 +1,65 @@
 ---
 id: "04"
-title: "终端 skill 持久化策略"
+title: "Terminal Skill Persistence Strategy"
 status: decided
 created: 2026-03-22
-decision: "D — 临时持久化 + 主动提醒正式保存"
-rationale: "解决 session compact 丢信息问题。所有产出自动写临时文件，skill 完成后主动问用户是否正式保存。不需要用户记参数，也不丢信息。"
+decision: "D — Temp persistence + proactive save reminder"
+rationale: "Solves the session compact information loss problem. All outputs are automatically written to a temp file, and the skill proactively asks the user whether to formally save after completion. No need for the user to remember parameters, and no information is lost."
 ---
 
-# 议题：终端 skill 持久化策略
+# Topic: Terminal Skill Persistence Strategy
 
-## 背景
+## Background
 
-当前 5 个 skill 仅输出到终端：code-review, consensus, trace, team, cross-family-review。其中 cross-family-review 是被动知识文档，不产出内容，不在此讨论范围。
+Currently 5 skills output only to the terminal: code-review, consensus, trace, team, cross-family-review. Of these, cross-family-review is passive reference documentation that does not produce content and is out of scope for this discussion.
 
-核心问题不只是"要不要写文件"，还有 **session compact 会丢信息**。一次 `/ae:trace` 的依赖图、一次 `/ae:consensus` 的三轮辩论，compact 后可能只剩摘要甚至消失。
+The core problem is not just "should we write files" — it's that **session compact can lose information**. A dependency graph from `/ae:trace` or three rounds of debate from `/ae:consensus` may be reduced to a summary or disappear entirely after compact.
 
-## 选项
+## Options
 
-### A：全部保持终端输出
+### A: Keep all terminal output as-is
 
-不改变任何终端 skill 的行为。
+Do not change any terminal skill behavior.
 
-- **优点**：最简单；不增加复杂度
-- **缺点**：compact 后信息丢失；review 阶段无法引用之前的 trace
+- **Pros**: Simplest; adds no complexity
+- **Cons**: Information lost after compact; review phase cannot reference previous trace output
 
-### B：trace 和 consensus 可选持久化（`--save` 参数）
+### B: opt-in persistence for trace and consensus (`--save` parameter)
 
-默认终端输出，用户加 `--save` 参数时写入正式目录。
+Default is terminal output; write to formal directory when user adds `--save` parameter.
 
-- **优点**：按需持久化，不强制
-- **缺点**：用户需要提前知道要保存；忘加参数就丢了；compact 问题未解决
+- **Pros**: Persist on demand, not forced
+- **Cons**: User must know in advance they want to save; forgetting the parameter means it's gone; compact problem unsolved
 
-### C：所有分析类 skill 默认持久化
+### C: All analysis-type skills default to persistent output
 
-trace、consensus、think 全部默认写文件。
+trace, consensus, think all write files by default.
 
-- **优点**：知识不丢失
-- **缺点**：文件膨胀；有些只是临时查看
+- **Pros**: Knowledge is not lost
+- **Cons**: File bloat; some outputs are only for temporary viewing
 
-### D：临时持久化 + 主动提醒正式保存（讨论中产生）
+### D: Temp persistence + proactive save reminder (option emerging from discussion)
 
-两层策略：
+Two-layer strategy:
 
-1. **自动临时持久化**：所有产出内容的 skill 跑完自动写临时文件（`.claude/scratch/`），用户无感。解决 compact 丢信息问题。
-2. **主动提醒**：skill 完成后主动问用户"这个结果要正式保存吗？"
-3. **正式保存**：用户确认后 move 到对应的 output slot（如 `docs/traces/001-auth-flow.md`）
-4. **不保存**：临时文件保留到下次清理或 session 结束
+1. **Automatic temp persistence**: all content-producing skills automatically write a temp file (`.claude/scratch/`) on completion, invisible to the user. Solves compact information loss.
+2. **Proactive reminder**: skill asks the user after completion "Do you want to formally save this result?"
+3. **Formal save**: on user confirmation, move to the corresponding output slot (e.g. `docs/traces/001-auth-flow.md`)
+4. **No save**: temp file is retained until next cleanup or session end
 
-适用范围：
-- `trace` — 依赖图有 plan 阶段引用价值 → 问
-- `consensus` — 辩论结论有 discuss 阶段引用价值 → 问
-- `code-review` — 每次 commit 前的快速审查，量大且临时 → 不问，只临时保存
-- `team` — agent 选择过程，纯临时 → 不问，只临时保存
+Scope of application:
+- `trace` — dependency graph has reference value at plan phase → ask
+- `consensus` — debate conclusion has reference value at discuss phase → ask
+- `code-review` — quick review before each commit, high volume and temporary → don't ask, temp save only
+- `team` — agent selection process, purely temporary → don't ask, temp save only
 
-- **优点**：compact 安全；用户不需要记参数；主动提醒不会漏；不强制膨胀文件
-- **缺点**：需要 `.claude/scratch/` 临时目录管理；多一步交互
+- **Pros**: Compact-safe; user doesn't need to remember parameters; proactive reminder prevents omissions; no forced file bloat
+- **Cons**: Requires `.claude/scratch/` temp directory management; one extra interaction step
 
-## 建议
+## Recommendation
 
-推荐 **D**。解决了选项 B 的"忘加参数"问题和选项 C 的"文件膨胀"问题，同时彻底解决 compact 丢信息的核心痛点。
+Recommend **D**. Solves option B's "forgetting the parameter" problem and option C's "file bloat" problem, while thoroughly addressing the core pain point of compact information loss.
 
-## 附注：cross-family-review 的归属
+## Note: Where does cross-family-review belong?
 
-`ae:cross-family-review` 是被动知识文档，不是用户可调用的 slash command，不产出任何内容。应考虑从 skills/ 移到更合适的位置（如 docs/ 或 agents/ 的参考文档）。
+`ae:cross-family-review` is passive reference documentation, not a user-invokable slash command, and produces no output. Consider moving it out of skills/ to a more appropriate location (e.g. docs/ or a reference document within agents/).

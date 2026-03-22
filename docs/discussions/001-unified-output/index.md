@@ -1,6 +1,6 @@
 ---
 id: "001"
-title: "统一 ae 插件文件输出规范"
+title: "Unified ae Plugin File Output Conventions"
 status: concluded
 created: 2026-03-22
 pipeline:
@@ -12,43 +12,43 @@ plan: "docs/plans/001-unified-output.md"
 tags: [output, conventions, pipeline]
 ---
 
-# 统一 ae 插件文件输出规范
+# Unified ae Plugin File Output Conventions
 
-统一所有 ae skill 的文件输出位置、命名规范和格式，消除当前的混乱状态。
+Unify the file output locations, naming conventions, and formats across all ae skills, eliminating the current inconsistency.
 
-## 问题陈述
+## Problem Statement
 
-当前 13 个 skill 的输出完全不一致：
-- analyze/discuss 硬编码 `docs/discussions/`
-- plan 读 `pipeline.yml → output.plans`（无默认值）
-- think 读 `pipeline.yml → output.analyses`（有默认值 `docs/analyses/`）
-- work/review 散落在 `docs/milestones/*/notes.md` 和 `docs/backlog/`
-- 命名规范不统一（NNN-slug vs topic.md vs 无规定）
-- pipeline.yml 的 `output.*` 用法混乱（有的读、有的硬编码、有的没默认值）
+The outputs of the current 13 skills are completely inconsistent:
+- analyze/discuss hardcode `docs/discussions/`
+- plan reads `pipeline.yml → output.plans` (no default value)
+- think reads `pipeline.yml → output.analyses` (has default value `docs/analyses/`)
+- work/review are scattered across `docs/milestones/*/notes.md` and `docs/backlog/`
+- Naming conventions are inconsistent (NNN-slug vs topic.md vs no convention)
+- Usage of `output.*` in pipeline.yml is inconsistent (some read it, some hardcode, some have no default)
 
-## 现状
+## Current State
 
-产出文件的 skill（7 个）：
-- `ae:setup` → `.claude/pipeline.yml`, `.claude/cross-family-status.json`（固定路径，合理）
-- `ae:analyze` → `docs/discussions/NNN-slug/analysis.md`（硬编码）
-- `ae:discuss` → `docs/discussions/NNN-slug/topic-NN-slug.md`（硬编码）
-- `ae:plan` → `pipeline.yml → output.plans`（可配，无默认值）
-- `ae:work` → 原地更新 plan + `docs/milestones/*/notes.md` + `docs/backlog/`
-- `ae:review` → `notes.md`（路径不明） + `docs/backlog/`
-- `ae:think` → `pipeline.yml → output.analyses`（可配，默认 `docs/analyses/`）
+Skills that produce files (7):
+- `ae:setup` → `.claude/pipeline.yml`, `.claude/cross-family-status.json` (fixed paths, reasonable)
+- `ae:analyze` → `docs/discussions/NNN-slug/analysis.md` (hardcoded)
+- `ae:discuss` → `docs/discussions/NNN-slug/topic-NN-slug.md` (hardcoded)
+- `ae:plan` → `pipeline.yml → output.plans` (configurable, no default)
+- `ae:work` → updates plan in-place + `docs/milestones/*/notes.md` + `docs/backlog/`
+- `ae:review` → `notes.md` (path unclear) + `docs/backlog/`
+- `ae:think` → `pipeline.yml → output.analyses` (configurable, default `docs/analyses/`)
 
-仅终端输出的 skill（5 个）：code-review, consensus, trace, team, cross-family-review
+Skills with terminal-only output (5): code-review, consensus, trace, team, cross-family-review
 
-代码文件输出：testgen（写到项目测试目录，合理）
+Code file output: testgen (writes to project test directory, reasonable)
 
-## 议题
+## Topics
 
-| # | 议题 | 文件 | 状态 | 决定 |
-|---|------|------|------|------|
-| 1 | 输出根目录选择 | [topic-01-output-root.md](topic-01-output-root.md) | ✅ 废弃 | 被议题 2 合并取代 |
-| 2 | pipeline.yml 配置粒度 | [topic-02-config-granularity.md](topic-02-config-granularity.md) | ✅ 已决定 | D — 语义槽 + 合理默认值，无 root |
-| 3 | 文件命名与格式规范 | [topic-03-naming-format.md](topic-03-naming-format.md) | ✅ 已决定 | B — 每类独立编号 + slug |
-| 4 | 终端 skill 持久化策略 | [topic-04-terminal-persistence.md](topic-04-terminal-persistence.md) | ✅ 已决定 | D — 临时持久化 + 主动提醒正式保存 |
+| # | Topic | File | Status | Decision |
+|---|-------|------|--------|----------|
+| 1 | Output root directory | [topic-01-output-root.md](topic-01-output-root.md) | ✅ Superseded | Merged into topic 2 |
+| 2 | pipeline.yml config granularity | [topic-02-config-granularity.md](topic-02-config-granularity.md) | ✅ Decided | D — Semantic slots + sensible defaults, no root |
+| 3 | File naming and format conventions | [topic-03-naming-format.md](topic-03-naming-format.md) | ✅ Decided | B — Per-type independent numbering + slug |
+| 4 | Terminal skill persistence strategy | [topic-04-terminal-persistence.md](topic-04-terminal-persistence.md) | ✅ Decided | D — Temp persistence + proactive save reminder |
 
-## 文档
-- [结论](conclusion.md)
+## Documents
+- [Conclusion](conclusion.md)

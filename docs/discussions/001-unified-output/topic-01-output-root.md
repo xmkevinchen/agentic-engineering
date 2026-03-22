@@ -1,23 +1,23 @@
 ---
 id: "01"
-title: "输出根目录选择"
+title: "Output Root Directory"
 status: decided
 created: 2026-03-22
-decision: "废弃 — 被议题 02 的方案 D 合并取代"
-rationale: "不需要统一根目录。语义槽方案让每个 slot 独立配路径，默认值直接在 docs/ 下（如 docs/discussions/），无需 docs/ae/ 隔离层。已有项目（SmartPal）零迁移兼容。"
+decision: "Superseded — merged and replaced by option D from topic 02"
+rationale: "No unified root directory is needed. The semantic slot approach lets each slot configure its path independently, with defaults directly under docs/ (e.g. docs/discussions/), eliminating the need for a docs/ae/ isolation layer. Existing projects (SmartPal) are compatible with zero migration."
 ---
 
-# 议题：输出根目录选择
+# Topic: Output Root Directory
 
-## 背景
+## Background
 
-ae 产出的文件（分析、计划、讨论、审查结果）需要一个统一的根目录。当前散落在 `docs/discussions/`、`docs/milestones/`、`docs/analyses/`、`docs/backlog/`、`results/reviews/` 等多个位置。根目录的选择影响项目整洁度和可发现性。
+Files produced by ae (analyses, plans, discussions, review results) need a unified root directory. Currently they are scattered across `docs/discussions/`, `docs/milestones/`, `docs/analyses/`, `docs/backlog/`, `results/reviews/`, and other locations. The choice of root directory affects project tidiness and discoverability.
 
-## 选项
+## Options
 
-### A：`docs/ae/`
+### A: `docs/ae/`
 
-所有 ae 产出集中在 `docs/ae/` 下，子目录按 skill 类型分：
+All ae outputs are centralized under `docs/ae/`, with subdirectories by skill type:
 
 ```
 docs/ae/
@@ -29,12 +29,12 @@ docs/ae/
   backlog/
 ```
 
-- **优点**：命名空间隔离，不污染项目已有 `docs/`；一目了然哪些是 ae 产出
-- **缺点**：嵌套多一层；如果项目本身用 `docs/` 管文档，ae 的产出可能被混入 docs 的构建流程
+- **Pros**: Namespace isolation, doesn't pollute the project's existing `docs/`; makes it obvious which files are ae outputs
+- **Cons**: One extra level of nesting; if the project uses `docs/` for its own documentation, ae outputs might get mixed into the docs build pipeline
 
-### B：`.claude/ae/`
+### B: `.claude/ae/`
 
-产出放在 `.claude/ae/` 下（隐藏目录）：
+Outputs placed under `.claude/ae/` (hidden directory):
 
 ```
 .claude/ae/
@@ -44,12 +44,12 @@ docs/ae/
   reviews/
 ```
 
-- **优点**：完全隔离，不影响项目文档结构；`.claude/` 已是 ae 配置的家
-- **缺点**：隐藏目录不易发现；团队成员可能忽略；部分项目 `.gitignore` 排除 `.claude/`；不适合需要版本控制的产出（计划、决策）
+- **Pros**: Fully isolated, does not affect project documentation structure; `.claude/` is already home to ae configuration
+- **Cons**: Hidden directory is hard to discover; team members may overlook it; some projects have `.gitignore` excluding `.claude/`; not suitable for outputs that need version control (plans, decisions)
 
-### C：项目根目录平铺（维持现状改良）
+### C: Flat layout under project root (improved status quo)
 
-保持 `docs/` 下平铺，但统一前缀：
+Keep a flat layout under `docs/` but with unified prefixes:
 
 ```
 docs/
@@ -59,9 +59,9 @@ docs/
   ae-reviews/
 ```
 
-- **优点**：扁平结构，路径短；与现有习惯接近
-- **缺点**：前缀方案不优雅；`docs/` 目录变杂；没有真正的命名空间隔离
+- **Pros**: Flat structure, shorter paths; close to existing habits
+- **Cons**: Prefix approach is inelegant; `docs/` directory becomes cluttered; no real namespace isolation
 
-## 建议
+## Recommendation
 
-推荐 **A：`docs/ae/`**。一层嵌套换来干净的命名空间隔离，且产出本质上是文档（计划、分析、决策），放在 `docs/` 下语义正确。`.claude/` 适合配置和运行时状态，不适合需要团队共享和版本控制的知识产出。
+Recommend **A: `docs/ae/`**. One level of nesting yields clean namespace isolation, and the outputs are fundamentally documentation (plans, analyses, decisions), so placing them under `docs/` is semantically correct. `.claude/` is suitable for configuration and runtime state, not for knowledge outputs that need team sharing and version control.

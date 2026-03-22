@@ -1,23 +1,23 @@
 ---
 id: "03"
-title: "文件命名与格式规范"
+title: "File Naming and Format Conventions"
 status: decided
 created: 2026-03-22
-decision: "B — 每类独立编号 + slug"
-rationale: "实现最简单，与 SmartPal 已有约定（discussions/001-xxx, BL-002-xxx）天然兼容。跨类型时间关系通过 frontmatter created 字段查询。"
+decision: "B — Per-type independent numbering + slug"
+rationale: "Simplest to implement, naturally compatible with SmartPal's existing conventions (discussions/001-xxx, BL-002-xxx). Cross-type chronological relationships are queried via the frontmatter created field."
 ---
 
-# 议题：文件命名与格式规范
+# Topic: File Naming and Format Conventions
 
-## 背景
+## Background
 
-当前命名方式混乱：analyze/discuss 用 `NNN-slug` 三位编号目录，plan 没有规定文件名，think 用 `<topic>.md`，review 的 notes.md 路径不明。需要统一命名规范和文件格式。
+Current naming is inconsistent: analyze/discuss use `NNN-slug` three-digit numbered directories, plan has no prescribed filename, think uses `<topic>.md`, and review's notes.md path is unclear. We need to unify naming conventions and file formats.
 
-## 选项
+## Options
 
-### A：全局递增编号 + slug
+### A: Global incrementing number + slug
 
-所有产出共享一个全局计数器，跨 skill 类型：
+All outputs share a single global counter, spanning skill types:
 
 ```
 docs/ae/
@@ -27,12 +27,12 @@ docs/ae/
   analyses/004-perf-bottleneck.md
 ```
 
-- **优点**：天然排序反映时间线；跨类型可以看出工作顺序
-- **缺点**：全局计数器实现复杂（需要扫描所有子目录）；编号间有空洞不直观
+- **Pros**: Natural ordering reflects the timeline; work sequence is visible across types
+- **Cons**: Global counter is complex to implement (requires scanning all subdirectories); gaps in numbering are unintuitive
 
-### B：每类独立编号 + slug
+### B: Per-type independent numbering + slug
 
-每个子目录独立编号：
+Each subdirectory has its own independent numbering:
 
 ```
 docs/ae/
@@ -42,10 +42,10 @@ docs/ae/
   plans/001-implement-auth.md
 ```
 
-- **优点**：实现简单（只扫当前子目录）；各类型编号连续无空洞
-- **缺点**：跨类型无法看出先后关系（analyses/001 和 plans/001 谁先？）
+- **Pros**: Simple to implement (only scan current subdirectory); numbers within each type are consecutive with no gaps
+- **Cons**: Cannot see chronological order across types (does analyses/001 come before or after plans/001?)
 
-### C：日期前缀 + slug
+### C: Date prefix + slug
 
 ```
 docs/ae/
@@ -54,18 +54,18 @@ docs/ae/
   plans/2026-03-23-implement-auth.md
 ```
 
-- **优点**：自带时间信息；无需计数器；天然排序
-- **缺点**：同一天多个产出需要额外区分（加序号？）；文件名较长
+- **Pros**: Time information is built in; no counter needed; natural ordering
+- **Cons**: Multiple outputs on the same day need extra disambiguation (add a sequence number?); filenames are longer
 
-## 格式规范（各选项通用）
+## Format Conventions (applies to all options)
 
-无论选哪种命名方式，格式统一为：
+Regardless of which naming scheme is chosen, format is unified as:
 
-- **文件格式**：Markdown + YAML frontmatter
-- **frontmatter 必含字段**：`id`, `title`, `type`（analysis/discussion/plan/review/trace）, `created`, `status`
-- **讨论目录结构不变**：discuss 因为多文件性质（index + topics + conclusion），保持目录形式
-- **其余为单文件**：analyses、plans、reviews、traces 各为单个 .md 文件
+- **File format**: Markdown + YAML frontmatter
+- **Required frontmatter fields**: `id`, `title`, `type` (analysis/discussion/plan/review/trace), `created`, `status`
+- **Discussion directory structure unchanged**: discuss retains its directory form due to its multi-file nature (index + topics + conclusion)
+- **All others are single files**: analyses, plans, reviews, traces are each a single .md file
 
-## 建议
+## Recommendation
 
-推荐 **B：每类独立编号 + slug**。实现最简单，语义清晰。跨类型的时间关系通过 frontmatter 的 `created` 字段查询，不需要靠文件名编码。discuss 已有的 `NNN-slug` 目录约定自然延续。
+Recommend **B: Per-type independent numbering + slug**. Simplest to implement, semantically clear. Cross-type chronological relationships are queried via the frontmatter `created` field and don't need to be encoded in filenames. The existing `NNN-slug` directory convention for discuss carries over naturally.

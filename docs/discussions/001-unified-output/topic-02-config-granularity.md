@@ -1,47 +1,47 @@
 ---
 id: "02"
-title: "pipeline.yml 配置粒度"
+title: "pipeline.yml Config Granularity"
 status: decided
 created: 2026-03-22
-decision: "D — 语义槽 + 合理默认值，无 root"
-rationale: "从 SmartPal 实际用例出发：已有项目的路径天然兼容默认值，无需迁移。新项目零配置即可用。root 概念不必要。同时修正议题 01 的决定。"
+decision: "D — Semantic slots + sensible defaults, no root"
+rationale: "Derived from SmartPal's real use case: existing projects' paths naturally align with defaults, requiring no migration. New projects work with zero configuration. The root concept is unnecessary. Also corrects the decision from topic 01."
 ---
 
-# 议题：pipeline.yml 配置粒度
+# Topic: pipeline.yml Config Granularity
 
-## 背景
+## Background
 
-当前 pipeline.yml 的 `output` 块有 `output.plans` 和 `output.review` 两个独立路径，且 think 自己又引入了 `output.analyses`。需要决定 pipeline.yml 给用户多大的配置自由度。这个决策依赖议题 01（根目录选择）。
+The current pipeline.yml `output` block has two independent paths, `output.plans` and `output.review`, and think has introduced its own `output.analyses`. We need to decide how much configuration freedom pipeline.yml should give users. This decision depends on topic 01 (root directory choice).
 
-## 选项
+## Options
 
-### A：只配根目录
+### A: Configure root directory only
 
 ```yaml
 output:
-  root: "docs/ae/"    # 唯一可配项，默认 docs/ae/
+  root: "docs/ae/"    # single configurable item, default docs/ae/
 ```
 
-子目录 `analyses/`、`discussions/`、`plans/` 等由各 skill 内部决定，不可配。
+Subdirectories `analyses/`, `discussions/`, `plans/`, etc. are determined internally by each skill and are not configurable.
 
-- **优点**：配置极简，一行搞定；不会出现路径配错的问题；skill 之间有固定的相对路径引用
-- **缺点**：无法单独把 plans 放到别的位置；灵活性最低
+- **Pros**: Minimal config, one line does it all; no risk of misconfigured paths; skills have fixed relative path references to each other
+- **Cons**: Cannot place plans in a different location independently; least flexible
 
-### B：根目录 + 可覆盖子目录
+### B: Root directory + overridable subdirectories
 
 ```yaml
 output:
-  root: "docs/ae/"            # 默认根
-  analyses: "analyses/"       # 相对于 root，可覆盖
+  root: "docs/ae/"            # default root
+  analyses: "analyses/"       # relative to root, overridable
   discussions: "discussions/"
   plans: "plans/"
   reviews: "reviews/"
 ```
 
-- **优点**：兼顾简洁和灵活；大多数用户只改 root；有特殊需求的可以逐项覆盖
-- **缺点**：配置项多了；子目录覆盖后 skill 之间的交叉引用可能断裂
+- **Pros**: Balances simplicity and flexibility; most users only change root; special needs can be handled per-item
+- **Cons**: More config options; overriding subdirectories may break cross-skill references
 
-### C：每个 skill 独立配置（当前方向）
+### C: Per-skill independent configuration (current direction)
 
 ```yaml
 output:
@@ -51,33 +51,33 @@ output:
   discussions: "docs/discussions/"
 ```
 
-- **优点**：最大灵活性；适合有强烈目录偏好的项目
-- **缺点**：配置冗长；各路径之间没有关联，容易散乱；没有统一感；当前实际也没人用
+- **Pros**: Maximum flexibility; suitable for projects with strong directory preferences
+- **Cons**: Verbose config; no relationship between paths, easy to become scattered; no unified feel; nobody is actually using this today
 
-### D：语义槽 + 合理默认值，无 root（讨论中产生的新方案）
+### D: Semantic slots + sensible defaults, no root (option emerging from discussion)
 
 ```yaml
 output:
-  discussions: "docs/discussions/"   # 默认值
-  plans: "docs/plans/"              # 默认值
-  milestones: "docs/milestones/"    # 默认值
-  backlog: "docs/backlog/"          # 默认值
-  reviews: "docs/reviews/"          # 默认值
-  analyses: "docs/analyses/"        # 默认值
+  discussions: "docs/discussions/"   # default value
+  plans: "docs/plans/"              # default value
+  milestones: "docs/milestones/"    # default value
+  backlog: "docs/backlog/"          # default value
+  reviews: "docs/reviews/"          # default value
+  analyses: "docs/analyses/"        # default value
 ```
 
-不需要 root 概念。每个 slot 独立，有合理默认值。不配 = 用默认值。
+No root concept needed. Each slot is independent with a sensible default. Omitting config = use default.
 
-关键验证：SmartPal 已有的 `docs/discussions/`、`docs/milestones/` 天然匹配默认值，**零迁移**。
+Key validation: SmartPal's existing `docs/discussions/`, `docs/milestones/` naturally align with the defaults — **zero migration**.
 
-同时修正议题 01 — 不需要 `docs/ae/` 隔离层，因为：
-- 新项目的 docs/ 里本来就全是 ae 产出
-- 加 ae/ 是 YAGNI
-- ae 产出本身就是项目文档，不应被隔离
+Also corrects topic 01 — no need for a `docs/ae/` isolation layer, because:
+- In new projects, everything in docs/ is ae output anyway
+- Adding ae/ is YAGNI
+- ae outputs are project documentation and should not be isolated
 
-- **优点**：零配置能用；已有项目向后兼容；agent 读取逻辑简单（一个 slot 一个路径）；不需要 root + 相对路径的解析
-- **缺点**：配置项比 A 多（但都可省略）
+- **Pros**: Works with zero config; backward compatible for existing projects; simple agent read logic (one slot, one path); no need to resolve root + relative path
+- **Cons**: More config items than A (but all optional)
 
-## 建议
+## Recommendation
 
-推荐 **D：语义槽 + 合理默认值**。这是从 SmartPal 实际用例倒推出的方案——已有项目天然兼容，新项目零配置。比选项 C 多了"默认值"的概念，比选项 A/B 少了"root"的概念。
+Recommend **D: Semantic slots + sensible defaults**. This is a solution derived by working backwards from SmartPal's real use case — existing projects are naturally compatible, new projects need zero configuration. It adds the concept of "defaults" compared to option C, and removes the concept of "root" compared to options A/B.

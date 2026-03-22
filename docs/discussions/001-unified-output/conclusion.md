@@ -1,51 +1,51 @@
 ---
 id: "001"
-title: "统一 ae 插件文件输出规范 — 结论"
+title: "Unified ae Plugin File Output Conventions — Conclusion"
 concluded: 2026-03-22
 plan: ""
 ---
 
-# 统一 ae 插件文件输出规范 — 结论
+# Unified ae Plugin File Output Conventions — Conclusion
 
-## 决策摘要
+## Decision Summary
 
-| # | 议题 | 决定 | 原因 |
-|---|------|------|------|
-| 1 | 输出根目录选择 | 废弃，被议题 2 合并 | 不需要统一根目录 |
-| 2 | pipeline.yml 配置粒度 | 语义槽 + 合理默认值，无 root | SmartPal 零迁移兼容；新项目零配置即用；agent 读取简单 |
-| 3 | 文件命名与格式规范 | 每类独立编号 + slug | 实现简单，与已有约定兼容，跨类型时间靠 frontmatter |
-| 4 | 终端 skill 持久化策略 | 临时持久化 + 主动提醒正式保存 | 解决 compact 丢信息；不强制文件膨胀；用户不需记参数 |
+| # | Topic | Decision | Rationale |
+|---|-------|----------|-----------|
+| 1 | Output root directory | Superseded, merged into topic 2 | No unified root directory needed |
+| 2 | pipeline.yml config granularity | Semantic slots + sensible defaults, no root | SmartPal zero-migration compatible; new projects work out of the box; simple for agents to read |
+| 3 | File naming and format conventions | Per-type independent numbering + slug | Simplest to implement, compatible with existing conventions, cross-type chronology via frontmatter |
+| 4 | Terminal skill persistence strategy | Temp persistence + proactive save reminder | Solves compact information loss; no forced file bloat; user doesn't need to remember parameters |
 
-## 关键约束
+## Key Constraints
 
-### 正式输出
+### Formal Output
 
-1. **pipeline.yml output 块是唯一路径真相** — 所有写文件的 skill 必须从这里读路径
-2. **每个 slot 有默认值** — 不配 = 用默认值，默认值匹配 SmartPal 现有结构
-3. **命名统一 `NNN-slug`** — 三位编号，每类独立递增，slug 从标题生成
-4. **格式统一 Markdown + YAML frontmatter** — 必含 `id`, `title`, `type`, `created`, `status`
+1. **pipeline.yml output block is the single source of truth for paths** — all file-writing skills must read paths from here
+2. **Every slot has a default value** — omitting config = use default, defaults match SmartPal's existing structure
+3. **Unified naming `NNN-slug`** — three-digit number, independently incremented per type, slug generated from title
+4. **Unified format Markdown + YAML frontmatter** — must include `id`, `title`, `type`, `created`, `status`
 
-### 临时持久化（scratch）
+### Temporary Persistence (scratch)
 
-5. **scratch 目录默认 `~/.claude/scratch/<project-hash>/`** — 不污染 repo，跨 session 可靠，按项目隔离
-6. **pipeline.yml 可选覆盖**：`scratch: "~/.claude/scratch/"` — 想 commit 给队友看的团队可改为 `.claude/scratch/`
-7. **所有 skill 产出自动写 scratch** — session compact/crash/close 后信息不丢
+5. **scratch directory defaults to `~/.claude/scratch/<project-hash>/`** — does not pollute repo, reliable across sessions, isolated per project
+6. **Optional override in pipeline.yml**: `scratch: "~/.claude/scratch/"` — teams that want teammates to see it can change to `.claude/scratch/`
+7. **All skill outputs automatically written to scratch** — information is not lost after session compact/crash/close
 
-### 持久化提醒策略
+### Persistence Reminder Strategy
 
-8. **高价值产出**（trace、consensus、think）→ 完成时立即问："结果已暂存，要正式保存到 `docs/xxx/` 吗？"
-9. **流水线产出**（code-review、team）→ 不问，自动写 scratch，格式为 action log：
-   - 每个 finding 有 `action`（fix now / backlog / skip）和 `status`（pending / in_progress / resolved）
-   - 进 backlog 的写 BL-xxx 到 `output.backlog`，标记 resolved
-   - 当场修的标记 in_progress，修完标记 resolved + commit hash
-10. **session 恢复** — agent 启动时扫 scratch，发现 `status: in_progress` 的记录主动提醒："上次有未完成的操作，要继续吗？"
-11. **feature gate 归档** — `/ae:review` 时批量展示本轮 scratch 记录，问用户要不要归档
+8. **High-value outputs** (trace, consensus, think) → ask immediately upon completion: "Result saved temporarily. Want to formally save to `docs/xxx/`?"
+9. **Pipeline outputs** (code-review, team) → no prompt, auto-write to scratch as action log:
+   - Each finding has `action` (fix now / backlog / skip) and `status` (pending / in_progress / resolved)
+   - Items going to backlog are written as BL-xxx to `output.backlog`, marked resolved
+   - Items fixed on the spot are marked in_progress, then resolved + commit hash when done
+10. **Session recovery** — on agent startup, scan scratch; if `status: in_progress` records are found, proactively remind: "There are unfinished operations from last time. Want to continue?"
+11. **Feature gate archiving** — during `/ae:review`, show all scratch records from this cycle in bulk and ask the user whether to archive them
 
-### 结构调整
+### Structural Changes
 
-12. **cross-family-review 不是用户 skill** — 应从 skills/ 移出，改为参考文档
+12. **cross-family-review is not a user skill** — should be moved out of skills/ and converted to a reference document
 
-## pipeline.yml output 块定义
+## pipeline.yml output Block Definition
 
 ```yaml
 # --- Output Directories ---
@@ -57,11 +57,11 @@ output:
   reviews: "docs/reviews/"          # ae:review
   analyses: "docs/analyses/"        # ae:think
 
-# --- Scratch (临时持久化) ---
-scratch: "~/.claude/scratch/"        # 默认值，一般不用改
+# --- Scratch (temporary persistence) ---
+scratch: "~/.claude/scratch/"        # default value, generally no need to change
 ```
 
-## scratch action log 格式
+## scratch action log Format
 
 ```yaml
 # ~/.claude/scratch/<project-hash>/code-review-2026-03-22-001.md
@@ -86,28 +86,28 @@ status: in_progress    # pending | in_progress | resolved
    - status: resolved
 ```
 
-## 需要修改的文件
+## Files That Need Modification
 
-### 模板
-- `plugins/ae/templates/pipeline.template.yml` — output 块改为语义槽 + 默认值，加 scratch
+### Template
+- `plugins/ae/templates/pipeline.template.yml` — update output block to semantic slots + defaults, add scratch
 
-### Skills（读/写路径统一 + scratch）
-- `plugins/ae/skills/analyze/SKILL.md` — 从硬编码改为读 `output.discussions`
-- `plugins/ae/skills/discuss/SKILL.md` — 从硬编码改为读 `output.discussions`
-- `plugins/ae/skills/plan/SKILL.md` — 改为读 `output.plans`，加默认值
-- `plugins/ae/skills/work/SKILL.md` — 改为读 `output.milestones` + `output.backlog`
-- `plugins/ae/skills/review/SKILL.md` — 改为读 `output.reviews` + `output.backlog` + scratch 归档
-- `plugins/ae/skills/think/SKILL.md` — 改为读 `output.analyses` + 完成后提醒保存
-- `plugins/ae/skills/setup/SKILL.md` — 生成逻辑匹配新模板
-- `plugins/ae/skills/trace/SKILL.md` — 加 scratch + 完成后提醒保存
-- `plugins/ae/skills/consensus/SKILL.md` — 加 scratch + 完成后提醒保存
-- `plugins/ae/skills/code-review/SKILL.md` — 加 scratch action log
-- `plugins/ae/skills/team/SKILL.md` — 加 scratch
+### Skills (unified path reading/writing + scratch)
+- `plugins/ae/skills/analyze/SKILL.md` — change from hardcoded to reading `output.discussions`
+- `plugins/ae/skills/discuss/SKILL.md` — change from hardcoded to reading `output.discussions`
+- `plugins/ae/skills/plan/SKILL.md` — change to reading `output.plans`, add default value
+- `plugins/ae/skills/work/SKILL.md` — change to reading `output.milestones` + `output.backlog`
+- `plugins/ae/skills/review/SKILL.md` — change to reading `output.reviews` + `output.backlog` + scratch archiving
+- `plugins/ae/skills/think/SKILL.md` — change to reading `output.analyses` + save reminder on completion
+- `plugins/ae/skills/setup/SKILL.md` — generation logic to match new template
+- `plugins/ae/skills/trace/SKILL.md` — add scratch + save reminder on completion
+- `plugins/ae/skills/consensus/SKILL.md` — add scratch + save reminder on completion
+- `plugins/ae/skills/code-review/SKILL.md` — add scratch action log
+- `plugins/ae/skills/team/SKILL.md` — add scratch
 
-### 结构调整
-- `plugins/ae/skills/cross-family-review/` — 移出 skills/，改为参考文档
+### Structural Changes
+- `plugins/ae/skills/cross-family-review/` — move out of skills/, convert to reference document
 
-## 下一步
+## Next Steps
 
-→ 运行 `/ae:plan` 基于这些决策生成执行计划。
-  引用本结论：`docs/discussions/001-unified-output/conclusion.md`
+→ Run `/ae:plan` based on these decisions to generate an execution plan.
+  Reference this conclusion: `docs/discussions/001-unified-output/conclusion.md`
