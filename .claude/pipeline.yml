@@ -1,19 +1,30 @@
 # .claude/pipeline.yml — Agentic Engineering (self-hosted)
+# Updated by /ae:setup update
 
 test:
-  command: "cd mcp-servers/gemini && npm run build"
+  command: ""
 
 lint:
   command: ""
 
+# --- Output Directories ---
 output:
-  review: "results/reviews/"
-  plans: "docs/milestones/"
+  discussions: "docs/discussions/"
+  plans: "docs/plans/"
+  milestones: "docs/milestones/"
+  backlog: "docs/backlog/"
+  reviews: "docs/reviews/"
+  analyses: "docs/analyses/"
 
+# --- Scratch (临时持久化) ---
+# scratch: "~/.claude/scratch/"
+
+# --- Agents ---
 agents:
   developers: []
   code_reviewers: []
 
+# --- Cross-Family ---
 cross_family:
   codex: true
   gemini: true

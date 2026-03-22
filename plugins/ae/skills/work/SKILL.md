@@ -81,6 +81,9 @@ If `agents.developers` is empty, Lead executes directly (no teams).
 
 ## TDD Cycle (all modes)
 
+If `test.command` is empty → skip TDD cycle, implement directly.
+
+If `test.command` is set:
 1. **Write test** — based on step's AC, write a failing test
 2. **Confirm red** — run test, confirm failure (passes → test too loose, fix)
 3. **Cross-family testgen** — use Codex to suggest edge cases
@@ -93,7 +96,7 @@ Complex steps → multiple TDD rounds (one per subtask).
 
 ## Pre-commit Checks (every commit must pass all)
 
-1. **Tests green** — run the test command from pipeline.yml
+1. **Tests green** — run the test command from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping tests"
 2. **Code Review** — execute `/ae:code-review` (subagent mode, fast)
 3. **Disposition table** — classify all findings:
    - Fix now (< 5 min, fix immediately)

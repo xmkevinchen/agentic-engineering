@@ -63,6 +63,15 @@ When `pipeline.yml` is absent or a slot is missing, skills use these defaults:
 
 Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is missing or pipeline.yml doesn't exist, fall back to the default above. This ensures zero-config works for new projects.
 
+## Test & Lint Fallback
+
+`test.command` and `lint.command` may be empty. Skills that use them (ae:work, ae:code-review) MUST handle empty values gracefully:
+
+- **Has value** → run the command
+- **Empty** → skip, show `"⚠️ No test/lint command configured, skipping"`
+
+Empty does NOT block execution. Not all projects have tests, not all changes need testing.
+
 ## Cross-Family Setup
 
 After writing pipeline.yml, check cross-family dependencies:
