@@ -10,7 +10,7 @@ Build multi-perspective consensus on: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family config)
 2. If missing → suggest `/ae:setup`
 
@@ -24,7 +24,7 @@ Build multi-perspective consensus on: **$ARGUMENTS**
 
 Create a Team with explicit stances. **Lead: mediator** (collects and synthesizes). Each agent argues from their assigned position.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents as additional neutral evaluators.
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents as additional neutral evaluators. If a proxy fails to connect, it should SendMessage to **mediator** (the lead) that it's unavailable, then exit gracefully.
 
 ```
 TeamCreate(team_name: "<topic>-consensus")
@@ -87,7 +87,7 @@ Close the Team.
 
 ## Step 4: Persist
 
-1. **Auto-save to scratch**: Write verdict to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `consensus-YYYY-MM-DD-NNN.md` with frontmatter `type: consensus`, `created`, `status: done`, `proposal: <$ARGUMENTS>`.
+1. **Auto-save to scratch**: Write verdict to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `consensus-YYYY-MM-DD-NNN.md` with frontmatter `type: consensus`, `project: <repo-name>`, `created`, `status: done`, `proposal: <$ARGUMENTS>`.
 2. **Ask user**: Use `AskUserQuestion` — "辩论结果已暂存。要正式保存到 `<output.analyses>` 吗？"
    - **Yes** → copy to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-consensus-slug.md`
    - **No** → keep in scratch only

@@ -53,7 +53,7 @@ If `index.md` already exists, update `pipeline.analyze` to `done` and add the an
 
 Create a Team and launch Teammates in parallel.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it exits gracefully.
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **challenger** that it's unavailable, then exit gracefully — so challenger doesn't hang waiting.
 
 ```
 TeamCreate(team_name: "<topic>-analyze")

@@ -19,7 +19,7 @@ Perform systematic deep analysis on: **$ARGUMENTS**
 
 Create a Team for parallel deep investigation. **Lead: architect** (collects and synthesizes).
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents.
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully.
 
 ```
 TeamCreate(team_name: "<topic>-deep-think")

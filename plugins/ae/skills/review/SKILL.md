@@ -11,7 +11,7 @@ Deep review of all changes for **$ARGUMENTS**.
 ## Pre-checks (all must pass before starting)
 
 ### Check 0: Scratch Recovery
-Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？" Resolve before proceeding.
+Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？" Resolve before proceeding.
 
 ### Check 1: Plan All Done
 - Read the plan file
@@ -43,7 +43,7 @@ TaskCreate("Cross-family challenge + synthesis")
 
 ### 3. Launch Teammates in Parallel
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy agent fails to connect to its MCP server, it should SendMessage to Lead and exit gracefully — do not block the team.
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy agent fails to connect to its MCP server, it should SendMessage to **challenger** (not Lead) and exit gracefully — challenger needs to know so it doesn't hang waiting for proxy findings.
 
 In **one message** launch all (`run_in_background: true`):
 

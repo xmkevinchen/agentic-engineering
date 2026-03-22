@@ -54,6 +54,7 @@ Do NOT ask user about formal persistence — code-review is high-frequency, low-
 ```markdown
 ---
 type: code-review
+project: <repo-name>   # git repo name, for cross-project isolation
 created: YYYY-MM-DDTHH:MM:SS
 status: pending        # pending | in_progress | resolved
 ---

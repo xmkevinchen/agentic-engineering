@@ -10,7 +10,7 @@ Create an execution plan for: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
 1. Confirm `.claude/pipeline.yml` exists
 2. If missing → suggest `/ae:setup`, **refuse to execute**
 
@@ -77,7 +77,7 @@ One sentence: what problem does this feature solve.
 
 After the plan is written, create a Team for parallel review.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it exits gracefully.
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully — so the lead doesn't hang waiting.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")

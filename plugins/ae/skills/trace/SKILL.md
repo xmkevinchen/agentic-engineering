@@ -10,7 +10,7 @@ Trace: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
 
 ## Step 1: Determine Mode
 
@@ -29,7 +29,7 @@ Ask user if not obvious:
 
 Create a Team for parallel trace validation. **Lead: architect** (validates and produces final trace).
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents.
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully.
 
 ```
 TeamCreate(team_name: "<target>-trace")
@@ -101,7 +101,7 @@ Close the Team.
 
 ## Step 5: Persist
 
-1. **Auto-save to scratch**: Write results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `trace-YYYY-MM-DD-NNN.md` with frontmatter `type: trace`, `created`, `status: done`, `target: <$ARGUMENTS>`.
+1. **Auto-save to scratch**: Write results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `trace-YYYY-MM-DD-NNN.md` with frontmatter `type: trace`, `project: <repo-name>`, `created`, `status: done`, `target: <$ARGUMENTS>`.
 2. **Ask user**: Use `AskUserQuestion` — "Trace 结果已暂存。要正式保存到 `<output.analyses>` 吗？"
    - **Yes** → copy to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-trace-slug.md`
    - **No** → keep in scratch only
