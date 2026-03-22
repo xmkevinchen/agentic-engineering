@@ -151,5 +151,8 @@ P2/P3 per standard rule (fix / defer / backlog).
 1. Challenger final report (with discussion evidence, cross-family opinions, disposition recommendations)
 2. Fixups squashed
 3. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
-4. **Scratch archive**: List all scratch files from this feature's work session. Ask user: "本轮有 N 条 scratch 记录（code-review, team 等），要归档到 `<output.reviews>` 吗？" Yes → move to reviews dir. No → leave in scratch.
+4. **Scratch archive + cleanup**: List all scratch files for current project (`project` field matches repo name).
+   - Ask user: "本轮有 N 条 scratch 记录（code-review, team 等），要归档到 `<output.reviews>` 吗？" Yes → copy to reviews dir. No → skip.
+   - Then ask: "要清理已完成的 scratch 文件吗？" Yes → delete files with `status: resolved` or `status: done`. No → keep all.
+   - **Never delete `status: in_progress` files** — these represent unfinished work.
 5. Prompt user to create PR
