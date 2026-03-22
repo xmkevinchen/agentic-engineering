@@ -19,7 +19,7 @@ Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratc
 - If pending → suggest `/ae:work`, **refuse to execute**
 
 ### Check 2: Tests Green
-- Run the test command from pipeline.yml
+- Run the test command from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping tests"
 - If fail → fix first, **refuse to execute**
 
 ## Execution: Agent Teams Review
@@ -151,8 +151,10 @@ P2/P3 per standard rule (fix / defer / backlog).
 1. Challenger final report (with discussion evidence, cross-family opinions, disposition recommendations)
 2. Fixups squashed
 3. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
-4. **Scratch archive + cleanup**: List all scratch files for current project (`project` field matches repo name).
-   - Ask user: "本轮有 N 条 scratch 记录（code-review, team 等），要归档到 `<output.reviews>` 吗？" Yes → copy to reviews dir. No → skip.
-   - Then ask: "要清理已完成的 scratch 文件吗？" Yes → delete files with `status: resolved` or `status: done`. No → keep all.
+4. **Scratch archive + cleanup**: List all scratch files for current project (`project` field matches repo name). Ask user once with AskUserQuestion:
+   - "本轮有 N 条 scratch 记录。怎么处理？"
+   - Option A: "归档并清理" → copy to `<output.reviews>`, then delete `status: resolved`/`done` files
+   - Option B: "仅归档" → copy to `<output.reviews>`, keep scratch files
+   - Option C: "跳过" → do nothing
    - **Never delete `status: in_progress` files** — these represent unfinished work.
 5. Prompt user to create PR

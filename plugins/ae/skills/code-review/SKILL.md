@@ -56,7 +56,7 @@ Do NOT ask user about formal persistence — code-review is high-frequency, low-
 type: code-review
 project: <repo-name>   # git repo name, for cross-project isolation
 created: YYYY-MM-DDTHH:MM:SS
-status: pending        # pending | in_progress | resolved
+status: in_progress    # in_progress → resolved (when all findings addressed)
 ---
 
 ## Findings
@@ -65,3 +65,5 @@ status: pending        # pending | in_progress | resolved
    - action: fix now | backlog BL-NNN | skip
    - status: pending | in_progress | resolved
 ```
+
+Write scratch file at start of review with `status: in_progress`. Update to `status: resolved` after all findings are addressed and committed.

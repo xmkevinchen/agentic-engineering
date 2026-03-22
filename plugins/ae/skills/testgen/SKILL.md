@@ -10,8 +10,8 @@ Generate tests for: **$ARGUMENTS**
 
 ## Pre-check
 
-1. Confirm `.claude/pipeline.yml` exists
-2. Read `test_command` and `test_framework` from pipeline.yml
+1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "首次使用 ae 插件，正在初始化项目配置..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
+2. Read `test.command` and `test.framework` from pipeline.yml
 
 ## Step 1: Analyze
 
@@ -71,6 +71,6 @@ Write tests following project conventions:
 
 ## Step 4: Verify
 
-Run `test_command` from pipeline.yml. All new tests must pass.
+Run `test.command` from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping test verification". All new tests must pass.
 
 Show summary: number of tests generated, coverage areas, any skipped scenarios.
