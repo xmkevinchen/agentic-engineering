@@ -10,6 +10,7 @@ Create an execution plan for: **$ARGUMENTS**
 
 ## Pre-check
 
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
 1. Confirm `.claude/pipeline.yml` exists
 2. If missing → suggest `/ae:setup`, **refuse to execute**
 
@@ -23,11 +24,22 @@ Create an execution plan for: **$ARGUMENTS**
 
 ## Step 2: Write Plan
 
-Write the plan file to the directory specified in `pipeline.yml` → `output.plans`.
+Write the plan file to the directory specified in `pipeline.yml` → `output.plans` (default: `docs/plans/`).
+
+File naming: `NNN-slug.md` — three-digit sequential number + slug derived from title.
 
 ### Structure
 
 ```markdown
+---
+id: "NNN"
+title: "<title>"
+type: plan
+created: YYYY-MM-DD
+status: draft
+discussion: ""           # link to conclusion.md if exists
+---
+
 # Feature: <title>
 
 ## Goal

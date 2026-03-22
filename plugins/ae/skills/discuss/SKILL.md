@@ -10,16 +10,18 @@ Start a structured design discussion for: **$ARGUMENTS**
 
 ## Mode Detection
 
-- **Continue mode**: if `$ARGUMENTS` points to an existing `docs/discussions/NNN-*` directory, load index.md and continue pending topics.
+- **Continue mode**: if `$ARGUMENTS` points to an existing discussion directory, load index.md and continue pending topics.
 - **Create mode**: otherwise, treat $ARGUMENTS as a topic description — research and create a new discussion.
+
+Read `pipeline.yml` → `output.discussions` (default: `docs/discussions/`) for the base directory.
 
 ## Create Mode
 
 ### 1. Find or Create Discussion Directory
 
-Check `docs/discussions/` for an existing related directory (e.g., from a prior `/ae:analyze`).
+Check `<output.discussions>` for an existing related directory (e.g., from a prior `/ae:analyze`).
 - **Exists**: add topics to that directory.
-- **New**: find the highest existing number, take next sequential (zero-padded 3 digits). Create `docs/discussions/NNN-slug/`.
+- **New**: find the highest existing number, take next sequential (zero-padded 3 digits). Create `<output.discussions>/NNN-slug/`.
 
 ### 2. Research Codebase
 

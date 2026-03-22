@@ -1,127 +1,181 @@
-# Agentic Engineering (ae)
+# Agentic Engineering
 
-A Claude Code plugin for multi-agent, cross-family software engineering workflows.
+An operating system for AI agents in software engineering.
 
-## What It Does
+13 specialized agents. 3 model families. One disciplined pipeline. Built as a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin.
 
-**ae** brings structured engineering discipline to AI-assisted development:
+## The Problem
 
-- **Multi-agent teams** — specialized agents (architect, security reviewer, challenger, etc.) collaborate via Agent Teams with structured communication protocols
-- **Cross-family review** — every review includes Claude + Codex (OpenAI) + Gemini (Google) perspectives to eliminate single-family blind spots
-- **TDD-first workflow** — write test → red → implement → green → review → commit
-- **Structured planning** — plans with acceptance criteria, reviewed by agent teams before execution
-- **Decision persistence** — all design decisions persisted to docs, surviving context window compaction
+AI-assisted coding is powerful but unstructured. You prompt one model, hope for the best, and move on. There's no review process, no second opinion, no persistent memory of decisions made.
 
-## Workflow
+**ae** treats AI agents the way an operating system treats processes — scheduling them, routing communication between them, abstracting away the differences between model families, and persisting state to disk.
+
+| OS Concept | ae Equivalent |
+|-----------|---------------|
+| Process scheduler | Agent Teams — dynamic formation, parallel execution, task-based selection |
+| Filesystem | Persistent artifacts — plans, analysis docs, review results, decision records |
+| IPC | Structured agent protocols — handoff, challenge/response, consensus |
+| Device drivers | MCP servers — Codex and Gemini abstracted behind a uniform interface |
+| Shell | 12 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, ...) |
+
+## Quick Start
+
+```bash
+# Install the plugin
+claude plugin marketplace add <repo-url>
+claude plugin install ae
+
+# In your project
+/ae:setup          # creates .claude/pipeline.yml
+/ae:plan           # generate a plan with acceptance criteria
+/ae:work           # execute it (TDD + commit + review loop)
+```
+
+## The Pipeline
 
 ```
-/ae:analyze (optional) → /ae:discuss (optional) → /ae:plan → /ae:work (step by step) → /ae:review
+/ae:analyze  →  /ae:discuss  →  /ae:plan  →  /ae:work       →  /ae:review
+ (optional)      (optional)     (required)   (step by step)    (feature gate)
 ```
 
-| Command | Purpose |
-|---------|---------|
-| `/ae:setup` | Initialize project pipeline config |
-| `/ae:analyze` | Research codebase topic with agent teams |
-| `/ae:discuss` | Structured design discussion, decisions persisted |
-| `/ae:plan` | Generate plan with ACs + agent team plan review |
-| `/ae:work` | Execute plan (TDD + commit + review loop) |
+Each stage produces artifacts that feed the next. Plans reference analysis docs. Work follows plan steps. Reviews validate against acceptance criteria. Everything persists to disk — surviving context window compaction.
+
+## Commands
+
+### Core Workflow
+
+| Command | What it does |
+|---------|-------------|
+| `/ae:setup` | Initialize pipeline config (`.claude/pipeline.yml`) — auto-detects test/lint commands |
+| `/ae:plan` | Generate an execution plan with acceptance criteria, reviewed by agent teams |
+| `/ae:work` | Execute the plan step by step: write test, red, implement, green, review, commit |
+| `/ae:review` | Deep multi-agent review + automatic fixups — the feature completion gate |
+
+### Analysis & Design
+
+| Command | What it does |
+|---------|-------------|
+| `/ae:analyze` | Research a codebase topic with agent teams, output persistent analysis docs |
+| `/ae:discuss` | Structured design discussion with decision persistence |
+| `/ae:think` | Deep multi-step reasoning for hard architecture decisions or complex bugs |
+| `/ae:consensus` | Structured debate (for/against/neutral) to evaluate a proposal |
+
+### Development Support
+
+| Command | What it does |
+|---------|-------------|
 | `/ae:code-review` | Quick pre-commit review (Claude + Codex + Gemini) |
-| `/ae:review` | Deep multi-agent review + fixup (feature gate) |
-| `/ae:think` | Deep multi-agent analysis for hard problems |
-| `/ae:consensus` | Structured debate (for/against/neutral) on proposals |
 | `/ae:testgen` | Generate test suites with edge case coverage |
-| `/ae:trace` | Trace execution flow or map dependencies |
+| `/ae:trace` | Trace execution flow or map dependency chains |
+| `/ae:team` | Spin up an ad-hoc agent team — auto-selects agents based on your task |
 
-## Agents (11)
+## Agents
 
-### Review
-| Agent | Role |
-|-------|------|
-| `architecture-reviewer` | Module boundaries, dependency direction, consistency |
-| `code-reviewer` | General code quality, SOLID, security, testability |
-| `performance-reviewer` | Algorithms, DB queries, memory, I/O hot paths |
-| `security-reviewer` | Auth, injection, data protection, secrets |
-| `simplicity-reviewer` | Over-engineering, YAGNI, unnecessary abstraction |
+13 specialized agents, organized in three groups:
 
-### Research
-| Agent | Role |
-|-------|------|
-| `archaeologist` | Deep-dive existing code, trace dependencies |
+### Review Agents — the quality gate
+| Agent | Focus |
+|-------|-------|
+| `architecture-reviewer` | Module boundaries, dependency direction, architectural consistency |
+| `code-reviewer` | Code quality, SOLID principles, security, testability |
+| `performance-reviewer` | Algorithms, DB queries, memory usage, I/O hot paths |
+| `security-reviewer` | Auth, injection, data protection, secrets management |
+| `simplicity-reviewer` | Over-engineering detection, YAGNI enforcement |
+
+### Research Agents — the knowledge layer
+| Agent | Focus |
+|-------|-------|
+| `archaeologist` | Deep-dive into existing code, trace dependencies and history |
 | `dependency-analyst` | Validate parallel feasibility, find hidden coupling |
-| `standards-expert` | Industry best practices comparison |
+| `standards-expert` | Industry best practices and conventions comparison |
 
-### Workflow
-| Agent | Role |
-|-------|------|
-| `architect` | Step decomposition, parallel strategy |
-| `challenger` | Devil's advocate, cross-family ambassador |
-| `qa` | Code review + cross-family after each step |
+### Workflow Agents — the runtime
+| Agent | Focus |
+|-------|-------|
+| `architect` | Step decomposition, parallel execution strategy |
+| `challenger` | Devil's advocate, cross-family decision-maker |
+| `qa` | Post-step code review + cross-family validation |
+| `codex-proxy` | Routes requests to Codex (OpenAI) via MCP |
+| `gemini-proxy` | Routes requests to Gemini (Google) via MCP |
+
+Agent teams form dynamically. `/ae:team` picks the right combination for your task. Commands like `/ae:review` assemble a full review panel automatically.
+
+## Cross-Family Architecture
+
+No single model family catches everything. ae abstracts three families behind a uniform MCP interface:
+
+| Family | Channel | Role |
+|--------|---------|------|
+| Claude | Built-in | Primary development and agent orchestration |
+| Codex (OpenAI) | `codex` MCP server | Cross-family baseline, multi-turn via `codex-reply` |
+| Gemini (Google) | Bundled MCP server | Targeted review, multi-turn via `reply` with session management |
+
+The proxy agents (`codex-proxy`, `gemini-proxy`) act as device drivers — translating between ae's internal protocols and each family's MCP interface. Without them, the system still runs; you just lose cross-family coverage.
+
+### Gemini MCP Server
+
+Bundled in `mcp-servers/gemini/`. TypeScript, stdio transport.
+
+- Multi-turn conversations (`chat` + `reply` with sessionId)
+- Switch models mid-conversation (flash to pro)
+- Dual auth: `GEMINI_API_KEY` env var or OAuth
+- Auto session cleanup (30 min TTL)
 
 ## Installation
 
 ### Prerequisites
 
-- [Claude Code](https://code.claude.com) v1.0.33+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) v1.0.33+
 - [Node.js](https://nodejs.org) (for Gemini MCP server)
 
-### Cross-family (optional but recommended)
+### Cross-Family Setup (optional but recommended)
 
-| Family | Requirement | Install |
-|--------|------------|---------|
-| Codex (OpenAI) | `codex` CLI | `npm install -g @openai/codex` |
-| Gemini (Google) | API key or OAuth | Set `GEMINI_API_KEY` or run `gemini auth` |
+| Family | How to set up |
+|--------|--------------|
+| Codex (OpenAI) | `npm install -g @openai/codex` |
+| Gemini (Google) | Set `GEMINI_API_KEY` env var, or run `gemini auth` for OAuth |
 
-Without these, the plugin still works but loses cross-family blind spot coverage.
+`/ae:setup` guides you through cross-family configuration and writes status to `.claude/cross-family-status.json`.
 
-### Install plugin
+## Project Configuration
 
-```bash
-claude plugin marketplace add <repo-url>
-claude plugin install ae
-```
-
-A SessionStart hook automatically checks dependencies and writes status to `.claude/cross-family-status.json`.
-
-### Project Setup
-
-In your project:
-
-```
-/ae:setup
-```
-
-This creates `.claude/pipeline.yml` with auto-detected test/lint commands.
-
-## Project-Specific Agents
-
-The plugin provides generic agents. Your project can define domain-specific agents in `.claude/agents/` and reference them in `.claude/pipeline.yml`:
+Running `/ae:setup` creates `.claude/pipeline.yml`:
 
 ```yaml
+test:
+  command: "npm test"              # auto-detected
+lint:
+  command: "npm run lint"          # auto-detected
+
+output:
+  review: "results/reviews/"
+  plans: "docs/milestones/"
+
 agents:
-  developers: [backend-dev, ios-dev]      # for /ae:work parallel execution
-  code_reviewers: [python-reviewer, swift-reviewer]  # for /ae:code-review
+  developers: [backend-dev]       # for /ae:work parallel execution
+  code_reviewers: [ts-reviewer]   # for /ae:code-review
+
+cross_family:
+  codex: true
+  gemini: true
+  gemini_model: "gemini-2.5-flash"
 ```
 
-## Cross-Family Review (MCP-native)
+Define project-specific agents in `.claude/agents/` and reference them here. The plugin provides generic agents; your project adds domain expertise.
 
-The workflow uses three model families, all via MCP — no CLI tools needed:
+## Architecture
 
-| Family | MCP Server | Role |
-|--------|------------|------|
-| Claude | (built-in) | Primary development, agent review |
-| Codex | `mcp__codex__codex` | Cross-family baseline (multi-turn via `codex-reply`) |
-| Gemini | `mcp__ae-gemini__chat` | Targeted review (multi-turn via `reply`, bundled with plugin) |
-
-### Gemini MCP Server
-
-Bundled in `mcp-servers/gemini/`. Features:
-- Multi-turn conversations (`chat` → `reply` with sessionId)
-- Switch models mid-conversation (flash → pro)
-- Dual auth: `GEMINI_API_KEY` env var or OAuth (shared with `gemini` CLI)
-- Auto session cleanup (30 min TTL)
-- Graceful shutdown
-
-Without Codex/Gemini MCP servers, the workflow still functions but loses cross-family blind spot coverage.
+```
+plugins/ae/
+  .claude-plugin/plugin.json      # Plugin manifest
+  skills/                         # 12 slash commands (the shell)
+  agents/                         # 13 specialized agents (the processes)
+    review/                       #   5 review agents
+    research/                     #   3 research agents
+    workflow/                     #   5 workflow agents
+  mcp-servers/gemini/             # Bundled Gemini MCP server (device driver)
+  templates/pipeline.template.yml # Template for /ae:setup
+```
 
 ## License
 

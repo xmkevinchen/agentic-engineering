@@ -24,9 +24,17 @@ If `.claude/pipeline.yml` does not exist:
    - `Gemfile` → Ruby (rspec/minitest + rubocop)
    - `justfile` / `Makefile` → read existing test/lint commands
    - Multi-language → split backend/frontend config
-3. Auto-detect and suggest code reviewer agents
-4. Use AskUserQuestion to confirm generated config
-5. Write `.claude/pipeline.yml`
+3. Fill in `output` block — keep all 6 slots with default values:
+   - `discussions: "docs/discussions/"`
+   - `plans: "docs/plans/"`
+   - `milestones: "docs/milestones/"`
+   - `backlog: "docs/backlog/"`
+   - `reviews: "docs/reviews/"`
+   - `analyses: "docs/analyses/"`
+4. Scan existing project directories — if project already has docs in non-default locations (e.g., `results/reviews/` instead of `docs/reviews/`), adjust slot values to match
+5. Auto-detect and suggest code reviewer agents
+6. Use AskUserQuestion to confirm generated config
+7. Write `.claude/pipeline.yml`
 
 If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
@@ -34,9 +42,26 @@ If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
 Read current `.claude/pipeline.yml`, compare with template:
 
-1. Check for new fields in template (missing from config)
-2. Check for deprecated fields
+1. Check for new fields in template (missing from config) — especially new `output` slots and `scratch`
+2. Check for deprecated fields (e.g., old `output.review` → new `output.reviews`)
 3. Show diff, use AskUserQuestion to confirm
+4. Preserve user-customized values, only add missing slots with defaults
+
+## Output Defaults
+
+When `pipeline.yml` is absent or a slot is missing, skills use these defaults:
+
+| Slot | Default | Used by |
+|------|---------|---------|
+| `output.discussions` | `docs/discussions/` | ae:analyze, ae:discuss |
+| `output.plans` | `docs/plans/` | ae:plan |
+| `output.milestones` | `docs/milestones/` | ae:work |
+| `output.backlog` | `docs/backlog/` | ae:work, ae:review, ae:code-review |
+| `output.reviews` | `docs/reviews/` | ae:review |
+| `output.analyses` | `docs/analyses/` | ae:think |
+| `scratch` | `~/.claude/scratch/` | All skills (临时持久化) |
+
+Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is missing or pipeline.yml doesn't exist, fall back to the default above. This ensures zero-config works for new projects.
 
 ## Cross-Family Setup
 

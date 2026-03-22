@@ -74,9 +74,24 @@ Close the Team.
 
 ## Step 4: Persist
 
-Write analysis to the directory specified in `pipeline.yml` → `output.analyses` (default: `docs/analyses/`).
+1. **Auto-save to scratch**: Write analysis to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `think-YYYY-MM-DD-NNN.md` with full content.
+2. **Ask user**: Use `AskUserQuestion` — "分析结果已暂存。要正式保存到 `<output.analyses>` 吗？"
+   - **Yes** → write to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`).
+   - **No** → keep in scratch only
 
-File: `<topic>.md` with:
+File naming: `NNN-slug.md` — three-digit sequential number + slug derived from topic.
+
+```markdown
+---
+id: "NNN"
+title: "Analysis: [topic]"
+type: analysis
+created: YYYY-MM-DD
+status: done
+---
+```
+
+Content sections:
 - Problem statement
 - Key findings
 - Recommendation

@@ -10,6 +10,9 @@ Execute the plan at **$ARGUMENTS**.
 
 ## Pre-checks (all must pass before starting)
 
+### Check 0: Scratch Recovery
+Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？" Resolve before proceeding.
+
 ### Check 1: Plan Exists
 - Read the plan file, confirm it exists and contains `## Acceptance Criteria` or `## AC`
 - If missing → suggest `/ae:plan`, **refuse to execute**
@@ -21,7 +24,7 @@ Execute the plan at **$ARGUMENTS**.
 - All done → suggest `/ae:review`, **refuse to execute**
 
 ### Check 3: Deferred Items
-- Read `docs/milestones/*/notes.md` (if exists)
+- Read `pipeline.yml` → `output.milestones` (default: `docs/milestones/`), check `*/notes.md` (if exists)
 - Find deferred items tagged for the current step
 - **Has unresolved items → list them, resolve before continuing**
 - None → pass
@@ -94,8 +97,8 @@ Complex steps → multiple TDD rounds (one per subtask).
 2. **Code Review** — execute `/ae:code-review` (subagent mode, fast)
 3. **Disposition table** — classify all findings:
    - Fix now (< 5 min, fix immediately)
-   - Defer to step N (write to notes.md)
-   - Backlog (write to docs/backlog/)
+   - Defer to step N (write to `<output.milestones>/*/notes.md`)
+   - Backlog (write to `pipeline.yml` → `output.backlog`, default: `docs/backlog/`). File: `BL-NNN-slug.md` with frontmatter `id`, `title`, `type: backlog`, `created`, `status: open`
 4. **Disposition challenge** — send table to cross-family for challenge
 5. **Fix and re-review** — after fixing findings, re-run review until clean pass
 

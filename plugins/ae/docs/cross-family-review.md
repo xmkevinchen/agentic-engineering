@@ -1,8 +1,3 @@
----
-name: ae:cross-family-review
-description: "Cross-family review guide (Claude + Codex + Gemini). Reference this when invoking cross-family review tools. Passive knowledge skill, not a slash command."
----
-
 # Cross-Family Review Guide
 
 Three model families, different training biases, covering each other's blind spots.

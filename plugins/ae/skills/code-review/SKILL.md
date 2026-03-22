@@ -37,10 +37,30 @@ Launch `gemini-proxy` agent to review the same diff via Gemini MCP.
 
 ## Results
 
-Output directly to terminal (no report file):
+Output directly to terminal:
 
 - **Block** — must fix
 - **Warning** — suggested fix, not blocking
 - **OK**
 
 **Flag conflicts between tracks for user judgment.**
+
+## Scratch Persistence
+
+Auto-save results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `code-review-YYYY-MM-DD-NNN.md`.
+
+Do NOT ask user about formal persistence — code-review is high-frequency, low-ceremony. Scratch files are archived in bulk during `/ae:review` (feature gate).
+
+```markdown
+---
+type: code-review
+created: YYYY-MM-DDTHH:MM:SS
+status: pending        # pending | in_progress | resolved
+---
+
+## Findings
+
+1. [SEVERITY] file:line — description
+   - action: fix now | backlog BL-NNN | skip
+   - status: pending | in_progress | resolved
+```

@@ -10,6 +10,7 @@ Spin up a task-specific Agent Team for: **$ARGUMENTS**
 
 ## Pre-check
 
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family + agent config)
 2. If missing → suggest `/ae:setup`
 
@@ -75,7 +76,15 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
 
 Lead agent synthesizes all findings and sends report.
 
-Close the Team. Show results to user.
+Close the Team.
+
+## Scratch Persistence
+
+Auto-save team results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `team-YYYY-MM-DD-NNN.md` with frontmatter `type: team`, `created`, `status: done`, `task: <$ARGUMENTS>`.
+
+Do NOT ask user about formal persistence — team results are ephemeral working artifacts.
+
+Show results to user.
 
 ## Rules
 

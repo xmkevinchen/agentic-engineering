@@ -12,9 +12,9 @@ Research the codebase and generate a structured analysis for: **$ARGUMENTS**
 
 ### 1. Find or Create Discussion Directory
 
-Check `docs/discussions/` for an existing related directory (match by topic).
+Read `pipeline.yml` → `output.discussions` (default: `docs/discussions/`). Check that directory for an existing related directory (match by topic).
 - **Exists**: add analysis to that directory.
-- **New**: find the highest existing number, take next sequential (zero-padded 3 digits, starting `001`). Create `docs/discussions/NNN-slug/`.
+- **New**: find the highest existing number, take next sequential (zero-padded 3 digits, starting `001`). Create `<output.discussions>/NNN-slug/`.
 
 ### 2. Create or Update index.md
 
@@ -99,7 +99,7 @@ Also read project context files (CLAUDE.md, docs/) for background.
 
 ### 4. Generate Analysis Document
 
-After Challenger sends the synthesized report, create `docs/discussions/NNN-slug/analysis.md`:
+After Challenger sends the synthesized report, create `<output.discussions>/NNN-slug/analysis.md`:
 
 ```markdown
 ---

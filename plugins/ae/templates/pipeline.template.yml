@@ -9,9 +9,21 @@ lint:
   command: ""              # e.g., "just lint", "npm run lint"
 
 # --- Output Directories ---
+# Each slot has a default value. Omit or leave empty to use the default.
+# All paths are relative to project root.
 output:
-  review: "results/reviews/"
-  plans: "docs/milestones/"
+  discussions: "docs/discussions/"   # ae:analyze, ae:discuss (default: docs/discussions/)
+  plans: "docs/plans/"              # ae:plan (default: docs/plans/)
+  milestones: "docs/milestones/"    # ae:work (default: docs/milestones/)
+  backlog: "docs/backlog/"          # ae:work, ae:review, ae:code-review (default: docs/backlog/)
+  reviews: "docs/reviews/"          # ae:review (default: docs/reviews/)
+  analyses: "docs/analyses/"        # ae:think (default: docs/analyses/)
+
+# --- Scratch (临时持久化) ---
+# Temporary files for session resilience (survives compact/crash).
+# Default: ~/.claude/scratch/ (per-project hash, doesn't pollute repo)
+# Set to ".claude/scratch/" if you want scratch files in-repo (add to .gitignore).
+# scratch: "~/.claude/scratch/"
 
 # --- Project-Specific Agent Roles ---
 # Define agents in your project's .claude/agents/ directory.

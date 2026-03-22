@@ -8,6 +8,10 @@ argument-hint: "<function, endpoint, or module to trace>"
 
 Trace: **$ARGUMENTS**
 
+## Pre-check
+
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
+
 ## Step 1: Determine Mode
 
 Ask user if not obvious:
@@ -93,4 +97,13 @@ Include:
 - Issues found (coupling, performance, missing error handling)
 - Recommendations
 
-Close the Team. Show results to user.
+Close the Team.
+
+## Step 5: Persist
+
+1. **Auto-save to scratch**: Write results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `trace-YYYY-MM-DD-NNN.md` with frontmatter `type: trace`, `created`, `status: done`, `target: <$ARGUMENTS>`.
+2. **Ask user**: Use `AskUserQuestion` — "Trace 结果已暂存。要正式保存到 `<output.analyses>` 吗？"
+   - **Yes** → copy to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-trace-slug.md`
+   - **No** → keep in scratch only
+
+Show results to user.

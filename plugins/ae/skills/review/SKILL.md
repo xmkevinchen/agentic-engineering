@@ -10,6 +10,9 @@ Deep review of all changes for **$ARGUMENTS**.
 
 ## Pre-checks (all must pass before starting)
 
+### Check 0: Scratch Recovery
+Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？" Resolve before proceeding.
+
 ### Check 1: Plan All Done
 - Read the plan file
 - Confirm all step checkboxes are `- [x]`
@@ -147,5 +150,6 @@ P2/P3 per standard rule (fix / defer / backlog).
 
 1. Challenger final report (with discussion evidence, cross-family opinions, disposition recommendations)
 2. Fixups squashed
-3. Deferred items written to notes.md, backlog items to docs/backlog/
-4. Prompt user to create PR
+3. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
+4. **Scratch archive**: List all scratch files from this feature's work session. Ask user: "本轮有 N 条 scratch 记录（code-review, team 等），要归档到 `<output.reviews>` 吗？" Yes → move to reviews dir. No → leave in scratch.
+5. Prompt user to create PR

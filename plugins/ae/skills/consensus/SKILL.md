@@ -10,6 +10,7 @@ Build multi-perspective consensus on: **$ARGUMENTS**
 
 ## Pre-check
 
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family config)
 2. If missing → suggest `/ae:setup`
 
@@ -82,4 +83,13 @@ Include:
 - Cross-family perspective
 - Final recommendation
 
-Close the Team. Show verdict to user.
+Close the Team.
+
+## Step 4: Persist
+
+1. **Auto-save to scratch**: Write verdict to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `consensus-YYYY-MM-DD-NNN.md` with frontmatter `type: consensus`, `created`, `status: done`, `proposal: <$ARGUMENTS>`.
+2. **Ask user**: Use `AskUserQuestion` — "辩论结果已暂存。要正式保存到 `<output.analyses>` 吗？"
+   - **Yes** → copy to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-consensus-slug.md`
+   - **No** → keep in scratch only
+
+Show verdict to user.
