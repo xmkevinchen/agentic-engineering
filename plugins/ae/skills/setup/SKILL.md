@@ -59,7 +59,7 @@ When `pipeline.yml` is absent or a slot is missing, skills use these defaults:
 | `output.backlog` | `docs/backlog/` | ae:work, ae:review, ae:code-review |
 | `output.reviews` | `docs/reviews/` | ae:review |
 | `output.analyses` | `docs/analyses/` | ae:think |
-| `scratch` | `~/.claude/scratch/` | All skills (临时持久化) |
+| `scratch` | `~/.claude/scratch/` | All skills (temporary persistence) |
 
 Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is missing or pipeline.yml doesn't exist, fall back to the default above. This ensures zero-config works for new projects.
 

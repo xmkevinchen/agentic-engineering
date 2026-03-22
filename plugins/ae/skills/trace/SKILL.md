@@ -10,8 +10,8 @@ Trace: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
-1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "首次使用 ae 插件，正在初始化项目配置..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?"
+1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
 
 ## Step 1: Determine Mode
 
@@ -103,7 +103,7 @@ Close the Team.
 ## Step 5: Persist
 
 1. **Auto-save to scratch**: Write results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `trace-YYYY-MM-DD-NNN.md` with frontmatter `type: trace`, `project: <repo-name>`, `created`, `status: done`, `target: <$ARGUMENTS>`.
-2. **Ask user**: Use `AskUserQuestion` — "Trace 结果已暂存。要正式保存到 `<output.analyses>` 吗？"
+2. **Ask user**: Use `AskUserQuestion` — "Trace results saved to scratch. Formally save to `<output.analyses>`?"
    - **Yes** → copy to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-trace-slug.md`
    - **No** → keep in scratch only
 

@@ -10,9 +10,9 @@ Create an execution plan for: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
+0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?"
 1. Confirm `.claude/pipeline.yml` exists
-2. If missing → tell user "首次使用 ae 插件，正在初始化项目配置..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
+2. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
 
 ## Step 1: Research
 

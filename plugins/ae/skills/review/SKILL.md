@@ -11,7 +11,7 @@ Deep review of all changes for **$ARGUMENTS**.
 ## Pre-checks (all must pass before starting)
 
 ### Check 0: Scratch Recovery
-Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？" Resolve before proceeding.
+Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?" Resolve before proceeding.
 
 ### Check 1: Plan All Done
 - Read the plan file
@@ -152,9 +152,9 @@ P2/P3 per standard rule (fix / defer / backlog).
 2. Fixups squashed
 3. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
 4. **Scratch archive + cleanup**: List all scratch files for current project (`project` field matches repo name). Ask user once with AskUserQuestion:
-   - "本轮有 N 条 scratch 记录。怎么处理？"
-   - Option A: "归档并清理" → copy to `<output.reviews>`, then delete `status: resolved`/`done` files
-   - Option B: "仅归档" → copy to `<output.reviews>`, keep scratch files
-   - Option C: "跳过" → do nothing
+   - "N scratch records found from this session. What to do?"
+   - Option A: "Archive and clean up" → copy to `<output.reviews>`, then delete `status: resolved`/`done` files
+   - Option B: "Archive only" → copy to `<output.reviews>`, keep scratch files
+   - Option C: "Skip" → do nothing
    - **Never delete `status: in_progress` files** — these represent unfinished work.
 5. Prompt user to create PR

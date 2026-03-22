@@ -11,7 +11,7 @@ Execute the plan at **$ARGUMENTS**.
 ## Pre-checks (all must pass before starting)
 
 ### Check 0: Scratch Recovery
-Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？" Resolve before proceeding.
+Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?" Resolve before proceeding.
 
 ### Check 1: Plan Exists
 - Read the plan file, confirm it exists and contains `## Acceptance Criteria` or `## AC`
