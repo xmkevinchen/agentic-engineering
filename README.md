@@ -22,7 +22,7 @@ AI-assisted coding is powerful but unstructured. You prompt one model, hope for 
 
 ```bash
 # Install the plugin
-claude plugin marketplace add <repo-url>
+claude plugin marketplace add github:xmkevinchen/agentic-engineering
 claude plugin install ae
 
 # In your project
