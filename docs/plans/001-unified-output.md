@@ -59,8 +59,10 @@ discussion: "docs/discussions/001-unified-output/conclusion.md"
 ### AC1: pipeline.yml 语义槽完整
 模板包含 6 个 output slot（discussions, plans, milestones, backlog, reviews, analyses）+ scratch 配置。每个 slot 有默认值注释。`/ae:setup` 生成的 pipeline.yml 匹配此模板。
 
-### AC2: 零配置可用
-在一个空项目（无 pipeline.yml）运行 `/ae:plan test-feature` 时，skill 使用默认值写入 `docs/plans/001-test-feature.md`。不报错，不需要先运行 setup。
+### AC2: 零配置可用（修订）
+~~在一个空项目（无 pipeline.yml）运行 `/ae:plan test-feature` 时，skill 使用默认值写入 `docs/plans/001-test-feature.md`。不报错，不需要先运行 setup。~~
+
+修订：无 pipeline.yml 时自动触发 `/ae:setup` 流程（告知用户"首次使用 ae 插件，正在初始化..."），setup 完成后继续执行原命令。用户无需手动跑 setup，但 pipeline.yml 始终存在。
 
 ### AC3: 所有写文件 skill 读 pipeline.yml
 逐一检查 7 个写文件 skill（analyze, discuss, plan, work, review, think, setup），确认每个都从 `pipeline.yml → output.<slot>` 读路径，无硬编码路径。命名格式统一 `NNN-slug` + frontmatter。

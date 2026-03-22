@@ -11,6 +11,7 @@ Trace: **$ARGUMENTS**
 ## Pre-check
 
 0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "上次有未完成的操作，要继续吗？"
+1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "首次使用 ae 插件，正在初始化项目配置..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
 
 ## Step 1: Determine Mode
 
