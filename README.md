@@ -132,6 +132,15 @@ Bundled in `mcp-servers/gemini/`. TypeScript, stdio transport.
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) v1.0.33+
 - [Node.js](https://nodejs.org) (for Gemini MCP server)
+- **Agent Teams** (experimental) — required for multi-agent workflows (9 of 12 commands). Add to `~/.claude/settings.json`:
+  ```json
+  {
+    "experiments": {
+      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": true
+    }
+  }
+  ```
+  Then restart Claude Code. See [Agent Teams docs](https://code.claude.com/docs/en/agent-teams) for details.
 
 ### Cross-Family Setup (optional but recommended)
 

@@ -72,6 +72,16 @@ Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is miss
 
 Empty does NOT block execution. Not all projects have tests, not all changes need testing.
 
+## Agent Teams Setup
+
+Check if Agent Teams is enabled (required for multi-agent workflows):
+
+1. Read `~/.claude/settings.json` — look for `"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"` in the `experiments` object
+2. If **not enabled** → use AskUserQuestion: "Agent Teams is not enabled. Most ae commands require it. Enable it now? (This will update ~/.claude/settings.json)"
+   - **User confirms** → read `~/.claude/settings.json`, add/merge `"experiments": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": true }` into the JSON, write back. Then update `.claude/cross-family-status.json` → set `agent_teams: true`. Tell user: "Agent Teams enabled."
+   - **User declines** → warn: "Skipped. Commands that use Agent Teams (plan, work, review, team, analyze, think, consensus, testgen, trace) will refuse to execute."
+3. If already enabled → `✅ Agent Teams: enabled`
+
 ## Cross-Family Setup
 
 After writing pipeline.yml, check cross-family dependencies:

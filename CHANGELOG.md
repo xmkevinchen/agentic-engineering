@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.5 — 2026-03-23
+
+### Features
+- **Agent Teams pre-check**: All 9 skills that use Agent Teams now check `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled before executing — refuses with actionable instructions if missing
+- **Setup detects Agent Teams**: `/ae:setup` checks and reports Agent Teams status during initialization
+- **README updated**: Prerequisites section documents Agent Teams requirement with setup instructions
+
 ## v0.0.4 — 2026-03-22
 
 ### Fixes

@@ -23,7 +23,11 @@ Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratc
 - Current step = first pending one
 - All done → suggest `/ae:review`, **refuse to execute**
 
-### Check 3: Deferred Items
+### Check 3: Agent Teams
+- Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`
+- If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"experiments\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": true } }` to ~/.claude/settings.json and restart Claude Code."
+
+### Check 4: Deferred Items
 - Read `pipeline.yml` → `output.milestones` (default: `docs/milestones/`), check `*/notes.md` (if exists)
 - Find deferred items tagged for the current step
 - **Has unresolved items → list them, resolve before continuing**

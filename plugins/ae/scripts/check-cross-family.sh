@@ -5,10 +5,31 @@
 STATUS_FILE=".claude/cross-family-status.json"
 mkdir -p .claude
 
+AGENT_TEAMS=false
 CODEX_AVAILABLE=false
 GEMINI_AVAILABLE=false
 NODE_AVAILABLE=false
 ISSUES=()
+
+# Check Agent Teams experimental flag
+SETTINGS_FILE="$HOME/.claude/settings.json"
+if [ -f "$SETTINGS_FILE" ]; then
+  if command -v jq &>/dev/null; then
+    AT=$(jq -r '.experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS // false' "$SETTINGS_FILE" 2>/dev/null)
+    if [ "$AT" = "true" ]; then
+      AGENT_TEAMS=true
+    fi
+  else
+    # Fallback: grep for the key
+    if grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS.*true' "$SETTINGS_FILE" 2>/dev/null; then
+      AGENT_TEAMS=true
+    fi
+  fi
+fi
+
+if [ "$AGENT_TEAMS" = false ]; then
+  ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"experiments\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": true } }")
+fi
 
 # Check node
 if command -v node &>/dev/null; then
@@ -52,6 +73,7 @@ fi
 
 cat > "$STATUS_FILE" <<EOF
 {
+  "agent_teams": $AGENT_TEAMS,
   "node": $NODE_AVAILABLE,
   "codex": $CODEX_AVAILABLE,
   "gemini": $GEMINI_AVAILABLE,
