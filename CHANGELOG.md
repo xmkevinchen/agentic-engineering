@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.0.3 — 2026-03-22
+
+### Improvements
+- **Agent auto-discovery**: Skills discover agents at runtime from all sources (project, plugins, global) — no need to list agents in pipeline.yml
+- **Gemini model auto-discovery**: New `models` tool lists available models via API, agents pick models at runtime. Removed `gemini_model` from pipeline.yml.
+- **Auto-setup on first use**: Skills auto-trigger `/ae:setup` when pipeline.yml is missing instead of refusing to execute
+- **Review findings fixed**: testgen field name bug, review empty test.command, code-review scratch status, think scratch recovery
+- **Proxy failure deadlock fix**: Proxies now notify the team lead (not Lead) on failure, preventing hang
+- **Scratch project isolation**: frontmatter `project` field + recovery filters by repo name
+- **dist/ included in repo**: Gemini MCP server works immediately on plugin install without build step
+
 ## v0.0.2 — 2026-03-22
 
 ### Unified Output Specification
