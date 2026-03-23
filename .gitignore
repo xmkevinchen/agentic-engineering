@@ -3,7 +3,7 @@
 *.swo
 *~
 node_modules/
-dist/
+# dist/ — committed for plugin distribution (no build step on install)
 .claude/settings.json
 .claude/settings.local.json
 .claude/cross-family-status.json
