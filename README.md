@@ -112,12 +112,17 @@ No single model family catches everything. ae abstracts three families behind a 
 
 The proxy agents (`codex-proxy`, `gemini-proxy`) act as device drivers — translating between ae's internal protocols and each family's MCP interface. Without them, the system still runs; you just lose cross-family coverage.
 
+### Codex
+
+Uses the Codex CLI installed on the user's machine. Model is determined by the user's Codex CLI configuration (profile, default model) — ae does not override it.
+
 ### Gemini MCP Server
 
 Bundled in `mcp-servers/gemini/`. TypeScript, stdio transport.
 
+- **Model auto-discovery** — `models` tool lists available models at runtime, agents pick the right one (flash for quick reviews, pro for deep analysis)
 - Multi-turn conversations (`chat` + `reply` with sessionId)
-- Switch models mid-conversation (flash to pro)
+- Switch models mid-conversation
 - Auth via `GEMINI_API_KEY` env var
 - Auto session cleanup (30 min TTL)
 
