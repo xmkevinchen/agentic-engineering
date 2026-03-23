@@ -155,12 +155,6 @@ output:
   reviews: "docs/reviews/"
   analyses: "docs/analyses/"
 
-# Agents are auto-discovered at runtime — no need to list them.
-# Override only if you want to restrict specific roles:
-# agents:
-#   developers: [backend-dev]
-#   code_reviewers: [ts-reviewer]
-
 cross_family:
   codex: true
   gemini: true

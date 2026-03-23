@@ -19,13 +19,6 @@ output:
 # --- Scratch ---
 # scratch: "~/.claude/scratch/"
 
-# --- Agents ---
-# Auto-discovered from .claude/agents/ at runtime.
-# Uncomment below to override:
-# agents:
-#   developers: []
-#   code_reviewers: []
-
 # --- Cross-Family ---
 cross_family:
   codex: true
