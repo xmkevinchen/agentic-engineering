@@ -118,7 +118,7 @@ Bundled in `mcp-servers/gemini/`. TypeScript, stdio transport.
 
 - Multi-turn conversations (`chat` + `reply` with sessionId)
 - Switch models mid-conversation (flash to pro)
-- Dual auth: `GEMINI_API_KEY` env var or OAuth
+- Auth via `GEMINI_API_KEY` env var
 - Auto session cleanup (30 min TTL)
 
 ## Installation
@@ -133,7 +133,7 @@ Bundled in `mcp-servers/gemini/`. TypeScript, stdio transport.
 | Family | How to set up |
 |--------|--------------|
 | Codex (OpenAI) | `npm install -g @openai/codex` |
-| Gemini (Google) | Set `GEMINI_API_KEY` env var, or run `gemini auth` for OAuth |
+| Gemini (Google) | Set `GEMINI_API_KEY` env var ([get a key](https://aistudio.google.com/apikey)) |
 
 `/ae:setup` guides you through cross-family configuration and writes status to `.claude/cross-family-status.json`.
 
