@@ -22,8 +22,8 @@ AI-assisted coding is powerful but unstructured. You prompt one model, hope for 
 
 ```bash
 # Install the plugin
-claude plugin marketplace add github:xmkevinchen/agentic-engineering
-claude plugin install ae
+/plugin marketplace add xmkevinchen/agentic-engineering
+/plugin install ae@xmkevinchen-agentic-engineering
 
 # In your project
 /ae:setup          # creates .claude/pipeline.yml
