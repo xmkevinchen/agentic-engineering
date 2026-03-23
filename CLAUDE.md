@@ -35,6 +35,10 @@ plugins/ae/             # The actual plugin
 - This ensures `/ae:plan` shows in autocomplete, not just `/plan (ae)`
 - Agent names are auto-prefixed by plugin system
 
+## Git
+
+- Never push to remote unless explicitly approved by the user
+
 ## Design Principles
 
 - **Project-agnostic** — skills and agents read project context from CLAUDE.md and pipeline.yml

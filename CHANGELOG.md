@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.4 — 2026-03-22
+
+### Fixes
+- **Gemini MCP startup**: Move dep install from SessionStart hook into `.mcp.json` command — fixes race condition where MCP connection started before `npm install` finished
+- **GEMINI_API_KEY passthrough**: Add `env` block to `.mcp.json` so the key is forwarded to the Gemini server process
+
 ## v0.0.3 — 2026-03-22
 
 ### Improvements
