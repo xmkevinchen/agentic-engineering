@@ -158,7 +158,6 @@ output:
 cross_family:
   codex: true
   gemini: true
-  gemini_model: "gemini-2.5-flash"
 ```
 
 Agents are auto-discovered at runtime from all available sources — project agents (`.claude/agents/`), installed plugin agents, and user global agents. The plugin's built-in agents provide generic roles; your project and other plugins add domain expertise.

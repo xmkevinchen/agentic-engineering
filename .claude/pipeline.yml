@@ -23,4 +23,3 @@ output:
 cross_family:
   codex: true
   gemini: true
-  gemini_model: "gemini-2.5-flash"

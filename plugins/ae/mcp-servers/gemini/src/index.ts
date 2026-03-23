@@ -22,9 +22,16 @@ interface Session {
   lastAccessedAt: number;
 }
 
+interface CachedModel {
+  name: string;
+  displayName: string;
+  inputTokenLimit?: number;
+  outputTokenLimit?: number;
+}
+
 // --- Config ---
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const FALLBACK_MODEL = "gemini-2.5-flash";
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
 
@@ -32,6 +39,7 @@ const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
 
 const sessions = new Map<string, Session>();
 let sdkClient: GoogleGenAI | null = null;
+let cachedModels: CachedModel[] = [];
 
 // --- Auth ---
 
@@ -41,6 +49,29 @@ async function initAuth(): Promise<void> {
     throw new Error("GEMINI_API_KEY environment variable is required.");
   }
   sdkClient = new GoogleGenAI({ apiKey });
+}
+
+// --- Model Discovery ---
+
+async function discoverModels(): Promise<void> {
+  try {
+    const pager = await sdkClient!.models.list();
+    const models: CachedModel[] = [];
+    for await (const model of pager) {
+      if (model.name) {
+        models.push({
+          name: model.name.replace(/^models\//, ""),
+          displayName: model.displayName ?? model.name,
+          inputTokenLimit: model.inputTokenLimit,
+          outputTokenLimit: model.outputTokenLimit,
+        });
+      }
+    }
+    cachedModels = models;
+  } catch {
+    // Non-fatal: if model listing fails, we still work with user-specified models
+    cachedModels = [];
+  }
 }
 
 // --- Gemini API ---
@@ -96,12 +127,12 @@ server.registerTool(
   {
     title: "Gemini Chat",
     description:
-      "Start a new Gemini conversation. Returns a sessionId for multi-turn follow-ups via `reply`. Used for cross-family code review, analysis, and second opinions.",
+      "Start a new Gemini conversation. Returns a sessionId for multi-turn follow-ups via `reply`. Call `models` first to see available models. Used for cross-family code review, analysis, and second opinions.",
     inputSchema: z.object({
       prompt: z.string().describe("The prompt to send to Gemini"),
       model: z
         .string()
-        .default(DEFAULT_MODEL)
+        .default(FALLBACK_MODEL)
         .describe("Gemini model (e.g., gemini-2.5-flash, gemini-2.5-pro)"),
       systemPrompt: z
         .string()
@@ -211,7 +242,48 @@ server.registerTool(
   },
 );
 
-// Tool 3: info — server status + active sessions
+// Tool 3: models — list available models
+server.registerTool(
+  "models",
+  {
+    title: "List Models",
+    description:
+      "List all available Gemini models with their capabilities. Use this to discover which models are available before calling chat/reply.",
+    inputSchema: z.object({
+      refresh: z
+        .boolean()
+        .default(false)
+        .describe("Re-fetch models from API instead of using cache"),
+    }),
+  },
+  async ({ refresh }) => {
+    if (refresh || cachedModels.length === 0) {
+      await discoverModels();
+    }
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(
+            {
+              defaultModel: FALLBACK_MODEL,
+              availableModels: cachedModels.map((m) => ({
+                name: m.name,
+                displayName: m.displayName,
+                inputTokenLimit: m.inputTokenLimit,
+                outputTokenLimit: m.outputTokenLimit,
+              })),
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    };
+  },
+);
+
+// Tool 4: info — server status + active sessions
 server.registerTool(
   "info",
   {
@@ -238,7 +310,8 @@ server.registerTool(
             {
               version: "0.2.0",
               authMode: "api_key",
-              defaultModel: DEFAULT_MODEL,
+              defaultModel: FALLBACK_MODEL,
+              availableModels: cachedModels.length,
               activeSessions: sessions.size,
               sessionTTL: "30m",
               sessions: sessionList,
@@ -268,6 +341,7 @@ async function shutdown(): Promise<void> {
 
 async function main(): Promise<void> {
   await initAuth();
+  await discoverModels();
 
   cleanupTimer = setInterval(cleanupSessions, CLEANUP_INTERVAL_MS);
 

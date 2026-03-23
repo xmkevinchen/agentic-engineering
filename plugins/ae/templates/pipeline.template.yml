@@ -32,4 +32,3 @@ output:
 cross_family:
   codex: true              # Include codex-proxy in teams (requires Codex MCP server)
   gemini: true             # Include gemini-proxy in teams (requires ae-gemini MCP server)
-  gemini_model: "gemini-2.5-flash"  # Default Gemini model for proxy calls
