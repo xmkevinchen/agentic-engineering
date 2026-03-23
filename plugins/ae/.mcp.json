@@ -5,8 +5,11 @@
       "args": ["mcp-server"]
     },
     "gemini": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.js"]
+      "command": "bash",
+      "args": ["-c", "cd \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini\" && npm install --omit=dev --silent >&2 && exec node dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      }
     }
   }
 }
