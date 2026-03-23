@@ -25,15 +25,13 @@ output:
 # Set to ".claude/scratch/" if you want scratch files in-repo (add to .gitignore).
 # scratch: "~/.claude/scratch/"
 
-# --- Project-Specific Agent Roles ---
-# Define agents in your project's .claude/agents/ directory.
-# The ae: commands will use these roles for team workflows.
-agents:
-  # Developer agents for /ae:work parallel execution
-  developers: []           # e.g., [backend-dev, ios-dev, frontend-dev]
-
-  # Code reviewer agents for /ae:code-review
-  code_reviewers: []       # e.g., [python-reviewer, swift-reviewer]
+# --- Project-Specific Agents ---
+# By default, ae skills auto-discover agents from .claude/agents/ at runtime.
+# Each agent .md file's description is used to classify it (developer, reviewer, etc.).
+# Override below ONLY if you want to restrict which agents are used for specific roles.
+# agents:
+#   developers: []           # e.g., [backend-dev, ios-dev] — for /ae:work parallel execution
+#   code_reviewers: []       # e.g., [python-reviewer] — for /ae:code-review
 
 # --- Cross-Family Review ---
 # Enable/disable cross-family proxy agents in Agent Teams.

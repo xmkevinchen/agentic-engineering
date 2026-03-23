@@ -32,7 +32,7 @@ If `.claude/pipeline.yml` does not exist:
    - `reviews: "docs/reviews/"`
    - `analyses: "docs/analyses/"`
 4. Scan existing project directories — if project already has docs in non-default locations (e.g., `results/reviews/` instead of `docs/reviews/`), adjust slot values to match
-5. Auto-detect and suggest code reviewer agents
+5. **Auto-discover project agents**: Discover all available agents (project `.claude/agents/`, installed plugins, user global `~/.claude/agents/`). Read each agent's description to classify as developer or reviewer. Show discovered agents to user for confirmation. Do NOT write agent lists to pipeline.yml — agents are discovered at runtime.
 6. Use AskUserQuestion to confirm generated config
 7. Write `.claude/pipeline.yml`
 

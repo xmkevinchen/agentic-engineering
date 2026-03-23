@@ -46,13 +46,13 @@ Lead follows the TDD cycle directly, no Team created.
 
 ### Parallel Steps (multiple developers) → Agent Teams
 
-When pipeline.yml has `agents.developers` configured AND the plan's parallel strategy marks multiple steps for concurrent execution:
+When the plan's parallel strategy marks multiple steps for concurrent execution:
 
 ```
 TeamCreate(team_name: "<feature>-work")
 ```
 
-Read `agents.developers` from pipeline.yml. For each developer agent:
+Discover developer agents: check `agents.developers` in pipeline.yml first. If not configured (default), discover all available agents (project, plugins, global) and select those whose description indicates a developer role. For each developer agent:
 
 ```
 Agent(subagent_type: "<dev-agent>", name: "<dev-agent>",
@@ -77,7 +77,7 @@ Agent(subagent_type: "qa", name: "qa",
                Pass → SendMessage to dev confirming.")
 ```
 
-If `agents.developers` is empty, Lead executes directly (no teams).
+If no developer agents found (neither in pipeline.yml nor any agent source), Lead executes directly (no teams).
 
 ## TDD Cycle (all modes)
 

@@ -29,7 +29,7 @@ Read the task description and determine:
    - `general` → architect, challenger, qa
 
 2. **Cross-family needed?** — if task involves review, validation, or decision-making → yes
-3. **Project agents** — check `agents.*` in pipeline.yml for domain-specific agents that match the task
+3. **Project agents** — discover all available agents (project, plugins, global) that match the task (check `agents.*` in pipeline.yml as override if configured)
 4. **Lead agent** — pick the most relevant agent as lead (collects and synthesizes)
 
 Show selected team to user before launching. User can adjust.
@@ -91,4 +91,4 @@ Show results to user.
 - **Minimum 2, maximum 5** core agents (excluding cross-family proxies)
 - Don't launch agents that aren't relevant — fewer focused agents > many unfocused ones
 - If the task clearly maps to an existing skill (`ae:think`, `ae:consensus`, `ae:testgen`, `ae:trace`), suggest that skill instead
-- Project-specific agents from pipeline.yml take priority over generic agents when they match the task domain
+- Project-specific agents (auto-discovered from all sources, or `pipeline.yml` override) take priority over plugin's built-in agents when they match the task domain

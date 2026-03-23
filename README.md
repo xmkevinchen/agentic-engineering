@@ -148,12 +148,18 @@ lint:
   command: "npm run lint"          # auto-detected
 
 output:
-  review: "results/reviews/"
-  plans: "docs/milestones/"
+  discussions: "docs/discussions/"
+  plans: "docs/plans/"
+  milestones: "docs/milestones/"
+  backlog: "docs/backlog/"
+  reviews: "docs/reviews/"
+  analyses: "docs/analyses/"
 
-agents:
-  developers: [backend-dev]       # for /ae:work parallel execution
-  code_reviewers: [ts-reviewer]   # for /ae:code-review
+# Agents are auto-discovered at runtime — no need to list them.
+# Override only if you want to restrict specific roles:
+# agents:
+#   developers: [backend-dev]
+#   code_reviewers: [ts-reviewer]
 
 cross_family:
   codex: true
@@ -161,7 +167,7 @@ cross_family:
   gemini_model: "gemini-2.5-flash"
 ```
 
-Define project-specific agents in `.claude/agents/` and reference them here. The plugin provides generic agents; your project adds domain expertise.
+Agents are auto-discovered at runtime from all available sources — project agents (`.claude/agents/`), installed plugin agents, and user global agents. The plugin's built-in agents provide generic roles; your project and other plugins add domain expertise.
 
 ## Architecture
 
