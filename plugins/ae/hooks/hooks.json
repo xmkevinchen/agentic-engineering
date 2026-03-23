@@ -5,6 +5,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "cd \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini\" && test -d node_modules || npm install --production --silent 2>/dev/null"
+          },
+          {
+            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-cross-family.sh"
           }
         ]
