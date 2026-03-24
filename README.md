@@ -16,7 +16,7 @@ AI-assisted coding is powerful but unstructured. You prompt one model, hope for 
 | Filesystem | Persistent artifacts — plans, analysis docs, review results, decision records |
 | IPC | Structured agent protocols — handoff, challenge/response, consensus |
 | Device drivers | MCP servers — Codex and Gemini abstracted behind a uniform interface |
-| Shell | 12 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, ...) |
+| Shell | 13 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, ...) |
 
 ## Quick Start
 
@@ -48,6 +48,7 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 |---------|-------------|
 | `/ae:setup` | Initialize pipeline config (`.claude/pipeline.yml`) — auto-detects test/lint commands |
 | `/ae:plan` | Generate an execution plan with acceptance criteria, reviewed by agent teams |
+| `/ae:plan-review` | Re-review an existing plan with agent teams (standalone, without regenerating) |
 | `/ae:work` | Execute the plan step by step: write test, red, implement, green, review, commit |
 | `/ae:review` | Deep multi-agent review + automatic fixups — the feature completion gate |
 
@@ -132,7 +133,7 @@ Bundled in `mcp-servers/gemini/`. TypeScript, stdio transport.
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) v1.0.33+
 - [Node.js](https://nodejs.org) (for Gemini MCP server)
-- **Agent Teams** (experimental) — required for multi-agent workflows (9 of 12 commands). Add to `~/.claude/settings.json`:
+- **Agent Teams** (experimental) — required for multi-agent workflows (10 of 13 commands). Add to `~/.claude/settings.json`:
   ```json
   {
     "experiments": {
@@ -181,7 +182,7 @@ Agents are auto-discovered at runtime from all available sources — project age
 ```
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest
-  skills/                         # 12 slash commands (the shell)
+  skills/                         # 13 slash commands (the shell)
   agents/                         # 13 specialized agents (the processes)
     review/                       #   5 review agents
     research/                     #   3 research agents

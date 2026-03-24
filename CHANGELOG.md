@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.0.6 — 2026-03-23
+
+### Features
+- **`/ae:plan-review`**: Standalone plan review command — re-review an existing plan with Agent Teams without regenerating it
+
+### Component counts
+- 13 skills (was 12), 13 agents, 2 MCP servers
+
 ## v0.0.5 — 2026-03-23
 
 ### Features
