@@ -1,6 +1,6 @@
 {
   "name": "ae",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
   "author": {
     "name": "ckai"
