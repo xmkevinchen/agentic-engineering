@@ -141,7 +141,25 @@ Architect integrates feedback from dependency-analyst and simplicity-reviewer, t
 
 Close the Team. Modify plan based on results.
 
-## Step 4: Confirm
+## Step 4: Doodlestein Challenge (optional)
+
+Before confirming with the user, check cross-family availability (`cross_family` in pipeline.yml):
+
+- **Cross-family available** → run Doodlestein challenge on the plan:
+  - Compile: plan title + step summaries + AC list
+  - Send to cross-family (codex-proxy + gemini-proxy + challenger) with 3 questions:
+    - Q1 Smartest Alternative: Is there a fundamentally different approach that makes this plan unnecessary?
+    - Q2 Problem Validity: Which step solves a problem that doesn't actually exist?
+    - Q3 Regret Prediction: Which step will be reworked or removed, and why?
+  - Present challenges to user
+  - User agrees → modify plan accordingly
+  - User dismisses → record in plan review summary
+- **Cross-family unavailable** → skip:
+  ```
+  ℹ️ Doodlestein challenge skipped: cross-family unavailable.
+  ```
+
+## Step 5: Confirm
 
 Show the complete plan to the user. Indicate next step is `/ae:work <plan file path>`.
 
@@ -149,3 +167,4 @@ Show the complete plan to the user. Indicate next step is `/ae:work <plan file p
 
 1. Plan file (with acceptance criteria + step-AC mapping + parallel strategy)
 2. Plan review summary (with architect/analyst/simplifier discussion records)
+3. Doodlestein review (if cross-family available)

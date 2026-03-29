@@ -150,15 +150,31 @@ Re-run test command from pipeline.yml, confirm tests pass.
 
 P2/P3 per standard rule (fix / defer / backlog).
 
+## Outcome Statistics
+
+After all fixups are done, compile outcome data for this feature cycle:
+
+```
+## Outcome Statistics
+- Steps completed: N/M
+- Rework rate: X steps needed fixup commits (X/N = Y%)
+- P1 escape rate: Z P1 findings discovered in /ae:review (should be 0 if /ae:work pre-commit caught them all)
+- Drift events: D contract violations during /ae:work (approved: A, fixed: F, rolled back: R)
+- Auto-pass rate: P steps auto-continued / N total steps (only if auto_pass was enabled)
+```
+
+Include this in the review report. This data accumulates naturally across features, providing evidence for tuning checklists and gate conditions over time.
+
 ## Output
 
 1. Challenger final report (with discussion evidence, cross-family opinions, disposition recommendations)
-2. Fixups squashed
-3. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
-4. **Scratch archive + cleanup**: List all scratch files for current project (`project` field matches repo name). Ask user once with AskUserQuestion:
+2. Outcome statistics (rework rate, P1 escape rate, drift events, auto-pass rate)
+3. Fixups squashed
+4. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
+5. **Scratch archive + cleanup**: List all scratch files for current project (`project` field matches repo name). Ask user once with AskUserQuestion:
    - "N scratch records found from this session. What to do?"
    - Option A: "Archive and clean up" → copy to `<output.reviews>`, then delete `status: resolved`/`done` files
    - Option B: "Archive only" → copy to `<output.reviews>`, keep scratch files
    - Option C: "Skip" → do nothing
    - **Never delete `status: in_progress` files** — these represent unfinished work.
-5. Prompt user to create PR
+6. Prompt user to create PR
