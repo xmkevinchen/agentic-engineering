@@ -51,9 +51,11 @@ One sentence: what problem does this feature solve.
 ### Step 1: <description> (AC1)
 - [ ] Subtask a
 - [ ] Subtask b
+Expected files: path/to/file1.ts, path/to/file2.ts
 
 ### Step 2: <description> (AC2, AC3)
 - [ ] Subtask a
+Expected files: path/to/file3.ts
 
 ## Acceptance Criteria
 
