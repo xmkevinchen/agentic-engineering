@@ -98,15 +98,35 @@ If `test.command` is set:
 
 Complex steps → multiple TDD rounds (one per subtask).
 
+### Fix Loop Circuit Breaker
+
+Track consecutive failures per test file during TDD. If the same test file fails N consecutive times (default: 3, configurable via `pipeline.yml` → `work.max_fix_loops`):
+
+→ **STOP** and show:
+```
+🔴 Fix loop detected: [test file] failed [N] consecutive times.
+
+Options:
+1. Retry with a different approach (describe what to try differently)
+2. Skip this subtask and defer to next step
+3. Pause for human help
+```
+
+Do NOT continue the TDD cycle. Each option must be presented to the user via AskUserQuestion.
+
 ## Pre-commit Checks (every commit must pass all)
 
+0. **Diff transparency** — run `git diff --stat` and display the output. This shows the user exactly which files were changed and how much, enabling quick drift detection before commit.
 1. **Tests green** — run the test command from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping tests"
 2. **Code Review** — execute `/ae:code-review` (subagent mode, fast)
-3. **Disposition table** — classify all findings:
-   - Fix now (< 5 min, fix immediately)
-   - Defer to step N (write to `<output.milestones>/*/notes.md`)
-   - Backlog (write to `pipeline.yml` → `output.backlog`, default: `docs/backlog/`). File: `BL-NNN-slug.md` with frontmatter `id`, `title`, `type: backlog`, `created`, `status: open`
-4. **Disposition challenge** — send table to cross-family for challenge
+3. **Disposition table** — classify all findings with default handling:
+   - **P1 (blocker)**: always show, always fix now
+   - **P2 logic/security**: show, require human disposition (fix now / defer / backlog)
+   - **P2 style/naming**: auto-skip (do not show unless user requests full report)
+   - **P3 (minor)**: auto-skip (do not show unless user requests full report)
+   - Defer → write to `<output.milestones>/*/notes.md`
+   - Backlog → write to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`). File: `BL-NNN-slug.md` with frontmatter `id`, `title`, `type: backlog`, `created`, `status: open`
+4. **Disposition challenge** — send P1 + P2-logic/security items to cross-family for challenge (skip P2-style and P3)
 5. **Fix and re-review** — after fixing findings, re-run review until clean pass
 
 ## Commit

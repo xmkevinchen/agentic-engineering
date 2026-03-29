@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.7 — 2026-03-29
+
+### Harness Improvement Phase 1
+- **Fix loop circuit breaker**: `/ae:work` TDD cycle detects consecutive test failures on same file, stops after 3 (configurable) with retry/defer/help options
+- **Git diff transparency**: `/ae:work` shows `git diff --stat` before each commit for drift visibility
+- **Disposition efficiency**: Pre-commit auto-skips P3 and P2-style/naming findings, only shows P1 + P2-logic/security
+- **Plan quality self-check**: `/ae:plan` verifies step completion conditions, AC verifiability, and expected file lists before review
+- **Discussion decision self-check**: `/ae:discuss` requires rationale, reversibility rating, and evidence for each decision
+
+### Documentation
+- **Discussion 002**: Harness improvement discussion with 2 rounds of Agent Team review (conclusion + plan)
+- **Plan 002**: 3-phase implementation plan for evaluation criteria, automation gates, drift detection
+
 ## v0.0.6 — 2026-03-23
 
 ### Features

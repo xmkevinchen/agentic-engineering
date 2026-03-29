@@ -74,6 +74,16 @@ One sentence: what problem does this feature solve.
 - Each AC covered by at least one step
 - Each step ≤ 3 ACs
 
+### Plan Quality Self-check
+
+After writing the plan, verify before proceeding to review:
+
+1. **Step completeness**: Does every step have a clear completion condition? (not just "implement X" — what specifically is done when it's done?)
+2. **AC verifiability**: Does every AC have a concrete verification method? (test command, manual check, metric threshold — not "results should be reasonable")
+3. **Evidence for drift detection**: Does every step list the files expected to be modified? (This enables Phase 2 contract extraction for drift detection during `/ae:work`)
+
+If any check fails → fix the plan before proceeding to review. These checks are self-checks by the writing agent, not a separate review step.
+
 ## Step 3: Agent Teams Plan Review
 
 After the plan is written, create a Team for parallel review.
