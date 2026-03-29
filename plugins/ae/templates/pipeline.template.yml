@@ -25,6 +25,20 @@ output:
 # Set to ".claude/scratch/" if you want scratch files in-repo (add to .gitignore).
 # scratch: "~/.claude/scratch/"
 
+# --- Work Execution ---
+work:
+  max_fix_loops: 3           # Fix loop circuit breaker: stop after N consecutive failures on same test
+  auto_pass: false           # Auto-continue when tests green + no P1 + contract verified (opt-in)
+  security_patterns:         # Files matching these patterns always require human confirmation
+    - "auth/*"
+    - "security/*"
+    - "*.env"
+    - "*secret*"
+    - "*credential*"
+    - "*.pem"
+    - "*.key"
+    - "migrations/*"
+
 # --- Cross-Family Review ---
 # Enable/disable cross-family proxy agents in Agent Teams.
 # When enabled, the corresponding proxy agent joins every team.
