@@ -143,9 +143,45 @@ For each pending topic:
 
 Allow skipping (keep pending) and revisiting decided topics.
 
-### 3. Generate Conclusion
+### 3. Doodlestein Challenge
 
-After all topics decided:
+After all topics decided but BEFORE generating conclusion:
+
+1. Compile a summary: topic titles + decisions + one-line rationale each (do NOT include the full discussion process)
+2. Check cross-family availability (`cross_family` in pipeline.yml):
+   - **Cross-family available** → create Agent Team:
+     ```
+     TeamCreate(team_name: "<discussion>-doodlestein")
+
+     Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+           team_name: "<team>", run_in_background: true,
+           prompt: "Answer these 3 questions about these decisions: <summary>.
+                    Q1 Smartest Alternative: Is there a fundamentally different approach that makes these decisions unnecessary?
+                    Q2 Problem Validity: Which decision solves a problem that doesn't actually exist? What evidence would prove it's real?
+                    Q3 Regret Prediction: Which decision will be reversed within 6 months, and why?
+                    SendMessage findings to challenger.")
+
+     Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
+           team_name: "<team>", run_in_background: true,
+           prompt: "<same 3 questions with summary>. SendMessage findings to challenger.")
+
+     Agent(subagent_type: "challenger", name: "challenger",
+           team_name: "<team>", run_in_background: true,
+           prompt: "Wait for codex-proxy and gemini-proxy findings.
+                    Also answer the 3 Doodlestein questions yourself.
+                    Synthesize all challenges into a single report.
+                    SendMessage report to user.")
+     ```
+   - **Cross-family unavailable** → challenger-only mode (no team, single subagent answers the 3 questions)
+3. Present challenges to user via AskUserQuestion
+4. For each challenge:
+   - User agrees → reopen that topic (go back to step 2)
+   - User dismisses with reason → record dismissal
+5. Record all challenges and responses in conclusion under `## Doodlestein Review`
+
+### 4. Generate Conclusion
+
+After Doodlestein challenge resolved (or all challenges dismissed):
 
 1. Update `index.md`: set `pipeline.discuss: done`
 2. Create `conclusion.md`:
