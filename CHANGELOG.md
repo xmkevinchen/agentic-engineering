@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.0.8 — 2026-03-29
+
+### Harness Improvement Phase 2
+- **Contract extraction**: `/ae:work` extracts `files_allowed` and `target_ac` from plan's "Expected files:" before each step. Graceful degradation when plan lacks this field.
+- **Drift verification**: Post-step `git diff --name-only` checked against contract. Violations trigger soft pause with fix/approve/rollback options. Approved drifts recorded in commit message.
+- **Auto-pass gate** (opt-in): When `work.auto_pass: true` in pipeline.yml, steps auto-continue if tests green + no P1 + contract verified. Contract violations and security-sensitive files always force pause.
+- **Pipeline config**: `work.max_fix_loops`, `work.auto_pass`, `work.security_patterns` added to pipeline template
+- **Plan template**: Steps now include "Expected files:" line for contract extraction
+
 ## v0.0.7 — 2026-03-29
 
 ### Harness Improvement Phase 1

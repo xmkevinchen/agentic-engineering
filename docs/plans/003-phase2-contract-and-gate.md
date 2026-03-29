@@ -3,7 +3,7 @@ id: "003"
 title: "Phase 2: Contract 提取 + Auto-pass Gate"
 type: plan
 created: 2026-03-29
-status: reviewed
+status: done
 discussion: "docs/discussions/002-harness-improvement/conclusion.md"
 review: "docs/plans/003-phase2-plan-review.md"
 ---
@@ -38,15 +38,15 @@ Contract 作为 session 状态在 SKILL.md 执行过程中传递（同 fix_loop_
 
 ## Steps
 
-### Step 0: Plan 模板更新 (AC6)
-- [ ] `plugins/ae/skills/plan/SKILL.md` — Step 结构模板加 "Expected files" 字段指导：
+### Step 0: Plan 模板更新 (AC6) ✅ 86bc7dd
+- [x] `plugins/ae/skills/plan/SKILL.md` — Step 结构模板加 "Expected files" 字段指导：
   ```
   ### Step N: <description> (ACx)
   - [ ] Subtask a
   - [ ] Subtask b
   Expected files: src/auth/middleware.ts, src/auth/types.ts
   ```
-- [ ] `plugins/ae/templates/pipeline.template.yml` — 加配置项：
+- [x] `plugins/ae/templates/pipeline.template.yml` — 加配置项：
   ```yaml
   work:
     max_fix_loops: 3
@@ -63,28 +63,28 @@ Contract 作为 session 状态在 SKILL.md 执行过程中传递（同 fix_loop_
   ```
 - [ ] 预计改动文件：`plugins/ae/skills/plan/SKILL.md`, `plugins/ae/templates/pipeline.template.yml`
 
-### Step 1: Contract 提取逻辑 (AC1)
-- [ ] `/ae:work` SKILL.md — 在 TDD Cycle 之前加 "Contract Extraction" 段落
-- [ ] 从当前 step 的 plan 文本提取 contract：
+### Step 1: Contract 提取逻辑 (AC1) ✅
+- [x] `/ae:work` SKILL.md — 在 TDD Cycle 之前加 "Contract Extraction" 段落
+- [x] 从当前 step 的 plan 文本提取 contract：
   - 解析 "Expected files:" 行 → `files_allowed`
   - 解析步骤标题 "(ACx)" → `target_ac`
   - 无 "Expected files" → `is_empty = true`
-- [ ] 提取后**静默展示** contract（MF4）：显示但不 block，不等用户确认
+- [x] 提取后**静默展示** contract（MF4）：显示但不 block，不等用户确认
   ```
   📋 Contract: files_allowed=[src/auth/middleware.ts, src/auth/types.ts], AC=[AC3]
   ```
-- [ ] 提取失败（plan 结构异常）→ 警告 + 跳过验证继续（C4）
-- [ ] 预计改动文件：`plugins/ae/skills/work/SKILL.md`
+- [x] 提取失败（plan 结构异常）→ 警告 + 跳过验证继续（C4）
+- [x] 预计改动文件：`plugins/ae/skills/work/SKILL.md`
 
-### Step 2: Post-step Drift 验证 (AC2, AC3)
-- [ ] `/ae:work` SKILL.md — 在 Pre-commit Checks 的 "Diff transparency" 步骤后加 "Contract Verification"
-- [ ] 如果 `contract.is_empty == true` → 跳过验证，视为通过
-- [ ] 验证逻辑：
+### Step 2: Post-step Drift 验证 (AC2, AC3) ✅
+- [x] `/ae:work` SKILL.md — 在 Pre-commit Checks 的 "Diff transparency" 步骤后加 "Contract Verification"
+- [x] 如果 `contract.is_empty == true` → 跳过验证，视为通过
+- [x] 验证逻辑：
   - 运行 `git diff --name-only` 提取改动文件列表（C6）
   - 对比 `files_allowed`：有没有超出范围的文件？
   - 新增文件：是否在 step 描述的预期内？
-- [ ] 验证通过 → 继续 pre-commit checks
-- [ ] 验证失败 → 软暂停 + 展示偏离详情：
+- [x] 验证通过 → 继续 pre-commit checks
+- [x] 验证失败 → 软暂停 + 展示偏离详情：
   ```
   ⚠️ Contract violation detected:
   - files_allowed: [list]
@@ -96,13 +96,13 @@ Contract 作为 session 状态在 SKILL.md 执行过程中传递（同 fix_loop_
   2. Approve drift: explain why and continue (recorded in commit message)
   3. Rollback: discard this step's changes
   ```
-- [ ] 预计改动文件：`plugins/ae/skills/work/SKILL.md`
+- [x] 预计改动文件：`plugins/ae/skills/work/SKILL.md`
 
-### Step 3: Auto-pass Gate 条件 (AC4, AC5)
-- [ ] `/ae:work` SKILL.md — Post-commit 段落修改：条件判断替代无条件暂停
-- [ ] **默认关闭**（opt-in）：需 `pipeline.yml → work.auto_pass: true` 才启用（C2）
-- [ ] 未启用时保持当前行为（post-commit 始终暂停）
-- [ ] 启用后，auto-pass 条件（全部满足才自动继续）：
+### Step 3: Auto-pass Gate 条件 (AC4, AC5) ✅
+- [x] `/ae:work` SKILL.md — Post-commit 段落修改：条件判断替代无条件暂停
+- [x] **默认关闭**（opt-in）：需 `pipeline.yml → work.auto_pass: true` 才启用（C2）
+- [x] 未启用时保持当前行为（post-commit 始终暂停）
+- [x] 启用后，auto-pass 条件（全部满足才自动继续）：
   - tests green（test command 返回 0）
   - code-review 无 P1 findings
   - contract verified（通过 or is_empty）
@@ -110,10 +110,10 @@ Contract 作为 session 状态在 SKILL.md 执行过程中传递（同 fix_loop_
   ```
   ✅ Auto-pass: tests green, no P1, contract verified. Continuing to Step N+1.
   ```
-- [ ] **强制暂停**（无论 auto_pass 设置如何）：
+- [x] **强制暂停**（无论 auto_pass 设置如何）：
   - contract violation（优先级最高）
   - 改动文件匹配 `pipeline.yml → work.security_patterns`（C3）
-- [ ] 预计改动文件：`plugins/ae/skills/work/SKILL.md`
+- [x] 预计改动文件：`plugins/ae/skills/work/SKILL.md`
 
 ## Acceptance Criteria
 
