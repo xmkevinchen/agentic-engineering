@@ -132,10 +132,14 @@ For each pending topic:
 2. Present: context, options, recommendation
 3. Use `AskUserQuestion` to collect user's choice — list options
 4. If user needs more analysis, use appropriate agent
-5. Update topic file:
-   - Set frontmatter `status: decided`, `decision: "[choice]"`, `rationale: "[reason]"`
-6. Update `index.md` topic table: mark status decided, fill decision column
-7. Move to next topic
+5. **Decision quality self-check** before recording:
+   - Does the decision have a clear rationale? (not "feels right" — specific reasoning)
+   - For high-impact decisions: mark `reversibility: high/medium/low` in frontmatter
+   - What evidence supports this choice? (codebase analysis, prior art, data — record in rationale)
+6. Update topic file:
+   - Set frontmatter `status: decided`, `decision: "[choice]"`, `rationale: "[reason]"`, `reversibility: "high|medium|low"`
+7. Update `index.md` topic table: mark status decided, fill decision column
+8. Move to next topic
 
 Allow skipping (keep pending) and revisiting decided topics.
 
