@@ -26,7 +26,7 @@ Generate tests for: **$ARGUMENTS**
 
 Create a Team for parallel test planning review. **Lead: qa** (collects and validates coverage).
 
-**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+**Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents.
 

@@ -25,7 +25,7 @@ Build multi-perspective consensus on: **$ARGUMENTS**
 
 Create a Team with explicit stances. **Lead: mediator** (collects and synthesizes). Each agent argues from their assigned position.
 
-**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+**Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents as additional neutral evaluators. If a proxy fails to connect, it should SendMessage to **mediator** (the lead) that it's unavailable, then exit gracefully.
 

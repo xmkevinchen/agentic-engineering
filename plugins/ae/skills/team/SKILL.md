@@ -19,7 +19,7 @@ Spin up a task-specific Agent Team for: **$ARGUMENTS**
 
 Read the task description and determine:
 
-Read `docs/agent-selection.md` for the selection table and rules. Use it to pick the right team based on task context.
+Refer to the **Agent Selection Reference** skill for the selection table and rules. Use it to pick the right team based on task context.
 
 ## Step 2: Launch Team
 
