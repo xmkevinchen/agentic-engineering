@@ -94,44 +94,32 @@ If any check fails → fix the plan before proceeding to review. These checks ar
 
 After the plan is written, create a Team for parallel review.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully — so the lead doesn't hang waiting.
+**Select reviewers**: Read `docs/agent-selection.md` for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst + simplicity-reviewer). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
+
+**Cross-family**: Follow the cross-family rules in `docs/agent-selection.md` — same specialized prompt for both proxies, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **architect** (the lead) and exit gracefully.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")
 
+# Selected reviewers (example — actual selection based on plan context):
 Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
-               Follow Team Communication Protocol.
-               Teammates: dependency-analyst, simplicity-reviewer, codex-proxy, gemini-proxy.
                Produce step dependency graph and parallel strategy.
-               SendMessage to dependency-analyst and simplicity-reviewer when done.")
+               SendMessage to other reviewers when done.")
 
-Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Validate the architect's parallel assumptions in the step decomposition.
-               Follow Team Communication Protocol.
-               Teammates: architect, simplicity-reviewer.
-               Wait for architect's proposal before analyzing.
-               Hidden dependencies → SendMessage to architect with adjustment suggestions.")
+Agent(subagent_type: "<reviewer-2>", ...)
+Agent(subagent_type: "<reviewer-3>", ...)
 
-Agent(subagent_type: "simplicity-reviewer", name: "simplicity-reviewer",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Operate in /plan mode per Team Communication Protocol.
-               Review the architect's step decomposition for complexity.
-               Wait for architect's proposal before reviewing.
-               Overly complex steps → SendMessage to architect with simplification suggestions.")
-
+# Cross-family (same specialized prompt):
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan via Codex MCP for hidden dependencies and over-engineering: <plan full text>.
-               Teammates: architect, dependency-analyst, simplicity-reviewer.
+      prompt: "<specialized review focus based on plan domain>: <plan full text>.
                SendMessage findings to architect when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan via Gemini MCP for architecture quality and industry practices: <plan full text>.
-               Teammates: architect, dependency-analyst, simplicity-reviewer.
+      prompt: "<same specialized focus as codex>: <plan full text>.
                SendMessage findings to architect when done.")
 ```
 

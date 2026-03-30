@@ -45,53 +45,42 @@ TaskCreate("Architecture review")
 TaskCreate("Cross-family challenge + synthesis")
 ```
 
-### 3. Launch Teammates in Parallel
+### 3. Select and Launch Reviewers
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy agent fails to connect to its MCP server, it should SendMessage to **challenger** (not Lead) and exit gracefully — challenger needs to know so it doesn't hang waiting for proxy findings.
+**Select reviewers**: Read `docs/agent-selection.md` for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** as synthesizer.
 
-In **one message** launch all (`run_in_background: true`):
+**Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in `docs/agent-selection.md` — same specialized prompt for both proxies. If a proxy fails to connect, it should SendMessage to **challenger** and exit gracefully.
+
+**Launch all in one message** (`run_in_background: true`):
 
 ```
-Agent(subagent_type: "security-reviewer", name: "security-reviewer",
+# For each selected reviewer:
+Agent(subagent_type: "<reviewer>", name: "<reviewer>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review <diff-range> for security. Follow Team Communication Protocol.
-               Teammates: performance-reviewer, architecture-reviewer, challenger.
-               SendMessage findings to challenger when done. Cross-domain findings → send to relevant reviewer.")
+      prompt: "Review <diff-range> for <your domain>. Follow Team Communication Protocol.
+               Teammates: [other selected reviewers], challenger.
+               SendMessage findings to challenger when done.")
 
-Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Review <diff-range> for performance. Follow Team Communication Protocol.
-               Teammates: security-reviewer, architecture-reviewer, challenger.
-               SendMessage findings to challenger when done. Cross-domain findings → send to relevant reviewer.")
-
-Agent(subagent_type: "architecture-reviewer", name: "architecture-reviewer",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Review <diff-range> for architecture. Follow Team Communication Protocol.
-               Teammates: security-reviewer, performance-reviewer, challenger.
-               SendMessage findings to challenger when done. Cross-domain findings → send to relevant reviewer.")
-
+# Always include challenger:
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
       prompt: "Operate in /review mode per Team Communication Protocol.
                Review scope: <diff-range>.
-               Teammates: security-reviewer, performance-reviewer, architecture-reviewer,
-                          codex-proxy, gemini-proxy.
+               Teammates: [selected reviewers], codex-proxy, gemini-proxy.
                Step 1: independent review of blind spots.
-               Step 2: wait for all reviewer + proxy findings, then compare and merge.
-               Step 3: targeted challenges — if reviewers disagree on a finding, YOU make the call. Do not let reviewers debate each other indefinitely.
-               Step 4: route cross-domain findings to the relevant reviewer if needed (max one round — if unresolved, you decide).
-               Step 5: synthesize final report and send to Lead.")
+               Step 2: wait for all reviewer + proxy findings, compare and merge.
+               Step 3: targeted challenges with structured format (Claim/Evidence/Objection/Confidence).
+               Step 4: synthesize final report with Disagreement Value Assessment. Send to Lead.")
 
+# Cross-family (same specialized prompt for both):
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review <diff-range> via Codex MCP. Focus on security, correctness, and edge cases.
-               Teammates: challenger, security-reviewer, performance-reviewer, architecture-reviewer.
+      prompt: "Review <diff-range> via Codex MCP. <specialized focus based on diff context>.
                SendMessage findings to challenger when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review <diff-range> via Gemini MCP. Focus on architecture, patterns, and best practices.
-               Teammates: challenger, security-reviewer, performance-reviewer, architecture-reviewer.
+      prompt: "Review <diff-range> via Gemini MCP. <same specialized focus as codex>.
                SendMessage findings to challenger when done.")
 ```
 
