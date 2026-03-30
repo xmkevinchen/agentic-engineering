@@ -1,7 +1,7 @@
 ---
 name: ae:work
 description: Execute plan (TDD + commit + review, pre-checks chain)
-argument-hint: "<plan file path> [--auto N]"
+argument-hint: "<plan file path>"
 ---
 
 # /ae:work — Execute Plan
@@ -152,19 +152,16 @@ Fix findings, re-run from Check D until clean pass.
 ## Post-commit
 
 1. Brief summary: what was done, key decisions, structural changes
-2. **Auto-pass gate** — determined by `--auto N` argument OR `pipeline.yml` → `work.auto_pass`:
-   - **No `--auto` and `auto_pass: false`** (default) → **pause for user confirmation**
-   - **`--auto N`** → user authorizes next N steps to auto-execute. Decrement counter after each step.
-   - **`auto_pass: true`** → equivalent to `--auto ∞` (all steps auto-execute)
-   - When auto-pass is active, evaluate gate:
-     ```
-     gate = tests_green AND no_p1 AND (no_drift OR drift_approved)
-     ```
-     - All met → `✅ Auto-pass: tests green, no P1, no drift. Continuing to Step N+1. (N remaining)`
-     - Any failed → pause for user, reset `--auto` counter to 0
-     - Drift detected (not approved) → always pause, reset counter
-     - Security pattern matched → always pause, reset counter
-     - No test command → `tests_green` treated as true
+2. **Auto-pass gate** (default: ON) — evaluate after every step:
+   ```
+   gate = tests_green AND no_p1 AND (no_drift OR drift_approved)
+   ```
+   - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no drift. Continuing to Step N+1.`
+   - Any failed → **pause for user confirmation**
+   - Drift detected (not approved) → always pause
+   - Security pattern matched → always pause
+   - No test command → `tests_green` treated as true
+   - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
 3. All steps done → suggest `/ae:review`
 
 ## Output

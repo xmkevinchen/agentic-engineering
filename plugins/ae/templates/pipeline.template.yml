@@ -28,7 +28,7 @@ output:
 # --- Work Execution ---
 work:
   max_fix_loops: 3           # Fix loop circuit breaker: stop after N consecutive failures on same test
-  auto_pass: false           # Auto-continue when tests green + no P1 + contract verified (opt-in)
+  auto_pass: true            # Auto-continue when gate passes (tests green + no P1 + no drift). Set false for manual confirm every step.
   security_patterns:         # Files matching these patterns always require human confirmation
     - "auth/*"
     - "security/*"
