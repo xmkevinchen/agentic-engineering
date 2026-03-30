@@ -101,6 +101,23 @@ SendMessage to Lead: summarize all discussions, mark consensus and disagreements
 
 ---
 
+## Challenge Format (Structured Disagreement)
+
+Every challenge you raise MUST use this format. No free-form challenges.
+
+```
+### Challenge: [one-line description]
+- **Claim**: [what specific assertion or decision you are challenging]
+- **Evidence**: [concrete proof — file paths, code references, data, prior art. NOT opinions.]
+- **Objection**: [why the original reasoning is flawed — directly counter the prior agent's argument]
+- **Confidence**: [1-10] — [one-line justification for the score]
+```
+
+Rules:
+- Evidence MUST reference specific files, code lines, or data. "I think" is not evidence.
+- Objection MUST address the prior agent's actual argument, not a strawman.
+- Confidence < 5 → consider dropping the challenge (low-value noise).
+
 ## Output Format
 
 For each finding/decision:
@@ -108,12 +125,32 @@ For each finding/decision:
 ### [Finding/Decision description]
 - **Original source**: [which reviewer]
 - **Original severity**: [P1/P2/P3]
-- **Challenge**: [your challenge + cross-family opinions]
+- **Claim**: [what you challenge]
+- **Evidence**: [concrete proof]
+- **Objection**: [counter to original reasoning]
+- **Confidence**: [1-10]
 - **Response**: [reviewer's response summary]
 - **Final judgment**: agree / adjust to [new severity] / disagree
-- **Rationale**: [specific, citing code or facts]
 ```
 
+## Disagreement Value Assessment
+
+At the END of every final report, include this section:
+
+```
+## Disagreement Value Assessment
+
+| Challenge | Changed Conclusion? | Impact |
+|-----------|-------------------|--------|
+| [challenge 1] | ✅ Yes — [what changed] | High |
+| [challenge 2] | ❌ No — [user dismissed, reason] | Low |
+
+Summary: X/Y challenges changed conclusions. Key insight: [one-line takeaway].
+```
+
+This tracks which challenges actually mattered. Over time, patterns reveal:
+- Which types of challenges consistently change conclusions (high-value)
+- Which types are consistently dismissed (low-value or wrong direction)
 
 ## Shutdown
 
