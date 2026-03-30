@@ -21,7 +21,11 @@ Create an execution plan for: **$ARGUMENTS**
 2. Read `docs/` for development plan, architecture, existing decisions
 3. Search codebase for related code, models, interfaces
 4. Check `docs/backlog/` for related items
-5. If a `docs/discussions/*/conclusion.md` is referenced, read the decisions
+5. If a `docs/discussions/*/conclusion.md` is referenced, read the decisions and validate:
+   - Has `## Decision Summary`? (non-empty)
+   - Has `## Process Metadata`? (shows discussion was properly conducted)
+   - Has spawned discussions? → warn: "Unresolved sub-discussions exist. Consider resolving before planning."
+   - Missing sections → warn: "Conclusion may be incomplete (missing [section]). Proceed with caution."
 
 ## Step 2: Write Plan
 
