@@ -39,15 +39,24 @@ Use Explore agent to investigate related modules, patterns, and constraints. If 
 
 Find 3-6 key decision points. Each should be a genuine choice with trade-offs.
 
-### 4. Create Topic Files
+### 4. Create Topic Directories
 
-For each topic, create `topic-NN-slug.md`:
+Each topic is a **directory** (not a single file) to support multi-round discussion without context bloat:
+
+```
+topic-NN-slug/
+  summary.md       # Current state — agent reads ONLY this each round
+  round-01.md      # First round discussion (archived after round ends)
+```
+
+**summary.md** (agent reads this every round — keep concise):
 
 ```markdown
 ---
 id: "NN"
 title: "[topic title]"
 status: pending          # pending → converged / revisit / deferred
+current_round: 1
 created: YYYY-MM-DD
 decision: ""
 rationale: ""
@@ -56,11 +65,18 @@ reversibility: ""
 
 # Topic: [title]
 
+## Current Status
+[One-line status: what's been decided or what's blocking]
+
+## Round History
+| Round | Score | Key Outcome |
+|-------|-------|-------------|
+| (populated as rounds complete) |
+
 ## Context
 [Why this decision is needed, what it affects]
 
 ## Options
-
 ### A: [option name]
 - **Pros**: X, Y
 - **Cons**: Z
@@ -70,7 +86,29 @@ reversibility: ""
 - **Cons**: Z
 
 ## Recommendation
-[Which option and why, based on codebase analysis]
+[Which option and why]
+```
+
+**round-NN.md** (full discussion record for each round — archived, not re-read):
+
+```markdown
+---
+round: NN
+date: YYYY-MM-DD
+score: pending/converged/revisit/deferred
+---
+
+# Round NN
+
+## Discussion
+[Full discussion content, user responses, analysis]
+
+## Outcome
+- Score: [converged/revisit/deferred]
+- Decision: [if converged]
+- Revisit reason: [if revisit]
+- Deferred reason: [if deferred]
+```
 ```
 
 ### 5. Create or Update index.md
@@ -99,7 +137,7 @@ tags: [relevant, tags]
 
 | # | Topic | File | Status | Decision |
 |---|-------|------|--------|----------|
-| 1 | [Topic A] | [topic-01-slug.md](topic-01-slug.md) | pending | — |
+| 1 | [Topic A] | [topic-01-slug/](topic-01-slug/) | pending | — |
 
 ## Documents
 - [Analysis](analysis.md) *(if exists)*
@@ -129,13 +167,14 @@ Read `$ARGUMENTS/index.md`, parse topic table.
 
 For each pending or revisit topic:
 
-1. Read topic file, present context + options + recommendation
-2. Use `AskUserQuestion` to collect user's choice — options include:
+1. **Read `topic-NN-slug/summary.md` ONLY** — do NOT read previous round files (they are archived)
+2. Present: context + options + recommendation (from summary)
+3. Use `AskUserQuestion` to collect user's choice — options include:
    - The listed options (A, B, C...)
    - "需要更多分析" (triggers deeper research)
    - "这个问题需要拆分" (marks as deferred → will spawn new discussion in Sweep)
    - "稍后再议" (marks as deferred)
-3. **Score the topic** based on user's response:
+4. **Score the topic** based on user's response:
 
 | Score | When | Frontmatter | Next |
 |-------|------|-------------|------|
@@ -143,16 +182,20 @@ For each pending or revisit topic:
 | `revisit` | Discussion inconclusive, need more info or different angle | `status: revisit`, `revisit_reason: "..."` | Come back later this round or next round |
 | `deferred` | Can be postponed, but MUST resolve before discussion ends | `status: deferred`, `deferred_reason: "..."` | Handle in Sweep |
 
-4. **Quality check** before recording converged decisions:
+5. **Quality check** before recording converged decisions:
    - Rationale must reference specific analysis, files, or data (not "综合考虑选 A")
    - High-impact decisions (reversibility: low) need stronger evidence
    - If rationale is weak → prompt user to strengthen or mark as revisit
-5. Update topic file + index.md topic table
-6. After each topic, show updated convergence status
+6. **Write round file**: create `topic-NN-slug/round-NN.md` with full discussion content + outcome
+7. **Update summary.md**: update status, add Round History row, update Current Status. Keep summary concise — only key outcomes, not full discussion text
+8. Update index.md topic table
+9. After each topic, show updated convergence status
 
 **Multi-round**: After all topics discussed once, if any are `revisit`:
-- Present revisit topics again with the `revisit_reason`
+- Read `summary.md` (which now includes previous round outcomes)
+- Present revisit topics with the `revisit_reason` from summary
 - User can provide new info, change approach, or mark as deferred
+- New round → new `round-NN.md`, update `summary.md`
 - No fixed round limit — continue until no more revisit topics
 
 ### 3. Sweep: Resolve All Deferred
