@@ -47,9 +47,9 @@ TaskCreate("Cross-family challenge + synthesis")
 
 ### 3. Select and Launch Reviewers
 
-**Select reviewers**: Read `docs/agent-selection.md` for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** as synthesizer.
+**Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** as synthesizer.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in `docs/agent-selection.md` — same specialized prompt for both proxies. If a proxy fails to connect, it should SendMessage to **challenger** and exit gracefully.
+**Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies. If a proxy fails to connect, it should SendMessage to **challenger** and exit gracefully.
 
 **Launch all in one message** (`run_in_background: true`):
 

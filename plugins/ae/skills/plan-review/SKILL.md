@@ -20,7 +20,7 @@ Review the plan at **$ARGUMENTS** using Agent Teams.
 
 Read the full plan text, then create a Team for parallel review.
 
-**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+**Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully — so the lead doesn't hang waiting.
 

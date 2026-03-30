@@ -15,7 +15,7 @@ Quick code review on current uncommitted changes.
 
 ## Execution (three parallel tracks)
 
-**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+**Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. If a proxy fails to connect, skip it — do not block the review.
 

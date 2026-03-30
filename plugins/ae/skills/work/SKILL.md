@@ -50,7 +50,7 @@ Pre-checks:
 
 **Parallel steps** → Agent Teams:
 
-**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+**Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 ```
 TeamCreate(team_name: "<feature>-work")

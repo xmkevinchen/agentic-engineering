@@ -25,7 +25,7 @@ Perform systematic deep analysis on: **$ARGUMENTS**
 
 Create a Team for parallel deep investigation. **Lead: architect** (collects and synthesizes).
 
-**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+**Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully.
 

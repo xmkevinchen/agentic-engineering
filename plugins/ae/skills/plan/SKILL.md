@@ -94,9 +94,9 @@ If any check fails → fix the plan before proceeding to review. These checks ar
 
 After the plan is written, create a Team for parallel review.
 
-**Select reviewers**: Read `docs/agent-selection.md` for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst + simplicity-reviewer). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
+**Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst + simplicity-reviewer). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
 
-**Cross-family**: Follow the cross-family rules in `docs/agent-selection.md` — same specialized prompt for both proxies, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **architect** (the lead) and exit gracefully.
+**Cross-family**: Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **architect** (the lead) and exit gracefully.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")
