@@ -1,9 +1,11 @@
 ---
 id: "02"
 title: "Cross-family 角色化 — Codex/Gemini 不只是 second opinion"
-status: revisit
-current_round: 1
-revisit_reason: "Team report 确认了方向（同一问题不同视角），但以下子问题未决：1) proxy 是否应该把角色定义/checklist 传给 Codex/Gemini real agent 2) cross-family 应该镜像 Claude 的角色(A)、补充没选的角色(B)、还是只给问题不给角色(C) 3) 这些角色选择的定义应该放在 agent-selection.md 还是别的地方"
+status: converged
+current_round: 2
+decision: "TL 根据 context 决定 cross-family 的角度"
+rationale: "Cross-family 是外部专家，需要明确的审查角度。TL 有足够上下文判断从什么角度最能发现盲区。Naive 版本先做起来，后续根据实战数据迭代。"
+reversibility: "high"
 created: 2026-03-30
 decision: ""
 rationale: ""

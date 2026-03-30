@@ -1,7 +1,7 @@
 ---
 id: "004"
 title: "动态 Agent 选择 — 根据 context 组建最优团队"
-status: active
+status: done
 created: 2026-03-30
 pipeline:
   analyze: skipped
@@ -40,8 +40,8 @@ Agent 选择应该是：
 
 | # | Topic | File | Status | Decision |
 |---|-------|------|--------|----------|
-| 1 | Agent 选择机制 | [topic-01-selection-mechanism/](topic-01-selection-mechanism/) | pending | — |
-| 2 | Cross-family 角色化 | [topic-02-cross-family-roles/](topic-02-cross-family-roles/) | pending | — |
+| 1 | Agent 选择机制 | [topic-01-selection-mechanism/](topic-01-selection-mechanism/) | converged | TL 查 agent-selection.md 表选人 |
+| 2 | Cross-family 角色化 | [topic-02-cross-family-roles/](topic-02-cross-family-roles/) | converged | TL 根据 context 决定外部专家审查角度 |
 
 ## Documents
 - [Conclusion](conclusion.md) *(after discussion complete)*
