@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.1.0 — 2026-03-30
+
+### Dynamic Agent Selection
+- **Centralized agent selection**: `skills/agent-selection/SKILL.md` — unified selection table referenced by all 12 Agent Teams skills
+- **Context-aware team composition**: TL selects agents based on task context signals, not hardcoded lists
+- **Cross-family as external experts**: TL decides review angle, proxy assembles full prompt (two-layer assembly)
+- **Auto-pass default ON**: gate passes → auto-continue, pause only on exception. Removed `--auto N`.
+
+### Challenger Format
+- **Structured disagreement**: Claim/Evidence/Objection/Confidence — no free-form challenges
+- **Disagreement Value Assessment**: tracks which challenges changed conclusions
+
+### /ae:work Rewrite
+- **Inline drift detection**: contract extraction moved into pre-commit (no separate phase)
+- **Execution flow diagram**: top of file for agent orientation
+- **Pre-commit checks A-G**: letter labels, contract verification, disposition efficiency
+
+### Knowledge Management
+- **docs/references/**: external sources with borrowed/discarded rationale
+- **NykDev framework analysis**: "Agreement is a bug" comparison
+- **docs/backlog/**: 6 tracked items for future work
+
+### Component counts
+- 14 skills (was 13 — added agent-selection contextual skill), 13 agents, 2 MCP servers
+
 ## v0.0.9 — 2026-03-30
 
 ### Discussion Convergence
