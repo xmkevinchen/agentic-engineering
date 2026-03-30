@@ -25,6 +25,8 @@ Perform systematic deep analysis on: **$ARGUMENTS**
 
 Create a Team for parallel deep investigation. **Lead: architect** (collects and synthesizes).
 
+**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully.
 
 ```
@@ -56,13 +58,13 @@ Agent(subagent_type: "challenger", name: "challenger",
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent analysis of this problem via Codex MCP: <problem + relevant files>.
+      prompt: "Independent analysis of this problem via Codex MCP — <specialized focus based on context>: <problem + relevant files>.
                Teammates: architect, standards-expert, challenger.
                SendMessage findings to architect when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent analysis of this problem via Gemini MCP: <problem + relevant files>.
+      prompt: "Independent analysis of this problem via Gemini MCP — <specialized focus based on context>: <problem + relevant files>.
                Teammates: architect, standards-expert, challenger.
                SendMessage findings to architect when done.")
 ```

@@ -31,6 +31,8 @@ Ask user if not obvious:
 
 Create a Team for parallel trace validation. **Lead: architect** (validates and produces final trace).
 
+**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully.
 
 ```
@@ -63,13 +65,13 @@ Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent trace validation via Codex MCP: <target + trace results>.
+      prompt: "Independent trace validation via Codex MCP — <specialized focus based on context>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
                SendMessage findings to architect when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent trace validation via Gemini MCP: <target + trace results>.
+      prompt: "Independent trace validation via Gemini MCP — <specialized focus based on context>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
                SendMessage findings to architect when done.")
 ```
