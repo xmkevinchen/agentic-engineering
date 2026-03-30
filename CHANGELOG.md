@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.0.9 — 2026-03-30
+
+### Discussion Convergence
+- **Three-state scoring**: topics scored as converged/revisit/deferred (no irresolvable escape)
+- **Multi-round discussion**: no fixed round limit, revisit until convergence
+- **Sweep mechanism**: all deferred items must resolve before conclusion — converge, spawn new discussion, or explain why
+- **Topic directory structure**: `summary.md` + `round-NN.md` per topic, agent only reads summary each round (O(1) context vs O(n))
+- **Process Metadata**: auto-embedded in conclusion, makes incomplete process visible
+- **Downstream validation**: `/ae:plan` checks conclusion completeness
+
+### Harness Phase 3
+- **Doodlestein challenge**: cross-family 3-question challenge (Smartest Alternative / Problem Validity / Regret Prediction) at discuss conclusion and plan confirm
+- **Outcome statistics**: `/ae:review` reports rework rate, P1 escape rate, drift events, auto-pass rate
+- **Auto-pass default ON**: gate passes → auto-continue, pause only on exception. Removed `--auto N` parameter.
+
+### Challenger Improvements
+- **Structured disagreement**: challenges must use Claim/Evidence/Objection/Confidence format
+- **Disagreement Value Assessment**: tracks which challenges changed conclusions vs dismissed
+
+### Documentation
+- **docs/references/**: knowledge sources with what we borrowed, discarded, and why
+- **NykDev framework analysis**: compared "Agreement is a bug" 11-agent framework with ae
+
+### Component counts
+- 13 skills, 13 agents, 2 MCP servers
+
 ## v0.0.8 — 2026-03-29
 
 ### Harness Improvement Phase 2
