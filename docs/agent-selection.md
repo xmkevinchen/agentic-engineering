@@ -22,25 +22,26 @@
 
 1. **Pick 2-4 core agents** from the table. Multiple rows can match — combine.
 2. **Always add challenger** to any team with 3+ agents.
-3. **Cross-family** (codex-proxy + gemini-proxy): add when task involves review, validation, or decision-making.
-   - Give both proxies the **same** specialized prompt focused on the task context.
-   - Do NOT give generic "review this" — specialize based on context (e.g., "review this migration for data integrity and rollback safety").
-   - Cross-family value = independent perspectives on the same question, not different roles.
+3. **Cross-family** (codex-proxy + gemini-proxy): external experts brought in for specific review angles.
+   - TL decides **what angle** the external expert should review from, based on where blind spots are most likely.
+   - Give a **specialized prompt with clear focus** — not generic "review this".
+   - Cross-family can review from the same angle as a Claude agent (two independent opinions) or a different angle (covering blind spots).
+   - Example: if Claude has security-reviewer and architecture-reviewer, cross-family could review from performance angle (补盲区) or also from security angle (双重独立验证). TL decides based on context.
 4. **Project agents**: discover all available agents (project `.claude/agents/`, plugins, global `~/.claude/agents/`). If a project agent matches the task better than a built-in one, prefer it.
 5. **Show selected team** to user before launching. User can adjust.
 
 ## Cross-family Prompt Reference
 
-Both codex-proxy and gemini-proxy receive the **same** specialized prompt. Examples by context:
+TL 根据 context 决定外部专家从什么角度审查。以下是常见角度的 prompt 示例：
 
-| Context | Specialized Prompt Focus |
-|---------|------------------------|
-| DB / migration | "Review for data integrity, index strategy, rollback safety, zero-downtime migration" |
-| Auth / security | "Review for authentication bypass, token lifecycle, injection vectors, secrets exposure" |
-| API / contract | "Review for backwards compatibility, error handling, versioning, contract violations" |
+| Review Angle | Specialized Prompt Focus |
+|-------------|------------------------|
+| Data integrity | "Review for data integrity, index strategy, rollback safety, zero-downtime migration" |
+| Security | "Review for authentication bypass, token lifecycle, injection vectors, secrets exposure" |
+| API contract | "Review for backwards compatibility, error handling, versioning, contract violations" |
 | Performance | "Review for query efficiency, N+1 patterns, caching strategy, memory allocation" |
 | Architecture | "Review for module boundaries, dependency direction, separation of concerns" |
-| New feature | "Review for hidden dependencies, scope completeness, edge cases, integration risks" |
-| Plan review | "Review for step decomposition quality, dependency accuracy, AC verifiability" |
+| Scope & risks | "Review for hidden dependencies, scope completeness, edge cases, integration risks" |
+| Plan quality | "Review for step decomposition quality, dependency accuracy, AC verifiability" |
 
-**Do NOT** assign different roles to codex vs gemini (e.g., "codex does security, gemini does performance"). Cross-family value = same question, different perspectives.
+TL 可以给 codex 和 gemini 相同角度（双重独立验证）或不同角度（覆盖更多盲区），取决于哪里最需要外部视角。

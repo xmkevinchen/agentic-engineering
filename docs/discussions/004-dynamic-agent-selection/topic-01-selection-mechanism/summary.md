@@ -1,12 +1,12 @@
 ---
 id: "01"
 title: "Agent 选择机制 — 从硬编码到 context-aware"
-status: pending
-current_round: 0
+status: converged
+current_round: 1
 created: 2026-03-30
-decision: ""
-rationale: ""
-reversibility: ""
+decision: "TL 查 agent-selection.md 表选人，统一引用"
+rationale: "已有 mapping table 放在 docs/agent-selection.md，所有 skill 引用同一个表。TL 根据 context 查表选 2-4 agents。Project agents 优先于 built-in。"
+reversibility: "high"
 ---
 
 # Topic: Agent 选择机制
