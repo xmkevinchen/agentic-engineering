@@ -227,6 +227,7 @@ After Sweep, all topics converged (or resolved). Before generating conclusion:
 
 1. Compile summary: topic titles + decisions + one-line rationale each
 2. Check cross-family availability (`cross_family` in pipeline.yml):
+   - **Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
    - **Cross-family available** → Agent Team:
      ```
      TeamCreate(team_name: "<discussion>-doodlestein")

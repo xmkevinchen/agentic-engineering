@@ -50,6 +50,8 @@ Pre-checks:
 
 **Parallel steps** → Agent Teams:
 
+**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+
 ```
 TeamCreate(team_name: "<feature>-work")
 
@@ -61,7 +63,7 @@ Agent(subagent_type: "<dev-agent>", name: "<dev-agent>",
 
 Agent(subagent_type: "qa", name: "qa",
       team_name: "<team>", run_in_background: true,
-      prompt: "Wait for dev, then review per checklist + Codex cross-family.
+      prompt: "Wait for dev, then review per checklist + cross-family — <specialized focus based on context>.
                Send findings to dev, wait for fixes, re-review.
                Pass → SendMessage to dev confirming.")
 ```

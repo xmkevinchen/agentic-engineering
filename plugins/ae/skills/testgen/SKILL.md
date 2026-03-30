@@ -26,6 +26,8 @@ Generate tests for: **$ARGUMENTS**
 
 Create a Team for parallel test planning review. **Lead: qa** (collects and validates coverage).
 
+**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents.
 
 ```
@@ -51,13 +53,13 @@ Agent(subagent_type: "security-reviewer", name: "security-reviewer",
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review test coverage via Codex MCP. Find untested paths and edge cases: <target code + test cases>.
+      prompt: "Review test coverage via Codex MCP — <specialized focus based on context>: <target code + test cases>.
                Teammates: qa, security-reviewer.
                SendMessage findings to qa when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review test coverage via Gemini MCP. Suggest additional scenarios and boundary tests: <target code + test cases>.
+      prompt: "Review test coverage via Gemini MCP — <specialized focus based on context>: <target code + test cases>.
                Teammates: qa, security-reviewer.
                SendMessage findings to qa when done.")
 ```

@@ -20,6 +20,8 @@ Review the plan at **$ARGUMENTS** using Agent Teams.
 
 Read the full plan text, then create a Team for parallel review.
 
+**Select agents**: Read `docs/agent-selection.md` for the selection table and rules.
+
 **Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully — so the lead doesn't hang waiting.
 
 ```
@@ -50,13 +52,13 @@ Agent(subagent_type: "simplicity-reviewer", name: "simplicity-reviewer",
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan via Codex MCP for hidden dependencies and over-engineering: <plan full text>.
+      prompt: "Review this plan via Codex MCP — <specialized focus based on context>: <plan full text>.
                Teammates: architect, dependency-analyst, simplicity-reviewer.
                SendMessage findings to architect when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan via Gemini MCP for architecture quality and industry practices: <plan full text>.
+      prompt: "Review this plan via Gemini MCP — <specialized focus based on context>: <plan full text>.
                Teammates: architect, dependency-analyst, simplicity-reviewer.
                SendMessage findings to architect when done.")
 ```
