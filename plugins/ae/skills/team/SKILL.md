@@ -19,21 +19,7 @@ Spin up a task-specific Agent Team for: **$ARGUMENTS**
 
 Read the task description and determine:
 
-1. **Task type** — which category best fits:
-   - `architecture` → architect, dependency-analyst, simplicity-reviewer
-   - `security` → security-reviewer, architect, code-reviewer
-   - `performance` → performance-reviewer, architect, dependency-analyst
-   - `debug` → archaeologist, dependency-analyst, qa
-   - `review` → code-reviewer, security-reviewer, performance-reviewer
-   - `research` → archaeologist, standards-expert, dependency-analyst
-   - `design` → architect, challenger, simplicity-reviewer
-   - `general` → architect, challenger, qa
-
-2. **Cross-family needed?** — if task involves review, validation, or decision-making → yes
-3. **Project agents** — discover all available agents (project, plugins, global) that match the task (check `agents.*` in pipeline.yml as override if configured)
-4. **Lead agent** — pick the most relevant agent as lead (collects and synthesizes)
-
-Show selected team to user before launching. User can adjust.
+Read `docs/agent-selection.md` for the selection table and rules. Use it to pick the right team based on task context.
 
 ## Step 2: Launch Team
 
