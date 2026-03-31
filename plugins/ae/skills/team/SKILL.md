@@ -10,7 +10,6 @@ Spin up a task-specific Agent Team for: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?"
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family + agent config)
 2. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
 3. **Agent Teams**: Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"experiments\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": true } }` to ~/.claude/settings.json and restart Claude Code."
@@ -65,11 +64,11 @@ Lead agent synthesizes all findings and sends report.
 
 Close the Team.
 
-## Scratch Persistence
+## Persist
 
-Auto-save team results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `team-YYYY-MM-DD-NNN.md` with frontmatter `type: team`, `project: <repo-name>`, `created`, `status: done`, `task: <$ARGUMENTS>`.
+Write team results directly to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-team-slug.md`.
 
-Do NOT ask user about formal persistence — team results are ephemeral working artifacts.
+**You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 
 Show results to user.
 

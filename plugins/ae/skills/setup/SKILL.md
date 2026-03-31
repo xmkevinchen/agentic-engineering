@@ -42,7 +42,7 @@ If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
 Read current `.claude/pipeline.yml`, compare with template:
 
-1. Check for new fields in template (missing from config) — especially new `output` slots and `scratch`
+1. Check for new fields in template (missing from config) — especially new `output` slots
 2. Check for deprecated fields (e.g., old `output.review` → new `output.reviews`)
 3. Show diff, use AskUserQuestion to confirm
 4. Preserve user-customized values, only add missing slots with defaults
@@ -59,7 +59,6 @@ When `pipeline.yml` is absent or a slot is missing, skills use these defaults:
 | `output.backlog` | `docs/backlog/` | ae:work, ae:review, ae:code-review |
 | `output.reviews` | `docs/reviews/` | ae:review |
 | `output.analyses` | `docs/analyses/` | ae:think |
-| `scratch` | `~/.claude/scratch/` | All skills (temporary persistence) |
 
 Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is missing or pipeline.yml doesn't exist, fall back to the default above. This ensures zero-config works for new projects.
 

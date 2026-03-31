@@ -10,9 +10,6 @@ Deep review of all changes for **$ARGUMENTS**.
 
 ## Pre-checks (all must pass before starting)
 
-### Check 0: Scratch Recovery
-Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?" Resolve before proceeding.
-
 ### Check 1: Agent Teams
 - Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`
 - If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"experiments\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": true } }` to ~/.claude/settings.json and restart Claude Code."
@@ -160,10 +157,4 @@ Include this in the review report. This data accumulates naturally across featur
 2. Outcome statistics (rework rate, P1 escape rate, drift events, auto-pass rate)
 3. Fixups squashed
 4. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
-5. **Scratch archive + cleanup**: List all scratch files for current project (`project` field matches repo name). Ask user once with AskUserQuestion:
-   - "N scratch records found from this session. What to do?"
-   - Option A: "Archive and clean up" → copy to `<output.reviews>`, then delete `status: resolved`/`done` files
-   - Option B: "Archive only" → copy to `<output.reviews>`, keep scratch files
-   - Option C: "Skip" → do nothing
-   - **Never delete `status: in_progress` files** — these represent unfinished work.
-6. Prompt user to create PR
+5. Prompt user to create PR

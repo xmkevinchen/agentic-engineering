@@ -18,9 +18,6 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 
 ## Pre-checks (all must pass)
 
-### Check 0: Scratch Recovery
-Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Resume?" Resolve before proceeding.
-
 ### Check 1: Plan Exists
 - Read the plan file, confirm it contains `## Acceptance Criteria` or `## AC`
 - If missing → suggest `/ae:plan`, **refuse to execute**

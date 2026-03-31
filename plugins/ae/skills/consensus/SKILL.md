@@ -10,7 +10,6 @@ Build multi-perspective consensus on: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?"
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family config)
 2. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
 3. **Agent Teams**: Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"experiments\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": true } }` to ~/.claude/settings.json and restart Claude Code."
@@ -90,9 +89,8 @@ Close the Team.
 
 ## Step 4: Persist
 
-1. **Auto-save to scratch**: Write verdict to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `consensus-YYYY-MM-DD-NNN.md` with frontmatter `type: consensus`, `project: <repo-name>`, `created`, `status: done`, `proposal: <$ARGUMENTS>`.
-2. **Ask user**: Use `AskUserQuestion` — "Debate results saved to scratch. Formally save to `<output.analyses>`?"
-   - **Yes** → copy to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-consensus-slug.md`
-   - **No** → keep in scratch only
+Write verdict directly to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-consensus-slug.md`.
+
+**You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 
 Show verdict to user.

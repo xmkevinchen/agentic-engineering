@@ -10,7 +10,6 @@ Perform systematic deep analysis on: **$ARGUMENTS**
 
 ## Pre-check
 
-0. **Scratch recovery**: Scan scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`) for files with `project` matching current repo name AND `status: in_progress`. If found → list them and ask user: "Unfinished operations found from a previous session. Resume?"
 1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
 2. **Agent Teams**: Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"experiments\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": true } }` to ~/.claude/settings.json and restart Claude Code."
 
@@ -82,10 +81,9 @@ Close the Team.
 
 ## Step 4: Persist
 
-1. **Auto-save to scratch**: Write analysis to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `think-YYYY-MM-DD-NNN.md` with full content.
-2. **Ask user**: Use `AskUserQuestion` — "Analysis results saved to scratch. Formally save to `<output.analyses>`?"
-   - **Yes** → write to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`).
-   - **No** → keep in scratch only
+Write analysis directly to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`).
+
+**You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 
 File naming: `NNN-slug.md` — three-digit sequential number + slug derived from topic.
 
