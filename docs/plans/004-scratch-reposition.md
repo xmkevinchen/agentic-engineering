@@ -3,7 +3,7 @@ id: "004"
 title: "Scratch 重新定位 — 去掉 scratch，产出物直接写项目目录"
 type: plan
 created: 2026-03-30
-status: draft
+status: done
 discussion: "docs/discussions/005-scratch-reposition/team-report.md"
 ---
 
