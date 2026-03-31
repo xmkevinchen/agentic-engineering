@@ -4,6 +4,14 @@ description: Structured design discussion (create topics or continue pending one
 argument-hint: "<topic description or discussion directory path>"
 ---
 
+## Argument Inference
+
+If `$ARGUMENTS` is empty:
+1. Check `output.discussions` for any discussion with `status: active` (has pending topics)
+2. Found → continue that discussion
+3. Not found → check conversation context for a topic being discussed
+4. Still nothing → ask user what to discuss
+
 # /ae:discuss — Design Discussion
 
 Start a structured design discussion for: **$ARGUMENTS**

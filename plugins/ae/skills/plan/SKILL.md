@@ -4,6 +4,14 @@ description: Generate a feature plan with acceptance criteria + plan review
 argument-hint: "<feature description>"
 ---
 
+## Argument Inference
+
+If `$ARGUMENTS` is empty:
+1. Check `output.discussions` for the most recent discussion with `pipeline.discuss: done` and a `conclusion.md`
+2. Found → use that conclusion as the basis: "Create plan based on docs/discussions/NNN-slug/conclusion.md"
+3. Not found → check conversation context for a topic being discussed
+4. Still nothing → ask user what to plan
+
 # /ae:plan — Feature Plan
 
 Create an execution plan for: **$ARGUMENTS**

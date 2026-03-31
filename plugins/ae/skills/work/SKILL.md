@@ -4,6 +4,14 @@ description: Execute plan (TDD + commit + review, pre-checks chain)
 argument-hint: "<plan file path>"
 ---
 
+## Argument Inference
+
+If `$ARGUMENTS` is empty:
+1. Check `output.plans` for the most recent plan with `status: draft` or `status: reviewed` and uncompleted steps (`- [ ]`)
+2. Found → use that plan file path
+3. Not found → check conversation context for a plan being discussed
+4. Still nothing → ask user which plan to execute
+
 # /ae:work — Execute Plan
 
 Execute the plan at **$ARGUMENTS**.
