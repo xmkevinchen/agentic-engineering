@@ -3,7 +3,7 @@ id: BL-004
 title: "Scratch 重新定位"
 type: backlog
 created: 2026-03-30
-status: open
+status: done
 ---
 
 # Scratch 重新定位
