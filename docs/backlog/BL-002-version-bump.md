@@ -3,7 +3,7 @@ id: BL-002
 title: "统一版本号"
 type: backlog
 created: 2026-03-30
-status: open
+status: done
 ---
 
 # 统一版本号

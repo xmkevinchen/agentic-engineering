@@ -19,12 +19,6 @@ output:
   reviews: "docs/reviews/"          # ae:review (default: docs/reviews/)
   analyses: "docs/analyses/"        # ae:think (default: docs/analyses/)
 
-# --- Scratch (临时持久化) ---
-# Temporary files for session resilience (survives compact/crash).
-# Default: ~/.claude/scratch/ (per-project hash, doesn't pollute repo)
-# Set to ".claude/scratch/" if you want scratch files in-repo (add to .gitignore).
-# scratch: "~/.claude/scratch/"
-
 # --- Work Execution ---
 work:
   max_fix_loops: 3           # Fix loop circuit breaker: stop after N consecutive failures on same test

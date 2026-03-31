@@ -47,25 +47,3 @@ Output directly to terminal:
 
 **Flag conflicts between tracks for user judgment.**
 
-## Scratch Persistence
-
-Auto-save results to scratch directory (`pipeline.yml` → `scratch`, default: `~/.claude/scratch/`). File: `code-review-YYYY-MM-DD-NNN.md`.
-
-Do NOT ask user about formal persistence — code-review is high-frequency, low-ceremony. Scratch files are archived in bulk during `/ae:review` (feature gate).
-
-```markdown
----
-type: code-review
-project: <repo-name>   # git repo name, for cross-project isolation
-created: YYYY-MM-DDTHH:MM:SS
-status: in_progress    # in_progress → resolved (when all findings addressed)
----
-
-## Findings
-
-1. [SEVERITY] file:line — description
-   - action: fix now | backlog BL-NNN | skip
-   - status: pending | in_progress | resolved
-```
-
-Write scratch file at start of review with `status: in_progress`. Update to `status: resolved` after all findings are addressed and committed.
