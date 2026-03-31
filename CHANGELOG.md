@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.1 — 2026-03-31
+
+### Adaptive Mediator Consensus
+- **Multi-round debate**: `/ae:consensus` upgraded from single-round to adaptive multi-round — mediator evaluates Round 1 with qualitative YES/NO signals, conditionally triggers cross-examination
+- **Structured output schema**: advocate/critic must use Claims/Evidence/Conceded/Unaddressed format — mediator parses structured data, not free-form text
+- **Cross-examination round**: when triggered, mediator extracts opponent's top claims and distributes; each side must respond per-claim (agree/partially agree/disagree)
+- **Mode flags**: `--quick` (3 agents, no cross-family, skip evaluation), `--full` (force cross-examination), default adaptive
+- **Mediator Phase 1/Phase 2 separation**: evaluation (ROUND_DECISION) and synthesis (verdict) are clearly separated phases to avoid context competition
+- **Max 3 rounds cap**: prevents infinite loops on ambiguous topics
+
+### Component counts
+- 14 skills, 13 agents, 2 MCP servers (unchanged — consensus enhanced, not added)
+
 ## v0.1.0 — 2026-03-30
 
 ### Dynamic Agent Selection

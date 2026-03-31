@@ -59,7 +59,7 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 | `/ae:analyze` | Research a codebase topic with agent teams, output persistent analysis docs |
 | `/ae:discuss` | Structured design discussion with decision persistence |
 | `/ae:think` | Deep multi-step reasoning for hard architecture decisions or complex bugs |
-| `/ae:consensus` | Structured debate (for/against/neutral) to evaluate a proposal |
+| `/ae:consensus` | Adaptive multi-round debate (for/against/neutral) with cross-examination |
 
 ### Development Support
 
