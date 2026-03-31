@@ -4,6 +4,13 @@ description: Re-review an existing plan with Agent Teams (standalone plan review
 argument-hint: "<plan file path>"
 ---
 
+## Argument Inference
+
+If `$ARGUMENTS` is empty:
+1. Check `output.plans` for the most recent plan with `status: draft` or `status: reviewed`
+2. Found → use that plan file path
+3. Not found → ask user which plan to review
+
 # /ae:plan-review — Plan Review
 
 Review the plan at **$ARGUMENTS** using Agent Teams.

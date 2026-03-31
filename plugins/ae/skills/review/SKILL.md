@@ -4,6 +4,13 @@ description: Deep multi-agent review + fixup (feature completion gate)
 argument-hint: "<plan file path>"
 ---
 
+## Argument Inference
+
+If `$ARGUMENTS` is empty:
+1. Check `output.plans` for the most recent plan with all steps completed (`- [x]`) and `status` not `done`
+2. Found → use that plan file path
+3. Not found → ask user which plan to review
+
 # /ae:review — Deep Review (Feature Completion Gate)
 
 Deep review of all changes for **$ARGUMENTS**.
