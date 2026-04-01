@@ -73,7 +73,8 @@ Agent(subagent_type: "architect", name: "advocate",
                ### Unaddressed Opponent Points (N/A in Round 1)
                Present strongest arguments with evidence from codebase.
                Acknowledge weaknesses honestly in Conceded Points.
-               SendMessage to mediator when done.")
+               SendMessage to mediator when done.
+               IMPORTANT: STAY IN THE TEAM. Wait for cross-examination rounds.")
 
 Agent(subagent_type: "challenger", name: "critic",
       team_name: "<team>", run_in_background: true,
@@ -87,7 +88,8 @@ Agent(subagent_type: "challenger", name: "critic",
                ### Unaddressed Opponent Points (N/A in Round 1)
                Find risks, hidden costs, better alternatives.
                Acknowledge strengths honestly in Conceded Points.
-               SendMessage to mediator when done.")
+               SendMessage to mediator when done.
+               IMPORTANT: STAY IN THE TEAM. Wait for cross-examination rounds.")
 
 # Mediator — see Step 3 for full prompt (Phase 1 + Phase 2)
 Agent(subagent_type: "simplicity-reviewer", name: "mediator",
@@ -137,9 +139,21 @@ Wait for advocate and critic to send their Round 1 output.
 [If not --quick] Also wait for codex-proxy and gemini-proxy.
 If any agent sends `## Position: UNAVAILABLE`, mark them absent and proceed without them.
 
-Once all Round 1 inputs received, produce this EXACT evaluation block:
+Once all Round 1 inputs received, produce this EXACT evaluation block AND SendMessage it to BOTH the team lead AND the debate participants:
 
-## Mediator Evaluation
+## Round 1 Summary
+### Advocate (FOR)
+- Key claims: [1-2 line summary of strongest claims]
+- Conceded: [what advocate admitted]
+
+### Critic (AGAINST)
+- Key claims: [1-2 line summary of strongest claims]
+- Conceded: [what critic admitted]
+
+### Cross-family
+- [1-line summary per proxy, or "N/A" if absent]
+
+### Mediator Evaluation
 - Has either side raised arguments the other hasn't addressed? YES/NO
 - Are both sides' claims backed by concrete evidence (file:line, data, specific examples)? YES/NO
 - ROUND_DECISION: CROSS_EXAMINE / SYNTHESIZE
@@ -164,7 +178,22 @@ SendMessage to critic: "Respond to advocate's claims: [list]. For EACH claim: ag
 
 Wait for both responses.
 
-After cross-examination, re-evaluate. Produce another Mediator Evaluation block (same EXACT format as above — YES/NO questions + ROUND_DECISION + Reason).
+After cross-examination, produce a Cross-Examination Summary AND SendMessage it to the team lead:
+
+## Cross-Examination Summary
+### Advocate responded to critic's claims:
+| Claim | Response | Stance changed? |
+|-------|----------|----------------|
+| [claim] | [agree/partially/disagree + key rationale] | [yes/no] |
+
+### Critic responded to advocate's claims:
+| Claim | Response | Stance changed? |
+|-------|----------|----------------|
+| [claim] | [agree/partially/disagree + key rationale] | [yes/no] |
+
+### Remaining disagreements: [list or "none"]
+
+Then re-evaluate. Produce another Mediator Evaluation block (same EXACT format as Phase 1 — YES/NO questions + ROUND_DECISION + Reason).
 Maximum 3 rounds total. After Round 3, MUST proceed to Phase 2 regardless.
 
 ═══ PHASE 2: SYNTHESIZE (Final Verdict) ═══
