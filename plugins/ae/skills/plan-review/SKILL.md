@@ -84,9 +84,8 @@ Close the Team.
 
 If there are "Must fix" items:
 1. Show findings to user
-2. Ask: "Apply fixes to the plan?"
-3. If yes → modify plan file, update frontmatter `status: reviewed`
-4. If no → leave plan as-is, show findings for manual action
+2. Directly modify plan file to address findings (consistent with ae:plan's inline review behavior)
+3. Update plan frontmatter `status: reviewed`
 
 If approved with no must-fix:
 1. Update plan frontmatter `status: reviewed`
