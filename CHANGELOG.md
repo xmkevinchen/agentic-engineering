@@ -10,8 +10,15 @@
 - **CLAUDE.md principles**: agent definition rules (no duplication, one-line, test after changes), TL autonomy boundary, 先运行后决策 principle
 - **/ae:consensus first execution**: smoke test successful — 5-agent debate produced majority consensus with cross-examination
 
+### AE Evolution — Pipeline Validation + Infrastructure (Discussion 009)
+- **ae:retrospect skill** (NEW): reads Outcome Statistics from `/ae:review` output, generates trend reports with actionable insights. Includes `--compare ID1 ID2` mode for report-to-report comparison with arrow + absolute delta format.
+- **WebSearch/WebFetch expansion**: added to challenger and architect agents. Permission principle: research-type agents (need external/time-sensitive data) get access; execution-type (proxy, review) do not.
+- **Next Steps standardization**: all 14 skills now have `## Next Steps` sections with conditional suggestions based on skill output and pipeline state (if/then style).
+- **Reversibility observation protocol**: discuss SKILL.md now requires `reversibility_basis` when scoring topics. Conclusion template includes `## Reversibility Observation` section.
+- **Pipeline end-to-end validation**: full discuss→plan→work→review cycle executed on ae:retrospect comparison mode. First Outcome Statistics produced.
+
 ### Component counts
-- 14 skills, 13 agents, 2 MCP servers (unchanged — skills enhanced, not added)
+- 15 skills (+1 ae:retrospect), 13 agents, 2 MCP servers
 
 ## v0.1.2 — 2026-03-31
 
