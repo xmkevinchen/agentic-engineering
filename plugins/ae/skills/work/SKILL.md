@@ -125,10 +125,10 @@ Read the current plan step's "Expected files:" line:
     3. Rollback: discard this step's changes
     ```
     If unexpected files match `pipeline.yml` → `work.security_patterns` → option 2 unavailable, must fix or get human review.
-- **No "Expected files:" in plan** → skip drift check:
+- **No "Expected files:" in plan** → drift = UNKNOWN:
   ```
-  ⚠️ No Expected files in plan step — drift check skipped.
-     Consider running /ae:plan to add file lists.
+  ⚠️ No Expected files in plan step — drift = UNKNOWN.
+     Gate will pause for user confirmation. Consider running /ae:plan to add file lists.
   ```
 
 ### C. Tests Green
@@ -167,7 +167,9 @@ Fix findings, re-run from Check D until clean pass.
    - Any failed → **pause for user confirmation**
    - Drift detected (not approved) → always pause
    - Security pattern matched → always pause
-   - No test command → `tests_green` treated as true
+   - No test command → `tests_green` = UNVERIFIED — **pause for user confirmation** (do not treat as true)
+   - No "Expected files:" in plan step → `drift` = UNKNOWN — **pause for user confirmation** (do not skip)
+   - UNVERIFIED or UNKNOWN states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
 3. All steps done → suggest `/ae:review`
 
