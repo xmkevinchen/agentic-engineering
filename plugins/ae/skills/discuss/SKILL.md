@@ -299,26 +299,33 @@ After Sweep, all topics resolved. Before generating conclusion:
 1. Compile: topic titles + decisions + one-line rationale each
 2. Check cross-family availability (`cross_family` in pipeline.yml):
    - **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
-   - **Cross-family available** → Agent Team:
+   - **Cross-family available** → Agent Team with **role reversal** (Attacker/Defender pattern):
      ```
      TeamCreate(team_name: "<discussion>-doodlestein")
 
-     Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+     Agent(subagent_type: "challenger", name: "challenger",
            team_name: "<team>", run_in_background: true,
-           prompt: "Answer 3 questions about these decisions: <summary>.
+           prompt: "You are the ATTACKER. Your goal is to find flaws in these decisions: <summary>.
+                    Attack with 3 questions:
                     Q1 Smartest Alternative: fundamentally different approach?
                     Q2 Problem Validity: which decision solves a non-existent problem?
                     Q3 Regret Prediction: which decision reversed in 6 months?
-                    SendMessage findings to challenger.")
+                    SendMessage your attacks to gemini-proxy (the Defender).
+                    IMPORTANT: STAY IN THE TEAM. Wait for defense response to synthesize final report.")
 
      Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
            team_name: "<team>", run_in_background: true,
-           prompt: "<same 3 questions>. SendMessage findings to challenger.")
+           prompt: "You are the DEFENDER. Wait for challenger's attacks on these decisions: <summary>.
+                    Defend each decision with code evidence. If an attack is genuinely strong, acknowledge it.
+                    SendMessage your defense to challenger.
+                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
-     Agent(subagent_type: "challenger", name: "challenger",
+     Agent(subagent_type: "codex-proxy", name: "codex-proxy",
            team_name: "<team>", run_in_background: true,
-           prompt: "Wait for cross-family findings. Answer 3 questions yourself.
-                    Synthesize into single report. SendMessage to user.")
+           prompt: "You are the cross-family OBSERVER. Read these decisions: <summary>.
+                    Provide independent perspective on the attack/defense exchange.
+                    SendMessage observations to challenger for synthesis.
+                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
      ```
    - **Cross-family unavailable** → challenger-only (single subagent)
    - **Skip conditions**: If only 1 topic with high reversibility → may skip, but MUST record: `Doodlestein: skipped (reason: single low-impact topic)`
@@ -380,6 +387,13 @@ Update index.md: set `pipeline.discuss: done`, add conclusion link.
 
 - All converged, no spawned → "Ready for `/ae:plan`"
 - Has spawned discussions → "Resolve sub-discussions first, then `/ae:plan`"
+
+## Agent Teams Protocol
+
+When using Agent Teams for discussion:
+- **Persistence**: ALL agent spawn prompts MUST include: "IMPORTANT: STAY IN THE TEAM. Do NOT exit. Wait for follow-up rounds."
+- **Multi-round**: For Round 2+, message existing agents — do NOT spawn new ones. Agents retain their Round 1 context.
+- **Challenger drives convergence**: Challenger should autonomously initiate Round 2 challenges when it identifies disagreements, without waiting for TL.
 
 ## Principles
 
