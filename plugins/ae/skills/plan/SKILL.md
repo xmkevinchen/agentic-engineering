@@ -66,11 +66,11 @@ One sentence: what problem does this feature solve.
 ### Step 1: <description> (AC1)
 - [ ] Subtask a
 - [ ] Subtask b
-Expected files: path/to/file1.ts, path/to/file2.ts
+Expected files: path/to/file1.ts, path/to/file2.ts   ← REQUIRED: list all files this step will modify
 
 ### Step 2: <description> (AC2, AC3)
 - [ ] Subtask a
-Expected files: path/to/file3.ts
+Expected files: path/to/file3.ts   ← REQUIRED: enables drift detection in /ae:work
 
 ## Acceptance Criteria
 
@@ -142,7 +142,7 @@ Architect integrates feedback from dependency-analyst and simplicity-reviewer, t
 - **Consider** — simplification suggestions
 - **Approved**
 
-Close the Team. Modify plan based on results.
+Close the Team. Modify plan based on results. Update plan frontmatter `status: reviewed`.
 
 ## Step 4: Doodlestein Challenge (optional)
 
