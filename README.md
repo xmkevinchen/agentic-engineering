@@ -16,7 +16,7 @@ AI-assisted coding is powerful but unstructured. You prompt one model, hope for 
 | Filesystem | Persistent artifacts — plans, analysis docs, review results, decision records |
 | IPC | Structured agent protocols — handoff, challenge/response, consensus |
 | Device drivers | MCP servers — Codex and Gemini abstracted behind a uniform interface |
-| Shell | 13 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, ...) |
+| Shell | 15 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, `/ae:retrospect`, ...) |
 
 ## Quick Start
 
@@ -182,7 +182,7 @@ Agents are auto-discovered at runtime from all available sources — project age
 ```
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest
-  skills/                         # 13 slash commands (the shell)
+  skills/                         # 15 slash commands (the shell)
   agents/                         # 13 specialized agents (the processes)
     review/                       #   5 review agents
     research/                     #   3 research agents
