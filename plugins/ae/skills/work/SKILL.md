@@ -135,7 +135,7 @@ Read the current plan step's "Expected files:" line:
 Run `test.command` from pipeline.yml. Empty → skip with "⚠️ No test command configured".
 
 ### D. Code Review
-Execute `/ae:code-review` (subagent mode, fast).
+Lead executes the `/ae:code-review` flow inline (read the code-review SKILL.md and follow its instructions within the current context — not a separate subagent spawn).
 
 ### E. Disposition
 - **P1 (blocker)**: always show, fix now
