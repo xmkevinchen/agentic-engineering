@@ -165,3 +165,10 @@ Include this in the review report. This data accumulates naturally across featur
 3. Fixups squashed
 4. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
 5. Prompt user to create PR
+
+## Next Steps
+
+Based on review outcome, suggest:
+- If review passed → "Feature complete. Create PR or run `/ae:retrospect` to analyze pipeline metrics"
+- If review has P1 findings → "Fix P1 findings, then re-run `/ae:review`"
+- If review deferred items → "Address deferred items in next iteration or add to backlog"

@@ -171,3 +171,10 @@ Show the complete plan to the user. Indicate next step is `/ae:work <plan file p
 1. Plan file (with acceptance criteria + step-AC mapping + parallel strategy)
 2. Plan review summary (with architect/analyst/simplifier discussion records)
 3. Doodlestein review (if cross-family available)
+
+## Next Steps
+
+Based on plan status, suggest:
+- If plan approved → "Ready for `/ae:work <plan-file>` to execute implementation"
+- If plan has unresolved discussion references → "Resolve linked discussions first, then `/ae:work`"
+- If plan review raised Must Fix items → "Address review findings, then re-run `/ae:plan-review`"

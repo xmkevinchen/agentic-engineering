@@ -155,3 +155,10 @@ Send shutdown_request to all teammates. Show the user:
 - Focus on facts and code evidence, not speculation
 - Keep analysis focused on the question asked
 - If analysis reveals the problem is more complex than expected, state it clearly
+
+## Next Steps
+
+Based on analysis output, suggest:
+- If analysis identifies decision points → "Ready for `/ae:discuss <analysis-dir>` to resolve design decisions"
+- If analysis confirms a clear path with no open questions → "Ready for `/ae:plan` to define implementation steps"
+- If analysis reveals the problem needs deeper investigation → "Consider `/ae:trace` or `/ae:think` for focused deep-dive"

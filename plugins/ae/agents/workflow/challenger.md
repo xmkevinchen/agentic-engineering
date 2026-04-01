@@ -1,7 +1,7 @@
 ---
 name: challenger
 description: Challenge assumptions, question decisions, find blind spots. Cross-family ambassador (Codex/Gemini). Used by /ae:analyze and /ae:review.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 model: sonnet
 ---
 

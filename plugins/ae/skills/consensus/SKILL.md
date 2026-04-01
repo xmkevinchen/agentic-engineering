@@ -246,3 +246,9 @@ The verdict file includes:
 Show verdict to user.
 
 Close the Team.
+
+## Next Steps
+
+Based on consensus outcome, suggest:
+- If verdict is clear → "Use this verdict to inform `/ae:discuss` or `/ae:plan` decisions"
+- If verdict is split → "Consider `/ae:think` for deeper analysis on the contested points"
