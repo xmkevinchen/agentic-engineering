@@ -29,10 +29,14 @@ Create an execution plan for: **$ARGUMENTS**
 3. Search codebase for related code, models, interfaces
 4. Check `docs/backlog/` for related items
 5. If a `docs/discussions/*/conclusion.md` is referenced, read the decisions and validate:
-   - Has `## Decision Summary`? (non-empty)
-   - Has `## Process Metadata`? (shows discussion was properly conducted)
-   - Has spawned discussions? → warn: "Unresolved sub-discussions exist. Consider resolving before planning."
-   - Missing sections → warn: "Conclusion may be incomplete (missing [section]). Proceed with caution."
+   - Check index.md `pipeline.discuss` — if still `in_progress` → **refuse**: "Discussion not concluded. Run `/ae:discuss` to complete."
+   - Has `## Decision Summary` with at least one row where Decision column is non-empty and not "—"? — if no real decisions → **refuse**: "Conclusion has no decisions. Run `/ae:discuss` first."
+   - Has `## Process Metadata`? — if missing → **refuse**: "Conclusion missing Process Metadata. May have bypassed discuss flow."
+   - Has spawned discussions in `## Spawned Discussions`? → **refuse**: "Unresolved sub-discussions exist. Resolve them before planning."
+   - Has deferred topics in index.md but no `## Deferred Resolutions` section? → **refuse**: "Sweep was skipped. Run `/ae:discuss` to resolve deferred items."
+   - Has `## Deferred Resolutions` with `explained` items? → warn: "Some decisions based on assumptions. Review assumptions before planning."
+   - `Autonomous decisions: 0` AND `User escalations: 0` in metadata → warn: "Discussion may not have been properly conducted (no decisions recorded)."
+   - Missing other sections → warn: "Conclusion may be incomplete (missing [section]). Proceed with caution."
 
 ## Step 2: Write Plan
 
