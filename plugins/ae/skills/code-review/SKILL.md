@@ -47,3 +47,10 @@ Output directly to terminal:
 
 **Flag conflicts between tracks for user judgment.**
 
+## Next Steps
+
+Based on review outcome, suggest:
+- If all OK → "Code is clean. Proceed with commit"
+- If has Block findings → "Fix blocking issues before commit"
+- If part of `/ae:work` flow → return to work's pre-commit checks
+

@@ -109,3 +109,10 @@ Write results directly to `pipeline.yml` → `output.analyses` (default: `docs/a
 **You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 
 Show results to user.
+
+## Next Steps
+
+Based on trace output, suggest:
+- If trace reveals architectural issues → "Consider `/ae:discuss` to decide on refactoring approach"
+- If trace reveals performance concerns → "Run `/ae:think` for performance analysis, or `/ae:plan` for optimization"
+- If trace is informational → "Use findings to inform current `/ae:work` or `/ae:plan`"

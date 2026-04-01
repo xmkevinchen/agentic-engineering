@@ -98,3 +98,10 @@ Show the plan to the user. Indicate next step is `/ae:work <plan file path>`.
 
 1. Plan review summary (with architect/analyst/simplifier discussion records)
 2. Updated plan file (if fixes applied)
+
+## Next Steps
+
+Based on review outcome, suggest:
+- If plan approved → "Ready for `/ae:work <plan-file>` to execute implementation"
+- If Must Fix items remain → "Address findings and re-run `/ae:plan-review`"
+- If plan needs fundamental rethinking → "Consider `/ae:discuss` to revisit design decisions"

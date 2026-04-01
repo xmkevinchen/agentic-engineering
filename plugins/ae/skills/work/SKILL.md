@@ -178,3 +178,10 @@ Fix findings, re-run from Check D until clean pass.
 - Implementation code + tests
 - Plan checkbox updates
 - Review records for each commit
+
+## Next Steps
+
+Based on work completion, suggest:
+- If all plan steps completed → "Ready for `/ae:review` — feature completion gate"
+- If steps remain → auto-continue to next step (or pause if gate failed)
+- If blockers encountered → "Consider `/ae:think` to analyze the blocker, or defer to backlog"

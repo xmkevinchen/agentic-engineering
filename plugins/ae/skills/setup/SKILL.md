@@ -106,3 +106,9 @@ Cross-family is optional — the plugin works without it but loses blind spot co
 2. Cross-family status checked and reported
 3. Show final config to user
 4. Prompt: "Pipeline ready. Use `/ae:plan <feature>` to start."
+
+## Next Steps
+
+Based on setup completion, suggest:
+- If setup complete → "Pipeline ready. Start with `/ae:analyze <topic>` for research, or `/ae:plan <feature>` for direct planning"
+- If cross-family not configured → "Optional: configure Codex/Gemini for cross-family review (see setup output)"

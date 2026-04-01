@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Solution design, step decomposition, dependency analysis, parallel strategy. Used by /ae:plan.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 model: sonnet
 ---
 

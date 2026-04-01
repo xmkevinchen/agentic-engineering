@@ -77,3 +77,10 @@ Write tests following project conventions:
 Run `test.command` from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping test verification". All new tests must pass.
 
 Show summary: number of tests generated, coverage areas, any skipped scenarios.
+
+## Next Steps
+
+Based on testgen output, suggest:
+- If tests all pass → "Tests ready. Continue with `/ae:work` or `/ae:review`"
+- If tests reveal gaps in implementation → "Fix implementation, then re-run tests"
+- If test design reveals unclear requirements → "Consider `/ae:discuss` or `/ae:think` to clarify"

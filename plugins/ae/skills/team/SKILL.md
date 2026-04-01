@@ -78,3 +78,10 @@ Show results to user.
 - Don't launch agents that aren't relevant — fewer focused agents > many unfocused ones
 - If the task clearly maps to an existing skill (`ae:think`, `ae:consensus`, `ae:testgen`, `ae:trace`), suggest that skill instead
 - Project-specific agents (auto-discovered from all sources, or `pipeline.yml` override) take priority over plugin's built-in agents when they match the task domain
+
+## Next Steps
+
+Based on team output, suggest:
+- If team produced analysis → "Use findings to inform `/ae:discuss` or `/ae:plan`"
+- If team produced implementation → "Run `/ae:review` or `/ae:code-review` on the changes"
+- If team identified new questions → "Consider `/ae:think` or `/ae:analyze` for deeper investigation"

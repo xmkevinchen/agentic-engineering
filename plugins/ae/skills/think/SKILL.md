@@ -104,3 +104,10 @@ Content sections:
 - Dissenting views
 
 Show summary to user.
+
+## Next Steps
+
+Based on thinking output, suggest:
+- If recommendation is actionable → "Ready for `/ae:plan` to define implementation, or `/ae:discuss` if design decisions remain"
+- If confidence is low → "Consider `/ae:analyze` for broader research, or `/ae:consensus` for structured debate"
+- If problem is execution-level → "Ready for `/ae:work` or `/ae:testgen`"
