@@ -2,9 +2,10 @@
 
 ## Versioning
 
-Every change MUST update:
+Version bumps are for **intentional releases**, not every commit. Accumulate changes and bump once when there's a meaningful release.
 
-1. `plugins/ae/.claude-plugin/plugin.json` — bump version (semver)
+When releasing:
+1. `plugins/ae/.claude-plugin/plugin.json` — bump version (semver: patch for enhancements, minor for new components)
 2. `CHANGELOG.md` — document changes
 3. `README.md` — verify component counts
 
@@ -37,10 +38,12 @@ plugins/ae/             # The actual plugin
 
 ## Git
 
+- **Feature branch** — all work on feature branches, PR to main. Branch naming: `feature/<slug>` or `fix/<slug>`
 - Never push to remote unless explicitly approved by the user
 
 ## Design Principles
 
+- **Self-bootstrapping** — AE develops AE. All changes to this plugin go through the AE pipeline (discuss→plan→work→review). This is the default working mode, not a special case.
 - **Project-agnostic** — skills and agents read project context from CLAUDE.md and pipeline.yml
 - **Extensible** — projects define their own agents (developers, code reviewers) in pipeline.yml
 - **Cross-family by default** — Codex is mandatory baseline, Gemini is optional add-on
