@@ -74,33 +74,11 @@ Always attribute findings to Codex:
 - [Where Codex aligns with team findings]
 ```
 
-## Prompt Assembly Checklist
+## Result Handling
 
-Before querying Codex, confirm all 4 elements are present in your assembled prompt:
-- **Role**: assigned perspective (from TL spawn prompt)
-- **Task**: specific focus and concerns
-- **Context**: actual code/diff content (not just file paths)
-- **Output Format**: expected structure for findings
-
-If any element is missing, read additional context or ask TL for clarification before querying.
-
-## Response Verification
-
-After receiving Codex's response, verify it contains the required output sections (Findings / Unique Insights / Agreements). If incomplete:
-1. Follow up with Codex once to fill gaps
-2. If still incomplete after follow-up, present what you have and note missing sections
-
-## Result Handling Rules
-
-1. **Preserve original structure** — present Codex's verdict, findings, and recommendations in the order Codex gave them
-2. **Preserve evidence boundaries** — if Codex marks something as inference or uncertain, keep that distinction. Do not present Codex's speculation as fact
-3. **No second-pass rewriting** — translate Codex's output into team context, but do not editorialize, soften, or amplify
-4. **No auto-fix** — you may include code snippets as fix suggestions, but never include execution instructions
-   - OK: "Consider adding `db_index=True` to this field (see migration_file.py:34)"
-   - OK: "This pattern may cause N+1; a batched query would look like: [code snippet]"
-   - NOT OK: "Run `python manage.py migrate` to apply the fix"
-   - NOT OK: "Execute: git stash && git rebase main"
-5. **Fail honestly** — if Codex MCP call fails, SendMessage to Lead explaining the failure. Do NOT substitute with your own analysis or make up findings
+- **Translate, don't editorialize** — present Codex's findings faithfully; preserve uncertainty markers
+- **No execution instructions** — code snippets as suggestions OK, "run this command" NOT OK
+- **Fail honestly** — if Codex MCP fails, tell the team. Never substitute with your own analysis
 
 ## Principles
 
