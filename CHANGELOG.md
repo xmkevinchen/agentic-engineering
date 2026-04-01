@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.0 — 2026-04-01
+
+### Implementation Audit (Discussion 008)
+- **Auto-pass gate fix**: `no test command` and `no Expected files` now trigger UNVERIFIED/UNKNOWN pause instead of silent bypass
+- **Doodlestein role reversal**: Attacker/Defender pattern replaces independent Q1/Q2/Q3 questionnaire — validated in Discussion 008 with real attack/defense exchange
+- **Agent persistence**: "STAY IN THE TEAM" protocol for multi-round discussions — agents survive across rounds
+- **Agent definition trimming**: removed duplicate rules from proxy/challenger definitions (v0.1.2 bloat caused Gemini proxy timeout)
+- **CLAUDE.md principles**: agent definition rules (no duplication, one-line, test after changes), TL autonomy boundary, 先运行后决策 principle
+- **/ae:consensus first execution**: smoke test successful — 5-agent debate produced majority consensus with cross-examination
+
+### Component counts
+- 14 skills, 13 agents, 2 MCP servers (unchanged — skills enhanced, not added)
+
 ## v0.1.2 — 2026-03-31
 
 ### Cross-family Prompt Infrastructure (Discussion 007)
