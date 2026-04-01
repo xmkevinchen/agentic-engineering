@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.1.2 — 2026-03-31
+
+### Cross-family Prompt Infrastructure (Discussion 007)
+- **Proxy prompt assembly checklist**: codex-proxy and gemini-proxy now require Role + Task + Context + Output Format before querying external models
+- **Response verification**: proxies self-check external model responses for required sections (Findings / Unique Insights / Agreements)
+- **Result handling rules**: 5 rules added to both proxies — preserve structure, preserve evidence boundaries, no rewriting, no auto-fix (with concrete OK/NOT-OK examples), fail honestly
+- **Challenger adversarial strengthening**: attack surface checklists tagged by scene (`[CODE REVIEW]` vs `[DESIGN DISCUSSION]`), calibration rules (quality > quantity, cross-family agreement ≠ severity increase), finding bar (4-question requirement)
+- **Reviewer tool constraint documentation**: all 5 reviewer agents now have explicit "Write/Edit intentionally excluded" comments
+
+### Future direction (from Doodlestein review)
+- AGENT_CONTRACT.md (centralized agent constraints) and MCP middleware (transport-layer validation) identified as evolution paths when architecture matures
+
+### Component counts
+- 14 skills, 13 agents, 2 MCP servers (unchanged — agents enhanced, not added)
+
 ## v0.1.1 — 2026-03-31
 
 ### Adaptive Mediator Consensus

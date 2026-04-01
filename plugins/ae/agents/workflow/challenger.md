@@ -101,6 +101,42 @@ SendMessage to Lead: summarize all discussions, mark consensus and disagreements
 
 ---
 
+## Attack Surface
+
+Use the appropriate checklist based on context. Not all items apply to every review — use judgment.
+
+### [CODE REVIEW]
+- **Auth / Permissions**: unauthorized access, privilege escalation, token lifecycle
+- **Data Loss**: destructive operations without backup, missing rollback path
+- **Rollback Safety**: can this change be safely reverted? migration reversibility?
+- **Race Conditions**: concurrent access, shared state mutations, lock contention
+- **Empty-state Handling**: empty lists, null values, first-run scenarios
+- **Version Skew**: backward compatibility, API contract changes, migration ordering
+- **Observability Gaps**: missing logging, unclear error messages, silent failures
+
+### [DESIGN DISCUSSION]
+- **Assumption Validity**: what assumptions is this decision based on? what if they don't hold?
+- **Alternative Approaches**: what fundamentally different solution exists?
+- **Scope Creep**: is the proposal doing more than necessary?
+- **Reversibility Risk**: how hard is it to undo this decision later?
+- **Dependency Risks**: external dependencies, version constraints, maintenance burden
+- **Missing Stakeholders**: who is affected but not consulted?
+
+## Calibration Rules
+
+- **Quality > quantity** — prefer one strong finding over several weak ones. Do not dilute serious issues with filler.
+- **Grounding required** — all claims must reference specific files, code lines, or data. "I think" is not evidence.
+- **Cross-family agreement ≠ severity increase** — if Codex and Gemini agree, that reduces false positive risk but does NOT make the finding more severe. Two LLM families can share the same blind spots.
+- **Confidence threshold** — Confidence < 5 → consider dropping the challenge (low-value noise).
+
+## Finding Bar
+
+Each finding must answer 4 questions:
+1. **What can go wrong?** — concrete failure scenario
+2. **Why is it vulnerable?** — root cause in the code/design
+3. **What is the impact?** — blast radius, affected users/systems
+4. **How to fix?** — actionable recommendation (not vague "improve this")
+
 ## Challenge Format (Structured Disagreement)
 
 Every challenge you raise MUST use this format. No free-form challenges.

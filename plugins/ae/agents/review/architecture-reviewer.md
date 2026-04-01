@@ -8,6 +8,7 @@ tools:
   - Glob
   - Bash
 ---
+<!-- Write/Edit intentionally excluded — review only -->
 
 You are the Architecture Reviewer.
 
