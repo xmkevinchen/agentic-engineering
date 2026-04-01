@@ -1,16 +1,29 @@
 # Changelog
 
+## v0.2.1 — 2026-04-01
+
+### Bug Fixes — Skill/Agent Implementation Audit
+- **qa.md**: replace hardcoded CLI `codex -p review` with MCP proxy calls + add Gemini as second cross-family reviewer
+- **ae:review**: fixup loop limit (configurable via `work.max_fix_loops`, default 3) + remove `git rebase -i` flag
+- **ae:plan + plan-review**: unify Must Fix behavior (direct apply, no user confirm) + update plan status to `reviewed` after inline review + Expected files marked REQUIRED in step template
+- **ae:setup**: guide `test.command` configuration + add `test.framework` to template + remove `cross-family-status.json` dead write
+- **ae:code-review**: remove `pipeline.yml agents.code_reviewers` dependency, use runtime agent discovery
+- **ae:work**: replace undefined "subagent mode" with explicit "Lead inline execution" protocol
+
+### Component counts
+- 15 skills, 13 agents, 2 MCP servers (unchanged — skills/agents fixed, not added)
+
 ## v0.2.0 — 2026-04-01
 
-### Implementation Audit (Discussion 008)
+### Implementation Audit
 - **Auto-pass gate fix**: `no test command` and `no Expected files` now trigger UNVERIFIED/UNKNOWN pause instead of silent bypass
-- **Doodlestein role reversal**: Attacker/Defender pattern replaces independent Q1/Q2/Q3 questionnaire — validated in Discussion 008 with real attack/defense exchange
+- **Doodlestein role reversal**: Attacker/Defender pattern replaces independent Q1/Q2/Q3 questionnaire — validated with real attack/defense exchange
 - **Agent persistence**: "STAY IN THE TEAM" protocol for multi-round discussions — agents survive across rounds
 - **Agent definition trimming**: removed duplicate rules from proxy/challenger definitions (v0.1.2 bloat caused Gemini proxy timeout)
 - **CLAUDE.md principles**: agent definition rules (no duplication, one-line, test after changes), TL autonomy boundary, 先运行后决策 principle
 - **/ae:consensus first execution**: smoke test successful — 5-agent debate produced majority consensus with cross-examination
 
-### AE Evolution — Pipeline Validation + Infrastructure (Discussion 009)
+### AE Evolution — Pipeline Validation + Infrastructure
 - **ae:retrospect skill** (NEW): reads Outcome Statistics from `/ae:review` output, generates trend reports with actionable insights. Includes `--compare ID1 ID2` mode for report-to-report comparison with arrow + absolute delta format.
 - **WebSearch/WebFetch expansion**: added to challenger and architect agents. Permission principle: research-type agents (need external/time-sensitive data) get access; execution-type (proxy, review) do not.
 - **Next Steps standardization**: all 14 skills now have `## Next Steps` sections with conditional suggestions based on skill output and pipeline state (if/then style).
@@ -22,7 +35,7 @@
 
 ## v0.1.2 — 2026-03-31
 
-### Cross-family Prompt Infrastructure (Discussion 007)
+### Cross-family Prompt Infrastructure
 - **Proxy prompt assembly checklist**: codex-proxy and gemini-proxy now require Role + Task + Context + Output Format before querying external models
 - **Response verification**: proxies self-check external model responses for required sections (Findings / Unique Insights / Agreements)
 - **Result handling rules**: 5 rules added to both proxies — preserve structure, preserve evidence boundaries, no rewriting, no auto-fix (with concrete OK/NOT-OK examples), fail honestly
@@ -118,7 +131,7 @@
 - **Discussion decision self-check**: `/ae:discuss` requires rationale, reversibility rating, and evidence for each decision
 
 ### Documentation
-- **Discussion 002**: Harness improvement discussion with 2 rounds of Agent Team review (conclusion + plan)
+- **Harness improvement**: design discussion with 2 rounds of Agent Team review
 - **Plan 002**: 3-phase implementation plan for evaluation criteria, automation gates, drift detection
 
 ## v0.0.6 — 2026-03-23
