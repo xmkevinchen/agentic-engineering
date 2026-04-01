@@ -8,6 +8,7 @@ tools:
   - Glob
   - Bash
 ---
+<!-- Write/Edit intentionally excluded — review only -->
 
 You are the Security Reviewer. Review all changes (via `git diff main...HEAD` or `git diff`), focusing on:
 

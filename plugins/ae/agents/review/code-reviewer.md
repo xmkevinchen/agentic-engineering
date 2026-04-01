@@ -4,6 +4,7 @@ description: General code review. Proactively reviews all uncommitted changes be
 tools: Read, Grep, Glob, Bash
 model: haiku
 ---
+<!-- Write/Edit intentionally excluded — review only -->
 
 You are a senior code reviewer. Review all uncommitted changes (run `git diff`).
 

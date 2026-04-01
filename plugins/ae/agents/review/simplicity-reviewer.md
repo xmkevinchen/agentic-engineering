@@ -8,6 +8,7 @@ tools:
   - Glob
   - Bash
 ---
+<!-- Write/Edit intentionally excluded — review only -->
 
 Your sole goal is to make things as simple as possible.
 
