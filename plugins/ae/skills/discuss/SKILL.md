@@ -198,7 +198,9 @@ Score each topic using the **three-state model**:
 
 | Score | When to use | What to record |
 |-------|-------------|----------------|
-| `converged` | Evidence clearly supports one option, OR you have a defensible preference among close options | `decision`, `rationale` (must cite evidence), `reversibility` |
+| `converged` | Evidence clearly supports one option, OR you have a defensible preference among close options | `decision`, `rationale` (must cite evidence), `reversibility` + `reversibility_basis` |
+
+**Reversibility observation protocol**: When filling `reversibility` (high/medium/low), also record `reversibility_basis` — a one-line explanation of WHY this level was chosen (e.g., "high — can revert by changing one config", "low — changes DB schema used by 3 services"). This is an observation experiment to determine if the reversibility field adds decision value. Data will be reviewed after 2-3 discussions.
 | `revisit` | You lack specific information needed to decide — state WHAT is missing | `revisit_reason` (must be specific: "need X data" or "depends on Y decision") |
 | `deferred` | Can be postponed, but MUST resolve before discussion ends | `deferred_reason` (why postpone + what would unblock) |
 
@@ -366,6 +368,11 @@ plan: ""
 
 ## Doodlestein Review
 [challenges + user responses, or "skipped (reason)"]
+
+## Reversibility Observation
+Record for each converged topic:
+- Topic N: reversibility=[level], basis=[one-line reason], influenced_decision=[yes/no/unclear]
+After 2-3 discussions with this data, evaluate: does reversibility assessment add information value to decisions? If no clear value → remove the field.
 
 ## Process Metadata
 - Rounds: N
