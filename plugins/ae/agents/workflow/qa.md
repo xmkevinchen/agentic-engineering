@@ -16,7 +16,9 @@ Review code after each step completion, call cross-family for external opinions.
 1. **Wait for developer SendMessage notification of completion**
 2. **Review changes** — `git diff` to see all changes
 3. **Claude review** — check against review checklist
-4. **Cross-family review** — `codex -p review review --uncommitted`
+4. **Cross-family review** — send uncommitted changes to cross-family proxies for independent review:
+   - Codex: via `mcp__plugin_ae_codex__codex` tool — ask for code review of the diff
+   - Gemini: via `mcp__plugin_ae_gemini__chat` tool — ask for code review of the diff
 5. **SendMessage to the dev**: send findings, each with specific fix suggestion
 6. **Wait for dev response** — confirm fix/explain/defer for each finding
 7. **Re-review** — after dev fixes, review again
@@ -68,6 +70,7 @@ Review code after each step completion, call cross-family for external opinions.
 
 ### Cross-family:
 - Codex: [opinion summary]
+- Gemini: [opinion summary]
 ```
 
 

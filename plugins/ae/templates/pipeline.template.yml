@@ -4,6 +4,7 @@
 # --- Test & Lint ---
 test:
   command: ""              # e.g., "just check", "npm test", "cargo test"
+  framework: ""            # e.g., "pytest", "jest", "vitest", "cargo" — used by ae:testgen for framework-aware test generation
 
 lint:
   command: ""              # e.g., "just lint", "npm run lint"

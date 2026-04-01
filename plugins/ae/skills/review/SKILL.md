@@ -132,7 +132,7 @@ git commit --fixup=def456
 ### 3. Squash
 
 ```bash
-GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash main
+git rebase --autosquash main
 ```
 
 ### 4. Verify
@@ -142,6 +142,21 @@ Re-run test command from pipeline.yml, confirm tests pass.
 ### 5. Remaining Findings Disposition
 
 P2/P3 per standard rule (fix / defer / backlog).
+
+### Fixup Loop Limit
+
+Track consecutive fixup rounds. Read `work.max_fix_loops` from pipeline.yml (default: 3). If the same finding persists after that many fixup rounds:
+
+```
+🔴 Fixup loop limit reached: 3 rounds of fixup without resolution.
+
+Options:
+1. Fix manually — pause for human intervention
+2. Defer to backlog — write to output.backlog as BL-NNN-slug.md
+3. Accept as-is — record finding as known issue in review report
+```
+
+Do NOT continue fixup indefinitely.
 
 ## Outcome Statistics
 

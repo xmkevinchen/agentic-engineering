@@ -33,8 +33,15 @@ If `.claude/pipeline.yml` does not exist:
    - `analyses: "docs/analyses/"`
 4. Scan existing project directories — if project already has docs in non-default locations (e.g., `results/reviews/` instead of `docs/reviews/`), adjust slot values to match
 5. **Auto-discover project agents**: Discover all available agents (project `.claude/agents/`, installed plugins, user global `~/.claude/agents/`). Read each agent's description to classify as developer or reviewer. Show discovered agents to user for confirmation. Do NOT write agent lists to pipeline.yml — agents are discovered at runtime.
-6. Use AskUserQuestion to confirm generated config
-7. Write `.claude/pipeline.yml`
+6. **Guide test.command configuration**: If auto-detect found no test command, use AskUserQuestion to prompt user:
+   ```
+   No test command detected. ae:work's auto-pass gate treats empty test.command as UNVERIFIED,
+   which pauses every step for confirmation. Options:
+   1. Enter test command now (e.g., "npm test", "pytest", "cargo test")
+   2. Skip — I'll configure later (auto-pass will pause each step)
+   ```
+7. Use AskUserQuestion to confirm generated config
+8. Write `.claude/pipeline.yml`
 
 If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
@@ -77,7 +84,7 @@ Check if Agent Teams is enabled (required for multi-agent workflows):
 
 1. Read `~/.claude/settings.json` — look for `"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"` in the `experiments` object
 2. If **not enabled** → use AskUserQuestion: "Agent Teams is not enabled. Most ae commands require it. Enable it now? (This will update ~/.claude/settings.json)"
-   - **User confirms** → read `~/.claude/settings.json`, add/merge `"experiments": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": true }` into the JSON, write back. Then update `.claude/cross-family-status.json` → set `agent_teams: true`. Tell user: "Agent Teams enabled."
+   - **User confirms** → read `~/.claude/settings.json`, add/merge `"experiments": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": true }` into the JSON, write back. Tell user: "Agent Teams enabled."
    - **User declines** → warn: "Skipped. Commands that use Agent Teams (plan, work, review, team, analyze, think, consensus, testgen, trace) will refuse to execute."
 3. If already enabled → `✅ Agent Teams: enabled`
 
@@ -96,8 +103,6 @@ After writing pipeline.yml, check cross-family dependencies:
    }
    Get a key at https://aistudio.google.com/apikey
    ```
-3. Write status to `.claude/cross-family-status.json`
-
 Cross-family is optional — the plugin works without it but loses blind spot coverage.
 
 ## Output

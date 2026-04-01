@@ -23,7 +23,7 @@ Quick code review on current uncommitted changes.
 
 Check `git diff --stat` to determine change scope. Then:
 
-- Discover reviewer agents: check `agents.code_reviewers` in pipeline.yml first. If not configured (default), discover all available agents (project, plugins, global) whose description indicates a code reviewer role.
+- Discover reviewer agents at runtime: scan all available agents (project `.claude/agents/`, installed plugins, user global `~/.claude/agents/`) whose description indicates a code reviewer role.
 - If project reviewers found: launch matching agents based on changed file types
 - If none found: use the plugin's built-in `code-reviewer` agent
 
