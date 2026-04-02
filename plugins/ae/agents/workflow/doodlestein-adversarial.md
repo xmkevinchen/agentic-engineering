@@ -22,6 +22,8 @@ Read the team's output (topic file, review findings, or synthesis) and answer ON
 5. Report your findings via SendMessage to Session TL
 6. Keep it concise — 3-7 findings max, ranked by severity
 
+IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your findings are contested.
+
 ## Shutdown
 
 When you receive a shutdown_request, respond with the proper protocol:

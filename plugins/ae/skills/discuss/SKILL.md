@@ -140,7 +140,7 @@ tags: [relevant, tags]
    - converged: X ✅  revisit: Y 🔄  deferred: Z ⏳  pending: W
    ```
 4. **Route**:
-   - All converged + no deferred → go to Doodlestein (step 5)
+   - All converged + no deferred → go to Doodlestein (step 7)
    - Has revisit or pending → spawn/continue team (step 2)
 
 ## Step 2. Spawn Discussion Team (once, persists until Conclusion)
@@ -158,54 +158,37 @@ If the team already exists (resuming), skip to step 3. Otherwise:
    - Show selected team to user before launching (per Rule 5)
 4. Spawn the team:
 
-**Debate model**: TL = moderator/judge, Host = proposer (proposer), other agents = opposition (challengers).
+**Discussion Mode per `ae:agent-teams` protocol**: TL = moderator, all agents = equal participants. No forced proposer/opposition.
 
 ```
 TeamCreate(team_name: "<discussion>-council")
 
-# Host — proposer (proposer). Has opinions, argues FOR positions.
-Agent(subagent_type: "general-purpose", name: "host",
+# All agents are equal participants — dynamic roles per Agent Selection Reference.
+Agent(subagent_type: "<per agent-selection>",
+      name: "<role-name>",  # e.g., "architect", "code-researcher", "security-expert"
       team_name: "<team>", run_in_background: true,
-      prompt: "You are the HOST (proposer) for: <discussion title>.
-               Topics: <topic brief>
-
-               You PROPOSE and DEFEND positions. You are NOT neutral.
-
-               Round 1: Research independently. Read code, find evidence.
-               Form your position on each topic. SendMessage your proposals
-               (with evidence) to Session TL.
-
-               Round 2+: Defend your positions against challengers.
-               Use structured output per ae:agent-teams protocol:
-               ## Position: FOR
-               ### Claims (each with file:line evidence)
-               ### Conceded Points (where opposition is right — be honest)
-               Concede only when presented with stronger evidence, not social pressure.
-
-               IMPORTANT: STAY IN THE TEAM for the entire discussion lifecycle. Do NOT exit.")
-
-# Challenger agents — opposition (opposition). Dynamic roles per Agent Selection Reference.
-Agent(subagent_type: "<codex-proxy|gemini-proxy|general-purpose>",
-      name: "<role-name>",  # e.g., "code-researcher", "architect", "security-expert"
-      team_name: "<team>", run_in_background: true,
-      prompt: "You are <ROLE> — a CHALLENGER (opposition) in this discussion.
+      prompt: "You are <ROLE> in a design discussion: <discussion title>.
                Your expertise: <role-specific focus>.
                Topics: <topic brief>
 
                Round 1: Research independently. Read code, find evidence, form your
-               OWN position. SendMessage your findings to Session TL.
+               position on each topic. SendMessage findings to Session TL.
                Do NOT read other agents' findings yet.
 
-               Round 2+: Challenge the Host's proposals. Attack weak points.
-               Use structured output per ae:agent-teams protocol:
-               ## Position: AGAINST (or INDEPENDENT if you agree with Host on some topics)
-               ### Claims (each with file:line evidence)
-               ### Conceded Points (where Host is right — be honest)
-               Defend your positions when challenged — strong opinions are valuable.
-               Concede only when presented with stronger evidence, not social pressure.
+               Round 2+: Respond to other agents' findings. Agree, build on,
+               or challenge with evidence. Evolving your position based on new
+               evidence is expected — not failure.
+
+               Use structured output per ae:agent-teams Discussion Mode:
+               ## Findings (with file:line evidence)
+               ## Agreements (with other agents)
+               ## Disagreements (with evidence)
+               ## Open Questions
 
                IMPORTANT: STAY IN THE TEAM for the entire discussion lifecycle. Do NOT exit.")
 ```
+
+**Consensus escalation**: When a specific topic is deeply contested and normal discussion cannot resolve it, TL escalates that topic to `ae:consensus` (Debate Mode, forced FOR/AGAINST stances) within the existing team. This is per-topic, not a global mode switch.
 
 Apply Proxy Timeout Protocol from Agent Selection Reference.
 
@@ -213,37 +196,50 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 
 ### 3. Discussion Rounds (TL moderates)
 
-**TL is the moderator.** TL drives rounds, routes messages, identifies convergence. Host and challengers debate; TL judges.
+**TL is the moderator.** TL drives rounds, routes messages, highlights disagreements, identifies convergence. Per `ae:agent-teams` Discussion Mode.
 
 **Round 1 — Independent Research** (no cross-talk):
-- All agents (Host + challengers) research topics independently
+- All agents research topics independently
 - Each forms their own position with evidence
 - All report findings to TL (not to each other)
 - TL does NOT share findings between agents yet
 
-**Round 2 — Debate** (TL opens the floor):
-- TL compiles all Round 1 positions, highlights disagreements
-- TL sends compiled summary to all agents: "Here are the positions. Debate."
-- Host defends proposals, challengers attack — using `ae:agent-teams` Debate Mode structured output:
-  Claims with evidence (file:line) + Conceded Points + responses to opponent claims
-- Agents argue directly with each other via TL routing
-- Sub-questions identified and debated
-- See `ae:agent-teams` protocol for full structured output schema and cross-examination protocol
+**Round 2 — Share & Explore**:
+- TL compiles all Round 1 findings, highlights disagreements and gaps
+- TL sends compiled summary to all agents
+- Agents respond to each other's findings — agree, build on, or challenge with evidence
+- Positions may evolve based on new evidence — this is expected
+- Use Discussion Mode structured output: Findings + Agreements + Disagreements + Open Questions
 
-**Round 3+ — TL drives convergence**:
-- TL identifies topics where evidence clearly supports one side → marks converging
-- Topics still contested → TL runs cross-examination per `ae:consensus` protocol:
-  extract top claims from each side, demand direct responses
+**Round 3+ — Convergence**:
+- TL pushes converging topics toward conclusion
+- Topics with genuine disagreement get more rounds
+- **Unanimous Agreement Gate**: when all agents agree on a topic direction, TL runs UAG per `ae:agent-teams` Discussion Mode — structured falsification question, agents must search for counterexamples. Passed UAG = genuine convergence.
 - Sub-questions resolved in-team — do NOT bubble up to user
-- Continue until all topics have either clear direction or genuine dilemma
+- Continue until all topics have either clear direction (UAG passed) or genuine disagreement
 
 **TL compiles synthesis** when rounds complete:
-- Per topic: recommendation backed by debate evidence, dissenting views, resolved sub-questions
-- Genuine dilemmas: team split with comparable evidence even after structured debate
+- Per topic: direction backed by evidence, UAG result, dissenting views, resolved sub-questions
 
-### 4. TL Scores (Batch)
+### 4. Consensus Verification
 
-Based on debate evidence:
+TL runs consensus verification on topics where a direction has formed, to stress-test the conclusion before marking it converged. This is a quality gate — discussion finds the direction, consensus confirms it holds under adversarial pressure.
+
+**When to trigger** (TL judgment):
+- **Run** when: topic involves a design decision, architecture choice, or recommendation that downstream work depends on. Also run when: agents agreed quickly without visible challenge (potential groupthink).
+- **Skip** when: topic is purely informational (e.g., "what's the current state of X"), OR all agents independently reached the same conclusion with strong evidence from different angles (genuine convergence, not groupthink).
+- **When in doubt**: run it. False positive (unnecessary verification) wastes some tokens. False negative (skipped verification on a bad decision) wastes real work downstream.
+
+For each topic TL selects for verification:
+1. TL temporarily assigns agents to forced stances: one = advocate (FOR the direction), another = critic (AGAINST)
+2. Run `ae:consensus` Debate Mode protocol within the same team: structured output (Claims + Evidence + Conceded Points), cross-examination
+3. **Confirmed** → topic converged, direction validated under adversarial pressure
+4. **Overturned** → back to Discussion rounds (step 3), explore further with new evidence
+5. **Deadlocked** (3 cross-exam rounds, still split) → TL decides by evidence preponderance, or marks genuine dilemma and escalates to user
+
+### 5. TL Scores (Batch)
+
+Based on discussion + consensus verification evidence:
 
 1. **Check for dependencies**: if Topic A's decision is prerequisite for Topic B, score A first
 2. **Score each topic** using the three-state model:
@@ -266,7 +262,7 @@ Based on debate evidence:
 
 **The default is to decide, not to ask.** Present autonomous decisions as FYI backed by team evidence.
 
-### 5. Present Results to User & Record
+### 6. Present Results to User & Record
 
 Present the batch result **with team evidence**:
 
@@ -296,7 +292,7 @@ For escalated topics: use `AskUserQuestion` with team findings + genuine dilemma
 - TL scores again after team reports back
 - Continue until all topics converged or deferred
 
-### 6. Doodlestein Challenge
+### 7. Doodlestein Challenge
 
 **Triggered when**: all topics converged or deferred (zero revisit remaining). Before Sweep and Conclusion.
 
@@ -323,10 +319,10 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
 ```
 
 3. Each Doodlestein agent SendMessage findings to TL
-4. **TL moderates response** (NOT Host — conflict of interest):
-   - TL routes challenges to relevant team members for response
-   - Host defends decisions (as proposer), opposition may agree or disagree with Doodlestein
-   - If a challenge is valid → TL opens new debate rounds (all agents participate)
+4. **TL moderates response** per `ae:agent-teams` Doodlestein Protocol:
+   - TL routes challenges to ALL team members simultaneously
+   - All agents respond — no agent's response is weighted higher than others
+   - If a challenge is valid → TL opens new discussion rounds (all agents participate)
    - If refuted with evidence → TL records the exchange
    - Continue until all Doodlestein issues resolved
 
@@ -335,7 +331,7 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
    - Challenge opened valid concern → topic reverts to `revisit`, back to step 3
    - Genuine dilemma → escalate to user
 
-### 7. Sweep: Resolve All Deferred
+### 8. Sweep: Resolve All Deferred
 
 **Triggered when**: all topics converged or deferred, Doodlestein complete.
 
@@ -368,7 +364,7 @@ Update summary.md and index.md for each resolution.
 
 **After Sweep: zero deferred, zero revisit.** Every output is plannable or spawned.
 
-### 8. Generate Conclusion
+### 9. Generate Conclusion
 
 ```markdown
 ---
@@ -420,7 +416,7 @@ plan: ""
 
 Update index.md: set `pipeline.discuss: done`, add conclusion link.
 
-### 9. Team Shutdown & Next Steps
+### 10. Team Shutdown & Next Steps
 
 **Shutdown the team ONLY after Conclusion is written.**
 
@@ -429,16 +425,17 @@ Update index.md: set `pipeline.discuss: done`, add conclusion link.
 
 ## Principles
 
-- **Debate model**: TL = moderator/judge (moderates, judges), Host = proposer (proposes, defends), other agents = opposition (challenges). Host must NEVER moderate or synthesize — that's TL's job.
-- **Team debates, TL judges**: The value of ae:discuss is multi-agent debate with code evidence. If the team didn't debate it, don't present it to the user.
+- **Discussion Mode**: TL = moderator, all agents = equal participants. No forced proposer/opposition. Positions evolve based on evidence. Per `ae:agent-teams` Discussion Mode.
+- **Team explores, TL synthesizes**: The value of ae:discuss is multi-agent collaborative exploration with code evidence. If the team didn't explore it, don't present it to the user.
+- **Consensus verification**: Topics with decisions get stress-tested via temporary Debate Mode (forced FOR/AGAINST) before being marked converged. Discussion finds the direction, consensus confirms it.
 - **One team, one lifecycle**: Spawn once, add agents as needed, never remove. Shutdown only at Conclusion.
-- **Strong opinions welcome**: Agents with dissenting views are assets. Never remove an agent for disagreeing. Heated debate produces better decisions.
-- **Dynamic composition**: Agent roles are determined by discussion content, not hardcoded. Multiple instances of the same backend (codex, gemini) with different roles are encouraged.
-- **Discussion before user**: Team runs minimum 3 internal rounds (research → debate → converge). Sub-questions resolved internally. Only genuine dilemmas reach the user. Presenting shallow A/B/C options is a failure mode.
+- **Strong opinions welcome**: Agents with dissenting views are assets. Genuine disagreement is valuable signal.
+- **Dynamic composition**: Agent roles determined by discussion content via `ae:agent-selection`. Multiple instances of same backend with different roles encouraged.
+- **Discussion before user**: Team runs minimum 2 rounds (research → explore). Sub-questions resolved internally. Only genuine dilemmas reach the user.
 - **Batch, don't serialize**: All topics discussed together, not one by one
 - **Decide, don't ask**: TL resolves autonomously by default, escalates only when genuinely stuck
 - **No deferred survives**: every item must have a result before Conclusion
-- **Evidence, not opinion**: decisions cite specific files, code, data — not "hand-wavy reasoning"
+- **Evidence, not opinion**: decisions cite specific files, code, data — not hand-wavy reasoning
 - **Landing rule**: every output is plannable or a new discussion — nothing sits idle
 - Topic dependencies: if one decision affects another, note it
 - Always keep index.md in sync with topic files
