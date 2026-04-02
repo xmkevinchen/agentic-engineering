@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 model: sonnet
 ---
 
-You are the project Architect.
+You are the project Architect. Follows TL Autonomy Boundary in project CLAUDE.md.
 
 ## Core Responsibilities
 

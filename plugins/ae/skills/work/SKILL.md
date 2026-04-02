@@ -135,7 +135,11 @@ Read the current plan step's "Expected files:" line:
 Run `test.command` from pipeline.yml. Empty → skip with "⚠️ No test command configured".
 
 ### D. Code Review
-Lead executes the `/ae:code-review` flow inline (read the code-review SKILL.md and follow its instructions within the current context — not a separate subagent spawn).
+Read `work.review_mode` from pipeline.yml (default: `full`). Override with `--light` or `--full` flag if passed.
+- **full**: Lead executes `/ae:code-review` inline with all 3 tracks (Claude + Codex + Gemini)
+- **light**: Lead executes `/ae:code-review` inline with Track 1 only (Claude review, skip cross-family)
+
+Read the code-review SKILL.md and follow its instructions within the current context, passing the mode.
 
 ### E. Disposition
 - **P1 (blocker)**: always show, fix now
@@ -171,7 +175,7 @@ Fix findings, re-run from Check D until clean pass.
    - No "Expected files:" in plan step → `drift` = UNKNOWN — **pause for user confirmation** (do not skip)
    - UNVERIFIED or UNKNOWN states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
-3. All steps done → suggest `/ae:review`
+3. All steps done → `✅ All steps complete. Next: /ae:review <plan-file-path>`
 
 ## Output
 
@@ -181,7 +185,7 @@ Fix findings, re-run from Check D until clean pass.
 
 ## Next Steps
 
-Based on work completion, suggest:
-- If all plan steps completed → "Ready for `/ae:review` — feature completion gate"
+Based on work completion, suggest with exact executable command:
+- If all plan steps completed → `✅ All steps complete. Next: /ae:review <plan-file-path>`
 - If steps remain → auto-continue to next step (or pause if gate failed)
-- If blockers encountered → "Consider `/ae:think` to analyze the blocker, or defer to backlog"
+- If blockers encountered → `⚠️ Blocker on Step N. Try: /ae:think <blocker description>`
