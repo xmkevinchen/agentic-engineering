@@ -101,6 +101,8 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
                SendMessage findings to challenger when done.")
 ```
 
+**Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
+
 Also read project context files (CLAUDE.md, docs/) for background.
 
 ### 4. Generate Analysis Document
