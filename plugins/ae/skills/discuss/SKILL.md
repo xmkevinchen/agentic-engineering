@@ -400,7 +400,7 @@ plan: ""
 ## Team Composition
 | Agent | Role | Backend | Joined |
 |-------|------|---------|--------|
-| host | Proposer | Claude | Start |
+| host | TL (moderator) | Claude | Start |
 | <name> | <role> | codex/gemini/claude | Start/Round N/Doodlestein |
 
 ## Process Metadata
