@@ -2,6 +2,7 @@
 id: plan-creates-expected-files
 target: ae:plan
 layer: 2
+source: manual
 ---
 
 ## Context

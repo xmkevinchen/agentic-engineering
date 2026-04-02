@@ -2,6 +2,7 @@
 id: refuse-no-agent-teams
 target: ae:plan
 layer: 1
+source: manual
 ---
 
 ## Context
