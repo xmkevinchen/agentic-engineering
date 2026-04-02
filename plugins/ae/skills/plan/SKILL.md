@@ -134,6 +134,8 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
                SendMessage findings to architect when done.")
 ```
 
+**Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
+
 ### Merge Results
 
 Architect integrates feedback from dependency-analyst and simplicity-reviewer, then SendMessage to Lead.

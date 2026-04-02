@@ -90,6 +90,8 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
 
 **No worktree isolation** — teammates need SendMessage communication.
 
+**Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference — proxy 120s MCP timeout + challenger 120s wait timeout.
+
 ### 4. Wait for Final Report
 
 Challenger collects findings → calls cross-family → challenges → synthesizes → SendMessage to Lead.

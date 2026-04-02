@@ -329,6 +329,7 @@ After Sweep, all topics resolved. Before generating conclusion:
                     SendMessage observations to challenger for synthesis.
                     IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
      ```
+   - **Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
    - **Cross-family unavailable** → challenger-only (single subagent)
    - **Skip conditions**: If only 1 topic with high reversibility → may skip, but MUST record: `Doodlestein: skipped (reason: single low-impact topic)`
 3. Present challenges to user
