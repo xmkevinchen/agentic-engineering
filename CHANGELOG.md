@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.2 — 2026-04-02
+
+### Agent Autonomy + Step Weight Calibration
+- **TL Autonomy operational rules**: 6 concrete rules in CLAUDE.md (P3 auto-skip, single-option converge, high-reversibility fast-track, etc.). 3 workflow agents reference these rules.
+- **Review mode**: `work.review_mode: full|light` in pipeline.yml. `--light` flag for Claude-only code review (skip cross-family). `--skip-review` flag for ae:plan to skip Agent Teams Plan Review.
+- **Proxy timeout protocol**: unified 120s dual timeout (proxy + challenger) defined in agent-selection, referenced by 4 skills.
+- **Actionable Next Steps**: work/review/plan completion suggests exact executable commands, SCM-agnostic.
+- **Emoji removal**: Next Steps sections cleaned up per CLAUDE.md style.
+
+### Component counts
+- 15 skills, 13 agents, 2 MCP servers (unchanged — skills enhanced, not added)
+
 ## v0.2.1 — 2026-04-01
 
 ### Bug Fixes — Skill/Agent Implementation Audit
