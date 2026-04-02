@@ -20,6 +20,10 @@ output:
   reviews: "docs/reviews/"          # ae:review (default: docs/reviews/)
   analyses: "docs/analyses/"        # ae:think (default: docs/analyses/)
 
+# --- Test Plugin ---
+test_plugin:
+  judge: codex               # LLM-as-judge for Layer 2 behavioral checks: codex (default), gemini, or claude
+
 # --- Work Execution ---
 work:
   max_fix_loops: 3           # Fix loop circuit breaker: stop after N consecutive failures on same test

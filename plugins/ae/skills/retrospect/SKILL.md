@@ -22,7 +22,7 @@ Analyze historical Outcome Statistics from `/ae:review` output to identify trend
    - If either ID matches a `type: retrospect-comparison` file → output: "比较失败：不支持对比较报告再次比较，请指定 type 为 retrospect 的报告 ID。"
    - If either ID not found → output: "比较失败：未找到 ID 为 [ID] 的 retrospect 报告。请确认报告 ID 存在于 `docs/analyses/` 中。"
    - If both found → skip to Step 5 (Comparison Mode)
-3. Scan for review files containing Outcome Statistics
+3. Scan for review files containing Outcome Statistics. **Skip files with `type: test-report` in frontmatter** — only process `type: review` documents.
 4. If no data found → output: "数据不足：尚无 Outcome Statistics。请先完成至少一次 `/ae:review` 以产出数据。"
 
 ## Step 1: Collect Outcome Statistics

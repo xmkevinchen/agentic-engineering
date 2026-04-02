@@ -2,6 +2,7 @@
 id: work-reads-review-mode
 target: ae:work
 layer: 2
+source: manual
 ---
 
 ## Context
