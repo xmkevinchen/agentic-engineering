@@ -2,7 +2,7 @@
 
 An operating system for AI agents in software engineering.
 
-13 specialized agents. 3 model families. One disciplined pipeline. Built as a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin.
+17 specialized agents. 3 model families. One disciplined pipeline. Built as a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin.
 
 ## The Problem
 
@@ -16,7 +16,7 @@ AI-assisted coding is powerful but unstructured. You prompt one model, hope for 
 | Filesystem | Persistent artifacts — plans, analysis docs, review results, decision records |
 | IPC | Structured agent protocols — handoff, challenge/response, consensus |
 | Device drivers | MCP servers — Codex and Gemini abstracted behind a uniform interface |
-| Shell | 16 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, `/ae:test-plugin`, ...) |
+| Shell | 17 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, `/ae:test-plugin`, ...) |
 
 ## Quick Start
 
@@ -66,13 +66,20 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 | Command | What it does |
 |---------|-------------|
 | `/ae:code-review` | Quick pre-commit review (Claude + Codex + Gemini) |
+| `/ae:test-plugin` | Adversarial behavioral testing — blind execution, LLM-as-judge, persistent test cases |
 | `/ae:testgen` | Generate test suites with edge case coverage |
 | `/ae:trace` | Trace execution flow or map dependency chains |
 | `/ae:team` | Spin up an ad-hoc agent team — auto-selects agents based on your task |
 
+### Protocol Reference
+
+| Command | What it does |
+|---------|-------------|
+| `/ae:agent-teams` | Unified protocol for all Agent Teams — Base layer + Debate/Investigation modes + Doodlestein |
+
 ## Agents
 
-13 specialized agents, organized in three groups:
+17 specialized agents, organized in four groups:
 
 ### Review Agents — the quality gate
 | Agent | Focus |
@@ -81,7 +88,6 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 | `code-reviewer` | Code quality, SOLID principles, security, testability |
 | `performance-reviewer` | Algorithms, DB queries, memory usage, I/O hot paths |
 | `security-reviewer` | Auth, injection, data protection, secrets management |
-| `simplicity-reviewer` | Over-engineering detection, YAGNI enforcement |
 
 ### Research Agents — the knowledge layer
 | Agent | Focus |
@@ -94,12 +100,20 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 | Agent | Focus |
 |-------|-------|
 | `architect` | Step decomposition, parallel execution strategy |
-| `challenger` | Devil's advocate, cross-family decision-maker |
+| `challenger` | Pure adversarial opposition, blind spot detection |
 | `qa` | Post-step code review + cross-family validation |
+| `test-lead` | Adversarial test generation + LLM-as-judge evaluation |
 | `codex-proxy` | Routes requests to Codex (OpenAI) via MCP |
 | `gemini-proxy` | Routes requests to Gemini (Google) via MCP |
 
-Agent teams form dynamically. `/ae:team` picks the right combination for your task. Commands like `/ae:review` assemble a full review panel automatically.
+### Doodlestein Agents — the challenge layer
+| Agent | Focus |
+|-------|-------|
+| `doodlestein-strategic` | "What's the smartest alternative that makes this unnecessary?" |
+| `doodlestein-adversarial` | "Which part solves a problem that doesn't exist?" |
+| `doodlestein-regret` | "Which decision will be reversed within 2 weeks?" |
+
+Agent teams form dynamically. `/ae:team` picks the right combination for your task. Commands like `/ae:review` assemble a full review panel automatically. **TL (Session TL) always synthesizes** — agents research, challenge, and report; TL merges findings into final output.
 
 ## Cross-Family Architecture
 
@@ -182,11 +196,13 @@ Agents are auto-discovered at runtime from all available sources — project age
 ```
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest
-  skills/                         # 15 slash commands (the shell)
-  agents/                         # 13 specialized agents (the processes)
-    review/                       #   5 review agents
+  skills/                         # 17 slash commands (the shell)
+  agents/                         # 17 specialized agents (the processes)
+    review/                       #   4 review agents
     research/                     #   3 research agents
-    workflow/                     #   5 workflow agents
+    workflow/                     #   7 workflow agents (incl. test-lead)
+    workflow/doodlestein-*        #   3 Doodlestein challenge agents
+  tests/                          # Persistent test cases (manual + generated)
   mcp-servers/gemini/             # Bundled Gemini MCP server (device driver)
   templates/pipeline.template.yml # Template for /ae:setup
 ```
