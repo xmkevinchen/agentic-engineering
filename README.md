@@ -16,7 +16,7 @@ AI-assisted coding is powerful but unstructured. You prompt one model, hope for 
 | Filesystem | Persistent artifacts — plans, analysis docs, review results, decision records |
 | IPC | Structured agent protocols — handoff, challenge/response, consensus |
 | Device drivers | MCP servers — Codex and Gemini abstracted behind a uniform interface |
-| Shell | 15 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, `/ae:retrospect`, ...) |
+| Shell | 16 slash commands (`/ae:plan`, `/ae:work`, `/ae:review`, `/ae:test-plugin`, ...) |
 
 ## Quick Start
 

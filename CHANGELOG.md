@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.0 — 2026-04-02
+
+### ae:test-plugin — Adversarial Behavioral Testing
+- **New skill**: `/ae:test-plugin` — adversarial behavioral testing for plugin skills/agents
+  - 3 input modes: skill name, `--recent` (git diff), `--all` (full scan)
+  - Phase 1: Agent Teams test generation (test-lead + prompts-writer + answer-writer)
+  - Phase 2: two-layer execution — Layer 1 deterministic (pass/fail) + Layer 2 behavioral (LLM-as-judge)
+  - Phase 3: Markdown test report with pass/fail breakdown
+- **New agent**: `test-lead` — adversarial testing lead, generates test cases, reviews writers, enforces communication isolation
+- **Sample test cases**: 3 Markdown test cases in `plugins/ae/tests/` (refuse behavior, plan output format, review mode config)
+- **Test case format**: Markdown per case with MUST/MUST_NOT/SHOULD behavioral assertions
+
+### Component counts
+- 16 skills (+1 ae:test-plugin), 14 agents (+1 test-lead), 2 MCP servers
+
 ## v0.2.2 — 2026-04-02
 
 ### Agent Autonomy + Step Weight Calibration
