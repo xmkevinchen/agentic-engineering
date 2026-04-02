@@ -28,11 +28,11 @@ Ask user if not obvious:
 
 ## Step 3: Agent Teams Analysis
 
-Create a Team for parallel trace validation. **Lead: architect** (validates and produces final trace).
+Create a Team for parallel trace validation (Investigation Mode). **TL synthesizes**.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully.
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **Lead (TL)** that it's unavailable, then exit gracefully.
 
 ```
 TeamCreate(team_name: "<target>-trace")
@@ -44,7 +44,7 @@ Agent(subagent_type: "architect", name: "architect",
                Teammates: dependency-analyst, performance-reviewer, codex-proxy, gemini-proxy.
                Check: missing hops? Incorrect call order? Hidden async paths?
                Produce validated trace diagram.
-               SendMessage to dependency-analyst when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
       team_name: "<team>", run_in_background: true,
@@ -52,7 +52,7 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
                Follow Team Communication Protocol.
                Teammates: architect, performance-reviewer.
                Find: circular deps, tight coupling, fragile chains.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
       team_name: "<team>", run_in_background: true,
@@ -60,24 +60,24 @@ Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
                Follow Team Communication Protocol.
                Teammates: architect, dependency-analyst.
                Check: N+1 queries, unnecessary hops, blocking calls, memory issues.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent trace validation via Codex MCP — <specialized focus based on context>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent trace validation via Gemini MCP — <specialized focus based on context>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 ```
 
-## Step 4: Output
+## Step 4: TL Synthesizes Output
 
-Architect produces:
+TL collects all findings and produces:
 
 ### Flow mode
 ```

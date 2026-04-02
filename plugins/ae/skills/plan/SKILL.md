@@ -107,40 +107,41 @@ If any check fails → fix the plan before proceeding to review. These checks ar
 
 After the plan is written, create a Team for parallel review.
 
-**Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst + simplicity-reviewer). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
+**Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
 
-**Cross-family**: Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **architect** (the lead) and exit gracefully.
+**Cross-family**: Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **Lead (TL)** and exit gracefully.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")
 
-# Selected reviewers (example — actual selection based on plan context):
+# Architect reviews plan structure and dependencies:
 Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
                Produce step dependency graph and parallel strategy.
-               SendMessage to other reviewers when done.")
+               SendMessage findings to Lead (TL) when done.")
 
-Agent(subagent_type: "<reviewer-2>", ...)
-Agent(subagent_type: "<reviewer-3>", ...)
+Agent(subagent_type: "<reviewer-2>", name: "<reviewer-2>",
+      team_name: "<team>", run_in_background: true,
+      prompt: "<review focus>. SendMessage findings to Lead (TL) when done.")
 
 # Cross-family (same specialized prompt):
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "<specialized review focus based on plan domain>: <plan full text>.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "<same specialized focus as codex>: <plan full text>.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 ```
 
 **Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
 
-### Merge Results
+### TL Merges Results
 
-Architect integrates feedback from dependency-analyst and simplicity-reviewer, then SendMessage to Lead.
+TL collects findings from all reviewers + cross-family, synthesizes:
 
 - **Must fix** — design flaws, hidden dependencies
 - **Consider** — simplification suggestions

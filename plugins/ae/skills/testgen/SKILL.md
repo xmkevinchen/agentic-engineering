@@ -24,7 +24,7 @@ Generate tests for: **$ARGUMENTS**
 
 ## Step 2: Agent Teams Review
 
-Create a Team for parallel test planning review. **Lead: qa** (collects and validates coverage).
+Create a Team for parallel test planning review (Investigation Mode). **TL validates coverage**.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
@@ -40,7 +40,7 @@ Agent(subagent_type: "qa", name: "qa",
                Teammates: security-reviewer, codex-proxy, gemini-proxy.
                Check: all code paths covered? Edge cases? Error handling?
                Missing scenarios → list them.
-               SendMessage to Lead when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "security-reviewer", name: "security-reviewer",
       team_name: "<team>", run_in_background: true,
@@ -49,19 +49,19 @@ Agent(subagent_type: "security-reviewer", name: "security-reviewer",
                Teammates: qa, codex-proxy, gemini-proxy.
                Check: injection, auth bypass, data leaks tested?
                Missing security tests → list them.
-               SendMessage to qa when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review test coverage via Codex MCP — <specialized focus based on context>: <target code + test cases>.
                Teammates: qa, security-reviewer.
-               SendMessage findings to qa when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review test coverage via Gemini MCP — <specialized focus based on context>: <target code + test cases>.
                Teammates: qa, security-reviewer.
-               SendMessage findings to qa when done.")
+               SendMessage findings to Lead (TL) when done.")
 ```
 
 ## Step 3: Generate

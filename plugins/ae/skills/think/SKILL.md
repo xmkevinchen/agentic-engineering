@@ -22,11 +22,11 @@ Perform systematic deep analysis on: **$ARGUMENTS**
 
 ## Step 2: Agent Teams Investigation
 
-Create a Team for parallel deep investigation. **Lead: architect** (collects and synthesizes).
+Create a Team for parallel deep investigation (Investigation Mode). **TL synthesizes**.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully.
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. If a proxy fails to connect, it should SendMessage to **Lead (TL)** that it's unavailable, then exit gracefully.
 
 ```
 TeamCreate(team_name: "<topic>-deep-think")
@@ -37,7 +37,7 @@ Agent(subagent_type: "architect", name: "architect",
                Follow Team Communication Protocol.
                Teammates: standards-expert, challenger, codex-proxy, gemini-proxy.
                Produce analysis with evidence from code.
-               SendMessage to standards-expert and challenger when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
       team_name: "<team>", run_in_background: true,
@@ -45,7 +45,7 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
                Follow Team Communication Protocol.
                Teammates: architect, challenger.
                Wait for architect's analysis before evaluating.
-               SendMessage agreements and disagreements to architect.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
@@ -53,24 +53,24 @@ Agent(subagent_type: "challenger", name: "challenger",
                Follow Team Communication Protocol.
                Teammates: architect, standards-expert.
                Wait for architect's analysis before challenging.
-               SendMessage counterarguments to architect.")
+               SendMessage challenges to Lead (TL) when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent analysis of this problem via Codex MCP — <specialized focus based on context>: <problem + relevant files>.
                Teammates: architect, standards-expert, challenger.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent analysis of this problem via Gemini MCP — <specialized focus based on context>: <problem + relevant files>.
                Teammates: architect, standards-expert, challenger.
-               SendMessage findings to architect when done.")
+               SendMessage findings to Lead (TL) when done.")
 ```
 
-## Step 3: Synthesize
+## Step 3: TL Synthesizes
 
-Architect integrates all perspectives:
+TL collects all findings and integrates perspectives:
 
 - **Confirmed** — points all agents agree on
 - **Contested** — disagreements with arguments from each side
