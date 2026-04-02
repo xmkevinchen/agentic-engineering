@@ -8,7 +8,7 @@ All skills that spawn Agent Teams reference this protocol. `ae:agent-selection` 
 
 Two-tier structure:
 - **Base Protocol** — applies to ALL Agent Teams regardless of mode
-- **Mode Protocol** — skills choose Debate Mode or Investigation Mode
+- **Mode Protocol** — skills choose one of: Debate Mode, Discussion Mode, or Investigation Mode
 
 ---
 
@@ -65,6 +65,7 @@ Three fresh agents that join an existing team LATE, after initial rounds converg
 
 **When to trigger**: After main rounds converge, before final conclusion.
 - **Debate Mode**: always triggered.
+- **Discussion Mode**: always triggered (discussions produce decisions that need fresh-eyes validation).
 - **Investigation Mode**: TL discretion — trigger when investigation produced decisions or recommendations. Skip for pure observational findings (e.g., trace output, factual analysis with no design choices).
 
 **The three Doodlestein agents** (agent definitions in `plugins/ae/agents/workflow/`):
@@ -105,7 +106,7 @@ Three fresh agents that join an existing team LATE, after initial rounds converg
 
 ## Debate Mode
 
-For skills where decisions require adversarial challenge: ae:discuss, ae:consensus, ae:plan, ae:plan-review, ae:review.
+For skills where a specific proposal/artifact needs adversarial validation: ae:consensus, ae:plan, ae:plan-review, ae:review.
 
 ### Roles
 
@@ -113,12 +114,16 @@ For skills where decisions require adversarial challenge: ae:discuss, ae:consens
 |------|-----|----------------|
 | **Moderator** | TL | Per Base Protocol |
 | **Proposer** | One agent | Proposes positions, defends with evidence. Has opinions. Is NOT neutral. |
-| **Opposition** | Other agents | Challenge proposer. Find flaws, demand evidence, present alternatives. |
+| **Opposition** | Other agents | Challenge proposer based on their genuine assessment. Organic positions. |
+| **Devil's Advocate** | One agent (always present) | MUST oppose the proposer regardless of personal assessment. Forced adversarial stance. |
 
 **Critical rule**: Proposer must NEVER moderate, synthesize, or control the narrative. That is TL's job.
 
+**Devil's Advocate purpose**: Guarantees adversarial pressure every round, even when opposition agents agree with the proposer. If the devil's advocate is thoroughly rebutted with evidence, that itself is the strongest validation signal — the proposal survived its hardest challenge. A devil's advocate that is never rebutted indicates the team isn't engaging seriously.
+
+**Consensus escalation**: When a topic remains deeply contested after normal rounds, TL can temporarily reassign agents to forced stances (advocate FOR / critic AGAINST) for that specific topic — full `ae:consensus` structured debate within the existing team. This is heavier than normal debate and used only when organic positions fail to resolve the disagreement.
+
 **Proposer selection** (per skill):
-- ae:discuss → Host
 - ae:plan / ae:plan-review → Architect (defends plan)
 - ae:review → code-defender perspective
 - ae:consensus → Advocate
@@ -185,6 +190,90 @@ When a topic remains contested after Round 2:
    - If still unresolved → another round of cross-examination (max 3 total)
    - If resolved → mark converged
    - **After max 3 with no convergence** → TL decides by evidence preponderance (side with stronger file:line evidence wins), or marks as genuine dilemma and escalates per CLAUDE.md TL Autonomy Boundary
+
+---
+
+## Discussion Mode
+
+For skills where the goal is collaborative exploration of open questions — no pre-formed proposal to defend: ae:discuss.
+
+### Roles
+
+| Role | Who | Responsibility |
+|------|-----|----------------|
+| **Moderator** | TL | Per Base Protocol. Additionally: highlights disagreements between agents, surfaces under-explored angles, prevents premature convergence. |
+| **Participants** | All agents | Equal participants. Research, form positions, evolve positions freely based on new evidence. No forced stances. |
+
+No fixed proposer/opposition. Agents bring different expertise and perspectives but are not locked into adversarial roles. Changing your position based on another agent's evidence is expected and valuable — not a "concession."
+
+### Groupthink Prevention
+
+Without forced adversarial roles, groupthink prevention relies on structural mechanisms:
+
+1. **Round 1 isolation** (Base Protocol) — agents research independently, no cross-talk
+2. **TL highlights disagreements** — in Round 2, TL explicitly surfaces where agents differ and demands they address each other's evidence
+3. **Unanimous Agreement Gate (UAG)** — structural, mandatory, not TL discretion. See below.
+
+### Unanimous Agreement Gate (UAG)
+
+"Agreement is a bug" — AI agents trained on similar data converge to the same "most likely answer," which is statistical repetition, not genuine consensus.
+
+**When triggered**: Automatically, whenever all agents reach the same direction on a topic AND no agent has raised boundary conditions or counterexamples.
+
+**How it works**:
+1. TL sends a structured falsification question to ALL agents:
+   > "List at least one: (a) what condition in the codebase would make this direction wrong? (b) what scenario would make this decision's cost unacceptable?"
+2. Agents MUST answer with specific file:line references or concrete scenarios. "I can't think of any" is not acceptable — the agent must attempt the search.
+3. **Answers reveal real concerns** → continue discussion rounds with the new evidence
+4. **Answers confirm no falsifiable condition found** → genuine convergence. Record: "UAG passed: no falsifiable condition found by any agent." Proceed.
+
+**Key principle**: Finding no counterexample after structured search IS the strongest convergence signal. The value is in the search, not in forcing artificial disagreement.
+
+### Escalation to Debate Mode
+
+Discussion Mode can escalate specific topics to Debate Mode (forced FOR/AGAINST) within the same team when needed. This is a tool available to both Discussion Mode and the calling skill. See ae:discuss for consensus verification as a quality gate.
+
+### Round Protocol (minimum 2 rounds)
+
+#### Round 1 — Independent Research (no cross-talk)
+- TL sends topic brief to all agents
+- Each agent researches independently, forms initial position with evidence
+- Reports findings to TL only
+
+#### Round 2 — Share & Explore
+- TL compiles all Round 1 findings, highlights disagreements and gaps
+- TL sends compiled summary to all agents
+- Agents respond to each other's findings — agree, build on, or challenge with evidence
+- Positions may evolve — this is expected, not failure
+- TL identifies which topics are converging and which have genuine disagreement
+
+#### Round 3+ — Convergence
+- TL pushes converging topics toward conclusion
+- Disagreeing topics get more rounds or escalate to consensus (per-topic)
+- Sub-questions resolved in-team
+
+**Early-exit gate**: Same as Debate Mode — after Round 2, if all evidence points same direction with no unresolved disagreements, TL may conclude.
+
+### Structured Output (lighter than Debate Mode)
+
+Discussion participants use:
+
+```
+## Findings
+1. [Finding/Position] — Evidence: [file:line or concrete data]
+2. [Finding/Position] — Evidence: [file:line or concrete data]
+
+## Agreements
+- [Points where I agree with other agents' findings]
+
+## Disagreements
+- [Agent X's finding Y] → I disagree because [evidence]
+
+## Open Questions
+- [Things I couldn't determine, need more research]
+```
+
+Key difference from Debate Mode: no forced FOR/AGAINST position. Agents report what they found, not what side they're on.
 
 ---
 

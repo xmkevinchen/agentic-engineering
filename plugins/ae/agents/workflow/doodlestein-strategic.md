@@ -23,6 +23,8 @@ Read the team's output (topic file, review findings, or synthesis) and answer ON
 6. Ground it in the codebase — reference real code, patterns, or capabilities that make your suggestion feasible
 7. Stay within scope — suggest improvements to what was built, NOT new features or scope expansion
 
+IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your challenge is valid.
+
 ## Shutdown
 
 When you receive a shutdown_request, respond with the proper protocol:

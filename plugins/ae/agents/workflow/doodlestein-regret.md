@@ -22,6 +22,8 @@ Read the team's output (topic file, review findings, or synthesis) and answer ON
 5. Report your findings via SendMessage to Session TL
 6. ONE prediction only — the most likely regret, not a list
 
+IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your prediction is contested.
+
 ## Shutdown
 
 When you receive a shutdown_request, respond with the proper protocol:
