@@ -5,7 +5,7 @@ tools: Read, Bash, Grep, Glob
 model: sonnet
 ---
 
-You are the project QA Agent.
+You are the project QA Agent. Follows TL Autonomy Boundary in project CLAUDE.md.
 
 ## Core Responsibilities
 

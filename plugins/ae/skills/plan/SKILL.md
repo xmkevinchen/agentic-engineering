@@ -103,6 +103,8 @@ If any check fails → fix the plan before proceeding to review. These checks ar
 
 ## Step 3: Agent Teams Plan Review
 
+**Skip with `--skip-review`**: If the user passed `--skip-review` flag, skip this entire step and proceed to Step 4 (Doodlestein) or Step 5 (Confirm). Use when: simple changes where full 5-agent review is overhead.
+
 After the plan is written, create a Team for parallel review.
 
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst + simplicity-reviewer). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
@@ -133,6 +135,8 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       prompt: "<same specialized focus as codex>: <plan full text>.
                SendMessage findings to architect when done.")
 ```
+
+**Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
 
 ### Merge Results
 
@@ -174,7 +178,7 @@ Show the complete plan to the user. Indicate next step is `/ae:work <plan file p
 
 ## Next Steps
 
-Based on plan status, suggest:
-- If plan approved → "Ready for `/ae:work <plan-file>` to execute implementation"
-- If plan has unresolved discussion references → "Resolve linked discussions first, then `/ae:work`"
-- If plan review raised Must Fix items → "Address review findings, then re-run `/ae:plan-review`"
+Based on plan status, suggest with exact executable command:
+- If plan approved → `✅ Plan reviewed. Next: /ae:work <plan-file-path>`
+- If plan has unresolved discussion references → `⚠️ Unresolved discussions. Run /ae:discuss <discussion-dir> first.`
+- If plan review raised Must Fix items → `🔴 Must Fix items remain. Re-run /ae:plan-review <plan-file-path>`

@@ -24,6 +24,7 @@ output:
 work:
   max_fix_loops: 3           # Fix loop circuit breaker: stop after N consecutive failures on same test
   auto_pass: true            # Auto-continue when gate passes (tests green + no P1 + no drift). Set false for manual confirm every step.
+  review_mode: full          # full = 3-track review (Claude+Codex+Gemini); light = Claude-only (skip cross-family). Override per-run: --light or --full
   security_patterns:         # Files matching these patterns always require human confirmation
     - "auth/*"
     - "security/*"
