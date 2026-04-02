@@ -186,6 +186,6 @@ Include this in the review report. This data accumulates naturally across featur
 ## Next Steps
 
 Based on review outcome, suggest with exact executable command:
-- If review passed → `✅ Review passed.` Suggest next action based on project's source control workflow and context. Let user decide.
-- If review has P1 findings → `🔴 P1 findings remain. Fix and re-run /ae:review <plan-file-path>`
-- If review deferred items → `⚠️ Deferred items exist. Address in next iteration or /ae:plan for follow-up.`
+- If review passed → `Review passed.` Suggest next action based on project's source control workflow and context. Let user decide.
+- If review has P1 findings → `P1 findings remain. Fix and re-run /ae:review <plan-file-path>`
+- If review deferred items → `Deferred items exist. Address in next iteration or /ae:plan for follow-up.`

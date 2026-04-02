@@ -179,6 +179,6 @@ Show the complete plan to the user. Indicate next step is `/ae:work <plan file p
 ## Next Steps
 
 Based on plan status, suggest with exact executable command:
-- If plan approved → `✅ Plan reviewed. Next: /ae:work <plan-file-path>`
-- If plan has unresolved discussion references → `⚠️ Unresolved discussions. Run /ae:discuss <discussion-dir> first.`
-- If plan review raised Must Fix items → `🔴 Must Fix items remain. Re-run /ae:plan-review <plan-file-path>`
+- If plan approved → `Plan reviewed. Next: /ae:work <plan-file-path>`
+- If plan has unresolved discussion references → `Unresolved discussions. Run /ae:discuss <discussion-dir> first.`
+- If plan review raised Must Fix items → `Must Fix items remain. Re-run /ae:plan-review <plan-file-path>`
