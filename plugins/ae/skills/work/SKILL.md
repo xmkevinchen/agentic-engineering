@@ -135,7 +135,11 @@ Read the current plan step's "Expected files:" line:
 Run `test.command` from pipeline.yml. Empty → skip with "⚠️ No test command configured".
 
 ### D. Code Review
-Lead executes the `/ae:code-review` flow inline (read the code-review SKILL.md and follow its instructions within the current context — not a separate subagent spawn).
+Read `work.review_mode` from pipeline.yml (default: `full`). Override with `--light` or `--full` flag if passed.
+- **full**: Lead executes `/ae:code-review` inline with all 3 tracks (Claude + Codex + Gemini)
+- **light**: Lead executes `/ae:code-review` inline with Track 1 only (Claude review, skip cross-family)
+
+Read the code-review SKILL.md and follow its instructions within the current context, passing the mode.
 
 ### E. Disposition
 - **P1 (blocker)**: always show, fix now

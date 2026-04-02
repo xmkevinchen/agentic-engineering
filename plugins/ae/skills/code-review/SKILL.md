@@ -13,11 +13,18 @@ Quick code review on current uncommitted changes.
 1. **Auto** — `/ae:work` calls this before each commit
 2. **Manual** — run `/ae:code-review` anytime
 
-## Execution (three parallel tracks)
+## Mode
+
+- **full** (default): three parallel tracks (Claude + Codex + Gemini)
+- **light**: Track 1 only (Claude review, skip cross-family)
+
+Mode is set by caller (ae:work reads `work.review_mode` from pipeline.yml, or `--light`/`--full` flag). When called manually, defaults to `full`.
+
+## Execution
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. If a proxy fails to connect, skip it — do not block the review.
+**Cross-family** (full mode only): Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. If a proxy fails to connect, skip it — do not block the review. In **light mode**, skip Tracks 2 and 3 entirely.
 
 ### Track 1: Claude Review
 
