@@ -1,4 +1,5 @@
 ---
+name: ae:agent-teams
 description: Agent Teams protocol reference — base rules, debate mode, investigation mode. Used by all skills that spawn Agent Teams.
 ---
 

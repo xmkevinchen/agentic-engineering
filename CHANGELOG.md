@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.4.0 — 2026-04-02
+
+### Agent Teams Protocol Unification
+- **New skill**: `/ae:agent-teams` — unified protocol for all Agent Teams (Base layer + Debate Mode + Investigation Mode + Doodlestein Protocol)
+- **TL synthesizes everywhere**: all 9 agent-teams skills updated — TL (Session TL) is the sole synthesizer, agents research/challenge/report but never produce final output
+- **Challenger = pure opposition**: ae:review and ae:analyze challenger no longer synthesizes, TL merges findings
+- **ae:consensus rewrite**: TL acts as mediator directly (no more mediator agent), simplicity-reviewer removed
+- **ae:discuss rewrite**: Discussion Mode per agent-teams protocol, UAG (Unanimous Agreement Gate), 3 Doodlestein agents, consensus verification
+- **3 new agents**: `doodlestein-strategic`, `doodlestein-adversarial`, `doodlestein-regret` — cross-family challenge layer
+
+### ae:test-plugin v2 — Blind Execution + LLM Judge
+- **Blind execution model**: test-lead generates+judges, Session TL executes without seeing assertions (behavioral contract, prevents self-easy-test bias)
+- **LLM-as-judge**: configurable judge (`test_plugin.judge` in pipeline.yml) — codex (default), gemini, or claude
+- **Persistence**: test cases saved with `source: generated|manual|regression` frontmatter tags
+- **Flags**: `--verbose` (debug), `--regression` (run existing only), `--refresh` (regenerate generated cases)
+- **Judge health check**: pre-check verifies judge reachability before Phase 2
+- **Verdict protocol**: structured `{ verdict, assertion, reasoning }` format, per-assertion granularity
+- **test-lead expanded**: Phase 4 judge integration, source tagging, MCP tool routing
+
+### Other changes
+- **pipeline.yml**: new `test_plugin.judge` config section
+- **ae:setup**: documents test_plugin config in Output Defaults table
+- **ae:retrospect**: filters `type: test-report` documents (only processes `type: review`)
+- **Existing test cases**: migrated with `source: manual` frontmatter
+- **simplicity-reviewer**: removed from all skill references and agent-selection table (agent file preserved)
+
+### Component counts
+- 17 skills (+1 ae:agent-teams), 17 agents (+3 doodlestein), 2 MCP servers
+
 ## v0.3.0 — 2026-04-02
 
 ### ae:test-plugin — Adversarial Behavioral Testing
