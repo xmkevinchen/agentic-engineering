@@ -185,7 +185,8 @@ Include this in the review report. This data accumulates naturally across featur
 
 ## Next Steps
 
-Based on review outcome, suggest:
-- If review passed → "Feature complete. Create PR or run `/ae:retrospect` to analyze pipeline metrics"
-- If review has P1 findings → "Fix P1 findings, then re-run `/ae:review`"
-- If review deferred items → "Address deferred items in next iteration or add to backlog"
+Based on review outcome, suggest with exact executable command:
+- If review passed, on feature branch → `✅ Review passed. Merge to main and bump version.`
+- If review passed, on main → `✅ Review passed. Run /ae:retrospect to analyze pipeline metrics.`
+- If review has P1 findings → `🔴 P1 findings remain. Fix and re-run /ae:review <plan-file-path>`
+- If review deferred items → `⚠️ Deferred items exist. Address in next iteration or /ae:plan for follow-up.`
