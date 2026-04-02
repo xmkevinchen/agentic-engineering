@@ -175,7 +175,7 @@ Fix findings, re-run from Check D until clean pass.
    - No "Expected files:" in plan step → `drift` = UNKNOWN — **pause for user confirmation** (do not skip)
    - UNVERIFIED or UNKNOWN states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
-3. All steps done → `✅ All steps complete. Next: /ae:review <plan-file-path>`
+3. All steps done → `All steps complete. Next: /ae:review <plan-file-path>`
 
 ## Output
 
@@ -186,6 +186,6 @@ Fix findings, re-run from Check D until clean pass.
 ## Next Steps
 
 Based on work completion, suggest with exact executable command:
-- If all plan steps completed → `✅ All steps complete. Next: /ae:review <plan-file-path>`
+- If all plan steps completed → `All steps complete. Next: /ae:review <plan-file-path>`
 - If steps remain → auto-continue to next step (or pause if gate failed)
-- If blockers encountered → `⚠️ Blocker on Step N. Try: /ae:think <blocker description>`
+- If blockers encountered → `Blocker on Step N. Try: /ae:think <blocker description>`
