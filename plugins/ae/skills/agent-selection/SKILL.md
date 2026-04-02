@@ -12,15 +12,15 @@ description: Agent selection reference — context-based team composition and cr
 |---------------|-------------|--------------|
 | DB / SQL / migration / schema | performance-reviewer, architect | architect |
 | Auth / token / session / secrets | security-reviewer, architecture-reviewer | security-reviewer |
-| UI / CSS / layout / frontend | simplicity-reviewer, code-reviewer | code-reviewer |
+| UI / CSS / layout / frontend | code-reviewer, architect | code-reviewer |
 | API / endpoint / contract / protocol | architecture-reviewer, standards-expert | architecture-reviewer |
 | New feature (cross-module) | architect, dependency-analyst, code-reviewer | architect |
-| Refactor / delete / simplify | simplicity-reviewer, archaeologist | simplicity-reviewer |
+| Refactor / delete / simplify | archaeologist, code-reviewer | archaeologist |
 | Performance / latency / scaling | performance-reviewer, architect, dependency-analyst | performance-reviewer |
 | Bug / debug / trace | archaeologist, dependency-analyst, qa | archaeologist |
-| Design / architecture decision | architect, challenger, simplicity-reviewer | architect |
+| Design / architecture decision | architect, challenger | architect |
 | Research / analysis | archaeologist, standards-expert, dependency-analyst | archaeologist |
-| Plan review | architect, dependency-analyst, simplicity-reviewer | architect |
+| Plan review | architect, dependency-analyst | architect |
 
 ## Rules
 

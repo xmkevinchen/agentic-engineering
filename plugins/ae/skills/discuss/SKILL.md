@@ -19,42 +19,21 @@ Start a structured design discussion for: **$ARGUMENTS**
 ## Discussion Flow
 
 ```
-Create/Load topics → Discuss (multi-round) → Sweep deferred → Doodlestein → Conclusion
-                          ↑                        │
-                          └── revisit topics ───────┘
+Setup → Spawn Team → Discussion Rounds → Doodlestein → Sweep → Conclusion → Shutdown
+                          ↑                    │
+                          └── revisit topics ───┘
 ```
 
-## Mode Detection
+Read `pipeline.yml` → `output.discussions` for the base directory.
 
-- **Continue mode**: if `$ARGUMENTS` points to an existing discussion directory, load index.md and continue.
-- **Create mode**: otherwise, treat $ARGUMENTS as a topic description — research and create a new discussion.
+## File Formats
 
-Read `pipeline.yml` → `output.discussions` (default: `docs/discussions/`) for the base directory.
-
-## Create Mode
-
-### 1. Find or Create Discussion Directory
-
-Check `<output.discussions>` for an existing related directory.
-- **Exists**: add topics to that directory.
-- **New**: next sequential number (zero-padded 3 digits). Create `<output.discussions>/NNN-slug/`.
-
-### 2. Research Codebase
-
-Use Explore agent to investigate related modules, patterns, and constraints. If `analysis.md` exists in the same directory, use its findings.
-
-### 3. Identify Discussion Topics
-
-Find 3-6 key decision points. Each should be a genuine choice with trade-offs.
-
-### 4. Create Topic Directories
-
-Each topic is a **directory** (not a single file) to support multi-round discussion without context bloat:
+### Topic directory structure
 
 ```
 topic-NN-slug/
   summary.md       # Current state — agent reads ONLY this each round
-  round-01.md      # First round discussion (archived after round ends)
+  round-01.md      # Round discussion record (archived after round ends)
 ```
 
 **summary.md** (agent reads this every round — keep concise):
@@ -82,22 +61,18 @@ reversibility: ""
 | (populated as rounds complete) |
 
 ## Context
-[Why this decision is needed, what it affects]
+[Why this decision matters, what it affects, what breaks if we get it wrong]
 
-## Options
-### A: [option name]
-- **Pros**: X, Y
-- **Cons**: Z
+## Constraints
+[Hard constraints — system limitations, compatibility requirements, resource limits, prior decisions]
 
-### B: [option name]
-- **Pros**: X, Y
-- **Cons**: Z
-
-## Recommendation
-[Which option and why]
+## Key Questions
+[What needs to be answered to make this decision — framed as questions, not options]
 ```
 
-**round-NN.md** (full discussion record for each round — archived, not re-read):
+**DO NOT pre-populate options (A/B/C) in summary.md.** Options emerge from team discussion. The template frames the problem; the team finds the solution.
+
+**round-NN.md** (archived after each round — not re-read by agents):
 
 ```markdown
 ---
@@ -109,7 +84,7 @@ score: pending/converged/revisit/deferred
 # Round NN
 
 ## Discussion
-[Full discussion content, user responses, analysis]
+[Team discussion content, key arguments, evidence cited]
 
 ## Outcome
 - Score: [converged/revisit/deferred]
@@ -117,9 +92,8 @@ score: pending/converged/revisit/deferred
 - Revisit reason: [if revisit]
 - Deferred reason: [if deferred]
 ```
-```
 
-### 5. Create or Update index.md
+### index.md
 
 ```markdown
 ---
@@ -152,192 +126,249 @@ tags: [relevant, tags]
 - [Conclusion](conclusion.md) *(after discussion complete)*
 ```
 
-### 6. Enter Discussion (Continue Mode)
+## Step 1. Setup
 
-## Continue Mode
+1. **Resolve discussion directory**:
+   - `$ARGUMENTS` points to existing directory → load `index.md`
+   - `$ARGUMENTS` is a topic description → check `<output.discussions>` for related directory
+     - Found → add topics to that directory
+     - Not found → create `<output.discussions>/NNN-slug/`
+2. **If new discussion**: create `index.md` with Problem Statement
+3. **If existing**: show convergence status:
+   ```
+   📊 Discussion NNN: N topics
+   - converged: X ✅  revisit: Y 🔄  deferred: Z ⏳  pending: W
+   ```
+4. **Route**:
+   - All converged + no deferred → go to Doodlestein (step 5)
+   - Has revisit or pending → spawn/continue team (step 2)
 
-### 1. Load Index & Route
+## Step 2. Spawn Discussion Team (once, persists until Conclusion)
 
-Read `$ARGUMENTS/index.md`, parse topic table. Show convergence status:
+**The core of ae:discuss is team discussion.** One team lives for the entire discussion — only add agents, never remove.
+
+If the team already exists (resuming), skip to step 3. Otherwise:
+
+1. Read all pending/revisit `topic-NN-slug/summary.md` files
+2. Compile a **topic brief**: Context + Constraints + Key Questions from each summary
+3. **Select agents using the Agent Selection Reference** skill:
+   - Match topic content against the Selection Table to pick core agents
+   - Cross-family: read `cross_family` config from pipeline.yml, assign specialized review angles per Cross-family Prompt Reference
+   - **Multiple instances of the same backend are allowed** — e.g., codex-as-researcher + codex-as-architect with different review angles
+   - Show selected team to user before launching (per Rule 5)
+4. Spawn the team:
+
+**Debate model**: TL = moderator/judge, Host = proposer (proposer), other agents = opposition (challengers).
 
 ```
-📊 Discussion NNN: N topics
-- converged: X ✅
-- revisit: Y 🔄
-- deferred: Z ⏳
-- pending: W
+TeamCreate(team_name: "<discussion>-council")
+
+# Host — proposer (proposer). Has opinions, argues FOR positions.
+Agent(subagent_type: "general-purpose", name: "host",
+      team_name: "<team>", run_in_background: true,
+      prompt: "You are the HOST (proposer) for: <discussion title>.
+               Topics: <topic brief>
+
+               You PROPOSE and DEFEND positions. You are NOT neutral.
+
+               Round 1: Research independently. Read code, find evidence.
+               Form your position on each topic. SendMessage your proposals
+               (with evidence) to Session TL.
+
+               Round 2+: Defend your positions against challengers.
+               Use structured output per ae:agent-teams protocol:
+               ## Position: FOR
+               ### Claims (each with file:line evidence)
+               ### Conceded Points (where opposition is right — be honest)
+               Concede only when presented with stronger evidence, not social pressure.
+
+               IMPORTANT: STAY IN THE TEAM for the entire discussion lifecycle. Do NOT exit.")
+
+# Challenger agents — opposition (opposition). Dynamic roles per Agent Selection Reference.
+Agent(subagent_type: "<codex-proxy|gemini-proxy|general-purpose>",
+      name: "<role-name>",  # e.g., "code-researcher", "architect", "security-expert"
+      team_name: "<team>", run_in_background: true,
+      prompt: "You are <ROLE> — a CHALLENGER (opposition) in this discussion.
+               Your expertise: <role-specific focus>.
+               Topics: <topic brief>
+
+               Round 1: Research independently. Read code, find evidence, form your
+               OWN position. SendMessage your findings to Session TL.
+               Do NOT read other agents' findings yet.
+
+               Round 2+: Challenge the Host's proposals. Attack weak points.
+               Use structured output per ae:agent-teams protocol:
+               ## Position: AGAINST (or INDEPENDENT if you agree with Host on some topics)
+               ### Claims (each with file:line evidence)
+               ### Conceded Points (where Host is right — be honest)
+               Defend your positions when challenged — strong opinions are valuable.
+               Concede only when presented with stronger evidence, not social pressure.
+
+               IMPORTANT: STAY IN THE TEAM for the entire discussion lifecycle. Do NOT exit.")
 ```
 
-Route:
-- All converged + no deferred → **go to Doodlestein** (step 5)
-- Has revisit → **discuss those next** (step 2)
-- Has pending → **discuss those next** (step 2)
+Apply Proxy Timeout Protocol from Agent Selection Reference.
 
-### 2. Research ALL Pending/Revisit Topics (Batch)
+**Adding agents mid-discussion**: If new topics emerge or existing debate reveals a missing perspective, TL spawns additional agents into the existing team. Never remove agents — strong disagreement is signal, not noise.
 
-**Do NOT discuss topics one by one.** Research all pending/revisit topics as a batch first.
+### 3. Discussion Rounds (TL moderates)
 
-For EACH pending or revisit topic:
+**TL is the moderator.** TL drives rounds, routes messages, identifies convergence. Host and challengers debate; TL judges.
 
-1. **Read `topic-NN-slug/summary.md` ONLY** — do NOT read previous round files (they are archived)
-2. **Independent research (MANDATORY)** — before forming any opinion:
-   - Read the actual code/files referenced in the topic
-   - Use Explore agent or Grep to investigate relevant patterns, constraints, and precedents
-   - If the topic references external systems/projects, read those too
-   - Identify at least one insight, risk, or consideration NOT already in the summary
-   - If the summary's options are incomplete or wrong based on your research, add/modify options
-   - Form your own evidence-based opinion on which option is best and WHY (cite specific files, patterns, or data)
+**Round 1 — Independent Research** (no cross-talk):
+- All agents (Host + challengers) research topics independently
+- Each forms their own position with evidence
+- All report findings to TL (not to each other)
+- TL does NOT share findings between agents yet
 
-**Anti-pattern**: Reading summary.md and presenting its content back to the user is NOT discussing — it's relaying. The value of this step is YOUR analysis.
+**Round 2 — Debate** (TL opens the floor):
+- TL compiles all Round 1 positions, highlights disagreements
+- TL sends compiled summary to all agents: "Here are the positions. Debate."
+- Host defends proposals, challengers attack — using `ae:agent-teams` Debate Mode structured output:
+  Claims with evidence (file:line) + Conceded Points + responses to opponent claims
+- Agents argue directly with each other via TL routing
+- Sub-questions identified and debated
+- See `ae:agent-teams` protocol for full structured output schema and cross-examination protocol
 
-### 3. Score & Decide Topics (Batch)
+**Round 3+ — TL drives convergence**:
+- TL identifies topics where evidence clearly supports one side → marks converging
+- Topics still contested → TL runs cross-examination per `ae:consensus` protocol:
+  extract top claims from each side, demand direct responses
+- Sub-questions resolved in-team — do NOT bubble up to user
+- Continue until all topics have either clear direction or genuine dilemma
 
-After researching all topics, **check for dependencies first**: if Topic A's decision is prerequisite for Topic B, score A first, then score B using A's decision. Within a batch, respect dependency order.
+**TL compiles synthesis** when rounds complete:
+- Per topic: recommendation backed by debate evidence, dissenting views, resolved sub-questions
+- Genuine dilemmas: team split with comparable evidence even after structured debate
 
-Score each topic using the **three-state model**:
+### 4. TL Scores (Batch)
+
+Based on debate evidence:
+
+1. **Check for dependencies**: if Topic A's decision is prerequisite for Topic B, score A first
+2. **Score each topic** using the three-state model:
 
 | Score | When to use | What to record |
 |-------|-------------|----------------|
-| `converged` | Evidence clearly supports one option, OR you have a defensible preference among close options | `decision`, `rationale` (must cite evidence), `reversibility` + `reversibility_basis` |
-
-**Reversibility observation protocol**: When filling `reversibility` (high/medium/low), also record `reversibility_basis` — a one-line explanation of WHY this level was chosen (e.g., "high — can revert by changing one config", "low — changes DB schema used by 3 services"). This is an observation experiment to determine if the reversibility field adds decision value. Data will be reviewed after 2-3 discussions.
-| `revisit` | You lack specific information needed to decide — state WHAT is missing | `revisit_reason` (must be specific: "need X data" or "depends on Y decision") |
+| `converged` | Team evidence clearly supports one direction | `decision`, `rationale` (cite team evidence), `reversibility` + `reversibility_basis` |
+| `revisit` | Team identified missing information needed to decide | `revisit_reason` (specific: "need X data") |
 | `deferred` | Can be postponed, but MUST resolve before discussion ends | `deferred_reason` (why postpone + what would unblock) |
+
+**Reversibility observation protocol**: record `reversibility_basis` — one-line explanation of WHY this level was chosen.
 
 **Decision authority rules:**
 
-- **TL decides autonomously (DEFAULT)** — most topics. Evidence supports an option → decide it, record rationale, move on.
+- **TL decides autonomously (DEFAULT)** — team evidence supports a direction → decide it, cite team findings.
 - **Escalate to user (EXCEPTION)** — only when:
-  - Low reversibility AND genuine ambiguity (evidence doesn't favor either side)
-  - You need domain context only the user has (business priorities, team constraints)
+  - Low reversibility AND team is genuinely split
+  - Domain context only the user has
   - Topic explicitly affects user's workflow or preferences
 
-**The default is to decide, not to ask.** Present autonomous decisions as FYI, not questions. User can override if they disagree.
+**The default is to decide, not to ask.** Present autonomous decisions as FYI backed by team evidence.
 
-### 4. Present Results to User
+### 5. Present Results to User & Record
 
-After scoring all topics, present the batch result:
+Present the batch result **with team evidence**:
 
 ```
-📊 Round N Results:
-- Topic 1: [title] → converged: [decision]. Evidence: [one-line].
-- Topic 2: [title] → converged: [decision]. Evidence: [one-line].
-- Topic 3: [title] → ⚠️ ESCALATED — [why you can't decide]. Options: A/B/C. My leaning: [X].
-- Topic 4: [title] → revisit: [what info is missing].
-- Topic 5: [title] → deferred: [why postpone].
+📊 Round N Results (Team: host + <role-agents>):
+
+- Topic 1: [title] → converged: [decision].
+  Evidence: [key finding that drove the decision]
+
+- Topic 2: [title] → ⚠️ ESCALATED — team split: [role-A] argues X (evidence), [role-B] argues Y (evidence).
+  My leaning: [X]. What's your call?
+
+- Topic 3: [title] → revisit: [what info team couldn't find].
 ```
 
-For escalated topics: use `AskUserQuestion` with your research findings + the genuine dilemma + YOUR leaning. Options include:
-- The listed options (A, B, C...)
-- "需要更多分析" (→ revisit)
-- "这个问题需要拆分" (→ deferred, spawn in Sweep)
-- "稍后再议" (→ deferred)
+For escalated topics: use `AskUserQuestion` with team findings + genuine dilemma + YOUR leaning.
 
-### 5. Record & Update
-
-For each topic decided in this round:
-
-1. **Quality check** — rationale must cite specific files, code, or data (not "综合考虑选 A"). High-impact (low reversibility) needs stronger evidence. Weak rationale → force revisit.
-2. **Write round file**: `topic-NN-slug/round-NN.md` with discussion content + outcome
-3. **Update summary.md**: status, Round History row, Current Status (concise, not full discussion)
+**Record** for each topic decided:
+1. **Quality check** — rationale must cite team evidence, not "hand-wavy reasoning". Weak rationale → force revisit.
+2. **Write round file**: `topic-NN-slug/round-NN.md` with team discussion content + outcome
+3. **Update summary.md**: status, Round History row, Current Status
 4. **Update index.md** topic table
-5. Show updated convergence status
 
-### 6. Multi-round (if revisit topics exist)
+**Multi-round**: If any topics are `revisit`:
+- SendMessage to existing team (Host + all agents still alive, with full context)
+- Host runs another round addressing the specific `revisit_reason`
+- TL scores again after team reports back
+- Continue until all topics converged or deferred
 
-If any topics are `revisit` after this round:
-- For each revisit topic, address the specific `revisit_reason` — get the missing info, try a different angle
-- New round → repeat from step 2 (research → score → present → record)
-- No fixed round limit — continue until all topics are converged or deferred (no more revisit)
+### 6. Doodlestein Challenge
+
+**Triggered when**: all topics converged or deferred (zero revisit remaining). Before Sweep and Conclusion.
+
+Per `ae:agent-teams` Doodlestein Protocol. Three fresh agents, each answering ONE focused question.
+
+1. Compile: topic titles + decisions + rationale + key evidence + summary of debate
+2. **Spawn all three Doodlestein agents INTO the existing team simultaneously**:
+
+```
+Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
+      team_name: "<existing team>", run_in_background: true,
+      prompt: "<compiled decisions + debate summary + file paths to read>
+               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+
+Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
+      team_name: "<existing team>", run_in_background: true,
+      prompt: "<compiled decisions + debate summary + file paths to read>
+               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+
+Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
+      team_name: "<existing team>", run_in_background: true,
+      prompt: "<compiled decisions + debate summary + file paths to read>
+               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+```
+
+3. Each Doodlestein agent SendMessage findings to TL
+4. **TL moderates response** (NOT Host — conflict of interest):
+   - TL routes challenges to relevant team members for response
+   - Host defends decisions (as proposer), opposition may agree or disagree with Doodlestein
+   - If a challenge is valid → TL opens new debate rounds (all agents participate)
+   - If refuted with evidence → TL records the exchange
+   - Continue until all Doodlestein issues resolved
+
+5. TL processes:
+   - Challenge resolved → record in Doodlestein Review
+   - Challenge opened valid concern → topic reverts to `revisit`, back to step 3
+   - Genuine dilemma → escalate to user
 
 ### 7. Sweep: Resolve All Deferred
 
-**Triggered when**: all topics are converged or deferred (zero revisit remaining).
+**Triggered when**: all topics converged or deferred, Doodlestein complete.
 
-**Rule: No deferred item survives the Sweep.** But "no deferred survives" does NOT mean "force converge." If nothing has changed since deferral, forced converge with unchanged information is worse than an honest explain+assume.
+**Rule: No deferred item survives the Sweep.** Every deferred item MUST have a result before Conclusion.
+
+The existing team (including Doodlestein agents) participates in Sweep.
 
 **Decision tree** for each deferred item:
 
 ```
-Can you obtain the missing info in this session?
-  → YES: revisit (return to Step 2, not Sweep)
+Can the team obtain the missing info?
+  → YES: SendMessage to team, run research round → revisit (back to step 3)
   → NO: Is there a reasonable assumption to proceed?
     → YES: explain+assume (plannable with caveat)
-    → NO: Is this an independent design problem needing deep discussion?
+    → NO: Independent design problem?
       → YES: spawn new discussion
-      → NO: spawn as backlog (execution problem)
+      → NO: spawn as backlog
 ```
 
 | Resolution | When | Output |
 |------------|------|--------|
-| **Converge now** | New info arrived OR revisit resolved it | `converged` with decision + rationale |
-| **Spawn new discussion** | Independent design problem needing deep-dive | Create sub-discussion dir, link from index.md. Note: this creates the directory and links it but does not auto-execute — user initiates separately. |
-| **Spawn as backlog** | Execution problem, not a design problem | Write to `output.backlog` as `BL-NNN-slug.md` |
-| **Explain + assume** | Missing info unlikely to change decision, OR delay cost > assumption risk. If assumption is load-bearing AND high-stakes → spawn discussion instead. | Record assumption + revisit trigger; plannable with caveat |
+| **Converge now** | Team found new info | `converged` with decision + rationale |
+| **Spawn new discussion** | Independent deep-dive needed | Create sub-discussion dir, link from index.md |
+| **Spawn as backlog** | Execution problem, not design | Write to `output.backlog` |
+| **Explain + assume** | Delay cost > assumption risk | Record assumption + revisit trigger |
 
-**TL resolves autonomously first** — same rules as step 3. Only escalate to user when TL genuinely can't resolve.
+**TL resolves autonomously first.** Only escalate to user when TL genuinely can't resolve.
 
-**After each resolution**: update summary.md frontmatter `status` to `converged` (for converge now / explain+assume / backlog) or leave `deferred` (for spawn new discussion — it's tracked elsewhere). Update index.md topic table Status column. The `explained` resolution type maps to `status: converged` in frontmatter (it's plannable, just with a caveat).
+Update summary.md and index.md for each resolution.
 
-Record each resolution:
-```
-## Deferred Resolution: [topic title]
-- Resolution: [converged / new_discussion / backlog / explained]
-- Detail: [decision / link / backlog item / assumption + revisit trigger]
-```
+**After Sweep: zero deferred, zero revisit.** Every output is plannable or spawned.
 
-**After Sweep: zero deferred, zero revisit.** Every output is either plannable or spawned into a trackable unit.
-
-**Landing rule**: Every discussion output has exactly two possible destinations:
-- **Plannable** → feeds into `/ae:plan`
-- **New discussion** → enters next discussion cycle
-
-There is no third state. Nothing is "recorded but not acted on."
-
-### 8. Doodlestein Challenge
-
-After Sweep, all topics resolved. Before generating conclusion:
-
-1. Compile: topic titles + decisions + one-line rationale each
-2. Check cross-family availability (`cross_family` in pipeline.yml):
-   - **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
-   - **Cross-family available** → Agent Team with **role reversal** (Attacker/Defender pattern):
-     ```
-     TeamCreate(team_name: "<discussion>-doodlestein")
-
-     Agent(subagent_type: "challenger", name: "challenger",
-           team_name: "<team>", run_in_background: true,
-           prompt: "You are the ATTACKER. Your goal is to find flaws in these decisions: <summary>.
-                    Attack with 3 questions:
-                    Q1 Smartest Alternative: fundamentally different approach?
-                    Q2 Problem Validity: which decision solves a non-existent problem?
-                    Q3 Regret Prediction: which decision reversed in 6 months?
-                    SendMessage your attacks to gemini-proxy (the Defender).
-                    IMPORTANT: STAY IN THE TEAM. Wait for defense response to synthesize final report.")
-
-     Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-           team_name: "<team>", run_in_background: true,
-           prompt: "You are the DEFENDER. Wait for challenger's attacks on these decisions: <summary>.
-                    Defend each decision with code evidence. If an attack is genuinely strong, acknowledge it.
-                    SendMessage your defense to challenger.
-                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
-
-     Agent(subagent_type: "codex-proxy", name: "codex-proxy",
-           team_name: "<team>", run_in_background: true,
-           prompt: "You are the cross-family OBSERVER. Read these decisions: <summary>.
-                    Provide independent perspective on the attack/defense exchange.
-                    SendMessage observations to challenger for synthesis.
-                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
-     ```
-   - **Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
-   - **Cross-family unavailable** → challenger-only (single subagent)
-   - **Skip conditions**: If only 1 topic with high reversibility → may skip, but MUST record: `Doodlestein: skipped (reason: single low-impact topic)`
-3. Present challenges to user
-4. User agrees with challenge → reopen topic (back to step 2, scored as revisit)
-5. User dismisses → record reason
-6. Record in conclusion under `## Doodlestein Review`
-
-### 9. Generate Conclusion
+### 8. Generate Conclusion
 
 ```markdown
 ---
@@ -353,36 +384,34 @@ plan: ""
 
 | # | Topic | Decision | Rationale | Reversibility |
 |---|-------|----------|-----------|---------------|
-| 1 | [topic] | [option] | [reason] | high/medium/low |
+| 1 | [topic] | [decision] | [evidence-based reason] | high/medium/low |
+
+## Doodlestein Review
+[Challenges raised, how each was resolved, any topics reopened]
 
 ## Spawned Discussions
-
 | # | Topic | New Discussion | Reason |
 |---|-------|----------------|--------|
 | (only if Sweep spawned sub-discussions) |
 
 ## Deferred Resolutions
-
 | # | Topic | Resolution | Detail |
 |---|-------|------------|--------|
 | (only if Sweep resolved deferred items) |
 
-## Doodlestein Review
-[challenges + user responses, or "skipped (reason)"]
-
-## Reversibility Observation
-Record for each converged topic:
-- Topic N: reversibility=[level], basis=[one-line reason], influenced_decision=[yes/no/unclear]
-After 2-3 discussions with this data, evaluate: does reversibility assessment add information value to decisions? If no clear value → remove the field.
+## Team Composition
+| Agent | Role | Backend | Joined |
+|-------|------|---------|--------|
+| host | Proposer | Claude | Start |
+| <name> | <role> | codex/gemini/claude | Start/Round N/Doodlestein |
 
 ## Process Metadata
-- Rounds: N
+- Discussion rounds: N (team-internal rounds not counted)
 - Topics: X total (Y converged, Z spawned, W explained)
-- Autonomous decisions: N (TL decided without user escalation)
+- Autonomous decisions: N
 - User escalations: N
+- Doodlestein challenges: N raised, M resolved, K reopened topics
 - Deferred resolved in Sweep: N
-- Revisit cycles: N
-- Doodlestein: executed/skipped (cross-family: yes/no)
 
 ## Next Steps
 → `/ae:plan` for converged decisions
@@ -391,25 +420,25 @@ After 2-3 discussions with this data, evaluate: does reversibility assessment ad
 
 Update index.md: set `pipeline.discuss: done`, add conclusion link.
 
-### 10. Suggest Next Steps
+### 9. Team Shutdown & Next Steps
+
+**Shutdown the team ONLY after Conclusion is written.**
 
 - All converged, no spawned → "Ready for `/ae:plan`"
 - Has spawned discussions → "Resolve sub-discussions first, then `/ae:plan`"
 
-## Agent Teams Protocol
-
-When using Agent Teams for discussion:
-- **Persistence**: ALL agent spawn prompts MUST include: "IMPORTANT: STAY IN THE TEAM. Do NOT exit. Wait for follow-up rounds."
-- **Multi-round**: For Round 2+, message existing agents — do NOT spawn new ones. Agents retain their Round 1 context.
-- **Challenger drives convergence**: Challenger should autonomously initiate Round 2 challenges when it identifies disagreements, without waiting for TL.
-
 ## Principles
 
-- **Batch, don't serialize**: Research and decide all topics together, not one by one
+- **Debate model**: TL = moderator/judge (moderates, judges), Host = proposer (proposes, defends), other agents = opposition (challenges). Host must NEVER moderate or synthesize — that's TL's job.
+- **Team debates, TL judges**: The value of ae:discuss is multi-agent debate with code evidence. If the team didn't debate it, don't present it to the user.
+- **One team, one lifecycle**: Spawn once, add agents as needed, never remove. Shutdown only at Conclusion.
+- **Strong opinions welcome**: Agents with dissenting views are assets. Never remove an agent for disagreeing. Heated debate produces better decisions.
+- **Dynamic composition**: Agent roles are determined by discussion content, not hardcoded. Multiple instances of the same backend (codex, gemini) with different roles are encouraged.
+- **Discussion before user**: Team runs minimum 3 internal rounds (research → debate → converge). Sub-questions resolved internally. Only genuine dilemmas reach the user. Presenting shallow A/B/C options is a failure mode.
+- **Batch, don't serialize**: All topics discussed together, not one by one
 - **Decide, don't ask**: TL resolves autonomously by default, escalates only when genuinely stuck
-- **No deferred survives**: every item must be resolved or transformed before conclusion
-- **Evidence, not opinion**: decisions cite specific files, code, data — not "综合考虑"
-- **Landing rule**: every output is either plannable or a new discussion — nothing sits idle
-- If one topic's decision affects another, note the dependency
-- Multi-round: no fixed limit, continue until convergence
+- **No deferred survives**: every item must have a result before Conclusion
+- **Evidence, not opinion**: decisions cite specific files, code, data — not "hand-wavy reasoning"
+- **Landing rule**: every output is plannable or a new discussion — nothing sits idle
+- Topic dependencies: if one decision affects another, note it
 - Always keep index.md in sync with topic files
