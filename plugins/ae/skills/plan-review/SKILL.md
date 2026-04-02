@@ -29,50 +29,44 @@ Read the full plan text, then create a Team for parallel review.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **architect** (the lead) that it's unavailable, then exit gracefully — so the lead doesn't hang waiting.
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **Lead (TL)** that it's unavailable, then exit gracefully.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")
 
+# Architect reviews plan structure and dependencies:
 Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
                Follow Team Communication Protocol.
-               Teammates: dependency-analyst, simplicity-reviewer, codex-proxy, gemini-proxy.
+               Teammates: dependency-analyst, codex-proxy, gemini-proxy.
                Produce step dependency graph and parallel strategy.
-               SendMessage to dependency-analyst and simplicity-reviewer when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
       team_name: "<team>", run_in_background: true,
       prompt: "Validate the architect's parallel assumptions in the step decomposition.
                Follow Team Communication Protocol.
-               Teammates: architect, simplicity-reviewer.
+               Teammates: architect.
                Wait for architect's proposal before analyzing.
-               Hidden dependencies → SendMessage to architect with adjustment suggestions.")
-
-Agent(subagent_type: "simplicity-reviewer", name: "simplicity-reviewer",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Operate in /plan mode per Team Communication Protocol.
-               Review the architect's step decomposition for complexity.
-               Wait for architect's proposal before reviewing.
-               Overly complex steps → SendMessage to architect with simplification suggestions.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan via Codex MCP — <specialized focus based on context>: <plan full text>.
-               Teammates: architect, dependency-analyst, simplicity-reviewer.
-               SendMessage findings to architect when done.")
+               Teammates: architect, dependency-analyst.
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan via Gemini MCP — <specialized focus based on context>: <plan full text>.
-               Teammates: architect, dependency-analyst, simplicity-reviewer.
-               SendMessage findings to architect when done.")
+               Teammates: architect, dependency-analyst.
+               SendMessage findings to Lead (TL) when done.")
 ```
 
-## Step 2: Merge Results
+## Step 2: TL Merges Results
 
-Architect integrates feedback from dependency-analyst and simplicity-reviewer, then SendMessage to Lead.
+TL collects findings from architect, dependency-analyst, and cross-family proxies, then synthesizes.
 
 - **Must fix** — design flaws, hidden dependencies
 - **Consider** — simplification suggestions
@@ -95,7 +89,7 @@ Show the plan to the user. Indicate next step is `/ae:work <plan file path>`.
 
 ## Output
 
-1. Plan review summary (with architect/analyst/simplifier discussion records)
+1. Plan review summary (with architect/analyst discussion records)
 2. Updated plan file (if fixes applied)
 
 ## Next Steps

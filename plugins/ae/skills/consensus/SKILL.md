@@ -18,9 +18,9 @@ Build multi-perspective consensus on: **$ARGUMENTS**
 
 Parse `$ARGUMENTS` for mode flags:
 
-- `--quick` → **Quick mode**: 3 agents only (advocate + critic + mediator), no cross-family, mediator skips evaluation and goes directly to synthesis after Round 1
-- `--full` → **Full mode**: always trigger cross-examination regardless of signals, full 5-agent team
-- No flag → **Adaptive mode** (default): mediator evaluates Round 1 output and decides whether to trigger cross-examination
+- `--quick` → **Quick mode**: advocate + critic only, no cross-family. TL skips Phase 1 evaluation and goes directly to Phase 2 synthesis after Round 1
+- `--full` → **Full mode**: always trigger cross-examination regardless of signals, full team (advocate + critic + cross-family)
+- No flag → **Adaptive mode** (default): TL evaluates Round 1 output and decides whether to trigger cross-examination
 
 Strip the flag from `$ARGUMENTS` before proceeding; the remainder is the proposal text.
 
@@ -32,11 +32,11 @@ Strip the flag from `$ARGUMENTS` before proceeding; the remainder is the proposa
 
 ## Step 2: Agent Teams Debate — Round 1 (Independent Arguments)
 
-Create a Team with explicit stances. **Lead: mediator** (collects and synthesizes). Each agent argues from their assigned position.
+Create a Team with explicit stances. **TL = mediator** (collects, evaluates, and synthesizes). Each agent argues from their assigned position.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family** (skip if `--quick`): Read `cross_family` from pipeline.yml. Include enabled proxy agents as independent evaluators. If a proxy fails to connect, it MUST SendMessage to **mediator** using unavailability format: `## Position: UNAVAILABLE\nReason: [connection error]`. Mediator treats this as "agent absent" and proceeds without waiting further.
+**Cross-family** (skip if `--quick`): Read `cross_family` from pipeline.yml. Include enabled proxy agents as independent evaluators. If a proxy fails to connect, it MUST SendMessage to **TL (team lead)** using unavailability format: `## Position: UNAVAILABLE\nReason: [connection error]`. TL treats this as "agent absent" and proceeds without waiting further.
 
 ### Structured Output Schema
 
@@ -65,7 +65,7 @@ Agent(subagent_type: "architect", name: "advocate",
       team_name: "<team>", run_in_background: true,
       prompt: "STANCE: FOR. Argue in favor of this proposal: <proposal + context>.
                Follow Team Communication Protocol.
-               Teammates: critic, mediator[, codex-proxy, gemini-proxy].
+               Teammates: critic[, codex-proxy, gemini-proxy].
                YOU MUST use the structured output schema:
                ## Position: FOR
                ### Claims (each with file:line evidence)
@@ -73,14 +73,14 @@ Agent(subagent_type: "architect", name: "advocate",
                ### Unaddressed Opponent Points (N/A in Round 1)
                Present strongest arguments with evidence from codebase.
                Acknowledge weaknesses honestly in Conceded Points.
-               SendMessage to mediator when done.
+               SendMessage to Lead (TL) when done.
                IMPORTANT: STAY IN THE TEAM. Wait for cross-examination rounds.")
 
 Agent(subagent_type: "challenger", name: "critic",
       team_name: "<team>", run_in_background: true,
       prompt: "STANCE: AGAINST. Argue against this proposal: <proposal + context>.
                Follow Team Communication Protocol.
-               Teammates: advocate, mediator[, codex-proxy, gemini-proxy].
+               Teammates: advocate[, codex-proxy, gemini-proxy].
                YOU MUST use the structured output schema:
                ## Position: AGAINST
                ### Claims (each with file:line evidence)
@@ -88,50 +88,40 @@ Agent(subagent_type: "challenger", name: "critic",
                ### Unaddressed Opponent Points (N/A in Round 1)
                Find risks, hidden costs, better alternatives.
                Acknowledge strengths honestly in Conceded Points.
-               SendMessage to mediator when done.
+               SendMessage to Lead (TL) when done.
                IMPORTANT: STAY IN THE TEAM. Wait for cross-examination rounds.")
 
-# Mediator — see Step 3 for full prompt (Phase 1 + Phase 2)
-Agent(subagent_type: "simplicity-reviewer", name: "mediator",
-      team_name: "<team>", run_in_background: true,
-      prompt: "<see Step 3 below for complete mediator prompt>")
+# No mediator agent — TL acts as mediator (see Step 3)
 
 # Cross-family (skip if --quick):
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent evaluation of this proposal: <proposal + context>.
-               Teammates: advocate, critic, mediator.
+               Teammates: advocate, critic.
                YOU MUST use the structured output schema:
                ## Position: INDEPENDENT
                ### Claims (each with evidence)
                ### Conceded Points
                ### Unaddressed Opponent Points (N/A in Round 1)
-               SendMessage findings to mediator when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent evaluation of this proposal: <proposal + context>.
-               Teammates: advocate, critic, mediator.
+               Teammates: advocate, critic.
                YOU MUST use the structured output schema:
                ## Position: INDEPENDENT
                ### Claims (each with evidence)
                ### Conceded Points
                ### Unaddressed Opponent Points (N/A in Round 1)
-               SendMessage findings to mediator when done.")
+               SendMessage findings to Lead (TL) when done.")
 ```
 
-## Step 3: Mediator — Phase 1 (Evaluation) + Phase 2 (Synthesis)
+## Step 3: TL Mediates — Phase 1 (Evaluation) + Phase 2 (Synthesis)
 
-The mediator has two clearly separated phases. The complete mediator prompt:
+TL acts as neutral mediator. Two clearly separated phases.
 
-```
-ROLE: NEUTRAL MEDIATOR. Evaluate debate on this proposal: <proposal>.
-Follow Team Communication Protocol.
-Teammates: advocate, critic[, codex-proxy, gemini-proxy].
-
-You operate in two phases. Do NOT start Phase 2 until Phase 1 is complete.
-
-═══ PHASE 1: EVALUATE (after Round 1) ═══
+### Phase 1: Evaluate (after Round 1)
 
 If MODE=quick → SKIP Phase 1 entirely. Proceed immediately to Phase 2.
 
@@ -139,7 +129,7 @@ Wait for advocate and critic to send their Round 1 output.
 [If not --quick] Also wait for codex-proxy and gemini-proxy.
 If any agent sends `## Position: UNAVAILABLE`, mark them absent and proceed without them.
 
-Once all Round 1 inputs received, produce this EXACT evaluation block AND SendMessage it to BOTH the team lead AND the debate participants:
+Once all Round 1 inputs received, produce this EXACT evaluation block. Retain it for Phase 2 synthesis, AND SendMessage it to the debate participants:
 
 ## Round 1 Summary
 ### Advocate (FOR)
@@ -170,15 +160,15 @@ Decision rules:
 If ROUND_DECISION = CROSS_EXAMINE → proceed to Cross-Examination Round.
 If ROUND_DECISION = SYNTHESIZE → skip to Phase 2.
 
-══ CROSS-EXAMINATION ROUND ══
+### Cross-Examination Round
 
-Extract top 2-3 Claims from each side.
+TL extracts top 2-3 Claims from each side.
 SendMessage to advocate: "Respond to critic's claims: [list]. For EACH claim: agree / partially agree / disagree + rationale."
 SendMessage to critic: "Respond to advocate's claims: [list]. For EACH claim: agree / partially agree / disagree + rationale."
 
 Wait for both responses.
 
-After cross-examination, produce a Cross-Examination Summary AND SendMessage it to the team lead:
+After cross-examination, produce a Cross-Examination Summary:
 
 ## Cross-Examination Summary
 ### Advocate responded to critic's claims:
@@ -196,10 +186,11 @@ After cross-examination, produce a Cross-Examination Summary AND SendMessage it 
 Then re-evaluate. Produce another Mediator Evaluation block (same EXACT format as Phase 1 — YES/NO questions + ROUND_DECISION + Reason).
 Maximum 3 rounds total. After Round 3, MUST proceed to Phase 2 regardless.
 
-═══ PHASE 2: SYNTHESIZE (Final Verdict) ═══
+### Phase 2: Synthesize (Final Verdict)
 
-Produce the final verdict:
+TL produces the final verdict:
 
+```markdown
 ## Verdict
 
 ### Mode

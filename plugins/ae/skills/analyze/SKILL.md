@@ -59,7 +59,7 @@ Create a Team and launch Teammates in parallel.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **challenger** that it's unavailable, then exit gracefully — so challenger doesn't hang waiting.
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. If a proxy fails to connect, it should SendMessage to **Lead (TL)** that it's unavailable, then exit gracefully.
 
 ```
 TeamCreate(team_name: "<topic>-analyze")
@@ -69,7 +69,7 @@ Agent(subagent_type: "archaeologist", name: "archaeologist",
       prompt: "Deeply investigate existing code for: <$ARGUMENTS>.
                Follow Team Communication Protocol.
                Teammates: standards-expert, challenger.
-               SendMessage findings to challenger and standards-expert when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
       team_name: "<team>", run_in_background: true,
@@ -77,37 +77,38 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
                Follow Team Communication Protocol.
                Teammates: archaeologist, challenger.
                Wait for archaeologist's code analysis before comparing.
-               SendMessage findings to challenger and archaeologist when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
-      prompt: "Operate in /analyze mode per Team Communication Protocol.
-               Topic: <$ARGUMENTS>.
+      prompt: "Challenge findings from archaeologist and standards-expert for: <$ARGUMENTS>.
+               Follow Team Communication Protocol.
                Teammates: archaeologist, standards-expert, codex-proxy, gemini-proxy.
                Step 1: independent blind-spot review.
-               Step 2: wait for all teammate + proxy findings, compare and merge.
-               Step 3: challenge. Step 4: synthesize and send to Lead.")
+               Step 2: wait for teammate findings, then challenge.
+               SendMessage challenges to Lead (TL) when done.
+               You are pure opposition. Do NOT synthesize — TL synthesizes.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Research <$ARGUMENTS> via Codex MCP — <specialized focus based on context>.
-               Teammates: challenger, archaeologist, standards-expert.
-               SendMessage findings to challenger when done.")
+               Teammates: archaeologist, standards-expert, challenger.
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Research <$ARGUMENTS> via Gemini MCP — <specialized focus based on context>.
-               Teammates: challenger, archaeologist, standards-expert.
-               SendMessage findings to challenger when done.")
+               Teammates: archaeologist, standards-expert, challenger.
+               SendMessage findings to Lead (TL) when done.")
 ```
 
 **Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
 
 Also read project context files (CLAUDE.md, docs/) for background.
 
-### 4. Generate Analysis Document
+### 4. TL Synthesizes + Generate Analysis Document
 
-After Challenger sends the synthesized report, create `<output.discussions>/NNN-slug/analysis.md`:
+TL collects findings from archaeologist, standards-expert, challenger, and cross-family proxies. Synthesize into analysis document at `<output.discussions>/NNN-slug/analysis.md`:
 
 ```markdown
 ---

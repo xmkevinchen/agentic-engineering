@@ -51,9 +51,9 @@ TaskCreate("Cross-family challenge + synthesis")
 
 ### 3. Select and Launch Reviewers
 
-**Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** as synthesizer.
+**Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** (pure opposition).
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies. If a proxy fails to connect, it should SendMessage to **challenger** and exit gracefully.
+**Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies. If a proxy fails to connect, it should SendMessage to **Lead (TL)** and exit gracefully.
 
 **Launch all in one message** (`run_in_background: true`):
 
@@ -63,40 +63,43 @@ Agent(subagent_type: "<reviewer>", name: "<reviewer>",
       team_name: "<team>", run_in_background: true,
       prompt: "Review <diff-range> for <your domain>. Follow Team Communication Protocol.
                Teammates: [other selected reviewers], challenger.
-               SendMessage findings to challenger when done.")
+               SendMessage findings to Lead (TL) when done.")
 
-# Always include challenger:
+# Always include challenger (pure opposition — does NOT synthesize):
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
       prompt: "Operate in /review mode per Team Communication Protocol.
                Review scope: <diff-range>.
                Teammates: [selected reviewers], codex-proxy, gemini-proxy.
                Step 1: independent review of blind spots.
-               Step 2: wait for all reviewer + proxy findings, compare and merge.
-               Step 3: targeted challenges with structured format (Claim/Evidence/Objection/Confidence).
-               Step 4: synthesize final report with Disagreement Value Assessment. Send to Lead.")
+               Step 2: targeted challenges with structured format (Claim/Evidence/Objection/Confidence).
+               SendMessage challenges to Lead (TL) when done.
+               You are pure opposition. Do NOT synthesize — TL synthesizes.")
 
 # Cross-family (same specialized prompt for both):
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review <diff-range> via Codex MCP. <specialized focus based on diff context>.
-               SendMessage findings to challenger when done.")
+               SendMessage findings to Lead (TL) when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review <diff-range> via Gemini MCP. <same specialized focus as codex>.
-               SendMessage findings to challenger when done.")
+               SendMessage findings to Lead (TL) when done.")
 ```
 
 **No worktree isolation** — teammates need SendMessage communication.
 
-**Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference — proxy 120s MCP timeout + challenger 120s wait timeout.
+**Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference — proxy 120s MCP timeout + 120s wait timeout.
 
-### 4. Wait for Final Report
+### 4. TL Synthesizes Final Report
 
-Challenger collects findings → calls cross-family → challenges → synthesizes → SendMessage to Lead.
+TL collects all findings from reviewers + challenger + cross-family proxies, then synthesizes:
+- Merge overlapping findings, resolve contradictions
+- Produce Disagreement Value Assessment where reviewers disagreed
+- Classify by severity (P1/P2/P3)
 
-If challenger idle > 5 minutes without sending report, SendMessage to prompt.
+If any agent idle > 5 minutes without sending findings, SendMessage to prompt.
 
 ### 5. Close Team
 
@@ -177,7 +180,7 @@ Include this in the review report. This data accumulates naturally across featur
 
 ## Output
 
-1. Challenger final report (with discussion evidence, cross-family opinions, disposition recommendations)
+1. TL synthesis report (merged findings from all reviewers + challenger + cross-family, with Disagreement Value Assessment and severity classification)
 2. Outcome statistics (rework rate, P1 escape rate, drift events, auto-pass rate)
 3. Fixups squashed
 4. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
