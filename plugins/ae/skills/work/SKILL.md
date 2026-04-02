@@ -134,6 +134,17 @@ Read the current plan step's "Expected files:" line:
 ### C. Tests Green
 Run `test.command` from pipeline.yml. Empty → skip with "⚠️ No test command configured".
 
+### C.5 Protocol Invariant Check
+If `git diff --name-only` includes files under `plugins/ae/skills/` or `plugins/ae/agents/`:
+1. Read all test case files in `plugins/ae/tests/` with `layer: 1` in frontmatter
+2. For each Layer 1 test case, execute static analysis: read target SKILL.md files, check MUST/MUST_NOT/SHOULD assertions against file content
+3. **Layer 1 failure = P1** (blocks commit via auto-pass gate, same as other P1 findings)
+4. Report results:
+   - All pass → `✅ Protocol invariant check: N/N Layer 1 cases pass`
+   - Any fail → `P1: Protocol invariant violation — [case id]: [failed assertion]`
+
+If no plugin files in diff → skip with "No plugin skill/agent files changed, skipping protocol check."
+
 ### D. Code Review
 Read `work.review_mode` from pipeline.yml (default: `full`). Override with `--light` or `--full` flag if passed.
 - **full**: Lead executes `/ae:code-review` inline with all 3 tracks (Claude + Codex + Gemini)
