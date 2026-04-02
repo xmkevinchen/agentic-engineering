@@ -69,3 +69,12 @@ TL escalates to user only when:
 - Low-reversibility decision with genuine ambiguity
 - Domain context only user has
 - Topic directly affects user's workflow or preferences
+
+### Operational Rules (agents inherit these)
+
+- **P3 auto-skip** — P3 findings in code review: skip without asking user
+- **P2-style auto-skip** — P2 style/naming findings: skip without asking user
+- **Single-option converge** — discussion topic with only one viable option: converge directly
+- **High-reversibility fast-track** — all topics high-reversibility: TL may converge in one round
+- **Doodlestein dismiss** — TL dismisses a challenge: record reason, do not ask user to confirm
+- **Review findings triage** — only P1 and P2-logic/security require user disposition
