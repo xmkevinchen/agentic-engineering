@@ -9,17 +9,5 @@ node_modules/
 .claude/cross-family-status.json
 .claude/pipeline.yml
 
-# Project docs — process artifacts, not code
-# Keep: references, agent-selection.md, conclusion.md
-# Ignore: topics, rounds, plans, reviews, analyses, backlog
-docs/discussions/**/topic-*/
-docs/discussions/**/topic-*.md
-docs/discussions/**/round-*.md
-docs/discussions/**/index.md
-docs/discussions/**/analysis.md
-docs/discussions/**/team-report*.md
-docs/plans/
-docs/reviews/
-docs/analyses/
-docs/milestones/
-docs/backlog/
+# Process artifacts (discussions, plans, reviews, analyses, etc.)
+.ae/
