@@ -147,6 +147,8 @@ tags: [relevant, tags]
 
 **The core of ae:discuss is team discussion.** One team lives for the entire discussion — only add agents, never remove.
 
+**DO NOT delete the team between topics, after scoring, or before Doodlestein.** The team persists from Step 2 through Step 9 (Conclusion). Doodlestein agents join this team in Step 7 and original participants must be alive to respond to challenges. Deleting the team early breaks the Doodlestein challenge-response cycle.
+
 If the team already exists (resuming), skip to step 3. Otherwise:
 
 1. Read all pending/revisit `topic-NN-slug/summary.md` files
