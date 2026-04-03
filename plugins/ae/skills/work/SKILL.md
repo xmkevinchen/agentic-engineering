@@ -7,7 +7,7 @@ argument-hint: "<plan file path>"
 ## Argument Inference
 
 If `$ARGUMENTS` is empty:
-1. Check `output.plans` for the most recent plan with `status: draft` or `status: reviewed` and uncompleted steps (`- [ ]`)
+1. Check `output.plans` for the most recent plan with `status: reviewed` and uncompleted steps (`- [ ]`)
 2. Found → use that plan file path
 3. Not found → check conversation context for a plan being discussed
 4. Still nothing → ask user which plan to execute
@@ -26,9 +26,15 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 
 ## Pre-checks (all must pass)
 
-### Check 1: Plan Exists
+### Check 1: Plan Exists & Reviewed
 - Read the plan file, confirm it contains `## Acceptance Criteria` or `## AC`
 - If missing → suggest `/ae:plan`, **refuse to execute**
+- Read plan frontmatter `status`:
+  - `status: reviewed` → proceed
+  - `status: draft` or missing → **refuse to execute**:
+    ```
+    Plan is unreviewed (status: draft). Run `/ae:plan-review <plan-path>` first.
+    ```
 - Scan all pending steps (`- [ ]`): if any step lacks an "Expected files:" line → warn:
   ```
   ⚠️ Steps N, M missing "Expected files:" — these steps will hard-stop at Check B (requires manual confirmation or plan update).
