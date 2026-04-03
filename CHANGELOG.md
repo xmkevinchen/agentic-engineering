@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.2 — 2026-04-03
+
+### Usage Insights — Pipeline Hardening
+- **work/SKILL.md**: Check 1 scans pending steps for missing "Expected files:" and warns upfront (mentions hard-stop at Check B)
+- **work/SKILL.md**: UNKNOWN drift upgraded from soft pause to hard stop with 3 explicit recovery options (add Expected files / confirm as unknown / rollback)
+- **work/SKILL.md**: Post-commit gate description updated — UNKNOWN no longer reaches gate (blocked at Check B)
+- **review/SKILL.md**: Outcome Statistics adds `Fix loop triggers` metric + `unknown` category to Drift events
+
+### Component counts
+- 17 skills, 17 agents, 2 MCP servers (unchanged — pipeline hardening only)
+
 ## v0.4.1 — 2026-04-02
 
 ### Bug Fixes — External Review P1/P2
