@@ -182,7 +182,7 @@ Include this in the review report. This data accumulates naturally across featur
 ## Output
 
 1. TL synthesis report (merged findings from all reviewers + challenger + cross-family, with Disagreement Value Assessment and severity classification)
-2. Outcome statistics (rework rate, P1 escape rate, drift events, auto-pass rate)
+2. Outcome statistics (rework rate, P1 escape rate, drift events, fix loop triggers, auto-pass rate)
 3. Fixups squashed
 4. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
 5. Prompt user to create PR
