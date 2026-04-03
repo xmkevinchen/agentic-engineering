@@ -16,5 +16,17 @@
     "workflow-automation",
     "agent-teams"
   ],
-  "mcpServers": {}
+  "mcpServers": {
+    "codex": {
+      "command": "codex",
+      "args": ["mcp-server"]
+    },
+    "gemini": {
+      "command": "bash",
+      "args": ["-c", "cd \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini\" && npm install --omit=dev --silent >&2 && exec node dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      }
+    }
+  }
 }

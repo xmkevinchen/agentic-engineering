@@ -16,9 +16,10 @@ Review code after each step completion, call cross-family for external opinions.
 1. **Wait for developer SendMessage notification of completion**
 2. **Review changes** — `git diff` to see all changes
 3. **Claude review** — check against review checklist
-4. **Cross-family review** — send uncommitted changes to cross-family proxies for independent review:
-   - Codex: via `mcp__plugin_ae_codex__codex` tool — ask for code review of the diff
-   - Gemini: via `mcp__plugin_ae_gemini__chat` tool — ask for code review of the diff
+4. **Cross-family review** — send uncommitted diff to proxy agents for independent review (parallel):
+   - SendMessage to "codex-proxy": ask for code review of the diff
+   - SendMessage to "gemini-proxy": ask for code review of the diff
+   - If a proxy has not responded within 120s, treat as unavailable and continue without it (See agent-selection Proxy Timeout Protocol)
 5. **SendMessage to the dev**: send findings, each with specific fix suggestion
 6. **Wait for dev response** — confirm fix/explain/defer for each finding
 7. **Re-review** — after dev fixes, review again

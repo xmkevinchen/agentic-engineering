@@ -63,7 +63,7 @@ SendMessage to "security-reviewer":
 - Wait for reviewer response before proceeding
 - If reviewer's rebuttal is valid, can follow up with Codex/Gemini (max 2 rounds)
 
-### Step 4: Synthesize Final Report
+### Step 4: Aggregate and Report to Lead
 
 After all challenge responses received:
 1. Compile final findings (with discussion evidence)
@@ -95,7 +95,7 @@ After teammate findings arrive, combine with existing Codex/Gemini opinions:
 - If new arguments emerge, can follow up or call cross-family again
 - Form consensus or mark disagreements
 
-### Step 4: Synthesize
+### Step 4: Aggregate and Report
 
 SendMessage to Lead: summarize all discussions, mark consensus and disagreements.
 
@@ -107,7 +107,7 @@ Use judgment — not all items apply to every context.
 
 **Code review**: auth/permissions, data loss, rollback safety, race conditions, empty-state, version skew, observability gaps
 
-**Design discussion**: assumption validity, alternative approaches, scope creep, reversibility, dependency risks, missing stakeholders
+**Design discussion**: assumption validity, alternative approaches, scope creep, reversibility, dependency risks, missing stakeholders, YAGNI (plan steps or features with no direct AC mapping or MVP criticality, that can be deferred without blocking delivery)
 
 ## Challenge Format (Structured Disagreement)
 
