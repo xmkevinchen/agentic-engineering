@@ -20,13 +20,13 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- Write tool called with file path under `output.reviews` directory
-- Written file contains a Summary section
-- Written file contains a results table
+- [file:exists] Report file created under `output.reviews` directory
+- [file:contains] Written file contains a Summary section
+- [file:contains] Written file contains a results table
 
 ### MUST_NOT
-- Report only appears in conversation without being persisted to file
+- [behavior] Report only appears in conversation without being persisted to file
 
 ### SHOULD
-- Filename includes the current date
-- Summary section includes pass/fail counts
+- [text:regex] Filename includes date pattern (\d{4}-\d{2}-\d{2})
+- [file:contains] Summary section includes pass/fail counts

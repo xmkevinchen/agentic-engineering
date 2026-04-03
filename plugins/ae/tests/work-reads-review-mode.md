@@ -21,12 +21,12 @@ source: manual
 ## Expected Behavior
 
 ### MUST
-- Pre-commit code review step mentions "light" mode or "Claude-only" or "Track 1 only"
-- Does NOT spawn codex-proxy or gemini-proxy agents for code review when in light mode
+- [text:contains] Pre-commit code review step mentions "light" mode or "Claude-only" or "Track 1 only"
+- [behavior] Does NOT spawn codex-proxy or gemini-proxy agents for code review when in light mode
 
 ### MUST_NOT
-- When --light or review_mode: light: no cross-family proxy tool calls in code review phase
-- When --full override: must NOT skip cross-family (full 3-track)
+- [behavior] When --light or review_mode: light: no cross-family proxy tool calls in code review phase
+- [behavior] When --full override: must NOT skip cross-family (full 3-track)
 
 ### SHOULD
-- Output explicitly states which review mode is active
+- [text:contains] Output explicitly states which review mode is active
