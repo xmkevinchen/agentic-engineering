@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.4.1 — 2026-04-02
+
+### Bug Fixes — External Review P1/P2
+- **plugin.json**: register codex + gemini MCP servers (was `mcpServers: {}`, contradicting bundled claim)
+- **architect.md**: remove dead `SendMessage to simplicity-reviewer` reference (P1 — would hang or no-op)
+- **challenger.md**: rename Step 4 "Synthesize" → "Aggregate and Report" (TL-synthesis protocol consistency)
+- **challenger.md**: add YAGNI to Attack Surface Reference (replaces simplicity-reviewer's role via challenger's existing constraint framework)
+- **qa.md**: replace direct MCP tool calls with proxy agent SendMessage + 120s timeout protocol
+- **agent-selection/SKILL.md**: add missing `name: ae:agent-selection` frontmatter field
+
+### Component counts
+- 17 skills, 17 agents, 2 MCP servers (unchanged — bug fixes only)
+
 ## v0.4.0 — 2026-04-02
 
 ### Agent Teams Protocol Unification
