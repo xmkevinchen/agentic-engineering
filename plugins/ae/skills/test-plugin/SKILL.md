@@ -114,9 +114,9 @@ Session TL does NOT read:           │
   - ## Expected Behavior             │
   - MUST / MUST_NOT / SHOULD         │
                                     │
-Session TL executes prompt ──────→ collects raw output (text + tool calls + artifacts)
+Session TL executes prompt ──────→ collects artifacts (git diff + teams dir + output text)
                                     │
-Session TL sends raw output ─────→ test-lead
+Session TL sends artifacts ──────→ test-lead
                                     │
 test-lead holds assertions + output → applies checks → returns verdict
 ```
@@ -142,29 +142,93 @@ Only runs if Layer 1 passed for this test case.
 
 **Warning**: Layer 2 executes skills in the current session. This creates real side effects (files, commits, agent teams). Use on a clean branch or test project.
 
-For each Layer 2 test case:
-1. Read prompt + context only (blind protocol)
-2. Execute the prompt (run the skill in current context)
-3. Collect raw output (text + tool calls + file artifacts)
-4. Send raw output to judge for evaluation
+#### Execution Classification
+
+Before executing, classify the target skill:
+
+- **Scan** the target SKILL.md for `TeamCreate` or `Agent(` patterns
+- **Class A** (patterns not found): skill does not require Agent Teams → subagent can execute
+- **Class B** (patterns found): skill requires Agent Teams → Session TL must execute directly
+- **Unreadable target**: → `FAIL_CLOSED` (classification_error, do not execute)
+
+#### Class A Execution (subagent)
+
+```
+1. Spawn general-purpose subagent (try isolation: "worktree")
+2. Subagent reads prompt + context only (blind protocol)
+3. Subagent executes the skill (reads SKILL.md, follows instructions, calls tools)
+4. Subagent collects artifacts (see Artifact Collection below)
+5. Subagent sends artifacts to Session TL
+6. Session TL forwards to test-lead for judgment
+
+Fallback (if worktree creation fails):
+→ Subagent executes in current session. Log warning: "worktree unavailable, executing in session"
+```
+
+#### Class B Execution (Session TL direct)
+
+```
+1. Session TL reads prompt + context only (blind protocol)
+2. Session TL executes the skill directly (including TeamCreate, Agent spawns)
+3. After execution completes, Session TL collects artifacts (see Artifact Collection below)
+4. Session TL sends artifacts to test-lead for judgment
+```
+
+#### Artifact Collection Protocol
+
+After execution (Class A or B), collect:
+
+1. **File changes**: `git diff --name-only` (compare to pre-execution baseline)
+2. **Team creation**: `ls ~/.claude/teams/` — check for new `inboxes/` directories
+3. **State changes**: read plan/task frontmatter for status transitions
+4. **Output text**: capture execution output (messages, warnings, refusals)
+
+**Dual verification**: assertions check both:
+- **Outcome** — did the right artifacts appear? (files created, teams spawned, status changed)
+- **Process** — did the skill follow the correct flow? (refusal at correct check, correct ordering)
+
+### Typed Assertion Format
+
+Assertions use **type tags as dispatch hints** — they tell test-lead which verification method to use. Tags are semantic hints, not parseable syntax; test-lead (an LLM) reads the natural language description to understand what to check.
+
+| Tag | Verification | Meaning |
+|-----|-------------|---------|
+| `[file:exists]` | Mechanical | A file at the described path exists |
+| `[file:changed]` | Mechanical | A file appears in git diff output |
+| `[file:contains]` | Mechanical | A file contains the described pattern |
+| `[team:exists]` | Mechanical | Team inboxes/ directory exists |
+| `[text:contains]` | Mechanical | Output text contains the described keyword |
+| `[text:regex]` | Mechanical | Output text matches the described regex |
+| `[behavior]` | LLM judge | Requires semantic judgment (no mechanical shortcut) |
+
+**Dispatch rules**:
+- `[file:*]`, `[team:*]`, `[text:*]` → **mechanical verification** (test-lead checks directly, no LLM judge)
+- `[behavior]` → **LLM judge** (always routed to configured judge)
+- `MUST` / `MUST_NOT` → gate (any failure = case FAIL)
+- `SHOULD` → advisory (failure noted but case can still PASS)
+
+**Writing assertions**: use the tag + natural language description. Test-lead interprets the description to determine the specific file path, pattern, or team name from context. Example: `MUST [file:contains] Plan file contains ## Steps section` — test-lead knows to check the plan output file for "## Steps".
 
 ### Judge Protocol
 
-Session TL sends execution output to test-lead (or configured judge) for evaluation.
+Session TL sends collected artifacts to test-lead for evaluation.
 
-**Verdict format** — judge returns per case:
+**Verdict format** — judge returns per assertion:
 ```json
 {
   "verdict": "PASS|FAIL",
-  "assertion": "<which assertion was checked>",
+  "assertion": "<typed assertion>",
+  "method": "mechanical|judge",
   "reasoning": "<why it passed or failed>"
 }
 ```
 
 Judge selection (from `pipeline.yml` → `test_plugin.judge`):
-- `codex` (default) → test-lead sends output to codex-proxy for independent evaluation
-- `gemini` → test-lead sends output to gemini-proxy
+- `codex` (default) → test-lead routes `[behavior]` assertions to codex-proxy for independent evaluation
+- `gemini` → test-lead routes to gemini-proxy
 - `claude` → test-lead self-judges (weaker independence, but no external dependency)
+
+Mechanical assertions (`[file:*]`, `[team:*]`, `[text:*]`) are always verified directly, regardless of judge selection.
 
 Layer 2 failures are advisory — may need human review for edge cases.
 
