@@ -38,16 +38,27 @@ Prioritize: refusal/boundary cases first (highest signal-to-noise), then tool ca
 
 ### Phase 4: Judge Execution Output
 
-When Session TL sends raw execution output for a test case:
+When Session TL sends collected artifacts for a test case:
+
+**Step 1 — Mechanical assertions** (`[file:*]`, `[team:*]`, `[text:*]`):
 1. Read the test case's `## Expected Behavior` assertions
-2. Apply each MUST / MUST_NOT / SHOULD assertion against the raw output
-3. Return verdict per assertion in this format:
-   ```json
-   { "verdict": "PASS|FAIL", "assertion": "<which>", "reasoning": "<why>" }
-   ```
-4. If configured judge is external: forward output + assertions to the external judge, relay verdict back to Session TL
+2. For each typed mechanical assertion, verify directly:
+   - `[file:exists]` → check artifact list for file path
+   - `[file:changed]` → check git diff output
+   - `[file:contains]` → grep file content for pattern
+   - `[team:exists]` → check teams directory listing
+   - `[text:contains]` → keyword search in output text
+   - `[text:regex]` → regex match on output text
+3. Return verdict immediately: `{ "verdict": "PASS|FAIL", "assertion": "<typed>", "method": "mechanical", "reasoning": "<why>" }`
+
+**Step 2 — Behavioral assertions** (`[behavior]`):
+1. If configured judge is external: forward artifacts + `[behavior]` assertions to external judge
    - `codex` judge → use `mcp__plugin_ae_codex__codex` tool
    - `gemini` judge → use `mcp__plugin_ae_gemini__chat` tool
+2. If `claude` judge: self-evaluate (weaker independence)
+3. Return verdict: `{ "verdict": "PASS|FAIL", "assertion": "<typed>", "method": "judge", "reasoning": "<why>" }`
+
+**Step 3 — Aggregate**: MUST/MUST_NOT any FAIL → case FAIL. SHOULD FAIL → advisory only.
 
 ## Communication Protocol
 
