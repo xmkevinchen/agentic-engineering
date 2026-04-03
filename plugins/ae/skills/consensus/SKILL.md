@@ -36,7 +36,7 @@ Create a Team with explicit stances. **TL = mediator** (collects, evaluates, and
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family** (skip if `--quick`): Read `cross_family` from pipeline.yml. Include enabled proxy agents as independent evaluators. If a proxy fails to connect, it MUST SendMessage to **TL (team lead)** using unavailability format: `## Position: UNAVAILABLE\nReason: [connection error]`. TL treats this as "agent absent" and proceeds without waiting further.
+**Cross-family** (skip if `--quick`): Read `cross_family` from pipeline.yml. Include enabled proxy agents as independent evaluators. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family). If proxy ultimately unavailable (after fallback), TL treats as "agent absent" and proceeds.
 
 ### Structured Output Schema
 
