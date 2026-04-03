@@ -1,4 +1,5 @@
 ---
+name: ae:agent-selection
 description: Agent selection reference — context-based team composition and cross-family role assignment. Used by skills that create Agent Teams.
 ---
 
