@@ -189,14 +189,21 @@ Fix findings, re-run from Check D until clean pass.
 1. Brief summary: what was done, key decisions, structural changes
 2. **Auto-pass gate** (default: ON) — evaluate after every step:
    ```
-   gate = tests_green AND no_p1 AND (no_drift OR drift_approved)
+   gate = tests_green AND no_p1 AND (no_drift OR drift_approved) AND (NOT cross_family_degraded)
    ```
-   - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no drift. Continuing to Step N+1.`
+   - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no drift, review complete. Continuing to Step N+1.`
    - Any failed → **pause for user confirmation**
    - Drift detected (not approved) → always pause
    - Security pattern matched → always pause
    - No test command → `tests_green` = UNVERIFIED — **pause for user confirmation** (do not treat as true)
-   - No "Expected files:" in plan step → blocked at Check B (hard stop), will not reach gate
+   - No "Expected files:" in plan step → `drift` = UNKNOWN — **pause for user confirmation** (do not skip)
+   - `cross_family_degraded` = true (all cross-family failed after fallback, reported by code-review as `cross_family_degraded`) → **pause**:
+     ```
+     ⚠️ Review ran in degraded mode (cross-family unavailable after fallback). Auto-pass blocked.
+     Options:
+     1. Accept Claude-only review and continue
+     2. Retry (proxies may recover)
+     ```
    - UNVERIFIED states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
 3. All steps done → `All steps complete. Next: /ae:review <plan-file-path>`

@@ -24,7 +24,12 @@ Mode is set by caller (ae:work reads `work.review_mode` from pipeline.yml, or `-
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family** (full mode only): Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. If a proxy fails to connect, skip it — do not block the review. In **light mode**, skip Tracks 2 and 3 entirely.
+**Cross-family** (full mode only): Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family). In **light mode**, skip Tracks 2 and 3 entirely.
+
+**Degraded signal**: After all tracks complete, report cross-family coverage:
+- All requested tracks completed → `cross_family_complete`
+- Some proxy failed but fallback succeeded → `cross_family_complete` (fallback counts)
+- All cross-family failed (after fallback) → `cross_family_degraded`
 
 ### Track 1: Claude Review
 
