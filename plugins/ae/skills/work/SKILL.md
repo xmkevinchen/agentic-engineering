@@ -31,7 +31,7 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 - If missing → suggest `/ae:plan`, **refuse to execute**
 - Scan all pending steps (`- [ ]`): if any step lacks an "Expected files:" line → warn:
   ```
-  ⚠️ Steps N, M missing "Expected files:" — drift detection will be limited. Consider adding file lists.
+  ⚠️ Steps N, M missing "Expected files:" — these steps will hard-stop at Check B (requires manual confirmation or plan update).
   ```
 
 ### Check 2: Locate Current Step
@@ -132,8 +132,10 @@ Read the current plan step's "Expected files:" line:
 - **No "Expected files:" in plan** → drift = UNKNOWN → **hard stop**:
   ```
   🛑 No Expected files in plan step — drift = UNKNOWN. Hard stop.
-     Auto-pass blocked. You must confirm to continue, or add Expected files to the plan step.
-     Consider running /ae:plan to add file lists.
+     Auto-pass blocked. Options:
+     1. Add Expected files to the plan step, then re-run Check B
+     2. Confirm to continue (drift recorded as 'unknown' in Outcome Statistics)
+     3. Rollback this step's changes
   ```
 
 ### C. Tests Green
