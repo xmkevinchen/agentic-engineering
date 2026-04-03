@@ -29,6 +29,10 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 ### Check 1: Plan Exists
 - Read the plan file, confirm it contains `## Acceptance Criteria` or `## AC`
 - If missing → suggest `/ae:plan`, **refuse to execute**
+- Scan all pending steps (`- [ ]`): if any step lacks an "Expected files:" line → warn:
+  ```
+  ⚠️ Steps N, M missing "Expected files:" — drift detection will be limited. Consider adding file lists.
+  ```
 
 ### Check 2: Locate Current Step
 - `- [x]` = done, `- [ ]` = pending. Current step = first pending.
@@ -125,10 +129,11 @@ Read the current plan step's "Expected files:" line:
     3. Rollback: discard this step's changes
     ```
     If unexpected files match `pipeline.yml` → `work.security_patterns` → option 2 unavailable, must fix or get human review.
-- **No "Expected files:" in plan** → drift = UNKNOWN:
+- **No "Expected files:" in plan** → drift = UNKNOWN → **hard stop**:
   ```
-  ⚠️ No Expected files in plan step — drift = UNKNOWN.
-     Gate will pause for user confirmation. Consider running /ae:plan to add file lists.
+  🛑 No Expected files in plan step — drift = UNKNOWN. Hard stop.
+     Auto-pass blocked. You must confirm to continue, or add Expected files to the plan step.
+     Consider running /ae:plan to add file lists.
   ```
 
 ### C. Tests Green
@@ -183,8 +188,8 @@ Fix findings, re-run from Check D until clean pass.
    - Drift detected (not approved) → always pause
    - Security pattern matched → always pause
    - No test command → `tests_green` = UNVERIFIED — **pause for user confirmation** (do not treat as true)
-   - No "Expected files:" in plan step → `drift` = UNKNOWN — **pause for user confirmation** (do not skip)
-   - UNVERIFIED or UNKNOWN states block the gate — they are not true values
+   - No "Expected files:" in plan step → blocked at Check B (hard stop), will not reach gate
+   - UNVERIFIED states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
 3. All steps done → `All steps complete. Next: /ae:review <plan-file-path>`
 

@@ -172,7 +172,8 @@ After all fixups are done, compile outcome data for this feature cycle:
 - Steps completed: N/M
 - Rework rate: X steps needed fixup commits (X/N = Y%)
 - P1 escape rate: Z P1 findings discovered in /ae:review (should be 0 if /ae:work pre-commit caught them all)
-- Drift events: D contract violations during /ae:work (approved: A, fixed: F, rolled back: R)
+- Drift events: D contract violations during /ae:work (approved: A, fixed: F, rolled back: R, unknown: U)
+- Fix loop triggers: N circuit breaker activations during /ae:work (same test file failed max_fix_loops times)
 - Auto-pass rate: P steps auto-continued / N total steps (only if auto_pass was enabled)
 ```
 
