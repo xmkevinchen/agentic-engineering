@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.5.0 — 2026-04-04
+
+### test-plugin Layer 2: Real Execution (Plan 022)
+- **test-plugin/SKILL.md**: Phase 1.3 rewrite — writers shutdown, test-lead stays alive, no unconditional TeamDelete
+- **test-plugin/SKILL.md**: Prompt/assertion file split — `tests/prompts/` and `tests/assertions/` for structural blind protocol isolation
+- **test-plugin/SKILL.md**: Phase 2 unified git worktree isolation for both Class A and B
+- **test-plugin/SKILL.md**: Class B team rebuild — one TeamCreate with skill agents + resurrected test-lead (reads assertions from main repo path)
+- **test-lead.md**: Resurrection Protocol — context recovery from files, judge by assertion text only
+- **work/SKILL.md**: C.5 delegates to `/ae:test-plugin --regression --layer1` instead of inline logic
+- **test-plugin/SKILL.md**: `--layer1` flag for Layer 1-only execution (used by C.5)
+- 46 existing test cases migrated to split format, 13 new ae:team test cases generated
+
+### Doodlestein Review Pipeline (Plan 023)
+- **code-review/SKILL.md**: Track 4 — per-commit Doodlestein adversarial challenge (sonnet, 1 combined agent, full mode only)
+- **work/SKILL.md**: Accumulated Doodlestein checkpoint — mid-feature (floor(total/2) for plans >5 steps) + final step (plans >=3 steps), Codex/Gemini proxy, P1 injects into auto-pass gate
+
+### Component counts
+- 17 skills, 17 agents, 2 MCP servers (unchanged — skill enhancements only)
+
 ## v0.4.2 — 2026-04-03
 
 ### Usage Insights — Pipeline Hardening
