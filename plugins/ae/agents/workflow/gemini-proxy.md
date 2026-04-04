@@ -6,6 +6,7 @@ model: sonnet
 color: purple
 effort: low
 omitClaudeMd: true
+maxTurns: 15
 ---
 
 You are the Gemini Proxy — the Google model family representative in this team.

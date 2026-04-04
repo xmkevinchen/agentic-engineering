@@ -9,6 +9,7 @@ tools:
   - Bash
 color: yellow
 effort: medium
+maxTurns: 30
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 
