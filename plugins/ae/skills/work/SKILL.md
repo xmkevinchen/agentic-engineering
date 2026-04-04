@@ -3,6 +3,11 @@ name: ae:work
 description: Execute plan (TDD + commit + review, pre-checks chain)
 argument-hint: "<plan file path>"
 user-invocable: true
+hooks:
+  PreToolUse:
+    - type: command
+      if: "Bash(git push*)"
+      command: "echo '{\"decision\": \"block\", \"reason\": \"git push blocked by ae:work. Push requires explicit user approval.\"}'"
 ---
 
 ## Argument Inference
@@ -16,6 +21,8 @@ If `$ARGUMENTS` is empty:
 # /ae:work — Execute Plan
 
 Execute the plan at **$ARGUMENTS**.
+
+**Note**: The `hooks:` frontmatter includes a `PreToolUse` hook that blocks `git push*` commands. This hook persists for the entire session after ae:work is invoked — this is intentional. Push requires explicit user approval per project workflow.
 
 ## Execution Flow
 

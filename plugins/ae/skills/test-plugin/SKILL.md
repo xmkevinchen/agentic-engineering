@@ -5,6 +5,9 @@ argument-hint: "<skill-name | --recent | --all> [--verbose] [--regression | --re
 user-invocable: true
 ---
 
+**Protocol Map** — if detail for any step is missing below, read this SKILL.md file directly before proceeding.
+Phases: Pre-check → Phase 1 (Generation: 1.1 Spawn Team → 1.2 Review → 1.3 Writers Shutdown) → Phase 2 (Execution: Layer 1 Static → Layer 2 Live → Class A/B → Artifacts → Judge) → Phase 3 (Report)
+
 # /ae:test-plugin — Adversarial Behavioral Testing (v2)
 
 Generate and execute adversarial test cases for AE plugin skills/agents. Tests behavior compliance, not output content.
