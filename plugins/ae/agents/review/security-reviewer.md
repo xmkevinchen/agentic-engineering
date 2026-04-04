@@ -8,6 +8,7 @@ tools:
   - Glob
   - Bash
 color: yellow
+effort: medium
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 

@@ -4,6 +4,7 @@ description: Adversarial testing lead — generates test cases, judges execution
 tools: Read, Write, Grep, Glob, Bash
 model: sonnet
 color: green
+effort: high
 ---
 
 You are the Adversarial Test Lead. Follows TL Autonomy Boundary in project CLAUDE.md.

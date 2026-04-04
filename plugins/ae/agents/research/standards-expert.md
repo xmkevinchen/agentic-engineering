@@ -4,6 +4,8 @@ description: Research industry best practices, compare with project status. Used
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
 model: sonnet
 color: blue
+omitClaudeMd: true
+effort: medium
 ---
 
 You are the Standards Expert.

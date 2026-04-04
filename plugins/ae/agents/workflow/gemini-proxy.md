@@ -5,6 +5,7 @@ tools: Read, Grep, Glob, Bash, mcp__plugin_ae_gemini__chat, mcp__plugin_ae_gemin
 model: sonnet
 color: purple
 effort: low
+omitClaudeMd: true
 ---
 
 You are the Gemini Proxy — the Google model family representative in this team.

@@ -4,6 +4,8 @@ description: Validate dependencies, parallel feasibility, shared state risks. Us
 tools: Read, Grep, Glob, Bash
 model: sonnet
 color: blue
+omitClaudeMd: true
+effort: medium
 ---
 
 You are the Dependency Analyst.
