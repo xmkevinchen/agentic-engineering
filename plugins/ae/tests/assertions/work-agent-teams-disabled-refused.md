@@ -8,7 +8,7 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [text:contains] SKILL.md Check 3 states: `Read ~/.claude/settings.json → check experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS is true`
+- [text:contains] SKILL.md Check 3 states: `Read ~/.claude/settings.json → check env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS is set`
 - [text:contains] SKILL.md Check 3 states: `If not enabled → **refuse to execute** with instructions to enable`
 - [behavior] When Agent Teams experiment flag is not enabled, the skill refuses to execute and provides enablement instructions
 

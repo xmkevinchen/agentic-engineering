@@ -3,6 +3,7 @@ name: ae:analyze
 description: Research and analyze a topic, module, or problem domain in the codebase
 argument-hint: "<topic or question>"
 user-invocable: true
+context: fork
 ---
 
 # /ae:analyze — Codebase Analysis
@@ -11,7 +12,7 @@ Research the codebase and generate a structured analysis for: **$ARGUMENTS**
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ "experiments": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": true } }` to ~/.claude/settings.json and restart Claude Code."
+1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }` to ~/.claude/settings.json and restart Claude Code."
 
 ## Flow
 

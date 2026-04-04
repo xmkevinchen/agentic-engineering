@@ -53,7 +53,7 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 - All done → suggest `/ae:review`, **refuse to execute**
 
 ### Check 3: Agent Teams
-- Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`
+- Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
 - If not enabled → **refuse to execute** with instructions to enable
 
 ### Check 4: Deferred Items
