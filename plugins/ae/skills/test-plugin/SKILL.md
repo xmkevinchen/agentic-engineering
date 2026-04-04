@@ -304,12 +304,19 @@ target: "[skill/agent name]"
 - Layer 2: A/B pass (C%)
 - Overall: PASS / FAIL
 
+## Execution Info
+- Isolation: worktree (/tmp/test-<id>)
+- Baseline SHA: <HEAD_SHA>
+- Class: A (subagent) / B (team rebuild)
+- Team lifecycle: [kept alive | TeamDelete → rebuild]
+- Orphan cleanup: [none | cleaned N teams]
+
 ## Results
 
-| # | Case | Target | Layer | Result | Failed Assertion |
-|---|------|--------|-------|--------|-----------------|
-| 1 | refuse-no-agent-teams | ae:plan | 1 | PASS | |
-| 2 | plan-output-format | ae:plan | 2 | FAIL | SHOULD: Expected files in every step |
+| # | Case | Target | Layer | Class | Result | Failed Assertion |
+|---|------|--------|-------|-------|--------|-----------------|
+| 1 | refuse-no-agent-teams | ae:plan | 1 | — | PASS | |
+| 2 | plan-output-format | ae:plan | 2 | B | FAIL | SHOULD: Expected files in every step |
 
 ## Failed Cases Detail
 ### Case 2: plan-output-format
