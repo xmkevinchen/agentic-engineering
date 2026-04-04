@@ -28,17 +28,17 @@ plan: ".ae/plans/024-cc-uplift-master.md"
 | Skill `user-invocable` audit | All 17 skills | Done (7ad4a62) |
 | Proxy `model: haiku` validation | codex-proxy, gemini-proxy | Done (5f7d2bc, 620acaa) |
 
-### P1 — Config, Docs, Agents (in progress)
+### P1 — Config, Docs, Agents (done)
 
 | ID | Feature | Branch | Status |
 |----|---------|--------|--------|
-| BL-CC-005 | Plugin `userConfig` (3 keys) | feature/cc-uplift-p1-config | Pending |
-| BL-CC-029 | OutputStyles (.md files + plugin.json) | feature/cc-uplift-p1-config | Pending |
-| BL-CC-028 | MCP tools `alwaysLoad` | feature/cc-uplift-p1-config | Pending |
-| BL-CC-033 | Gemini model externalization via userConfig | feature/cc-uplift-p1-config | Pending |
-| BL-CC-009 | Agent `skills` preloading | feature/cc-uplift-p1-agents | Pending |
-| BL-CC-036 | MCP tool name centralization | feature/cc-uplift-p1-agents | Pending |
-| BL-CC-030 | Worktree auto-memory disable | feature/cc-uplift-p1-agents | Pending |
+| BL-CC-005 | Plugin `userConfig` (5 keys) | feature/cc-uplift-p1-config | Done (a34975d) |
+| BL-CC-029 | OutputStyles (.md files + plugin.json) | feature/cc-uplift-p1-config | Done (a34975d) |
+| BL-CC-028 | MCP tools `alwaysLoad` (Gemini chat/reply) | feature/cc-uplift-p1-config | Done (a34975d) |
+| BL-CC-033 | Gemini model externalization via userConfig | feature/cc-uplift-p1-config | Done (a34975d) |
+| BL-CC-009 | Agent `skills` preloading | feature/cc-uplift-p1-agents | Done (e3139f3) |
+| BL-CC-036 | MCP tool name centralization | feature/cc-uplift-p1-agents | Done (e3139f3) |
+| BL-CC-030 | Worktree auto-memory disable | feature/cc-uplift-p1-agents | Done (e3139f3) |
 
 ### P2 — Validated Experiments (deferred)
 

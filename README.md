@@ -2,7 +2,7 @@
 
 An operating system for AI agents in software engineering.
 
-17 specialized agents. 3 model families. One disciplined pipeline. Built as a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin.
+17 specialized agents. 3 model families. 2 output styles. One disciplined pipeline. Built as a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin.
 
 ## The Problem
 
