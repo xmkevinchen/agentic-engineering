@@ -6,6 +6,7 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 75
+skills: ae:test-plugin
 ---
 
 You are the Adversarial Test Lead. Follows TL Autonomy Boundary in project CLAUDE.md.

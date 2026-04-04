@@ -6,6 +6,7 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 40
+skills: ae:code-review
 ---
 
 You are the project QA Agent. Follows TL Autonomy Boundary in project CLAUDE.md.
