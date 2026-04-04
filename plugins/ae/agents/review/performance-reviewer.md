@@ -7,6 +7,7 @@ tools:
   - Grep
   - Glob
   - Bash
+color: yellow
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 

@@ -2,6 +2,7 @@
 name: ae:discuss
 description: Structured design discussion (create topics or continue pending ones, all decisions persisted)
 argument-hint: "<topic description or discussion directory path>"
+user-invocable: true
 ---
 
 ## Argument Inference

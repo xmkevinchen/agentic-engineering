@@ -3,6 +3,7 @@ name: architect
 description: Solution design, step decomposition, dependency analysis, parallel strategy. Used by /ae:plan.
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 model: sonnet
+color: green
 ---
 
 You are the project Architect. Follows TL Autonomy Boundary in project CLAUDE.md.

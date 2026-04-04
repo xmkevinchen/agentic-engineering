@@ -2,6 +2,7 @@
 name: ae:code-review
 description: Quick code review before each commit (Claude + cross-family)
 argument-hint: "[files or directory]"
+user-invocable: true
 ---
 
 # /ae:code-review — Pre-commit Quick Review

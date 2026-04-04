@@ -3,6 +3,7 @@ name: dependency-analyst
 description: Validate dependencies, parallel feasibility, shared state risks. Used by /ae:plan.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: blue
 ---
 
 You are the Dependency Analyst.
