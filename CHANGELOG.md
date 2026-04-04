@@ -8,12 +8,12 @@
 - **All 17 agents**: `color` by role group (research=blue, workflow=green, review=yellow, doodlestein=red, proxy=purple)
 - **All 17 agents**: `effort` tiering (high/medium/low by role)
 - **All 17 agents**: `maxTurns` protection (conservative-high values)
-- **8 agents**: `omitClaudeMd: true` for research + proxy + Doodlestein agents (~1000 tokens saved per spawn)
+- **5 agents**: `omitClaudeMd: true` for proxy + Doodlestein agents (~1000 tokens saved per spawn)
 - **All 17 skills**: `user-invocable` field audit (fixed underscore → hyphen)
 - **codex-proxy, gemini-proxy**: `model: haiku` (validated — quality indistinguishable from Sonnet, ~10x cost reduction)
 
 #### P1: Config
-- **plugin.json**: `userConfig` with 5 keys (cross_family_primary, default_effort, max_turns_default, gemini_flash_model, gemini_pro_model)
+- **plugin.json**: `userConfig` with 2 keys (gemini_flash_model, gemini_pro_model)
 - **plugin.json**: `outputStyles` — ae-structured + ae-compact
 - **Gemini MCP**: FALLBACK_MODEL reads from `CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL` env var
 - **Gemini MCP**: `alwaysLoad` annotation on chat/reply tools (skip ToolSearch overhead)

@@ -13,7 +13,7 @@ Three model families, different training biases, covering each other's blind spo
 | **Codex** | `mcp__plugin_ae_codex__codex` | Cross-family primary, full repo access |
 | **Gemini** | `mcp__plugin_ae_gemini__chat` | Targeted review, architecture debate |
 
-**Why cross-family**: Claude review agents (security-reviewer, simplicity-reviewer, etc.) are all Claude family, sharing training biases. Codex (OpenAI) and Gemini (Google) provide genuinely different perspectives.
+**Why cross-family**: Claude review agents (security-reviewer, architecture-reviewer, etc.) are all Claude family, sharing training biases. Codex (OpenAI) and Gemini (Google) provide genuinely different perspectives.
 
 ---
 
@@ -97,7 +97,7 @@ Set `GEMINI_API_KEY` environment variable. The plugin's `.mcp.json` passes it to
 | Stage | Claude | Codex (required) | Gemini (optional) |
 |-------|--------|-------------------|-------------------|
 | Each commit | `code-reviewer` agent | `mcp__plugin_ae_codex__codex` review | — |
-| Plan review | `architect` / `simplicity-reviewer` | `mcp__plugin_ae_codex__codex` plan review | — |
+| Plan review | `architect` | `mcp__plugin_ae_codex__codex` plan review | — |
 | TDD red light | Write test list | `mcp__plugin_ae_codex__codex` testgen | — |
 | After implementation | Claude review | `mcp__plugin_ae_codex__codex` review | — |
 | Feature complete | Review agents (parallel) | `mcp__plugin_ae_codex__codex` deep review | `mcp__plugin_ae_gemini__chat` security audit |
