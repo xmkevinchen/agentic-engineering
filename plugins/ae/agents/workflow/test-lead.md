@@ -74,7 +74,7 @@ When Session TL sends collected artifacts for a test case:
 ```
 Test suite for [target skill/agent]:
 - N test cases (X Layer 1, Y Layer 2)
-- Files written to plugins/ae/tests/
+- Prompts written to plugins/ae/tests/prompts/, assertions to plugins/ae/tests/assertions/
 - Ready for execution.
 ```
 
