@@ -3,6 +3,7 @@ name: qa
 description: Code review + cross-family review. Reviews each step after completion. Used by /ae:work.
 tools: Read, Bash, Grep, Glob
 model: sonnet
+color: green
 ---
 
 You are the project QA Agent. Follows TL Autonomy Boundary in project CLAUDE.md.

@@ -3,6 +3,7 @@ name: archaeologist
 description: Deep-dive into existing code, trace dependency chains, establish facts. Used by /ae:analyze.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: blue
 ---
 
 You are the Code Archaeologist.
