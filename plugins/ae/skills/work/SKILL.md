@@ -184,39 +184,43 @@ Fix findings, re-run from Check D until clean pass.
 
 1. Brief summary: what was done, key decisions, structural changes
 
-### Accumulated Doodlestein Checkpoint (before gate)
+2. **Accumulated Doodlestein Checkpoint** (before gate)
 
-**Skip if** `pipeline.yml → work.accumulated_doodlestein: false`.
+   **Skip if** `pipeline.yml → work.accumulated_doodlestein: false`. Initialize `no_accumulated_p1 = true`.
 
-After commit, compute from plan file:
-- `total_steps` = count all `### Step N` headings
-- `current_step` = count all completed steps (`- [x]` checkboxes at step level)
+   After commit, compute from plan file:
+   - `total_steps` = count all `### Step N` headings
+   - `current_step` = count all completed steps (`- [x]` checkboxes at step level)
 
-**Trigger condition**: `(total_steps >= 3 AND current_step == total_steps)` OR `(total_steps > 5 AND current_step == floor(total_steps/2))`
+   **Trigger condition**: `(total_steps >= 3 AND current_step == total_steps)` OR `(total_steps > 5 AND current_step == floor(total_steps/2))`
 
-When triggered:
-1. Spawn Codex proxy (primary) + Gemini proxy (optional, if enabled) with Doodlestein prompt on `git diff main...HEAD` (accumulated feature diff):
-   ```
-   Agent(subagent_type: "codex-proxy", run_in_background: true,
-         prompt: "Doodlestein accumulated review. Analyze the full feature diff (git diff main...HEAD).
-                  Answer 3 questions:
-                  1. STRATEGIC: What is the single smartest improvement across all these changes?
-                  2. ADVERSARIAL: What cross-commit mistake or blind spot exists?
-                  3. REGRET: Which decision across these commits is most likely to be reversed?
-                  Be specific — cite file:line evidence. SendMessage findings to Lead (TL).")
-   ```
-2. Collect findings. Classify: P1 (critical blind spot) / P2 (concern) / P3 (minor)
-3. Write findings to `<output.milestones>/*/notes.md`
-4. P1 findings inject into gate's `no_p1` condition below
+   For plans with >5 steps, checkpoint runs **twice**: at midpoint and at final step. This is intentional — midpoint catches early drift, final step catches late drift.
 
-If not triggered (step count doesn't match condition) → skip silently.
+   When triggered:
+   1. Spawn Codex proxy (primary) + Gemini proxy (optional, if enabled) with Doodlestein prompt on `git diff main...HEAD` (accumulated feature diff):
+      ```
+      Agent(subagent_type: "codex-proxy", run_in_background: true,
+            prompt: "You are a Doodlestein adversarial reviewer performing an accumulated review.
+                     Analyze the full feature diff (git diff main...HEAD).
+                     Answer 3 questions concisely (1-3 sentences each, cite file:line evidence):
+                     1. STRATEGIC: What is the single smartest improvement across all these changes?
+                     2. ADVERSARIAL: What cross-commit mistake or blind spot exists?
+                     3. REGRET: Which decision across these commits is most likely to be reversed?
+                     If a question has no substantive concern, say 'No concern.' Do not force issues.
+                     SendMessage findings to Lead (TL).")
+      ```
+   2. Collect findings. Classify: P1 (critical blind spot) / P2 (concern) / P3 (minor)
+   3. Write findings to `<output.milestones>/*/notes.md`
+   4. P1 findings set `no_accumulated_p1 = false`
 
-2. **Auto-pass gate** (default: ON) — evaluate after every step:
+   If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`.
+
+3. **Auto-pass gate** (default: ON) — evaluate after every step:
    ```
    gate = tests_green AND no_p1 AND no_accumulated_p1 AND (no_drift OR drift_approved) AND (NOT cross_family_degraded)
    ```
-   `no_accumulated_p1` = true if accumulated Doodlestein didn't run OR ran with no P1 findings.
-   - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no drift, review complete. Continuing to Step N+1.`
+   `no_accumulated_p1` defaults to `true`. Set to `false` only when accumulated checkpoint runs and finds P1.
+   - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no accumulated P1, no drift, review complete. Continuing to Step N+1.`
    - Any failed → **pause for user confirmation**
    - Drift detected (not approved) → always pause
    - Security pattern matched → always pause
