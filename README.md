@@ -65,17 +65,19 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 
 | Command | What it does |
 |---------|-------------|
-| `/ae:code-review` | Quick pre-commit review (Claude + Codex + Gemini) |
+| `/ae:code-review` | Quick pre-commit review (Claude + Codex + Gemini + Doodlestein) |
 | `/ae:test-plugin` | Adversarial behavioral testing — blind execution, LLM-as-judge, persistent test cases |
 | `/ae:testgen` | Generate test suites with edge case coverage |
 | `/ae:trace` | Trace execution flow or map dependency chains |
 | `/ae:team` | Spin up an ad-hoc agent team — auto-selects agents based on your task |
+| `/ae:retrospect` | Analyze pipeline execution history — trends, rework rates, actionable insights |
 
 ### Protocol Reference
 
 | Command | What it does |
 |---------|-------------|
 | `/ae:agent-teams` | Unified protocol for all Agent Teams — Base layer + Debate/Investigation modes + Doodlestein |
+| `/ae:agent-selection` | Agent selection reference — context-based team composition and cross-family role assignment |
 
 ## Agents
 
