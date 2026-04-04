@@ -186,6 +186,8 @@ Worktree creation failure → `FAIL_CLOSED` (isolation_error, do not execute wit
 
 Test team persists throughout — no TeamDelete needed for Class A.
 
+**Worktree memory isolation**: When spawning agents in worktree, include in their prompt: "Do not write to ~/.claude/projects/*/memory/. You are in an isolated worktree — memory writes would pollute the user's project memory."
+
 #### Class B Execution (team rebuild, Session TL executes)
 
 Class B skills need Agent Teams (TeamCreate). The test team must be released first.

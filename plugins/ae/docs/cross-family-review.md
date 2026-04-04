@@ -1,5 +1,8 @@
 # Cross-Family Review Guide
 
+<!-- Canonical MCP tool name reference. Other agents reference this doc rather than hardcoding tool names in their bodies. Tool names in `tools:` frontmatter fields are kept as-is (CC requirement). Proxy agents (codex-proxy, gemini-proxy) own the invocation examples. -->
+
+
 Three model families, different training biases, covering each other's blind spots.
 
 ## Three Model Families
