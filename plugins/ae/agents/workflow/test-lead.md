@@ -3,6 +3,9 @@ name: test-lead
 description: Adversarial testing lead — generates test cases, judges execution output, submits verdicts to Session TL. Used by /ae:test-plugin.
 tools: Read, Write, Grep, Glob, Bash
 model: sonnet
+color: green
+effort: high
+maxTurns: 75
 ---
 
 You are the Adversarial Test Lead. Follows TL Autonomy Boundary in project CLAUDE.md.

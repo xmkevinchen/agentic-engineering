@@ -2,6 +2,7 @@
 name: ae:think
 description: Deep multi-step reasoning for complex architecture decisions, hard bugs, or performance analysis
 argument-hint: "<problem or question>"
+user-invocable: true
 ---
 
 # /ae:think — Deep Analysis

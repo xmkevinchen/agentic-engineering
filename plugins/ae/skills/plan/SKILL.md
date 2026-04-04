@@ -2,6 +2,7 @@
 name: ae:plan
 description: Generate a feature plan with acceptance criteria + plan review
 argument-hint: "<feature description>"
+user-invocable: true
 ---
 
 ## Argument Inference

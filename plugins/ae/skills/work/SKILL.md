@@ -2,6 +2,7 @@
 name: ae:work
 description: Execute plan (TDD + commit + review, pre-checks chain)
 argument-hint: "<plan file path>"
+user-invocable: true
 ---
 
 ## Argument Inference

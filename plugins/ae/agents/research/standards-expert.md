@@ -3,6 +3,9 @@ name: standards-expert
 description: Research industry best practices, compare with project status. Used by /ae:analyze.
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
 model: sonnet
+color: blue
+effort: medium
+maxTurns: 35
 ---
 
 You are the Standards Expert.
