@@ -262,4 +262,3 @@
 - 12 skills (was 13 — cross-family-review moved to docs)
 - 13 agents
 - 2 MCP servers
-<!-- Layer 2 test fixture -->
