@@ -147,8 +147,6 @@ Layer 1 failures are definitive — no LLM judgment needed, no side effects.
 
 Only runs if Layer 1 passed for this test case.
 
-**Warning**: Layer 2 executes skills in the current session. This creates real side effects (files, commits, agent teams). Use on a clean branch or test project.
-
 #### Execution Classification
 
 Before executing, classify the target skill:
@@ -158,34 +156,78 @@ Before executing, classify the target skill:
 - **Class B** (patterns found): skill requires Agent Teams → Session TL must execute directly
 - **Unreadable target**: → `FAIL_CLOSED` (classification_error, do not execute)
 
-#### Class A Execution (subagent)
+#### Isolation: Git Worktree (both classes)
+
+Both Class A and Class B use git worktree for isolation. Worktree is the isolation layer; Agent is the execution layer. These are separate concerns.
 
 ```
-1. Spawn general-purpose subagent (try isolation: "worktree")
-2. Subagent reads prompt + context only (blind protocol)
-3. Subagent executes the skill (reads SKILL.md, follows instructions, calls tools)
-4. Subagent collects artifacts (see Artifact Collection below)
-5. Subagent sends artifacts to Session TL
-6. Session TL forwards to test-lead for judgment
-
-Fallback (if worktree creation fails):
-→ Subagent executes in current session. Log warning: "worktree unavailable, executing in session"
+1. Record baseline: HEAD_SHA=$(git rev-parse HEAD)
+2. Create worktree: git worktree add /tmp/test-<id> -b test-<id>
+3. Execute in worktree (see Class A / Class B below)
+4. Collect artifacts (diff against baseline)
+5. Cleanup: git worktree remove /tmp/test-<id> && git branch -D test-<id>
 ```
 
-#### Class B Execution (Session TL direct)
+Worktree creation failure → `FAIL_CLOSED` (isolation_error, do not execute without isolation).
+
+#### Class A Execution (subagent, test team stays alive)
 
 ```
-1. Session TL reads prompt + context only (blind protocol)
-2. Session TL executes the skill directly (including TeamCreate, Agent spawns)
-3. After execution completes, Session TL collects artifacts (see Artifact Collection below)
-4. Session TL sends artifacts to test-lead for judgment
+1. Create git worktree
+2. Spawn general-purpose subagent (isolation: "worktree")
+3. Subagent reads prompt from plugins/ae/tests/prompts/<id>.md (blind protocol)
+4. Subagent executes the skill in worktree
+5. Subagent writes artifacts to file
+6. Session TL reads artifact file → forwards to test-lead (still alive in test team)
+7. test-lead reads assertions/<id>.md + artifacts → judges → returns verdict
 ```
+
+Test team persists throughout — no TeamDelete needed for Class A.
+
+#### Class B Execution (team rebuild, Session TL executes)
+
+Class B skills need Agent Teams (TeamCreate). The test team must be released first.
+
+```
+Phase 2.1: Team Release
+1. TeamDelete test team (release slot for target skill)
+
+Phase 2.2: Worktree + Team Rebuild
+2. Create git worktree
+3. One TeamCreate — include BOTH:
+   - Target skill's required agents (per the skill being tested)
+   - Resurrected test-lead (context recovered from assertion files)
+
+   Resurrection prompt for test-lead:
+   "You are test-lead, resurrected for Phase 2 judgment.
+    Read assertion files from plugins/ae/tests/assertions/ (MAIN REPO path, not worktree —
+    Phase 1 files are uncommitted and not visible in worktree).
+    Do NOT regenerate test cases. Enter Judge mode directly.
+    Wait for execution artifacts from Session TL."
+
+Phase 2.3: Execute
+4. Session TL reads prompt from plugins/ae/tests/prompts/<id>.md (blind protocol)
+5. Session TL executes the target skill in worktree context
+6. Collect artifacts
+
+Phase 2.4: Judge
+7. Session TL sends artifacts to resurrected test-lead
+8. test-lead reads assertions (main repo path) + artifacts → judges → returns verdict
+
+Phase 2.5: Cleanup
+9. TeamDelete rebuilt team
+10. Remove worktree: git worktree remove /tmp/test-<id> && git branch -D test-<id>
+11. Defensive cleanup: check ~/.claude/teams/ for orphan teams created by target skill
+    (skill crash may leave uncleaned teams)
+```
+
+**Main repo path for assertions**: Phase 1 writes assertion files to `plugins/ae/tests/assertions/` in the main working directory. These files are uncommitted and NOT visible in the worktree. Resurrected test-lead MUST read from the main repo path, not the worktree path.
 
 #### Artifact Collection Protocol
 
 After execution (Class A or B), collect:
 
-1. **File changes**: `git diff --name-only` (compare to pre-execution baseline)
+1. **File changes**: `git diff --name-only` in worktree (compare to baseline SHA)
 2. **Team creation**: `ls ~/.claude/teams/` — check for new `inboxes/` directories
 3. **State changes**: read plan/task frontmatter for status transitions
 4. **Output text**: capture execution output (messages, warnings, refusals)
@@ -218,15 +260,9 @@ Assertions use **type tags as dispatch hints** — they tell test-lead which ver
 
 ### Judge Protocol
 
-After execution, Session TL spawns test-lead as an **independent subagent** (not in a team) for judgment:
+**Class A**: test-lead is still alive in the test team. Session TL forwards artifacts to test-lead via SendMessage. test-lead reads `assertions/<id>.md` and judges.
 
-```
-Agent(subagent_type: "test-lead", name: "judge",
-      prompt: "Judge these artifacts against test case <id>. Read plugins/ae/tests/assertions/<id>.md for assertions.
-               <collected artifacts>")
-```
-
-test-lead reads the test case's Expected Behavior and evaluates artifacts.
+**Class B**: test-lead was resurrected in the rebuilt team. Session TL sends artifacts via SendMessage. Resurrected test-lead reads assertions from **main repo path** (not worktree) and judges.
 
 **Verdict format** — judge returns per assertion:
 ```json
