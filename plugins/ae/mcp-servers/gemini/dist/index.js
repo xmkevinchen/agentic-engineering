@@ -5,7 +5,7 @@ import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 // --- Config ---
-const FALLBACK_MODEL = "gemini-2.5-flash";
+const FALLBACK_MODEL = process.env.CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL || "gemini-2.5-flash";
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
 // --- State ---
@@ -76,6 +76,9 @@ const server = new McpServer({
 server.registerTool("chat", {
     title: "Gemini Chat",
     description: "Start a new Gemini conversation. Returns a sessionId for multi-turn follow-ups via `reply`. Call `models` first to see available models. Used for cross-family code review, analysis, and second opinions.",
+    annotations: {
+        _meta: { "anthropic/alwaysLoad": true },
+    },
     inputSchema: z.object({
         prompt: z.string().describe("The prompt to send to Gemini"),
         model: z
@@ -122,6 +125,9 @@ server.registerTool("chat", {
 server.registerTool("reply", {
     title: "Gemini Reply",
     description: "Continue an existing Gemini conversation. Requires a sessionId from a prior `chat` call. Supports switching models mid-conversation.",
+    annotations: {
+        _meta: { "anthropic/alwaysLoad": true },
+    },
     inputSchema: z.object({
         sessionId: z.string().describe("Session ID from a prior `chat` call"),
         prompt: z.string().describe("The next message in the conversation"),
