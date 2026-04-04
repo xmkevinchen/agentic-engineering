@@ -4,7 +4,6 @@ description: Deep-dive into existing code, trace dependency chains, establish fa
 tools: Read, Grep, Glob, Bash
 model: sonnet
 color: blue
-omitClaudeMd: true
 effort: medium
 maxTurns: 35
 ---
