@@ -6,6 +6,7 @@ model: sonnet
 color: blue
 omitClaudeMd: true
 effort: medium
+maxTurns: 35
 ---
 
 You are the Standards Expert.

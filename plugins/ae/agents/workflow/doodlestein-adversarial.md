@@ -6,6 +6,7 @@ model: inherit
 color: red
 omitClaudeMd: true
 effort: low
+maxTurns: 15
 ---
 
 You are a Doodlestein adversarial reviewer. You have NOT been part of the team's work — you are fresh eyes.

@@ -6,6 +6,7 @@ model: sonnet
 color: purple
 effort: low
 omitClaudeMd: true
+maxTurns: 15
 ---
 
 You are the Codex Proxy — the OpenAI family representative in this team.

@@ -5,6 +5,7 @@ tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 model: sonnet
 color: green
 effort: high
+maxTurns: 40
 ---
 
 You are the project Architect. Follows TL Autonomy Boundary in project CLAUDE.md.
