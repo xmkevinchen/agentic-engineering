@@ -4,6 +4,9 @@ description: "Reference: Agent Teams protocol reference — base rules, debate m
 user-invocable: true
 ---
 
+**Protocol Map** — if detail for any section is missing below, read this SKILL.md file directly before proceeding.
+Sections: Base Rules → Team Communication → Debate Mode → Discussion Mode → Investigation Mode → Doodlestein Protocol → Shutdown Protocol
+
 # Agent Teams Protocol Reference
 
 All skills that spawn Agent Teams reference this protocol. `ae:agent-selection` defines WHO to pick. This skill defines HOW they operate.

@@ -5,6 +5,9 @@ argument-hint: "<topic description or discussion directory path>"
 user-invocable: true
 ---
 
+**Protocol Map** — if detail for any step is missing below, read this SKILL.md file directly before proceeding.
+Steps: 1.Setup → 2.Spawn Team → 3.Discussion Rounds → 4.Consensus Verification → 5.TL Scores → 6.Present & Record → 7.Doodlestein → 8.Sweep → 9.Conclusion → 10.Shutdown
+
 ## Argument Inference
 
 If `$ARGUMENTS` is empty:
@@ -27,105 +30,7 @@ Setup → Spawn Team → Discussion Rounds → Doodlestein → Sweep → Conclus
 
 Read `pipeline.yml` → `output.discussions` for the base directory.
 
-## File Formats
-
-### Topic directory structure
-
-```
-topic-NN-slug/
-  summary.md       # Current state — agent reads ONLY this each round
-  round-01.md      # Round discussion record (archived after round ends)
-```
-
-**summary.md** (agent reads this every round — keep concise):
-
-```markdown
----
-id: "NN"
-title: "[topic title]"
-status: pending          # pending → converged / revisit / deferred
-current_round: 1
-created: YYYY-MM-DD
-decision: ""
-rationale: ""
-reversibility: ""
----
-
-# Topic: [title]
-
-## Current Status
-[One-line status: what's been decided or what's blocking]
-
-## Round History
-| Round | Score | Key Outcome |
-|-------|-------|-------------|
-| (populated as rounds complete) |
-
-## Context
-[Why this decision matters, what it affects, what breaks if we get it wrong]
-
-## Constraints
-[Hard constraints — system limitations, compatibility requirements, resource limits, prior decisions]
-
-## Key Questions
-[What needs to be answered to make this decision — framed as questions, not options]
-```
-
-**DO NOT pre-populate options (A/B/C) in summary.md.** Options emerge from team discussion. The template frames the problem; the team finds the solution.
-
-**round-NN.md** (archived after each round — not re-read by agents):
-
-```markdown
----
-round: NN
-date: YYYY-MM-DD
-score: pending/converged/revisit/deferred
----
-
-# Round NN
-
-## Discussion
-[Team discussion content, key arguments, evidence cited]
-
-## Outcome
-- Score: [converged/revisit/deferred]
-- Decision: [if converged]
-- Revisit reason: [if revisit]
-- Deferred reason: [if deferred]
-```
-
-### index.md
-
-```markdown
----
-id: "NNN"
-title: "[title]"
-status: active
-created: YYYY-MM-DD
-pipeline:
-  analyze: skipped
-  discuss: in_progress
-  plan: pending
-  work: pending
-plan: ""
-tags: [relevant, tags]
----
-
-# [Title]
-
-## Problem Statement
-[What needs to be solved, why]
-
-## Topics
-
-| # | Topic | File | Status | Decision |
-|---|-------|------|--------|----------|
-| 1 | [Topic A] | [topic-01-slug/](topic-01-slug/) | pending | — |
-
-## Documents
-- [Analysis](analysis.md) *(if exists)*
-- [Conclusion](conclusion.md) *(after discussion complete)*
-```
+File format templates are in the Appendix at the end of this file.
 
 ## Step 1. Setup
 
@@ -442,3 +347,105 @@ Update index.md: set `pipeline.discuss: done`, add conclusion link.
 - **Landing rule**: every output is plannable or a new discussion — nothing sits idle
 - Topic dependencies: if one decision affects another, note it
 - Always keep index.md in sync with topic files
+
+---
+
+## Appendix: File Formats
+
+### Topic directory structure
+
+```
+topic-NN-slug/
+  summary.md       # Current state — agent reads ONLY this each round
+  round-01.md      # Round discussion record (archived after round ends)
+```
+
+**summary.md** (agent reads this every round — keep concise):
+
+```markdown
+---
+id: "NN"
+title: "[topic title]"
+status: pending          # pending → converged / revisit / deferred
+current_round: 1
+created: YYYY-MM-DD
+decision: ""
+rationale: ""
+reversibility: ""
+---
+
+# Topic: [title]
+
+## Current Status
+[One-line status: what's been decided or what's blocking]
+
+## Round History
+| Round | Score | Key Outcome |
+|-------|-------|-------------|
+| (populated as rounds complete) |
+
+## Context
+[Why this decision matters, what it affects, what breaks if we get it wrong]
+
+## Constraints
+[Hard constraints — system limitations, compatibility requirements, resource limits, prior decisions]
+
+## Key Questions
+[What needs to be answered to make this decision — framed as questions, not options]
+```
+
+**DO NOT pre-populate options (A/B/C) in summary.md.** Options emerge from team discussion. The template frames the problem; the team finds the solution.
+
+**round-NN.md** (archived after each round — not re-read by agents):
+
+```markdown
+---
+round: NN
+date: YYYY-MM-DD
+score: pending/converged/revisit/deferred
+---
+
+# Round NN
+
+## Discussion
+[Team discussion content, key arguments, evidence cited]
+
+## Outcome
+- Score: [converged/revisit/deferred]
+- Decision: [if converged]
+- Revisit reason: [if revisit]
+- Deferred reason: [if deferred]
+```
+
+### index.md
+
+```markdown
+---
+id: "NNN"
+title: "[title]"
+status: active
+created: YYYY-MM-DD
+pipeline:
+  analyze: skipped
+  discuss: in_progress
+  plan: pending
+  work: pending
+plan: ""
+tags: [relevant, tags]
+---
+
+# [Title]
+
+## Problem Statement
+[What needs to be solved, why]
+
+## Topics
+
+| # | Topic | File | Status | Decision |
+|---|-------|------|--------|----------|
+| 1 | [Topic A] | [topic-01-slug/](topic-01-slug/) | pending | — |
+
+## Documents
+- [Analysis](analysis.md) *(if exists)*
+- [Conclusion](conclusion.md) *(after discussion complete)*
+```
