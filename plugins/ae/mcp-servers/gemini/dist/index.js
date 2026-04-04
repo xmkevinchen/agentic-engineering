@@ -6,6 +6,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 // --- Config ---
 const FALLBACK_MODEL = process.env.CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL || "gemini-2.5-flash";
+const PRO_MODEL = process.env.CLAUDE_PLUGIN_OPTION_GEMINI_PRO_MODEL || "gemini-2.5-pro";
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // every 5 minutes
 // --- State ---
@@ -76,9 +77,6 @@ const server = new McpServer({
 server.registerTool("chat", {
     title: "Gemini Chat",
     description: "Start a new Gemini conversation. Returns a sessionId for multi-turn follow-ups via `reply`. Call `models` first to see available models. Used for cross-family code review, analysis, and second opinions.",
-    annotations: {
-        _meta: { "anthropic/alwaysLoad": true },
-    },
     inputSchema: z.object({
         prompt: z.string().describe("The prompt to send to Gemini"),
         model: z
@@ -125,9 +123,6 @@ server.registerTool("chat", {
 server.registerTool("reply", {
     title: "Gemini Reply",
     description: "Continue an existing Gemini conversation. Requires a sessionId from a prior `chat` call. Supports switching models mid-conversation.",
-    annotations: {
-        _meta: { "anthropic/alwaysLoad": true },
-    },
     inputSchema: z.object({
         sessionId: z.string().describe("Session ID from a prior `chat` call"),
         prompt: z.string().describe("The next message in the conversation"),
@@ -194,7 +189,8 @@ server.registerTool("models", {
             {
                 type: "text",
                 text: JSON.stringify({
-                    defaultModel: FALLBACK_MODEL,
+                    defaultFlashModel: FALLBACK_MODEL,
+                    defaultProModel: PRO_MODEL,
                     availableModels: cachedModels.map((m) => ({
                         name: m.name,
                         displayName: m.displayName,
@@ -227,7 +223,8 @@ server.registerTool("info", {
                 text: JSON.stringify({
                     version: "0.2.0",
                     authMode: "api_key",
-                    defaultModel: FALLBACK_MODEL,
+                    defaultFlashModel: FALLBACK_MODEL,
+                    defaultProModel: PRO_MODEL,
                     availableModels: cachedModels.length,
                     activeSessions: sessions.size,
                     sessionTTL: "30m",

@@ -17,21 +17,6 @@
     "agent-teams"
   ],
   "userConfig": {
-    "cross_family_primary": {
-      "description": "Primary cross-family model family (codex or gemini)",
-      "type": "string",
-      "default": "codex"
-    },
-    "default_effort": {
-      "description": "Default reasoning effort for AE agents (low, medium, high)",
-      "type": "string",
-      "default": "high"
-    },
-    "max_turns_default": {
-      "description": "Default max turns for AE agents",
-      "type": "number",
-      "default": 30
-    },
     "gemini_flash_model": {
       "description": "Gemini Flash model name",
       "type": "string",
