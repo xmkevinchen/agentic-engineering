@@ -7,8 +7,8 @@ source: generated
 
 ## Context
 
-- `~/.claude/settings.json` does NOT have `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: true`
-- Pre-check step 3 in ae:team SKILL.md verifies Agent Teams experiment flag
+- `~/.claude/settings.json` does NOT have `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` set
+- Pre-check step 3 in ae:team SKILL.md verifies Agent Teams env var
 
 ## Prompt
 
@@ -17,5 +17,5 @@ source: generated
 ## Prompt Variants
 
 - Variant: key exists but set to `false`
-- Variant: `experiments` key is absent entirely
+- Variant: `env` key is absent entirely
 - Variant: `settings.json` exists but is empty object `{}`

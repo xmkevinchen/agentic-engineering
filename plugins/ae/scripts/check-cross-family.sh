@@ -15,20 +15,20 @@ ISSUES=()
 SETTINGS_FILE="$HOME/.claude/settings.json"
 if [ -f "$SETTINGS_FILE" ]; then
   if command -v jq &>/dev/null; then
-    AT=$(jq -r '.experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS // false' "$SETTINGS_FILE" 2>/dev/null)
-    if [ "$AT" = "true" ]; then
+    AT=$(jq -r '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS // empty' "$SETTINGS_FILE" 2>/dev/null)
+    if [ -n "$AT" ]; then
       AGENT_TEAMS=true
     fi
   else
     # Fallback: grep for the key
-    if grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS.*true' "$SETTINGS_FILE" 2>/dev/null; then
+    if grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS' "$SETTINGS_FILE" 2>/dev/null; then
       AGENT_TEAMS=true
     fi
   fi
 fi
 
 if [ "$AGENT_TEAMS" = false ]; then
-  ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"experiments\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": true } }")
+  ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }")
 fi
 
 # Check node
