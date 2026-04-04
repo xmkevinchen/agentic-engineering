@@ -15,8 +15,8 @@ Quick code review on current uncommitted changes.
 
 ## Mode
 
-- **full** (default): three parallel tracks (Claude + Codex + Gemini)
-- **light**: Track 1 only (Claude review, skip cross-family)
+- **full** (default): four parallel tracks (Claude + Codex + Gemini + Doodlestein)
+- **light**: Track 1 only (Claude review, skip cross-family and Doodlestein)
 
 Mode is set by caller (ae:work reads `work.review_mode` from pipeline.yml, or `--light`/`--full` flag). When called manually, defaults to `full`.
 
@@ -48,6 +48,39 @@ Launch `codex-proxy` agent to review the same diff via Codex MCP.
 ### Track 3: Gemini Review
 
 Launch `gemini-proxy` agent to review the same diff via Gemini MCP.
+
+### Track 4: Doodlestein Adversarial Challenge (full mode only)
+
+**Purpose**: proactive adversarial challenge on the current diff — "what did the other tracks miss?"
+
+Launch 1 combined Doodlestein agent (sonnet model, independent subagent — no team_name) with the current diff scope (`git diff + git diff --cached`). The agent answers 3 questions in a single pass:
+
+```
+Agent(subagent_type: "general-purpose", model: "sonnet",
+      run_in_background: true,
+      prompt: "You are a Doodlestein adversarial reviewer. Review ONLY the following diff
+               (do NOT run git diff yourself, do NOT look at accumulated/feature-level changes):
+
+               <current diff>
+
+               Answer these 3 questions concisely (1-3 sentences each):
+
+               1. STRATEGIC: What is the single smartest improvement to this change?
+               2. ADVERSARIAL: What mistake, oversight, or blind spot exists in this change?
+               3. REGRET: Which part of this change is most likely to be reverted or reworked?
+
+               If the change is clean and you have no substantive concern for a question,
+               say 'No concern.' Do not force issues.
+
+               SendMessage your answers to Lead (TL).")
+```
+
+**Scope binding**: the diff is passed inline in the prompt. The agent MUST NOT independently query `git diff main...HEAD` or any accumulated diff. This keeps per-commit Doodlestein focused on the current step only.
+
+**Results**: Track 4 findings are merged into the overall Results output:
+- Substantive concern → **Warning**
+- Critical blind spot (security, data loss) → **Block**
+- "No concern" on all 3 → no output (silent pass)
 
 ## Results
 
