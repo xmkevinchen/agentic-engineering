@@ -149,7 +149,7 @@ Run `test.command` from pipeline.yml. Empty → skip with "⚠️ No test comman
 
 ### C.5 Protocol Invariant Check
 If `git diff --name-only` includes files under `plugins/ae/skills/` or `plugins/ae/agents/`:
-1. Run `/ae:test-plugin --regression` targeting the changed skills/agents (Layer 1 only)
+1. Run `/ae:test-plugin --regression --layer1` targeting the changed skills/agents (Layer 1 static analysis only — do NOT execute Layer 2 during pre-commit)
 2. **Layer 1 failure = P1** (blocks commit via auto-pass gate, same as other P1 findings)
 
 If no plugin files in diff → skip with "No plugin skill/agent files changed, skipping protocol check."

@@ -30,9 +30,11 @@ This is a **behavioral contract** (prompt-level separation of concerns), not a t
 - `--verbose` — Session TL can see full test case content during execution (debug mode). Combinable with any other flag.
 - `--regression` — skip Phase 1 generation, execute only existing `source: manual|regression` cases. If no matching cases exist for the target, warn and exit: `"No manual/regression cases found for [target]. Nothing to run."`
 - `--refresh` — regenerate only `source: generated` cases, preserve `manual` and `regression`.
+- `--layer1` — execute only Layer 1 (static analysis) cases. Skip all Layer 2 cases. Used by C.5 pre-commit check to avoid live execution side effects.
 
 **`source` lifecycle**: test cases start as `source: generated` (Phase 1) or `source: manual` (hand-written). A user can manually change a generated case to `source: regression` after it catches a real bug, marking it as a permanent regression guard.
 - `--regression` and `--refresh` are **mutually exclusive** (error if both provided).
+- `--layer1` is **combinable** with `--regression` or `--refresh`.
 
 ## Pre-check
 
@@ -206,7 +208,8 @@ Phase 2.2: Worktree + Team Rebuild
     Wait for execution artifacts from Session TL."
 
 Phase 2.3: Execute
-4. Session TL reads prompt from plugins/ae/tests/prompts/<id>.md (blind protocol)
+4. Session TL reads prompt from plugins/ae/tests/prompts/<id>.md (MAIN REPO path, not worktree —
+   same as assertions, Phase 1 files are uncommitted and not visible in worktree)
 5. Session TL executes the target skill in worktree context
 6. Collect artifacts
 
