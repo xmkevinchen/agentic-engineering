@@ -9,6 +9,13 @@ user-invocable: true
 
 Spin up a task-specific Agent Team for: **$ARGUMENTS**
 
+## Argument Inference
+
+If `$ARGUMENTS` is empty:
+1. Ask the user what task they want the team to work on
+2. Provide examples: "e.g., 'investigate why auth tests are flaky', 'research migration options for the DB layer', 'review the API design for v2 endpoints'"
+3. Do NOT proceed until a task description is provided
+
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family + agent config)

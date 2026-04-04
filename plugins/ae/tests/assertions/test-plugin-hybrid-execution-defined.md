@@ -11,7 +11,7 @@ source: generated
 - Layer 2 section defines Class A execution (subagent, no Agent Teams)
 - Layer 2 section defines Class B execution (Session TL, Agent Teams required)
 - Classifier rule scans target SKILL.md for TeamCreate or Agent patterns
-- Class A has fallback chain (worktree → session fallback → INFRA_FAIL)
+- Worktree creation failure results in FAIL_CLOSED (isolation_error, do not execute)
 - Unreadable/unclassifiable target results in FAIL_CLOSED
 
 ### MUST_NOT
