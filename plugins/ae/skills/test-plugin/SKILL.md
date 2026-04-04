@@ -94,9 +94,13 @@ test-lead reviews writer output for:
 
 If insufficient → feedback to writers for revision. If approved → compile test suite, write files to `plugins/ae/tests/`, SendMessage to Session TL.
 
-### 1.3 Close Test Team
+### 1.3 Writers Shutdown (Team Stays Alive)
 
-Session TL receives approved suite → shutdown prompts-writer and answer-writer. **test-lead persists** for Phase 2 judgment. test-lead is shut down after Phase 3 report is complete.
+Session TL receives approved suite → shutdown writers only (prompts-writer, answer-writer). **test-lead stays alive in the team** — it will judge execution output in Phase 2.
+
+**Do NOT TeamDelete here.** The test team persists into Phase 2 for Class A execution. Class B will TeamDelete at the start of Phase 2 (see Phase 2 → Class B Path).
+
+**Context transfer**: test cases are now written to `plugins/ae/tests/` as files. This is the sole context transfer mechanism — if the team must be rebuilt (Class B), the resurrected test-lead recovers context by reading these files.
 
 ## Phase 2: Execution
 
@@ -211,7 +215,15 @@ Assertions use **type tags as dispatch hints** — they tell test-lead which ver
 
 ### Judge Protocol
 
-Session TL sends collected artifacts to test-lead for evaluation.
+After execution, Session TL spawns test-lead as an **independent subagent** (not in a team) for judgment:
+
+```
+Agent(subagent_type: "test-lead", name: "judge",
+      prompt: "Judge these artifacts against test case <id>. Read plugins/ae/tests/<id>.md for assertions.
+               <collected artifacts>")
+```
+
+test-lead reads the test case's Expected Behavior and evaluates artifacts.
 
 **Verdict format** — judge returns per assertion:
 ```json
