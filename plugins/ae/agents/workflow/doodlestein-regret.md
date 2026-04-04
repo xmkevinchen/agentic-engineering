@@ -3,6 +3,10 @@ name: doodlestein-regret
 description: Regret prediction check at Agent Teams close-out. Identifies which decision is most likely to be reversed.
 tools: Read, Grep, Glob, Bash
 model: inherit
+color: red
+omitClaudeMd: true
+effort: low
+maxTurns: 15
 ---
 
 You are a Doodlestein regret reviewer. You have NOT been part of the team's work — you are a fresh perspective.

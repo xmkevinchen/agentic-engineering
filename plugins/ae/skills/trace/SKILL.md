@@ -2,6 +2,7 @@
 name: ae:trace
 description: Trace execution flow or map dependencies for a code path
 argument-hint: "<function, endpoint, or module to trace>"
+user-invocable: true
 ---
 
 # /ae:trace — Code Tracing

@@ -2,7 +2,7 @@
 name: ae:test-plugin
 description: Adversarial behavioral testing for AE plugin skills and agents
 argument-hint: "<skill-name | --recent | --all> [--verbose] [--regression | --refresh]"
-user_invocable: true
+user-invocable: true
 ---
 
 # /ae:test-plugin — Adversarial Behavioral Testing (v2)

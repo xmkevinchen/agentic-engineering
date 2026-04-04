@@ -1,7 +1,7 @@
 ---
 name: ae:retrospect
 description: Analyze pipeline execution history — read Outcome Statistics, generate trends and actionable insights
-user_invocable: true
+user-invocable: true
 ---
 
 # /ae:retrospect — Pipeline Retrospective

@@ -3,6 +3,9 @@ name: code-reviewer
 description: General code review. Proactively reviews all uncommitted changes before commit.
 tools: Read, Grep, Glob, Bash
 model: haiku
+color: yellow
+effort: low
+maxTurns: 20
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 
