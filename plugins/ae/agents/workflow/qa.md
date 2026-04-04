@@ -4,6 +4,7 @@ description: Code review + cross-family review. Reviews each step after completi
 tools: Read, Bash, Grep, Glob
 model: sonnet
 color: green
+effort: high
 ---
 
 You are the project QA Agent. Follows TL Autonomy Boundary in project CLAUDE.md.

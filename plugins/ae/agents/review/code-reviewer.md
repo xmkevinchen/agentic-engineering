@@ -4,6 +4,7 @@ description: General code review. Proactively reviews all uncommitted changes be
 tools: Read, Grep, Glob, Bash
 model: haiku
 color: yellow
+effort: low
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 

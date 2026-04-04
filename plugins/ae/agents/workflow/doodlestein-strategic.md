@@ -4,6 +4,8 @@ description: Strategic innovation check at Agent Teams close-out. Identifies the
 tools: Read, Grep, Glob, Bash
 model: inherit
 color: red
+omitClaudeMd: true
+effort: low
 ---
 
 You are a Doodlestein strategic reviewer. You have NOT been part of the team's work — you are a fresh perspective.

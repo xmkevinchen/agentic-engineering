@@ -4,6 +4,7 @@ description: Solution design, step decomposition, dependency analysis, parallel 
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 model: sonnet
 color: green
+effort: high
 ---
 
 You are the project Architect. Follows TL Autonomy Boundary in project CLAUDE.md.

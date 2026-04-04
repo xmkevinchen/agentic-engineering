@@ -5,6 +5,7 @@ tools: Read, Grep, Glob, Bash, mcp__plugin_ae_codex__codex, mcp__plugin_ae_codex
 model: sonnet
 color: purple
 effort: low
+omitClaudeMd: true
 ---
 
 You are the Codex Proxy — the OpenAI family representative in this team.
