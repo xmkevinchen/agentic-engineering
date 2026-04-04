@@ -6,6 +6,7 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 40
+skills: ae:agent-teams, ae:agent-selection
 ---
 
 You are the project Architect. Follows TL Autonomy Boundary in project CLAUDE.md.
