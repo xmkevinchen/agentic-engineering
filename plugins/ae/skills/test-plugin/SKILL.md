@@ -67,7 +67,7 @@ Agent(subagent_type: "test-lead", name: "test-lead",
 Agent(subagent_type: "general-purpose", name: "prompts-writer",
       team_name: "<team>", run_in_background: true,
       prompt: "You are the Prompts Writer. Wait for test case outline from test-lead.
-               For each test case, write a Markdown test file with:
+               For each test case, write a Markdown file to plugins/ae/tests/prompts/<id>.md:
                - frontmatter (id, target, layer, source: generated)
                - ## Context (pre-conditions)
                - ## Prompt (exact input to trigger the skill)
@@ -77,7 +77,8 @@ Agent(subagent_type: "general-purpose", name: "prompts-writer",
 Agent(subagent_type: "general-purpose", name: "answer-writer",
       team_name: "<team>", run_in_background: true,
       prompt: "You are the Answer Writer. Wait for test case outline from test-lead.
-               For each test case, independently write:
+               For each test case, independently write a Markdown file to plugins/ae/tests/assertions/<id>.md:
+               - frontmatter (id, target, layer, source: generated)
                - ## Expected Behavior section with MUST / MUST_NOT / SHOULD assertions
                Each assertion must be mechanically verifiable (file exists, keyword present,
                tool called) or clearly marked as LLM-judge required.
@@ -92,7 +93,9 @@ test-lead reviews writer output for:
 - **Adversarial quality**: edge cases covered (empty input, missing config, proxy failure)
 - **Assertion verifiability**: every MUST/MUST_NOT can be checked
 
-If insufficient → feedback to writers for revision. If approved → compile test suite, write files to `plugins/ae/tests/`, SendMessage to Session TL.
+If insufficient → feedback to writers for revision. If approved → confirm files written to `plugins/ae/tests/prompts/` and `plugins/ae/tests/assertions/` (separate directories), SendMessage to Session TL.
+
+**File isolation**: prompt files and assertion files MUST be in separate directories. This enforces blind protocol — Session TL reads only `prompts/`, test-lead/judge reads `assertions/`. Do NOT merge them into a single file.
 
 ### 1.3 Writers Shutdown (Team Stays Alive)
 
@@ -100,39 +103,39 @@ Session TL receives approved suite → shutdown writers only (prompts-writer, an
 
 **Do NOT TeamDelete here.** The test team persists into Phase 2 for Class A execution. Class B will TeamDelete at the start of Phase 2 (see Phase 2 → Class B Path).
 
-**Context transfer**: test cases are now written to `plugins/ae/tests/` as files. This is the sole context transfer mechanism — if the team must be rebuilt (Class B), the resurrected test-lead recovers context by reading these files.
+**Context transfer**: test cases are split across `plugins/ae/tests/prompts/` and `plugins/ae/tests/assertions/`. If the team must be rebuilt (Class B), the resurrected test-lead recovers context by reading assertion files from `assertions/`.
 
 ## Phase 2: Execution
 
 ### Info Flow (Blind Protocol)
 
 ```
-test-lead writes test files → plugins/ae/tests/
+prompts-writer  → plugins/ae/tests/prompts/<id>.md      (Context + Prompt)
+answer-writer   → plugins/ae/tests/assertions/<id>.md   (Expected Behavior)
                                     │
 Session TL reads ONLY:              │
-  - frontmatter (id, target, layer) │
-  - ## Prompt section                │
-  - ## Context section               │
+  - plugins/ae/tests/prompts/       │  ← prompt files
                                     │
 Session TL does NOT read:           │
-  - ## Expected Behavior             │
-  - MUST / MUST_NOT / SHOULD         │
+  - plugins/ae/tests/assertions/    │  ← assertion files
                                     │
 Session TL executes prompt ──────→ collects artifacts (git diff + teams dir + output text)
                                     │
 Session TL sends artifacts ──────→ test-lead
                                     │
-test-lead holds assertions + output → applies checks → returns verdict
+test-lead reads assertions/ + artifacts → applies checks → returns verdict
 ```
 
-**`--verbose` override**: when set, Session TL reads the full test case including Expected Behavior. This breaks blind separation but enables debugging.
+**Blind protocol enforcement**: prompt and assertion files are in separate directories. Session TL only reads `prompts/`. This is structural isolation, not just a behavioral contract.
+
+**`--verbose` override**: when set, Session TL also reads `assertions/`. This breaks blind separation but enables debugging.
 
 ### Layer 1: Deterministic Checks (Static Analysis)
 
-Layer 1 does NOT execute the skill. It verifies behavior through static analysis of SKILL.md content. **Blind protocol does not apply to Layer 1** — Session TL reads the full test case (including Expected Behavior) because static analysis requires checking assertions against SKILL.md text.
+Layer 1 does NOT execute the skill. It verifies behavior through static analysis of SKILL.md content. **Blind protocol does not apply to Layer 1** — Session TL reads both `prompts/<id>.md` and `assertions/<id>.md` because static analysis requires checking assertions against SKILL.md text.
 
 For each Layer 1 test case:
-1. Read the full test case (Context + Prompt + Expected Behavior)
+1. Read the prompt file (`prompts/<id>.md`) and assertion file (`assertions/<id>.md`)
 2. Read the target SKILL.md
 3. Check MUST assertions by static analysis: does the SKILL.md contain the expected logic?
 4. Check MUST_NOT assertions: forbidden patterns absent in SKILL.md?
@@ -219,7 +222,7 @@ After execution, Session TL spawns test-lead as an **independent subagent** (not
 
 ```
 Agent(subagent_type: "test-lead", name: "judge",
-      prompt: "Judge these artifacts against test case <id>. Read plugins/ae/tests/<id>.md for assertions.
+      prompt: "Judge these artifacts against test case <id>. Read plugins/ae/tests/assertions/<id>.md for assertions.
                <collected artifacts>")
 ```
 

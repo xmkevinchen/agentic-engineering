@@ -149,12 +149,8 @@ Run `test.command` from pipeline.yml. Empty → skip with "⚠️ No test comman
 
 ### C.5 Protocol Invariant Check
 If `git diff --name-only` includes files under `plugins/ae/skills/` or `plugins/ae/agents/`:
-1. Read all test case files in `plugins/ae/tests/` with `layer: 1` in frontmatter
-2. For each Layer 1 test case, execute static analysis: read target SKILL.md files, check MUST/MUST_NOT/SHOULD assertions against file content
-3. **Layer 1 failure = P1** (blocks commit via auto-pass gate, same as other P1 findings)
-4. Report results:
-   - All pass → `✅ Protocol invariant check: N/N Layer 1 cases pass`
-   - Any fail → `P1: Protocol invariant violation — [case id]: [failed assertion]`
+1. Run `/ae:test-plugin --regression` targeting the changed skills/agents (Layer 1 only)
+2. **Layer 1 failure = P1** (blocks commit via auto-pass gate, same as other P1 findings)
 
 If no plugin files in diff → skip with "No plugin skill/agent files changed, skipping protocol check."
 
