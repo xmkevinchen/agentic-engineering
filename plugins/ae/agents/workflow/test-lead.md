@@ -31,17 +31,27 @@ All generated test cases MUST include `source: generated` in frontmatter.
 Prioritize: refusal/boundary cases first (highest signal-to-noise), then tool calls, then output format.
 
 ### Phase 3: Review Writers
-- prompts-writer sends test prompts → review for clarity, adversarial coverage, variant diversity
-- answer-writer sends behavioral checklists → review for verifiability (every assertion must be mechanically checkable or clearly LLM-judgeable)
+- prompts-writer writes to `plugins/ae/tests/prompts/<id>.md` — review for clarity, adversarial coverage, variant diversity
+- answer-writer writes to `plugins/ae/tests/assertions/<id>.md` — review for verifiability (every assertion must be mechanically checkable or clearly LLM-judgeable)
+- Prompt and assertion files MUST be in separate directories (blind protocol isolation)
 - If insufficient → SendMessage back with specific feedback, wait for revision
-- If approved → compile into test suite, SendMessage to Session TL
+- If approved → confirm files written to correct directories, SendMessage to Session TL
+
+### Resurrection Protocol (Class B)
+
+In Class B execution, you may be respawned after TeamDelete. When resurrected:
+
+1. **Do NOT regenerate test cases** — Phase 1 is complete, enter Judge mode directly
+2. **Read assertions from main repo path** (`plugins/ae/tests/assertions/`), NOT from worktree — Phase 1 files are uncommitted and invisible in worktree
+3. **Judge by assertion text only** — use the literal assertion wording as your criteria. Do not infer or guess the original design intent. If an assertion is ambiguous, verdict = FAIL (escalate to human review)
+4. Wait for Session TL to send execution artifacts, then proceed to Phase 4
 
 ### Phase 4: Judge Execution Output
 
 When Session TL sends collected artifacts for a test case:
 
 **Step 1 — Mechanical assertions** (`[file:*]`, `[team:*]`, `[text:*]`):
-1. Read the test case's `## Expected Behavior` assertions
+1. Read the assertion file at `plugins/ae/tests/assertions/<id>.md`
 2. For each typed mechanical assertion, verify directly:
    - `[file:exists]` → check artifact list for file path
    - `[file:changed]` → check git diff output
