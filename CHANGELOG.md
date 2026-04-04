@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.6.0 — 2026-04-04
+
+### CC Capability Uplift (Plans 024-025)
+
+#### P0: Agent/Skill Frontmatter
+- **All 17 agents**: `color` by role group (research=blue, workflow=green, review=yellow, doodlestein=red, proxy=purple)
+- **All 17 agents**: `effort` tiering (high/medium/low by role)
+- **All 17 agents**: `maxTurns` protection (conservative-high values)
+- **8 agents**: `omitClaudeMd: true` for research + proxy + Doodlestein agents (~1000 tokens saved per spawn)
+- **All 17 skills**: `user-invocable` field audit (fixed underscore → hyphen)
+- **codex-proxy, gemini-proxy**: `model: haiku` (validated — quality indistinguishable from Sonnet, ~10x cost reduction)
+
+#### P1: Config
+- **plugin.json**: `userConfig` with 5 keys (cross_family_primary, default_effort, max_turns_default, gemini_flash_model, gemini_pro_model)
+- **plugin.json**: `outputStyles` — ae-structured + ae-compact
+- **Gemini MCP**: FALLBACK_MODEL reads from `CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL` env var
+- **Gemini MCP**: `alwaysLoad` annotation on chat/reply tools (skip ToolSearch overhead)
+
+#### P1: Docs
+- **docs/references/claude-code-plugin-api.md**: stable API reference (~200 lines) — frontmatter fields, hooks, security boundaries, feature flags, token budgets
+- **docs/decisions/021-claude-code-source-analysis-conclusion.md**: decision record with moat definition, risk register, agent override mechanism
+
+#### P1: Agents
+- **4 agents**: `skills` preload (qa→ae:code-review, architect→ae:agent-teams+ae:agent-selection, challenger→ae:agent-teams, test-lead→ae:test-plugin)
+- **cross-family-review.md**: canonical MCP tool name reference header
+- **test-plugin/SKILL.md**: worktree memory isolation instruction
+
+### Component counts
+- 17 skills, 17 agents, 2 MCP servers, 2 output styles, 2 hooks
+
 ## v0.5.0 — 2026-04-04
 
 ### test-plugin Layer 2: Real Execution (Plan 022)
