@@ -236,9 +236,10 @@ Phase 2.5: Cleanup
 After execution (Class A or B), collect:
 
 1. **File changes**: `git diff --name-only` in worktree (compare to baseline SHA)
-2. **Team creation**: `ls ~/.claude/teams/` — check for new `inboxes/` directories
-3. **State changes**: read plan/task frontmatter for status transitions
-4. **Output text**: capture execution output (messages, warnings, refusals)
+2. **File content**: for files in the diff, capture content snapshots (test-lead needs these for `[file:contains]` verification — worktree is removed after judgment)
+3. **Team creation**: `ls ~/.claude/teams/` — check for new `inboxes/` directories
+4. **State changes**: read plan/task frontmatter for status transitions
+5. **Output text**: capture execution output (messages, warnings, refusals)
 
 **Dual verification**: assertions check both:
 - **Outcome** — did the right artifacts appear? (files created, teams spawned, status changed)

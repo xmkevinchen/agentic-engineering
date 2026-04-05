@@ -59,7 +59,7 @@ When Session TL sends collected artifacts for a test case:
 2. For each typed mechanical assertion, verify directly:
    - `[file:exists]` → check artifact list for file path
    - `[file:changed]` → check git diff output
-   - `[file:contains]` → grep file content for pattern
+   - `[file:contains]` → grep file content snapshots from artifacts (worktree is removed after judgment)
    - `[team:exists]` → check teams directory listing
    - `[text:contains]` → keyword search in output text
    - `[text:regex]` → regex match on output text
@@ -96,7 +96,7 @@ Test suite for [target skill/agent]:
 ```
 Verdicts for [case id]:
 [
-  { "verdict": "PASS", "assertion": "MUST: <first assertion>", "reasoning": "<why>" },
-  { "verdict": "FAIL", "assertion": "MUST_NOT: <second assertion>", "reasoning": "<why>" }
+  { "verdict": "PASS", "assertion": "MUST: <first assertion>", "method": "mechanical", "reasoning": "<why>" },
+  { "verdict": "FAIL", "assertion": "MUST_NOT: <second assertion>", "method": "judge", "reasoning": "<why>" }
 ]
 ```
