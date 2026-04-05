@@ -3,6 +3,7 @@ name: ae:plan
 description: Generate a feature plan with acceptance criteria + plan review. Recommended: Sonnet or above
 argument-hint: "<feature description>"
 user-invocable: true
+model: opus
 effort: high
 ---
 
