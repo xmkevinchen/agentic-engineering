@@ -52,7 +52,7 @@ Analysis in progress: [title]
 Run: /ae:analyze [discussion-dir-path]
 ```
 
-If multiple → go to Step 7.
+If multiple → apply tiebreaker (highest ID). If unique → output directly. If tie → go to Step 9.
 
 ### Step 4: Active discussions
 
@@ -64,7 +64,7 @@ Discussion in progress: [title]
 Run: /ae:discuss [discussion-dir-path]
 ```
 
-If multiple active discussions → go to Step 7 (disambiguation).
+If multiple → apply tiebreaker (highest ID). If unique → output directly. If tie → go to Step 9.
 
 ### Step 5: Concluded discussions without plan
 
@@ -78,7 +78,7 @@ Discussion concluded, ready for planning: [title]
 Run: /ae:plan
 ```
 
-If multiple concluded-without-plan → go to Step 7.
+If multiple → apply tiebreaker (highest ID). If unique → output directly. If tie → go to Step 9.
 
 ### Step 6: Draft plans awaiting review
 
@@ -90,7 +90,7 @@ Plan drafted but not yet reviewed: [title]
 Run: /ae:plan-review [plan-file-path]
 ```
 
-If multiple → go to Step 7.
+If multiple → apply tiebreaker (highest ID). If unique → output directly. If tie → go to Step 9.
 
 ### Step 7: Reviewed plans with uncompleted steps
 
@@ -104,11 +104,13 @@ Plan ready for execution: [title] ([N/M] steps done)
 Run: /ae:work [plan-file-path]
 ```
 
-If multiple reviewed plans with pending steps → go to Step 9.
+Tiebreaker always produces a unique result (IDs are unique), so this step never goes to Step 9.
 
 ### Step 8: Completed plans without review
 
-Check: any plan file has all checkboxes `- [x]` AND no review file in `output.reviews` has a `target:` pointing to this plan.
+Check: any plan file has all checkboxes `- [x]` AND either:
+- No review file in `output.reviews` has a `target:` pointing to this plan, OR
+- A review file exists but has `verdict: fail` (needs re-review after fixup)
 
 ```
 All plan steps complete, ready for review: [title]
@@ -116,7 +118,7 @@ All plan steps complete, ready for review: [title]
 Run: /ae:review [plan-file-path]
 ```
 
-If multiple → go to Step 9.
+If multiple → apply tiebreaker (highest ID). If unique → output directly. If tie → go to Step 9.
 
 ### Step 9: Multiple items at same stage — disambiguation
 
@@ -139,7 +141,7 @@ Only use AskUserQuestion here — not for any other inference step.
 
 ### Step 10: All work complete
 
-Check: no active discussions, no pending plans, no uncompleted work, all reviews done.
+Check: no active discussions, no pending plans, no uncompleted work, all reviews have `verdict: pass` (or plan `status: done`).
 
 ```
 All pipeline work is complete.
