@@ -24,6 +24,7 @@ Review code after each step completion, call cross-family for external opinions.
    - SendMessage to "codex-proxy": ask for code review of the diff
    - SendMessage to "gemini-proxy": ask for code review of the diff
    - If a proxy has not responded within 120s, treat as unavailable and continue without it (See agent-selection Proxy Timeout Protocol)
+   - If ALL cross-family proxies are unavailable after fallback, include `cross_family_degraded: true` in your SendMessage to Lead (this triggers ae:work's degraded auto-pass gate)
 5. **SendMessage to the dev**: send findings, each with specific fix suggestion
 6. **Wait for dev response** — confirm fix/explain/defer for each finding
 7. **Re-review** — after dev fixes, review again
