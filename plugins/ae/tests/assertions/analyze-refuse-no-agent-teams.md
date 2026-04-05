@@ -8,14 +8,12 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [text:contains] Output contains refusal message refusing to execute
-- [text:contains] Output mentions "Agent Teams" as the reason
-- [text:contains] Output contains enablement instructions (JSON snippet with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`)
+- [text:contains] SKILL.md pre-check mentions auto-fallback when Agent Teams not enabled
+- [text:contains] SKILL.md contains warning message about running solo
+- [behavior] When Agent Teams disabled, skill proceeds with TL executing directly (auto-fallback)
 
 ### MUST_NOT
-- [behavior] No TeamCreate tool call
-- [behavior] No Agent tool call
-- [file:exists] No analysis.md created in output.discussions directory
+- [behavior] MUST NOT hard-block execution when Agent Teams is disabled (ae:analyze is auto-fallback tier)
 
 ### SHOULD
-- [text:contains] Refusal message includes settings path (`~/.claude/settings.json`)
+- [text:contains] Warning mentions cross-family and parallel review disabled

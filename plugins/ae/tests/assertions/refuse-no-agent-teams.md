@@ -8,14 +8,13 @@ source: manual
 ## Expected Behavior
 
 ### MUST
-- Output contains refusal message (refuses to execute)
-- Output mentions "Agent Teams" as the reason
-- Output contains instructions to enable (JSON snippet or settings path)
+- [text:contains] SKILL.md pre-check mentions auto-fallback when Agent Teams not enabled
+- [behavior] When Agent Teams disabled, skill proceeds in solo mode (TL writes plan directly)
+- [text:contains] Plan stays status: draft in fallback mode
 
 ### MUST_NOT
-- No TeamCreate tool call
-- No Agent tool call
-- No plan file created in output.plans directory
+- [behavior] MUST NOT call TeamCreate when Agent Teams disabled
+- [behavior] MUST NOT produce a reviewed plan in fallback mode (status must stay draft)
 
 ### SHOULD
-- Refusal message is actionable (user knows exactly what to do)
+- [text:contains] Fallback output includes guidance to run /ae:plan-review or enable Agent Teams
