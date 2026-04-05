@@ -3,6 +3,7 @@ name: ae:test-plugin
 description: Adversarial behavioral testing for AE plugin skills and agents
 argument-hint: "<skill-name | --recent | --all> [--verbose] [--regression | --refresh]"
 user-invocable: true
+effort: medium
 ---
 
 **Protocol Map** — if detail for any step is missing below, read this SKILL.md file directly before proceeding.

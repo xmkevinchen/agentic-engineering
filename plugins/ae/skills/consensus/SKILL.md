@@ -3,6 +3,7 @@ name: ae:consensus
 description: Multi-agent structured debate (for/against/neutral) to evaluate proposals and decisions
 argument-hint: "[--quick|--full] <proposal or decision to evaluate>"
 user-invocable: true
+effort: medium
 ---
 
 # /ae:consensus — Structured Debate
