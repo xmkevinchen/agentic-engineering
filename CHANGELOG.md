@@ -3,7 +3,7 @@
 ## v0.7.0 — 2026-04-05
 
 ### New Features
-- **Second Brain Integration (Phase 1)**: ae:analyze gains Step 3.5 — injects prior decisions from Second Brain MCP (`memory_search`) between research and synthesis. Graceful skip when MCP unavailable. ae:discuss conclusion template gains `entities: []` frontmatter field for downstream knowledge ingestion.
+- **Mengdie Integration (Phase 1)**: ae:analyze gains Step 3.5 — injects prior decisions from Mengdie MCP (`memory_search`) between research and synthesis. Graceful skip when MCP unavailable. ae:discuss conclusion template gains `entities: []` frontmatter field for downstream knowledge ingestion.
 - **Smart Model Selection**: Per-skill effort gradient across all 19 skills (5 high, 7 medium, 7 inherit). TL runs at opus for orchestration-heavy skills (ae:discuss, ae:plan, ae:review). Doodlestein agents pinned to `model: sonnet, effort: medium` (was `inherit, low`).
 - **Model-Effort Matrix**: New reference doc (`docs/references/model-effort-matrix.md`) with full skill + agent model/effort assignments and override hierarchy.
 
