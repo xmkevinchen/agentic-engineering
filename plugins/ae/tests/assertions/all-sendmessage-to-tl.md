@@ -8,10 +8,10 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- Every Agent() prompt routes final findings to "Lead (TL)"
+- Every Agent() prompt routes final findings to "team-lead"
 
 ### MUST_NOT
 - No agent sends findings ONLY to another agent (bypassing TL)
 
 ### SHOULD
-- Consistent use of "Lead (TL)" label across all skills
+- Consistent use of "team-lead" across all skills

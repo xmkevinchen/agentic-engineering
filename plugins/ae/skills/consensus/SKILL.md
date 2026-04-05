@@ -74,7 +74,7 @@ Agent(subagent_type: "architect", name: "advocate",
                ### Unaddressed Opponent Points (N/A in Round 1)
                Present strongest arguments with evidence from codebase.
                Acknowledge weaknesses honestly in Conceded Points.
-               SendMessage to Lead (TL) when done.
+               SendMessage to team-lead when done.
                IMPORTANT: STAY IN THE TEAM. Wait for cross-examination rounds.")
 
 Agent(subagent_type: "challenger", name: "critic",
@@ -89,7 +89,7 @@ Agent(subagent_type: "challenger", name: "critic",
                ### Unaddressed Opponent Points (N/A in Round 1)
                Find risks, hidden costs, better alternatives.
                Acknowledge strengths honestly in Conceded Points.
-               SendMessage to Lead (TL) when done.
+               SendMessage to team-lead when done.
                IMPORTANT: STAY IN THE TEAM. Wait for cross-examination rounds.")
 
 # No mediator agent — TL acts as mediator (see Step 3)
@@ -104,7 +104,7 @@ Agent(subagent_type: "codex-proxy", name: "codex-proxy",
                ### Claims (each with evidence)
                ### Conceded Points
                ### Unaddressed Opponent Points (N/A in Round 1)
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
@@ -115,7 +115,7 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
                ### Claims (each with evidence)
                ### Conceded Points
                ### Unaddressed Opponent Points (N/A in Round 1)
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 ## Step 3: TL Mediates — Phase 1 (Evaluation) + Phase 2 (Synthesis)

@@ -39,7 +39,7 @@ Prioritize: refusal/boundary cases first (highest signal-to-noise), then tool ca
 - answer-writer writes to `plugins/ae/tests/assertions/<id>.md` — review for verifiability (every assertion must be mechanically checkable or clearly LLM-judgeable)
 - Prompt and assertion files MUST be in separate directories (blind protocol isolation)
 - If insufficient → SendMessage back with specific feedback, wait for revision
-- If approved → confirm files written to correct directories, SendMessage to Session TL
+- If approved → confirm files written to correct directories, SendMessage to team-lead
 
 ### Resurrection Protocol (Class B)
 

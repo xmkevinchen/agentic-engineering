@@ -41,7 +41,7 @@ Agent(subagent_type: "qa", name: "qa",
                Teammates: security-reviewer, codex-proxy, gemini-proxy.
                Check: all code paths covered? Edge cases? Error handling?
                Missing scenarios → list them.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "security-reviewer", name: "security-reviewer",
       team_name: "<team>", run_in_background: true,
@@ -50,19 +50,19 @@ Agent(subagent_type: "security-reviewer", name: "security-reviewer",
                Teammates: qa, codex-proxy, gemini-proxy.
                Check: injection, auth bypass, data leaks tested?
                Missing security tests → list them.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review test coverage via Codex MCP — <specialized focus based on context>: <target code + test cases>.
                Teammates: qa, security-reviewer.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review test coverage via Gemini MCP — <specialized focus based on context>: <target code + test cases>.
                Teammates: qa, security-reviewer.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 ## Step 3: Generate

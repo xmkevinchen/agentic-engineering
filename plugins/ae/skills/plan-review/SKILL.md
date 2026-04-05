@@ -42,7 +42,7 @@ Agent(subagent_type: "architect", name: "architect",
                Follow Team Communication Protocol.
                Teammates: dependency-analyst, codex-proxy, gemini-proxy.
                Produce step dependency graph and parallel strategy.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
       team_name: "<team>", run_in_background: true,
@@ -50,19 +50,19 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
                Follow Team Communication Protocol.
                Teammates: architect.
                Wait for architect's proposal before analyzing.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan via Codex MCP — <specialized focus based on context>: <plan full text>.
                Teammates: architect, dependency-analyst.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan via Gemini MCP — <specialized focus based on context>: <plan full text>.
                Teammates: architect, dependency-analyst.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 ## Step 2: TL Merges Results

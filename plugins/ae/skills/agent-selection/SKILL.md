@@ -59,7 +59,7 @@ All skills that launch proxy agents MUST include timeout protection and fallback
 ### Proxy prompt suffix (add to every codex-proxy / gemini-proxy prompt)
 ```
 If MCP connection fails, times out (120s), is rate-limited, or quota is exhausted:
-SendMessage to TL: "unavailable: [reason]" (reason = timeout | connection | rate_limit | quota_exhausted).
+SendMessage to team-lead: "unavailable: [reason]" (reason = timeout | connection | rate_limit | quota_exhausted).
 Then exit immediately. Do not retry.
 ```
 

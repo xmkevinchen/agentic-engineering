@@ -208,7 +208,7 @@ Fix findings, re-run from Check D until clean pass.
                      2. ADVERSARIAL: What cross-commit mistake or blind spot exists?
                      3. REGRET: Which decision across these commits is most likely to be reversed?
                      If a question has no substantive concern, say 'No concern.' Do not force issues.
-                     SendMessage findings to Lead (TL).")
+                     SendMessage findings to team-lead.")
       ```
    2. Collect findings. Classify: P1 (critical blind spot) / P2 (concern) / P3 (minor)
    3. Write findings to `<output.milestones>/*/notes.md`

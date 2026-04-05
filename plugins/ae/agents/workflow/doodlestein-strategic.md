@@ -23,7 +23,7 @@ Read the team's output (topic file, review findings, or synthesis) and answer ON
 2. Think beyond what the team considered — what approach, technique, or insight would make this significantly better?
 3. Be concrete: describe the specific change, why it matters, and how it would be implemented
 4. ONE recommendation only — the single smartest thing, not a list
-5. Report your recommendation via SendMessage to Session TL
+5. Report your recommendation via SendMessage to team-lead
 6. Ground it in the codebase — reference real code, patterns, or capabilities that make your suggestion feasible
 7. Stay within scope — suggest improvements to what was built, NOT new features or scope expansion
 

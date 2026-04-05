@@ -45,7 +45,7 @@ Agent(subagent_type: "architect", name: "architect",
                Teammates: dependency-analyst, performance-reviewer, codex-proxy, gemini-proxy.
                Check: missing hops? Incorrect call order? Hidden async paths?
                Produce validated trace diagram.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
       team_name: "<team>", run_in_background: true,
@@ -53,7 +53,7 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
                Follow Team Communication Protocol.
                Teammates: architect, performance-reviewer.
                Find: circular deps, tight coupling, fragile chains.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
       team_name: "<team>", run_in_background: true,
@@ -61,19 +61,19 @@ Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
                Follow Team Communication Protocol.
                Teammates: architect, dependency-analyst.
                Check: N+1 queries, unnecessary hops, blocking calls, memory issues.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent trace validation via Codex MCP — <specialized focus based on context>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent trace validation via Gemini MCP — <specialized focus based on context>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 ## Step 4: TL Synthesizes Output

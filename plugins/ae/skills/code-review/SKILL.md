@@ -73,7 +73,7 @@ Agent(subagent_type: "general-purpose", model: "sonnet",
                If the change is clean and you have no substantive concern for a question,
                say 'No concern.' Do not force issues.
 
-               SendMessage your answers to Lead (TL).")
+               SendMessage your answers to team-lead.")
 ```
 
 **Scope binding**: the diff is passed inline in the prompt. The agent MUST NOT independently query `git diff main...HEAD` or any accumulated diff. This keeps per-commit Doodlestein focused on the current step only.

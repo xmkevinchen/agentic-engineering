@@ -67,7 +67,7 @@ Agent(subagent_type: "test-lead", name: "test-lead",
                All generated cases MUST have `source: generated` in frontmatter.
                Teammates: prompts-writer, answer-writer.
                Distribute outline to writers. Review their output.
-               Only SendMessage approved suite to team lead (Session TL).")
+               Only SendMessage approved suite to team-lead.")
 
 Agent(subagent_type: "general-purpose", name: "prompts-writer",
       team_name: "<team>", run_in_background: true,
@@ -77,7 +77,7 @@ Agent(subagent_type: "general-purpose", name: "prompts-writer",
                - ## Context (pre-conditions)
                - ## Prompt (exact input to trigger the skill)
                Write 2-3 prompt variants per case for robustness.
-               SendMessage all drafts to test-lead for review. Do NOT message Session TL.")
+               SendMessage all drafts to test-lead for review. Do NOT message team-lead.")
 
 Agent(subagent_type: "general-purpose", name: "answer-writer",
       team_name: "<team>", run_in_background: true,
@@ -87,7 +87,7 @@ Agent(subagent_type: "general-purpose", name: "answer-writer",
                - ## Expected Behavior section with MUST / MUST_NOT / SHOULD assertions
                Each assertion must be mechanically verifiable (file exists, keyword present,
                tool called) or clearly marked as LLM-judge required.
-               SendMessage all drafts to test-lead for review. Do NOT message Session TL.
+               SendMessage all drafts to test-lead for review. Do NOT message team-lead.
                Do NOT read prompts-writer's output — write independently.")
 ```
 
@@ -98,7 +98,7 @@ test-lead reviews writer output for:
 - **Adversarial quality**: edge cases covered (empty input, missing config, proxy failure)
 - **Assertion verifiability**: every MUST/MUST_NOT can be checked
 
-If insufficient → feedback to writers for revision. If approved → confirm files written to `plugins/ae/tests/prompts/` and `plugins/ae/tests/assertions/` (separate directories), SendMessage to Session TL.
+If insufficient → feedback to writers for revision. If approved → confirm files written to `plugins/ae/tests/prompts/` and `plugins/ae/tests/assertions/` (separate directories), SendMessage to team-lead.
 
 **File isolation**: prompt files and assertion files MUST be in separate directories. This enforces blind protocol — Session TL reads only `prompts/`, test-lead/judge reads `assertions/`. Do NOT merge them into a single file.
 

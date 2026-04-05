@@ -84,7 +84,7 @@ Agent(subagent_type: "<per agent-selection>",
                Topics: <topic brief>
 
                Round 1: Research independently. Read code, find evidence, form your
-               position on each topic. SendMessage findings to Session TL.
+               position on each topic. SendMessage findings to team-lead.
                Do NOT read other agents' findings yet.
 
                Round 2+: Respond to other agents' findings. Agree, build on,
@@ -113,7 +113,7 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 **Round 1 — Independent Research** (no cross-talk):
 - All agents research topics independently
 - Each forms their own position with evidence
-- All report findings to TL (not to each other)
+- All report findings to team-lead (not to each other)
 - TL does NOT share findings between agents yet
 
 **Round 2 — Share & Explore**:
@@ -230,7 +230,7 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 ```
 
-3. Each Doodlestein agent SendMessage findings to TL
+3. Each Doodlestein agent SendMessage findings to team-lead
 4. **TL moderates response** per `ae:agent-teams` Doodlestein Protocol:
    - TL routes challenges to ALL team members simultaneously
    - All agents respond — no agent's response is weighted higher than others
