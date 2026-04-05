@@ -33,11 +33,21 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 - Read the plan file, confirm it contains `## Acceptance Criteria` or `## AC`
 - If missing → suggest `/ae:plan`, **refuse to execute**
 - Read plan frontmatter `status`:
-  - `status: reviewed` → proceed
-  - `status: draft` or missing → **refuse to execute**:
+  - `status: reviewed` or `status: done` → proceed (`done` plans may have remaining unchecked steps from partial execution)
+  - `status: draft` → **refuse to execute**:
     ```
     Plan is unreviewed (status: draft). Run `/ae:plan-review <plan-path>` first.
     ```
+  - Any other value → **refuse to execute**:
+    ```
+    Unknown plan status '<value>'. Valid values: draft | reviewed | done | cancelled.
+    Fix the plan frontmatter before executing.
+    ```
+- **Self-healing**: read plan frontmatter `discussion:` field. If non-empty:
+  - Read that discussion's `index.md` → check `plan:` field
+  - If `plan:` is empty or `""` → patch: set `plan: "<this-plan-path>"`, log `[HEALED] Updated discussion plan: field → <this-plan-path>`
+  - If `plan:` points to a DIFFERENT plan → log `[WARNING] Discussion plan: field points to <other-plan>, not this plan. Not auto-patching (ambiguous).` Continue without patching.
+  - If `plan:` already correct → no action
 - Scan all pending steps (`- [ ]`): if any step lacks an "Expected files:" line → warn:
   ```
   ⚠️ Steps N, M missing "Expected files:" — these steps will hard-stop at Check B (requires manual confirmation or plan update).
@@ -238,7 +248,17 @@ Fix findings, re-run from Check D until clean pass.
      ```
    - UNVERIFIED states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
-3. All steps done → `All steps complete. Next: /ae:review <plan-file-path>`
+3. All steps done → run Completion Invariant, then `All steps complete. Next: /ae:review <plan-file-path>`
+
+## Completion Invariant
+
+When all plan steps are `[x]`, write pipeline state before suggesting next steps:
+
+- [ ] Update plan frontmatter: `status: done`
+- [ ] Read plan `discussion:` field. If non-empty → read that discussion's `index.md`:
+  - Set `status: concluded`
+  - Log: `[WRITEBACK] Plan status → done, discussion status → concluded`
+- [ ] If `discussion:` is empty → log: `[WRITEBACK] Plan status → done (standalone plan, no discussion)`
 
 ## Output
 
@@ -249,6 +269,6 @@ Fix findings, re-run from Check D until clean pass.
 ## Next Steps
 
 Based on work completion, suggest with exact executable command:
-- If all plan steps completed → `All steps complete. Next: /ae:review <plan-file-path>`
+- If all plan steps completed → `Pipeline state updated. All steps complete. Next: /ae:review <plan-file-path>`
 - If steps remain → auto-continue to next step (or pause if gate failed)
 - If blockers encountered → `Blocker on Step N. Try: /ae:think <blocker description>`
