@@ -148,25 +148,40 @@ TL collects findings from all reviewers + cross-family, synthesizes:
 - **Consider** — simplification suggestions
 - **Approved**
 
-Close the Team. Modify plan based on results. Update plan frontmatter `status: reviewed`.
+Modify plan based on results. Update plan frontmatter `status: reviewed`.
 
 ## Step 4: Doodlestein Challenge (optional)
 
 Before confirming with the user, check cross-family availability (`cross_family` in pipeline.yml):
 
 - **Cross-family available** → run Doodlestein challenge on the plan:
-  - Compile: plan title + step summaries + AC list
-  - Send to cross-family (codex-proxy + gemini-proxy + challenger) with 3 questions:
-    - Q1 Smartest Alternative: Is there a fundamentally different approach that makes this plan unnecessary?
-    - Q2 Problem Validity: Which step solves a problem that doesn't actually exist?
-    - Q3 Regret Prediction: Which step will be reworked or removed, and why?
-  - Present challenges to user
-  - User agrees → modify plan accordingly
-  - User dismisses → record in plan review summary
+  - Compile: plan title + step summaries + AC list + key review findings
+  - Spawn canonical Doodlestein agents INTO the existing plan-review team:
+    ```
+    Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
+          team_name: "<existing team>", run_in_background: true,
+          prompt: "<compiled plan summary + file paths to read>
+                   IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+
+    Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
+          team_name: "<existing team>", run_in_background: true,
+          prompt: "<compiled plan summary + file paths to read>
+                   IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+
+    Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
+          team_name: "<existing team>", run_in_background: true,
+          prompt: "<compiled plan summary + file paths to read>
+                   IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+    ```
+  - TL routes challenges to original review team members for response (per ae:agent-teams Doodlestein Protocol)
+  - Valid challenge → modify plan accordingly
+  - Refuted → record in plan review summary
 - **Cross-family unavailable** → skip:
   ```
   ℹ️ Doodlestein challenge skipped: cross-family unavailable.
   ```
+
+Close the Team after Doodlestein completes (or after Step 3 if Doodlestein skipped).
 
 ## Step 5: Confirm
 

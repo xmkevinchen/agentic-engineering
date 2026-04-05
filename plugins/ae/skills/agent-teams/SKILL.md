@@ -39,13 +39,41 @@ Spawn → Rounds → [Add agents as needed] → Conclusion → Shutdown
 - **Spawn once** per task/discussion. One team lives for the entire lifecycle.
 - **Only add agents, never remove for disagreement.** Strong disagreement is signal, not noise.
 - **Non-responsive agents**: If an agent has not responded within 120s after a round prompt, TL marks it as unresponsive and proceeds without it. This is operational, not removal for dissent. (Extends Proxy Timeout Protocol from `ae:agent-selection` to all agents.)
-- **Shutdown only after conclusion is written.**
+- **Shutdown only after conclusion is written.** If the skill has a Doodlestein step, team close MUST be after Doodlestein completes — original team members must be alive to respond to challenges.
 
 ### Communication Rules
 
-- **Agents SendMessage to team-lead only.** No lateral agent-to-agent messages unless TL explicitly routes a debate exchange.
 - **Round 1 isolation**: Agents communicate only via SendMessage to team-lead. Do not write intermediate findings to shared discussion directories. Do not read files other agents may have written during this round.
-- **TL routes all information.** TL decides what each agent sees and when.
+- **Post Round 1**: Agents may SendMessage to team-lead or to each other directly. Agent-to-agent communication is a design intent — agents should interact like real collaborators.
+
+### Lateral Communication
+
+Agent-to-agent direct messaging is permitted and encouraged. TL does not gatekeep agent communication — TL orchestrates it (see TL Orchestration below).
+
+Examples of valid lateral messaging:
+- dev notifies qa "step done, ready for review"
+- qa sends findings to dev for fixes
+- challenger sends probe to security-reviewer for domain assessment
+- architect sends step decomposition to dependency-analyst for validation
+
+The only restriction: Round 1 isolation (agents research independently before any cross-talk).
+
+### TL Orchestration
+
+TL is an active orchestrator who knows the team's dependency graph and ensures messages reach agents who need them.
+
+**Dependency forwarding**: When agent A declares "wait for B" (in agent definition or spawn prompt), TL must:
+1. Know this dependency exists (skill SKILL.md documents the dependency graph)
+2. When B's findings arrive at TL, forward them to A
+3. If A sends a message only to TL that B needs, forward it to B
+
+TL = mailman who knows the dependency graph, not a gatekeeper who controls all communication.
+
+**When to forward vs when not to**:
+- Forward: agent findings that another agent is explicitly waiting for
+- Forward: messages that contain information relevant to an agent's declared dependencies
+- Do not forward: routine status updates that only TL needs
+- Do not forward: messages between agents who are already communicating directly
 
 ### Evidence Requirement
 
@@ -325,4 +353,4 @@ No proposer/opposition distinction. Agents are collaborative investigators, not 
 - **Concession-free debate**: Agent that never concedes anything is not engaging honestly.
 - **Killing dissenters**: Removing an agent because they disagree. Strong opinions are assets.
 - **Round-per-team**: Spawning a new team each round. One team, one lifecycle.
-- **Lateral messaging**: Agents SendMessage-ing each other directly, bypassing TL routing.
+- **Routing lateral**: Agent .md files containing conditional routing logic ("in /ae:review send to X, in /ae:plan send to Y"). Routing decisions belong in skill spawn prompts, not agent definitions.
