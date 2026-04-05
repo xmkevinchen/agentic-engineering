@@ -12,7 +12,7 @@ Research the codebase and generate a structured analysis for: **$ARGUMENTS**
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
-2. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }` to ~/.claude/settings.json and restart Claude Code."
+2. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing the analysis directly (no team spawn). Output is lower confidence but structurally identical.
 
 ## Flow
 
@@ -105,6 +105,10 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
 ```
 
 **Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.
+
+**TL Orchestration — dependency graph**:
+- archaeologist → standards-expert: When archaeologist reports findings, TL forwards to standards-expert (who is waiting for code analysis before comparing)
+- archaeologist + standards-expert → challenger: When both report, TL forwards compiled findings to challenger (who waits for teammate findings before challenging)
 
 Also read project context files (CLAUDE.md, docs/) for background.
 

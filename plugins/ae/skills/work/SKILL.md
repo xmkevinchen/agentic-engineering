@@ -47,7 +47,7 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 
 ### Check 3: Agent Teams
 - Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
-- If not enabled → **refuse to execute** with instructions to enable
+- If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
 
 ### Check 4: Deferred Items
 - Check `<output.milestones>/*/notes.md` for items tagged to current step

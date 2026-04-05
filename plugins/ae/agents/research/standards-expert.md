@@ -48,7 +48,7 @@ Research industry best practices, find reference implementations, compare projec
 ## Team Communication Protocol
 
 ### Phase 1: Collaborate with Archaeologist
-1. **Wait for `archaeologist` to send code analysis before comparing** — base comparisons on real code context, not assumptions
+1. **Wait for `archaeologist` to send code analysis before comparing** (TL will forward when available) — base comparisons on real code context, not assumptions
 2. If more code details needed → SendMessage to `archaeologist`: "How exactly is X implemented in module Y?"
 
 ### Phase 2: After completing research

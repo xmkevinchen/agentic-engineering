@@ -84,7 +84,7 @@ After all challenge responses received:
 ### Step 1: Parallel Launch
 
 **Simultaneously**:
-- Wait for Archaeologist and Standards Expert analysis results
+- Wait for Archaeologist and Standards Expert analysis results (TL will forward when available)
 - Call Codex/Gemini for independent research on the topic (don't wait for teammates)
 
 ### Step 2: Challenge + Cross-family

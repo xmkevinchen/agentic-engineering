@@ -41,7 +41,7 @@ This is a **behavioral contract** (prompt-level separation of concerns), not a t
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
+1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing directly (no team spawn).
 2. **Target resolution**: resolve input to file paths. If skill name → find `plugins/ae/skills/<name>/SKILL.md`. If not found → refuse with suggestion.
 3. **Judge health check**: read `pipeline.yml` → `test_plugin.judge` (default: `codex`). Verify the judge is reachable:
    - `codex` → check `mcp__plugin_ae_codex__codex` tool is available
