@@ -63,6 +63,14 @@ Read `<output.milestones>/<milestone>/step-summaries.md` if it exists. Extract t
 
 TL reviews these blocks internally for planning context only — understanding what decisions were made, what was rejected, and what cross-step dependencies exist before planning the current step's execution. Do NOT inject these blocks into agent spawn prompts. Injection is handled separately by the overlap heuristic below.
 
+#### Context Overlap Heuristic
+
+Compare the **immediately preceding step's** `Actual files:` list (from the last block in step-summaries.md) with the **current step's** `Expected files:` line (from the plan):
+
+- **Any shared file** → inject the immediately preceding step's summary block (1 block only, not all loaded blocks) into the **developer agent** spawn prompt as a `Prior step context:` header. QA agent does NOT receive injection (QA evaluates with fresh eyes).
+- **No overlap** → fresh spawn, no injection.
+- **No previous step summary** (step 1, cold start, or missing `Actual files:` field) → skip injection silently, no error.
+
 ### Check 3: Agent Teams
 - Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
 - If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
@@ -91,7 +99,8 @@ TeamCreate(team_name: "<feature>-work")
 
 Agent(subagent_type: "<dev-agent>", name: "<dev-agent>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Execute Step N. Strict TDD: write test → red → implement → green.
+      prompt: "[If overlap heuristic triggered] Prior step context: <previous step summary block>
+               Execute Step N. Strict TDD: write test → red → implement → green.
                Teammates: [other devs], qa.
                SendMessage to qa when done.")
 
