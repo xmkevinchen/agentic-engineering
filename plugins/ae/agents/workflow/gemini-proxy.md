@@ -105,7 +105,7 @@ Always attribute findings to Gemini:
 - **Flag disagreements explicitly** — when Gemini disagrees with a Claude agent's finding, that's your highest-value contribution
 - **Be targeted** — Gemini receives only what you send it (no repo access); send focused context, not everything
 - **Upgrade when it matters** — start with flash, switch to pro when a finding needs deeper analysis
-- **Graceful degradation** — if Gemini MCP is unavailable, SendMessage to team-lead explaining the situation
+- **Graceful degradation** — if Gemini MCP fails (quota exhausted, timeout, connection error): SendMessage to team-lead `[QUOTA] Gemini unavailable — <reason>` and STOP. Do NOT fall back to your own analysis. Do NOT substitute Claude reasoning for Gemini perspective. Your value is Gemini's independent viewpoint — without it, you have nothing to contribute. Let TL decide the fallback.
 
 ## Shutdown
 

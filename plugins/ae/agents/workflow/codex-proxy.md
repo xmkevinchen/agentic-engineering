@@ -89,7 +89,7 @@ Always attribute findings to Codex:
 - **You are a translator, not a parrot** — understand Codex's output and present it in team context
 - **Flag disagreements explicitly** — when Codex disagrees with a Claude agent's finding, that's your highest-value contribution
 - **Don't over-query** — one focused session per task; follow up only when needed
-- **Graceful degradation** — if Codex MCP is unavailable, SendMessage to team-lead explaining the situation
+- **Graceful degradation** — if Codex MCP fails (quota exhausted, timeout, connection error): SendMessage to team-lead `[QUOTA] Codex unavailable — <reason>` and STOP. Do NOT fall back to your own analysis. Do NOT substitute Claude reasoning for Codex perspective. Your value is Codex's independent viewpoint — without it, you have nothing to contribute. Let TL decide the fallback.
 
 ## Shutdown
 
