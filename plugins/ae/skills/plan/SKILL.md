@@ -150,6 +150,12 @@ TL collects findings from all reviewers + cross-family, synthesizes:
 
 Modify plan based on results. Update plan frontmatter `status: reviewed`.
 
+**Update source discussion**: If the plan was created from a concluded discussion, update the discussion's `index.md`:
+- Set `plan: "<path-to-plan-file>"` (the plan file just written)
+- Set `pipeline.plan: done`
+
+This enables `/ae:dashboard` and `/ae:next` to link discussions to their plans without scanning.
+
 ## Step 4: Doodlestein Challenge (optional)
 
 Before confirming with the user, check cross-family availability (`cross_family` in pipeline.yml):

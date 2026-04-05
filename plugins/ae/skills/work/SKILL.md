@@ -13,6 +13,8 @@ If `$ARGUMENTS` is empty:
 3. Not found → check conversation context for a plan being discussed
 4. Still nothing → ask user which plan to execute
 
+**Tiebreaker rule**: when multiple plans match, select the most recent plan with `status: reviewed` and uncompleted steps (by plan ID/creation order, not file mtime). `/ae:next` uses the same rule to ensure consistent suggestions.
+
 # /ae:work — Execute Plan
 
 Execute the plan at **$ARGUMENTS**.
