@@ -3,7 +3,6 @@ name: ae:review
 description: Deep multi-agent review + fixup (feature completion gate)
 argument-hint: "<plan file path>"
 user-invocable: true
-context: fork
 ---
 
 ## Argument Inference
