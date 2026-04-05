@@ -53,8 +53,8 @@ id: "NNN"
 title: "<title>"
 type: plan
 created: YYYY-MM-DD
-status: draft
-discussion: ""           # link to conclusion.md if exists
+status: draft              # Valid status: draft | reviewed | done | cancelled
+discussion: ""             # path to source discussion directory (e.g., ".ae/discussions/029-slug/")
 ---
 
 # Feature: <title>
@@ -150,12 +150,6 @@ TL collects findings from all reviewers + cross-family, synthesizes:
 
 Modify plan based on results. Update plan frontmatter `status: reviewed`.
 
-**Update source discussion**: If the plan was created from a concluded discussion, update the discussion's `index.md`:
-- Set `plan: "<path-to-plan-file>"` (the plan file just written)
-- Set `pipeline.plan: done`
-
-This enables `/ae:dashboard` and `/ae:next` to link discussions to their plans without scanning.
-
 ## Step 4: Doodlestein Challenge (optional)
 
 Before confirming with the user, check cross-family availability (`cross_family` in pipeline.yml):
@@ -199,9 +193,19 @@ Show the complete plan to the user. Indicate next step is `/ae:work <plan file p
 2. Plan review summary (with architect/analyst/simplifier discussion records)
 3. Doodlestein review (if cross-family available)
 
+## Completion Invariant
+
+Before showing next steps, write pipeline state:
+
+- [ ] Read plan frontmatter `discussion:` field
+- [ ] If `discussion:` is non-empty → read that discussion's `index.md`:
+  - Set `plan: "<path-to-this-plan-file>"`
+  - Set `pipeline.plan: done`
+- [ ] If `discussion:` is empty → skip silently (standalone plan, no discussion to update)
+
 ## Next Steps
 
 Based on plan status, suggest with exact executable command:
-- If plan approved → `Plan reviewed. Next: /ae:work <plan-file-path>`
+- If plan approved → `Pipeline state updated. Next: /ae:work <plan-file-path>`
 - If plan has unresolved discussion references → `Unresolved discussions. Run /ae:discuss <discussion-dir> first.`
 - If plan review raised Must Fix items → `Must Fix items remain. Re-run /ae:plan-review <plan-file-path>`

@@ -433,7 +433,6 @@ pipeline:
   analyze: skipped
   discuss: in_progress
   plan: pending
-  work: pending
 plan: ""
 tags: [relevant, tags]
 ---
