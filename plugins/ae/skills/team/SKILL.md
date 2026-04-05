@@ -34,21 +34,21 @@ Refer to the **Agent Selection Reference** skill for the selection table and rul
 TeamCreate(team_name: "<task-summary>")
 
 # Launch selected agents (2-4 core + cross-family if needed)
-# All agents SendMessage findings to Lead (TL). TL synthesizes.
+# All agents SendMessage findings to team-lead. TL synthesizes.
 
 Agent(subagent_type: "<agent1>", name: "<agent1>",
       team_name: "<team>", run_in_background: true,
       prompt: "<task context>.
                Follow Team Communication Protocol.
                Teammates: <list>.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "<agent2>", name: "<agent2>",
       team_name: "<team>", run_in_background: true,
       prompt: "<task from agent2's perspective>.
                Follow Team Communication Protocol.
                Teammates: <list>.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 # ... additional agents as needed
 
@@ -57,13 +57,13 @@ Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "<task> via Codex MCP.
                Teammates: <list>.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "<task> via Gemini MCP.
                Teammates: <list>.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 ## Step 3: TL Synthesizes

@@ -43,8 +43,8 @@ Spawn → Rounds → [Add agents as needed] → Conclusion → Shutdown
 
 ### Communication Rules
 
-- **Agents SendMessage to TL only.** No lateral agent-to-agent messages unless TL explicitly routes a debate exchange.
-- **Round 1 isolation**: Agents communicate only via SendMessage to TL. Do not write intermediate findings to shared discussion directories. Do not read files other agents may have written during this round.
+- **Agents SendMessage to team-lead only.** No lateral agent-to-agent messages unless TL explicitly routes a debate exchange.
+- **Round 1 isolation**: Agents communicate only via SendMessage to team-lead. Do not write intermediate findings to shared discussion directories. Do not read files other agents may have written during this round.
 - **TL routes all information.** TL decides what each agent sees and when.
 
 ### Evidence Requirement
@@ -100,7 +100,7 @@ Three fresh agents that join an existing team LATE, after initial rounds converg
 **How Doodlestein works**:
 1. TL prepares two inputs: (a) file paths to relevant source code/artifacts, (b) lean decisions summary (decisions + rationale ONLY — no debate transcript, no full argument chains). Doodlestein agents receive file paths FIRST to form independent impressions, then the decisions summary for comparison.
 2. TL spawns all three Doodlestein agents INTO the existing team simultaneously
-3. Each Doodlestein agent SendMessage findings to TL (not directly to team — TL moderates)
+3. Each Doodlestein agent SendMessage findings to team-lead (not directly to team — TL moderates)
 4. TL routes challenges to ALL team members simultaneously (not Host-first — proposer's motivated defense should not be the primary input)
 5. All agents must respond — no hiding
 6. TL judges which challenges have merit. TL does not give proposer's response higher weight than opposition's independent assessment
@@ -139,7 +139,7 @@ For skills where a specific proposal/artifact needs adversarial validation: ae:c
 #### Round 1 — Independent Research (no cross-talk)
 - TL sends topic brief to all agents
 - Each agent researches independently (reads code, finds evidence, forms position)
-- Each agent reports findings to TL only
+- Each agent reports findings to team-lead only
 - TL does NOT share findings between agents yet
 
 #### Round 2 — Debate
@@ -243,7 +243,7 @@ Discussion Mode can escalate specific topics to Debate Mode (forced FOR/AGAINST)
 #### Round 1 — Independent Research (no cross-talk)
 - TL sends topic brief to all agents
 - Each agent researches independently, forms initial position with evidence
-- Reports findings to TL only
+- Reports findings to team-lead only
 
 #### Round 2 — Share & Explore
 - TL compiles all Round 1 findings, highlights disagreements and gaps
@@ -300,7 +300,7 @@ No proposer/opposition distinction. Agents are collaborative investigators, not 
 #### Round 1 — Parallel Investigation
 - TL sends task brief to all agents
 - Each agent investigates independently (per Base Protocol communication rules)
-- Each agent reports findings to TL with evidence (file:line)
+- Each agent reports findings to team-lead with evidence (file:line)
 
 #### Round 2 (optional) — Cross-Check
 - TL compiles findings, identifies contradictions or gaps

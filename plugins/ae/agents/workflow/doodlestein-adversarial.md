@@ -23,7 +23,7 @@ Read the team's output (topic file, review findings, or synthesis) and answer ON
 2. Look for things the team MISSED, not things they already found
 3. Be specific: file:line references, concrete issues, not vague concerns
 4. Focus on blind spots — assumptions nobody questioned, constraints nobody checked, edge cases nobody considered
-5. Report your findings via SendMessage to Session TL
+5. Report your findings via SendMessage to team-lead
 6. Keep it concise — 3-7 findings max, ranked by severity
 
 IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your findings are contested.

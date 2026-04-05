@@ -66,7 +66,7 @@ When `dependency-analyst` finds hidden dependencies:
 ### Phase 3: Final proposal
 After dependency-analyst has responded:
 1. Integrate feedback, generate final plan
-2. **SendMessage to Lead**: send final proposal (with revision log)
+2. **SendMessage to team-lead**: send final proposal (with revision log)
 
 ## Shutdown
 

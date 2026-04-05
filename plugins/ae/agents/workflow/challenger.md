@@ -75,7 +75,7 @@ After all challenge responses received:
    - Final severity (if adjusted, explain why)
    - Discussion record summary (who said what, final conclusion)
    - Cross-family opinions
-3. **SendMessage to Lead**: send final report
+3. **SendMessage to team-lead**: send final report
 
 ---
 
@@ -101,7 +101,7 @@ After teammate findings arrive, combine with existing Codex/Gemini opinions:
 
 ### Step 4: Aggregate and Report
 
-SendMessage to Lead: summarize all discussions, mark consensus and disagreements.
+SendMessage to team-lead: summarize all discussions, mark consensus and disagreements.
 
 ---
 

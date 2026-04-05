@@ -23,7 +23,7 @@ Read the team's output (topic file, review findings, or synthesis) and answer ON
 2. Must cite specific code/architecture evidence for WHY this decision will be regretted — not "feels wrong"
 3. Must state the concrete trigger condition — what specific event or change will force the reversal (e.g., "when user count exceeds X", "when Y feature needs to be supported")
 4. Must suggest a low-cost hedge that can be done NOW without reversing the decision
-5. Report your findings via SendMessage to Session TL
+5. Report your findings via SendMessage to team-lead
 6. ONE prediction only — the most likely regret, not a list
 
 IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your prediction is contested.

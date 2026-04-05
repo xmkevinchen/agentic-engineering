@@ -71,7 +71,7 @@ Agent(subagent_type: "archaeologist", name: "archaeologist",
       prompt: "Deeply investigate existing code for: <$ARGUMENTS>.
                Follow Team Communication Protocol.
                Teammates: standards-expert, challenger.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
       team_name: "<team>", run_in_background: true,
@@ -79,7 +79,7 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
                Follow Team Communication Protocol.
                Teammates: archaeologist, challenger.
                Wait for archaeologist's code analysis before comparing.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
@@ -88,20 +88,20 @@ Agent(subagent_type: "challenger", name: "challenger",
                Teammates: archaeologist, standards-expert, codex-proxy, gemini-proxy.
                Step 1: independent blind-spot review.
                Step 2: wait for teammate findings, then challenge.
-               SendMessage challenges to Lead (TL) when done.
+               SendMessage challenges to team-lead when done.
                You are pure opposition. Do NOT synthesize — TL synthesizes.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Research <$ARGUMENTS> via Codex MCP — <specialized focus based on context>.
                Teammates: archaeologist, standards-expert, challenger.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Research <$ARGUMENTS> via Gemini MCP — <specialized focus based on context>.
                Teammates: archaeologist, standards-expert, challenger.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 **Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference.

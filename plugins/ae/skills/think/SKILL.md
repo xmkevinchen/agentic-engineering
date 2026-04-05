@@ -38,7 +38,7 @@ Agent(subagent_type: "architect", name: "architect",
                Follow Team Communication Protocol.
                Teammates: standards-expert, challenger, codex-proxy, gemini-proxy.
                Produce analysis with evidence from code.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
       team_name: "<team>", run_in_background: true,
@@ -46,7 +46,7 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
                Follow Team Communication Protocol.
                Teammates: architect, challenger.
                Wait for architect's analysis before evaluating.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
@@ -54,19 +54,19 @@ Agent(subagent_type: "challenger", name: "challenger",
                Follow Team Communication Protocol.
                Teammates: architect, standards-expert.
                Wait for architect's analysis before challenging.
-               SendMessage challenges to Lead (TL) when done.")
+               SendMessage challenges to team-lead when done.")
 
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent analysis of this problem via Codex MCP — <specialized focus based on context>: <problem + relevant files>.
                Teammates: architect, standards-expert, challenger.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Independent analysis of this problem via Gemini MCP — <specialized focus based on context>: <problem + relevant files>.
                Teammates: architect, standards-expert, challenger.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 ## Step 3: TL Synthesizes

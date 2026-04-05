@@ -54,7 +54,7 @@ TaskCreate("Cross-family challenge + synthesis")
 
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** (pure opposition).
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies. If a proxy fails to connect, it should SendMessage to **Lead (TL)** and exit gracefully.
+**Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
 
 **Launch all in one message** (`run_in_background: true`):
 
@@ -64,7 +64,7 @@ Agent(subagent_type: "<reviewer>", name: "<reviewer>",
       team_name: "<team>", run_in_background: true,
       prompt: "Review <diff-range> for <your domain>. Follow Team Communication Protocol.
                Teammates: [other selected reviewers], challenger.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 # Always include challenger (pure opposition — does NOT synthesize):
 Agent(subagent_type: "challenger", name: "challenger",
@@ -74,19 +74,19 @@ Agent(subagent_type: "challenger", name: "challenger",
                Teammates: [selected reviewers], codex-proxy, gemini-proxy.
                Step 1: independent review of blind spots.
                Step 2: targeted challenges with structured format (Claim/Evidence/Objection/Confidence).
-               SendMessage challenges to Lead (TL) when done.
+               SendMessage challenges to team-lead when done.
                You are pure opposition. Do NOT synthesize — TL synthesizes.")
 
 # Cross-family (same specialized prompt for both):
 Agent(subagent_type: "codex-proxy", name: "codex-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review <diff-range> via Codex MCP. <specialized focus based on diff context>.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
       team_name: "<team>", run_in_background: true,
       prompt: "Review <diff-range> via Gemini MCP. <same specialized focus as codex>.
-               SendMessage findings to Lead (TL) when done.")
+               SendMessage findings to team-lead when done.")
 ```
 
 **No worktree isolation** — teammates need SendMessage communication.
