@@ -18,19 +18,21 @@
   ],
   "userConfig": {
     "gemini_flash_model": {
+      "title": "Gemini Flash Model",
       "description": "Gemini Flash model name",
       "type": "string",
       "default": "gemini-2.5-flash"
     },
     "gemini_pro_model": {
+      "title": "Gemini Pro Model",
       "description": "Gemini Pro model name",
       "type": "string",
       "default": "gemini-2.5-pro"
     }
   },
   "outputStyles": [
-    { "path": "output-styles/ae-structured.md" },
-    { "path": "output-styles/ae-compact.md" }
+    "./output-styles/ae-structured.md",
+    "./output-styles/ae-compact.md"
   ],
   "mcpServers": {
     "codex": {
