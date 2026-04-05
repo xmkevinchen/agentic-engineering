@@ -286,6 +286,7 @@ id: "[same as index]"
 title: "[title] — Conclusion"
 concluded: YYYY-MM-DD
 plan: ""
+entities: []
 ---
 
 # [Title] — Conclusion
@@ -327,6 +328,8 @@ plan: ""
 → `/ae:plan` for converged decisions
 → Resolve spawned discussions first if any
 ```
+
+**Entity extraction (required)**: Before writing the conclusion, extract entities from the Decision Summary Topic column for the `entities:` frontmatter field. For each topic: produce the full compound form (kebab-case) + individual tokens. Single-word topics → one entity. Multi-word → tokens + full compound only (no partial compounds). Filter stopwords and pure numbers. Lowercase, deduplicate. Example: "Auth middleware" → `[auth, middleware, auth-middleware]`.
 
 Update index.md: set `pipeline.discuss: done`, add conclusion link.
 
