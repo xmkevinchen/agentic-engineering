@@ -9,5 +9,8 @@ node_modules/
 .claude/cross-family-status.json
 .claude/pipeline.yml
 
+# Embedding model cache (from mengdie/second-brain MCP)
+.fastembed_cache/
+
 # Process artifacts (discussions, plans, reviews, analyses, etc.)
 .ae/
