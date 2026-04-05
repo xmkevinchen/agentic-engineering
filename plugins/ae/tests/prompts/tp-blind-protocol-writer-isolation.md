@@ -1,5 +1,5 @@
 ---
-id: test-plugin-blind-protocol-defined
+id: tp-blind-protocol-writer-isolation
 target: ae:test-plugin
 layer: 1
 source: generated

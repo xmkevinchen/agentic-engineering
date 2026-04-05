@@ -1,6 +1,6 @@
 ---
 id: discuss-no-teamdelete-between-topics
-skill: ae:discuss
+target: ae:discuss
 layer: 1
 source: generated
 ---

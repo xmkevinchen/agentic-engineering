@@ -1,5 +1,5 @@
 ---
-id: test-plugin-hybrid-execution-defined
+id: tp-blind-protocol-defined
 target: ae:test-plugin
 layer: 1
 source: generated
