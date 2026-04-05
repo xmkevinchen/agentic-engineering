@@ -22,11 +22,10 @@ Deep review of all changes for **$ARGUMENTS**.
 - Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
 - If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
 
-### Check 2: Plan All Done + Self-Healing
+### Check 2: Plan All Done
 - Read the plan file
 - Confirm all step checkboxes are `- [x]`
 - If pending → suggest `/ae:work`, **refuse to execute**
-- **Self-healing**: if all `[x]` but plan `status` ≠ `done` → patch to `done`, log `[HEALED] Plan status → done (all steps complete)`
 
 ### Check 3: Tests Green
 - Run the test command from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping tests"
