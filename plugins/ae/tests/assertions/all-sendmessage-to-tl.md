@@ -11,7 +11,7 @@ source: generated
 - Every Agent() prompt routes final findings to "team-lead"
 
 ### MUST_NOT
-- No agent sends findings ONLY to another agent (bypassing TL)
+- No agent sends final findings ONLY to another agent without TL also receiving them (TL must be able to synthesize all results)
 
 ### SHOULD
 - Consistent use of "team-lead" across all skills
