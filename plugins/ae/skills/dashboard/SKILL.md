@@ -47,9 +47,10 @@ For each subdirectory in `output.discussions`:
 ### Plans
 
 For each `.md` file in `output.plans`:
-1. Read frontmatter: `id`, `title`, `status` (draft/reviewed), `discussion`
+1. Read frontmatter: `id`, `title`, `status` (draft/reviewed/done), `discussion`
 2. Count checkboxes: `- [x]` (done) vs `- [ ]` (pending)
 3. Determine stage:
+   - `status: done` → "done" (skip review check — plan is explicitly marked complete)
    - `status: draft` → "plan draft", action = `/ae:plan-review <plan-path>`
    - `status: reviewed`, all `- [ ]` → "ready for work"
    - `status: reviewed`, mixed `- [x]`/`- [ ]` → "work in progress (N/M steps)"
