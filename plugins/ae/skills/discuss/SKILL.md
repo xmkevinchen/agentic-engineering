@@ -1,8 +1,9 @@
 ---
 name: ae:discuss
-description: Structured design discussion (create topics or continue pending ones, all decisions persisted)
+description: Structured design discussion (create topics or continue pending ones, all decisions persisted). Recommended: Sonnet or above
 argument-hint: "<topic description or discussion directory path>"
 user-invocable: true
+effort: high
 ---
 
 **Protocol Map** — if detail for any step is missing below, read this SKILL.md file directly before proceeding.
