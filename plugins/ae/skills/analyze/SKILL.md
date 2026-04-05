@@ -113,6 +113,16 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
 
 Also read project context files (CLAUDE.md, docs/) for background.
 
+### 3.5. Prior Context (from Second Brain)
+
+Run this step only after all agents have SendMessage'd findings to TL and before Step 4 synthesis begins.
+
+1. Call `memory_search` MCP tool with the research topic as query
+2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 4
+3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
+4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
+5. Treat as background context only — prior art does not constrain current evidence
+
 ### 4. TL Synthesizes + Generate Analysis Document
 
 TL collects findings from archaeologist, standards-expert, challenger, and cross-family proxies. Synthesize into analysis document at `<output.discussions>/NNN-slug/analysis.md`:
@@ -132,6 +142,9 @@ tags: [relevant, tags]
 [Original topic or question]
 
 ## Findings
+
+### Prior Art from Project Knowledge Base
+[Prior decisions from Second Brain, if available. Each with provenance: title, source_file, knowledge_type, valid_from, snippet. Or: "Prior context: unavailable" if tool not registered / no results.]
 
 ### Relevant Code
 [Key files and modules with paths (from Archaeologist)]
