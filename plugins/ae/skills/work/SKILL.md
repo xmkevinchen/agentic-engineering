@@ -3,7 +3,6 @@ name: ae:work
 description: Execute plan (TDD + commit + review, pre-checks chain). Recommended: Sonnet or above
 argument-hint: "<plan file path>"
 user-invocable: true
-model: opus
 effort: high
 ---
 

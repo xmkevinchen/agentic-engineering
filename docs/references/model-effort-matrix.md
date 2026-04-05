@@ -9,8 +9,8 @@ Current model and effort assignments for all AE skills and agents.
 | ae:discuss | opus | high | Multi-round team orchestration + synthesis |
 | ae:plan | opus | high | Plan generation + team review |
 | ae:review | opus | high | Deep multi-agent review + fixup |
-| ae:work | opus | high | Plan execution loop (TDD + commit + review) |
-| ae:think | opus | high | Deep multi-step reasoning |
+| ae:work | inherit | high | Plan execution loop (TDD + commit + review) |
+| ae:think | inherit | high | Deep multi-step reasoning |
 | ae:analyze | inherit | medium | Research + team analysis |
 | ae:consensus | inherit | medium | Structured debate |
 | ae:plan-review | inherit | medium | Standalone plan review |
