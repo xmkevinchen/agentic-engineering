@@ -3,6 +3,7 @@ name: ae:plan-review
 description: Re-review an existing plan with Agent Teams (standalone plan review without regenerating)
 argument-hint: "<plan file path>"
 user-invocable: true
+effort: medium
 ---
 
 ## Argument Inference
