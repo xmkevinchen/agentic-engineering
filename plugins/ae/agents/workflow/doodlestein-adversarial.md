@@ -2,10 +2,10 @@
 name: doodlestein-adversarial
 description: Fresh-eyes blunder check at Agent Teams close-out. Reads team output and looks for mistakes, oversights, and blind spots.
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
 color: red
 omitClaudeMd: true
-effort: low
+effort: medium
 maxTurns: 15
 ---
 
