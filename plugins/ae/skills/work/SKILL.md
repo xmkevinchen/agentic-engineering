@@ -57,6 +57,12 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 - `- [x]` = done, `- [ ]` = pending. Current step = first pending.
 - All done → suggest `/ae:review`, **refuse to execute**
 
+#### Step-Summary Context
+
+Read `<output.milestones>/<milestone>/step-summaries.md` if it exists. Extract the last 3 complete step blocks (identified by `## Step N` headers), or all blocks if fewer than 3 exist. If the file doesn't exist → skip silently (no error, no warning — this is normal for step 1 or first-time execution).
+
+TL reviews these blocks internally for planning context only — understanding what decisions were made, what was rejected, and what cross-step dependencies exist before planning the current step's execution. Do NOT inject these blocks into agent spawn prompts. Injection is handled separately by the overlap heuristic below.
+
 ### Check 3: Agent Teams
 - Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
 - If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
