@@ -60,14 +60,14 @@ The only restriction: Round 1 isolation (agents research independently before an
 
 ### TL Orchestration
 
-TL is an active orchestrator who knows the team's dependency graph and ensures messages reach agents who need them.
+TL is an active orchestrator for **declared dependency waits** — cases where an agent's definition or spawn prompt says "wait for X." TL ensures these agents receive the information they're waiting for.
 
 **Dependency forwarding**: When agent A declares "wait for B" (in agent definition or spawn prompt), TL must:
 1. Know this dependency exists (skill SKILL.md documents the dependency graph)
 2. When B's findings arrive at TL, forward them to A
 3. If A sends a message only to TL that B needs, forward it to B
 
-TL = mailman who knows the dependency graph, not a gatekeeper who controls all communication.
+TL forwards based on declared dependency waits only — not a general message router. Agents who communicate directly don't need TL in the loop.
 
 **When to forward vs when not to**:
 - Forward: agent findings that another agent is explicitly waiting for
@@ -350,8 +350,8 @@ When Agent Teams is unavailable (env var not set or feature gate closed), skills
 
 | Tier | Skills | Behavior |
 |------|--------|----------|
-| **hard-block** | ae:discuss, ae:review, ae:consensus | Refuse to execute — multi-agent IS the feature. Tell user to enable Agent Teams. |
-| **auto-fallback** | ae:analyze, ae:plan, ae:plan-review, ae:think, ae:trace, ae:testgen, ae:team, ae:work, ae:test-plugin | Print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` TL executes directly, no team spawn. Output is lower confidence. |
+| **hard-block** | ae:discuss, ae:review, ae:consensus, ae:test-plugin | Refuse to execute — multi-agent IS the feature (test-plugin requires blind protocol isolation via TeamCreate + test-lead). Tell user to enable Agent Teams. |
+| **auto-fallback** | ae:analyze, ae:plan, ae:plan-review, ae:think, ae:trace, ae:testgen, ae:team, ae:work | Print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` TL executes directly, no team spawn. Output is lower confidence. |
 | **no-pre-check** | ae:code-review | Uses plain Agent() subagents, not TeamCreate. No Agent Teams dependency. |
 
 Each skill's pre-check implements its tier. Auto-fallback skills may have skill-specific fallback details (e.g., ae:plan stays draft, ae:work uses "Lead executes directly" path).

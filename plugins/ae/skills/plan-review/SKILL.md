@@ -65,6 +65,9 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
                SendMessage findings to team-lead when done.")
 ```
 
+**TL Orchestration — dependency graph**:
+- architect → dependency-analyst: When architect reports findings, TL forwards to dependency-analyst (who waits for architect's proposal before analyzing)
+
 ## Step 2: TL Merges Results
 
 TL collects findings from architect, dependency-analyst, and cross-family proxies, then synthesizes.
