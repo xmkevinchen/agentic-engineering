@@ -1,5 +1,5 @@
 ---
-id: test-plugin-typed-assertions-defined
+id: tp-typed-assertions-format
 target: ae:test-plugin
 layer: 1
 source: generated

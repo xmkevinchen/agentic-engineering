@@ -1,6 +1,6 @@
 ---
 id: discuss-self-recovery-instruction
-skill: ae:discuss
+target: ae:discuss
 layer: 1
 source: generated
 ---

@@ -1,6 +1,6 @@
 ---
 id: discuss-appendix-section-exists
-skill: ae:discuss
+target: ae:discuss
 layer: 1
 source: generated
 ---

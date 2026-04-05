@@ -1,5 +1,5 @@
 ---
-id: refuse-mutual-exclusive-flags
+id: tp-refuse-mutual-exclusive-flags
 target: ae:test-plugin
 layer: 1
 source: generated
@@ -8,7 +8,7 @@ source: generated
 ## Context
 - Agent Teams enabled
 - `.claude/pipeline.yml` exists with valid config
-- Both `--regression` and `--refresh` flags passed simultaneously
+- Both `--regression` and `--refresh` flags are provided simultaneously
 
 ## Prompt
 /ae:test-plugin --regression --refresh ae:discuss
