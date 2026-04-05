@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.6.1 — 2026-04-05
+
+### Bug Fixes
+- **All 12 skills**: pre-check field corrected from `experiments` → `env` (CC reads `settings.json → env`, not `experiments`)
+- **ae:discuss**: add missing Agent Teams pre-check (was the only Teams-dependent skill without one)
+- **ae:work**: remove broken git push PreToolUse hook (CC hooks match tool name only, cannot filter by command content)
+- **ae:analyze**: add missing pipeline.yml pre-check
+- **check-cross-family.sh**: fix jq path and remediation message to use `env` block
+- **README**: fix settings.json example (`env` not `experiments`), update command count (12/17)
+
+### Test Suite
+- 30 new test cases: ae:analyze (6 L1 + 3 L2), ae:work (4 L1), ae:discuss (5 L1)
+- Test naming convention standardized: descriptive slugs, filename matches `id:` field
+- 11 TC-format assertion files migrated to slug format (atomic rename)
+
 ## v0.6.0 — 2026-04-04
 
 ### CC Capability Uplift (Plans 024-025)
