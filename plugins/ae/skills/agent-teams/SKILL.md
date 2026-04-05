@@ -356,6 +356,10 @@ When Agent Teams is unavailable (env var not set or feature gate closed), skills
 
 Each skill's pre-check implements its tier. Auto-fallback skills may have skill-specific fallback details (e.g., ae:plan stays draft, ae:work uses "Lead executes directly" path).
 
+### Enhanced Detection (recommended for auto-fallback tier)
+
+Beyond the env var check, auto-fallback skills can verify `run_in_background` parameter availability via `ToolSearch("select:Agent")`. If the Agent tool schema is returned without `run_in_background`, the feature is partially gated (e.g., CI/headless environments). Degrade per tier table. If ToolSearch returns no results (Agent already loaded as first-class tool) or fails — fail-open and proceed. Cache the result per skill invocation. See ae:work Check 3 for reference implementation.
+
 ---
 
 ## Anti-Patterns

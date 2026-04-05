@@ -72,8 +72,14 @@ Compare the **immediately preceding step's** `Actual files:` list (from the last
 - **No previous step summary** (step 1, cold start, or missing `Actual files:` field) → skip injection silently, no error.
 
 ### Check 3: Agent Teams
-- Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
-- If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
+1. Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
+   - Not set → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
+2. If set → call `ToolSearch("select:Agent")` to verify Agent tool schema includes `run_in_background` parameter:
+   - Schema returned WITH `run_in_background` param → `AGENT_TEAMS_FULL = true`
+   - Schema returned WITHOUT `run_in_background` → `AGENT_TEAMS_FULL = false`, degrade per tier table (same as auto-fallback)
+   - No results returned (Agent already loaded as first-class tool) → `AGENT_TEAMS_FULL = true`
+   - ToolSearch call fails/times out → `AGENT_TEAMS_FULL = true` (fail-open), log: `[WARNING] ToolSearch unavailable, assuming full Agent Teams support`
+3. Cache `AGENT_TEAMS_FULL` for this entire ae:work invocation (all steps). Do not repeat ToolSearch per step.
 
 ### Check 4: Deferred Items
 - Check `<output.milestones>/*/notes.md` for items tagged to current step
@@ -228,7 +234,7 @@ Fix findings, re-run from Check D until clean pass.
 
 2. **Accumulated Doodlestein Checkpoint** (before gate)
 
-   **Skip if** `pipeline.yml → work.accumulated_doodlestein: false`. Initialize `no_accumulated_p1 = true`.
+   **Skip if** `pipeline.yml → work.accumulated_doodlestein: false` OR `AGENT_TEAMS_FULL = false` (run_in_background unavailable — log: `[Doodlestein checkpoint skipped: run_in_background unavailable]`). Initialize `no_accumulated_p1 = true`.
 
    After commit, compute from plan file:
    - `total_steps` = count all `### Step N` headings
