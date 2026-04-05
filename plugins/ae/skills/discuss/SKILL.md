@@ -32,6 +32,10 @@ Read `pipeline.yml` → `output.discussions` for the base directory.
 
 File format templates are in the Appendix at the end of this file.
 
+## Pre-check
+
+1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
+
 ## Step 1. Setup
 
 1. **Resolve discussion directory**:

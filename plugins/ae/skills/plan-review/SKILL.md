@@ -18,7 +18,7 @@ Review the plan at **$ARGUMENTS** using Agent Teams.
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ "experiments": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": true } }` to ~/.claude/settings.json and restart Claude Code."
+1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }` to ~/.claude/settings.json and restart Claude Code."
 2. Confirm `.claude/pipeline.yml` exists
 3. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
 4. Read the plan file at `$ARGUMENTS` — confirm it exists and contains `## Steps` and `## Acceptance Criteria`

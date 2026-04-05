@@ -3,11 +3,6 @@ name: ae:work
 description: Execute plan (TDD + commit + review, pre-checks chain)
 argument-hint: "<plan file path>"
 user-invocable: true
-hooks:
-  PreToolUse:
-    - type: command
-      if: "Bash(git push*)"
-      command: "echo '{\"decision\": \"block\", \"reason\": \"git push blocked by ae:work. Push requires explicit user approval.\"}'"
 ---
 
 ## Argument Inference
@@ -21,8 +16,6 @@ If `$ARGUMENTS` is empty:
 # /ae:work — Execute Plan
 
 Execute the plan at **$ARGUMENTS**.
-
-**Note**: The `hooks:` frontmatter includes a `PreToolUse` hook that blocks `git push*` commands. This hook persists for the entire session after ae:work is invoked — this is intentional. Push requires explicit user approval per project workflow.
 
 ## Execution Flow
 
@@ -53,7 +46,7 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 - All done → suggest `/ae:review`, **refuse to execute**
 
 ### Check 3: Agent Teams
-- Read `~/.claude/settings.json` → check `experiments.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is `true`
+- Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
 - If not enabled → **refuse to execute** with instructions to enable
 
 ### Check 4: Deferred Items

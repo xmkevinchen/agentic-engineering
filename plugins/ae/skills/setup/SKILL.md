@@ -84,9 +84,9 @@ Empty does NOT block execution. Not all projects have tests, not all changes nee
 
 Check if Agent Teams is enabled (required for multi-agent workflows):
 
-1. Read `~/.claude/settings.json` — look for `"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"` in the `experiments` object
+1. Read `~/.claude/settings.json` — look for `"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"` in the `env` object
 2. If **not enabled** → use AskUserQuestion: "Agent Teams is not enabled. Most ae commands require it. Enable it now? (This will update ~/.claude/settings.json)"
-   - **User confirms** → read `~/.claude/settings.json`, add/merge `"experiments": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": true }` into the JSON, write back. Tell user: "Agent Teams enabled."
+   - **User confirms** → read `~/.claude/settings.json`, add/merge `"env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }` into the JSON, write back. Tell user: "Agent Teams enabled."
    - **User declines** → warn: "Skipped. Commands that use Agent Teams (plan, work, review, team, analyze, think, consensus, testgen, trace) will refuse to execute."
 3. If already enabled → `✅ Agent Teams: enabled`
 
