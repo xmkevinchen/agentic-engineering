@@ -17,7 +17,7 @@ Review code after each step completion, call cross-family for external opinions.
 
 ## Method
 
-1. **Wait for developer SendMessage notification of completion**
+1. **Wait for developer SendMessage notification of completion** (TL will forward when available)
 2. **Review changes** — `git diff` to see all changes
 3. **Claude review** — check against review checklist
 4. **Cross-family review** — send uncommitted diff to proxy agents for independent review (parallel):

@@ -12,7 +12,7 @@ Perform systematic deep analysis on: **$ARGUMENTS**
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
-2. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required. Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
+2. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing directly (no team spawn).
 
 ## Step 1: Frame
 
@@ -68,6 +68,10 @@ Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
                Teammates: architect, standards-expert, challenger.
                SendMessage findings to team-lead when done.")
 ```
+
+**TL Orchestration — dependency graph**:
+- architect → standards-expert: When architect reports findings, TL forwards to standards-expert (who waits for architect's analysis before evaluating)
+- architect → challenger: When architect reports findings, TL forwards to challenger (who waits for architect's analysis before challenging)
 
 ## Step 3: TL Synthesizes
 

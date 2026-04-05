@@ -59,7 +59,7 @@ Review the Architect's step decomposition, validate that dependency assumptions 
 ## Team Communication Protocol
 
 ### Phase 1: Wait for Architect's proposal
-Wait for `architect` to send step decomposition before analyzing.
+Wait for `architect` to send step decomposition before analyzing (TL will forward when available).
 
 ### Phase 2: After completing analysis
 1. **SendMessage to `architect`**: send analysis results — which parallel assumptions hold, which have hidden coupling

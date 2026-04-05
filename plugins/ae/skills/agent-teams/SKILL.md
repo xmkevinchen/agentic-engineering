@@ -344,6 +344,20 @@ No proposer/opposition distinction. Agents are collaborative investigators, not 
 
 ---
 
+## Degradation
+
+When Agent Teams is unavailable (env var not set or feature gate closed), skills degrade based on tier:
+
+| Tier | Skills | Behavior |
+|------|--------|----------|
+| **hard-block** | ae:discuss, ae:review, ae:consensus | Refuse to execute — multi-agent IS the feature. Tell user to enable Agent Teams. |
+| **auto-fallback** | ae:analyze, ae:plan, ae:plan-review, ae:think, ae:trace, ae:testgen, ae:team, ae:work, ae:test-plugin | Print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` TL executes directly, no team spawn. Output is lower confidence. |
+| **no-pre-check** | ae:code-review | Uses plain Agent() subagents, not TeamCreate. No Agent Teams dependency. |
+
+Each skill's pre-check implements its tier. Auto-fallback skills may have skill-specific fallback details (e.g., ae:plan stays draft, ae:work uses "Lead executes directly" path).
+
+---
+
 ## Anti-Patterns
 
 - **Proposer as moderator**: Letting proposer collect, summarize, or route messages. TL does this.
