@@ -3,7 +3,6 @@ name: ae:think
 description: Deep multi-step reasoning for complex architecture decisions, hard bugs, or performance analysis. Recommended: Sonnet or above
 argument-hint: "<problem or question>"
 user-invocable: true
-model: opus
 effort: high
 ---
 
