@@ -27,7 +27,7 @@ Deep review of all changes for **$ARGUMENTS**.
 - Confirm all step checkboxes are `- [x]`
 - If pending → suggest `/ae:work`, **refuse to execute**
 
-### Check 2: Tests Green
+### Check 3: Tests Green
 - Run the test command from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping tests"
 - If fail → fix first, **refuse to execute**
 
