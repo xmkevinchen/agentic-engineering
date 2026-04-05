@@ -1,8 +1,9 @@
 ---
 name: ae:review
-description: Deep multi-agent review + fixup (feature completion gate)
+description: Deep multi-agent review + fixup (feature completion gate). Recommended: Sonnet or above
 argument-hint: "<plan file path>"
 user-invocable: true
+effort: high
 ---
 
 ## Argument Inference
