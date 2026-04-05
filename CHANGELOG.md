@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.6.2 — 2026-04-05
+
+### Bug Fixes
+- **ae:test-plugin**: artifact collection protocol missing file content snapshots — `[file:contains]` assertions need content, not just filenames (P2 from review)
+- **test-lead**: Output Format verdict examples missing `method` field, inconsistent with Phase 4 schema
+- **ae:dashboard**: plan `status: done` now treated as "done" directly — no longer requires a review file (fixes false "awaiting review" for pre-review features)
+- **plugin.json**: add `title` fields to userConfig, fix outputStyles path format (object → string)
+- **Test frontmatter**: 5 prompt files used `skill:` instead of `target:` — standardized
+
+### Test Suite
+- ae:test-plugin test suite regenerated: 8 → 21 cases (15 Layer 1 + 6 Layer 2)
+- Layer 2 cases cover Class B execution (TeamDelete/rebuild, test-lead resurrection, artifact collection, orphan cleanup, --refresh deletion, report persistence)
+- All 21 cases verified: L1 15/15 PASS, L2 6/6 PASS
+
+### Pipeline State
+- 17 discussion frontmatter inconsistencies fixed (pipeline.* fields, plan path links)
+- Batch reconciliation of historical discussions predating Completion Invariant
+
 ## v0.6.1 — 2026-04-05
 
 ### Bug Fixes
