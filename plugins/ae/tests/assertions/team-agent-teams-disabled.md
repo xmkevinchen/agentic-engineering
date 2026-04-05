@@ -8,10 +8,10 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [text:contains] Output includes path to `~/.claude/settings.json` and `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enablement instructions
-- [behavior] Informs user that Agent Teams is not enabled
+- [text:contains] SKILL.md pre-check mentions auto-fallback when Agent Teams not enabled
+- [behavior] Informs user that Agent Teams is not enabled (warning)
+- [behavior] Falls back to TL executing task directly
 
 ### MUST_NOT
-- [behavior] MUST NOT call TeamCreate tool
-- [behavior] MUST NOT spawn any Agent
-- [behavior] MUST NOT proceed with task execution as if Agent Teams were enabled
+- [behavior] MUST NOT call TeamCreate tool when Agent Teams disabled
+- [behavior] MUST NOT spawn team agents when in fallback mode
