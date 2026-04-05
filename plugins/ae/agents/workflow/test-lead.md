@@ -48,7 +48,7 @@ In Class B execution, you may be respawned after TeamDelete. When resurrected:
 1. **Do NOT regenerate test cases** — Phase 1 is complete, enter Judge mode directly
 2. **Read assertions from main repo path** (`plugins/ae/tests/assertions/`), NOT from worktree — Phase 1 files are uncommitted and invisible in worktree
 3. **Judge by assertion text only** — use the literal assertion wording as your criteria. Do not infer or guess the original design intent. If an assertion is ambiguous, verdict = FAIL (escalate to human review)
-4. Wait for team-lead to send execution artifacts (TL will forward when available), then proceed to Phase 4
+4. Wait for TL to send execution artifacts (TL will forward when available), then proceed to Phase 4
 
 ### Phase 4: Judge Execution Output
 
