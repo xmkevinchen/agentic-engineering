@@ -195,7 +195,21 @@ Fix findings, re-run from Check D until clean pass.
 
 ## Post-commit
 
-1. Brief summary: what was done, key decisions, structural changes
+1. **Step Summary** — persist to disk AND echo in conversation.
+
+   Write a step-summary block to `<output.milestones>/<milestone>/step-summaries.md` (create directory and file if they don't exist). Append one block per completed step:
+
+   ```
+   ## Step N — <step title> (commit: <hash from git rev-parse HEAD>)
+   **Decisions**: [key choices made, with rationale — 1-3 bullets]
+   **Rejected**: [alternatives considered but dropped, why]
+   **Cross-step deps**: [files/contracts this step created that later steps depend on]
+   **Actual files**: [comma-separated list from git diff --name-only, already available from Check B]
+   ```
+
+   The `Actual files:` field copies the file list from Check B's drift detection output — no re-computation needed. This field is consumed by the context overlap heuristic (see Check 2) to determine whether to inject prior step context into agent spawn prompts.
+
+   Also echo the summary content in conversation (replacing the previous ephemeral "Brief summary" behavior).
 
 2. **Accumulated Doodlestein Checkpoint** (before gate)
 
