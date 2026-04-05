@@ -195,7 +195,9 @@ Show the complete plan to the user. Indicate next step is `/ae:work <plan file p
 
 ## Completion Invariant
 
-Before showing next steps, write pipeline state:
+**Guard**: only fire if plan `status: reviewed` (i.e., plan review passed). If plan is still `status: draft` (review found Must Fix items), skip — do not write `pipeline.plan: done` for unreviewed plans.
+
+When guard passes, write pipeline state:
 
 - [ ] Read plan frontmatter `discussion:` field
 - [ ] If `discussion:` is non-empty → read that discussion's `index.md`:
