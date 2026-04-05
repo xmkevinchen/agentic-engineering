@@ -254,11 +254,11 @@ Fix findings, re-run from Check D until clean pass.
 
 When all plan steps are `[x]`, write pipeline state before suggesting next steps:
 
-- [ ] Update plan frontmatter: `status: done`
+- [ ] Do NOT update plan `status` — leave as `reviewed`. ae:review will set `status: done` after verdict. This preserves the work → review handoff (ae:review argument inference filters `status: done`).
 - [ ] Read plan `discussion:` field. If non-empty → read that discussion's `index.md`:
-  - Set `status: concluded`
-  - Log: `[WRITEBACK] Plan status → done, discussion status → concluded`
-- [ ] If `discussion:` is empty → log: `[WRITEBACK] Plan status → done (standalone plan, no discussion)`
+  - Set `pipeline.work: done` (note: not read by dashboard/next, but documents completion)
+  - Log: `[WRITEBACK] Discussion pipeline.work → done`
+- [ ] If `discussion:` is empty → log: `[WRITEBACK] All steps complete (standalone plan)`
 
 ## Output
 
