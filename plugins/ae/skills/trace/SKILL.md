@@ -33,7 +33,7 @@ Create a Team for parallel trace validation (Investigation Mode). **TL synthesiz
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family).
+**Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
 ```
 TeamCreate(team_name: "<target>-trace")
@@ -42,7 +42,7 @@ Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
       prompt: "Validate this trace for completeness and accuracy: <trace results>.
                Follow Team Communication Protocol.
-               Teammates: dependency-analyst, performance-reviewer, codex-proxy, gemini-proxy.
+               Teammates: dependency-analyst, performance-reviewer, <enabled proxies>.
                Check: missing hops? Incorrect call order? Hidden async paths?
                Produce validated trace diagram.
                SendMessage findings to team-lead when done.")
@@ -63,15 +63,11 @@ Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
                Check: N+1 queries, unnecessary hops, blocking calls, memory issues.
                SendMessage findings to team-lead when done.")
 
-Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+# For each enabled proxy (check pipeline.yml cross_family):
+# TL picks angles first, assigns to available proxies. If both enabled, different angles.
+Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent trace validation via Codex MCP — <specialized focus based on context>: <target + trace results>.
-               Teammates: architect, dependency-analyst, performance-reviewer.
-               SendMessage findings to team-lead when done.")
-
-Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Independent trace validation via Gemini MCP — <specialized focus based on context>: <target + trace results>.
+      prompt: "Independent trace validation via <proxy> MCP — <assigned angle>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
                SendMessage findings to team-lead when done.")
 ```

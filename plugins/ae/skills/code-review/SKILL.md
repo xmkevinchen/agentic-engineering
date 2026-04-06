@@ -26,7 +26,7 @@ Mode is set by caller (ae:work reads `work.review_mode` from pipeline.yml, or `-
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family** (full mode only): Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family). In **light mode**, skip Tracks 2 and 3 entirely.
+**Cross-family** (full mode only): Read `cross_family` from pipeline.yml. For each enabled family, launch its proxy track in parallel. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback. In **light mode**, skip Tracks 2 and 3 entirely.
 
 **Degraded signal**: After all tracks complete, report cross-family coverage:
 - All requested tracks completed → `cross_family_complete`
@@ -43,13 +43,9 @@ Check `git diff --stat` to determine change scope. Then:
 
 Review `git diff` + `git diff --cached`.
 
-### Track 2: Codex Review
+### Tracks 2-3: Cross-family Review (for each enabled proxy in pipeline.yml cross_family)
 
-Launch `codex-proxy` agent to review the same diff via Codex MCP.
-
-### Track 3: Gemini Review
-
-Launch `gemini-proxy` agent to review the same diff via Gemini MCP.
+Launch each enabled proxy agent to review the diff with an `<assigned angle>`. TL picks angles first, assigns to available proxies. If both enabled, different angles.
 
 ### Track 4: Doodlestein Adversarial Challenge (full mode only)
 

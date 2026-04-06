@@ -112,7 +112,7 @@ After the plan is written, create a Team for parallel review.
 
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
 
-**Cross-family**: Follow the cross-family rules in the **Agent Selection Reference** skill — same specialized prompt for both proxies, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
+**Cross-family**: Follow the cross-family rules in the **Agent Selection Reference** skill — different angles per proxy, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")
@@ -128,15 +128,11 @@ Agent(subagent_type: "<reviewer-2>", name: "<reviewer-2>",
       team_name: "<team>", run_in_background: true,
       prompt: "<review focus>. SendMessage findings to team-lead when done.")
 
-# Cross-family (same specialized prompt):
-Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+# Cross-family — for each enabled proxy (check pipeline.yml cross_family):
+# TL picks angles first, assigns to available proxies. If both enabled, different angles.
+Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "<specialized review focus based on plan domain>: <plan full text>.
-               SendMessage findings to team-lead when done.")
-
-Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-      team_name: "<team>", run_in_background: true,
-      prompt: "<same specialized focus as codex>: <plan full text>.
+      prompt: "<assigned angle>: <plan full text>.
                SendMessage findings to team-lead when done.")
 ```
 

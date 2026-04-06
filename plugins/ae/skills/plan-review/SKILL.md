@@ -31,7 +31,7 @@ Read the full plan text, then create a Team for parallel review.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family).
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
 ```
 TeamCreate(team_name: "<feature>-plan-review")
@@ -41,7 +41,7 @@ Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
                Follow Team Communication Protocol.
-               Teammates: dependency-analyst, codex-proxy, gemini-proxy.
+               Teammates: dependency-analyst, <enabled proxies>.
                Produce step dependency graph and parallel strategy.
                SendMessage findings to team-lead when done.")
 
@@ -53,15 +53,11 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
                Wait for architect's proposal before analyzing.
                SendMessage findings to team-lead when done.")
 
-Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+# For each enabled proxy (check pipeline.yml cross_family):
+# TL picks angles first, assigns to available proxies. If both enabled, different angles.
+Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan via Codex MCP — <specialized focus based on context>: <plan full text>.
-               Teammates: architect, dependency-analyst.
-               SendMessage findings to team-lead when done.")
-
-Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan via Gemini MCP — <specialized focus based on context>: <plan full text>.
+      prompt: "Review this plan via <proxy> MCP — <assigned angle>: <plan full text>.
                Teammates: architect, dependency-analyst.
                SendMessage findings to team-lead when done.")
 ```
