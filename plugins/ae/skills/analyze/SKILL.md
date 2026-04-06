@@ -165,6 +165,32 @@ tags: [relevant, tags]
 [Suggest `/ae:discuss` or `/ae:plan`]
 ```
 
+### 4.5. Knowledge Capture (to Mengdie)
+
+Run this step after the analysis document is written (Step 4) and before closing the team (Step 5).
+
+Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
+
+**Skill-specific extraction**:
+- One item per key finding from the `## Findings` section of the analysis document
+- Skip findings that restate prior art already surfaced in Step 3.5
+- `source_type`: `conclusion`
+- `knowledge_type`: `factual`
+- `entities`: from the `tags` field in the analysis document frontmatter
+- `source_file`: path to the generated `analysis.md`
+
+**Example**:
+```
+memory_ingest({
+  title: "[analyze]: Claude Code ink renderer is a customized fork of vadimdemedes/ink",
+  content: "The terminal rendering layer in Claude Code (src/ink/) is based on vadimdemedes/ink v5, with custom patches for streaming output and ANSI handling. Key divergence points: custom reconciler, patched text measurement.",
+  source_file: "docs/discussions/021-claude-code-source-analysis/analysis.md",
+  source_type: "conclusion",
+  knowledge_type: "factual",
+  entities: "claude-code,ink,terminal,rendering"
+})
+```
+
 ### 5. Close Team + Present
 
 Send shutdown_request to all teammates. Show the user:
