@@ -2,10 +2,10 @@
 name: doodlestein-strategic
 description: Strategic innovation check at Agent Teams close-out. Identifies the single smartest improvement.
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
 color: red
 omitClaudeMd: true
-effort: low
+effort: medium
 maxTurns: 15
 ---
 

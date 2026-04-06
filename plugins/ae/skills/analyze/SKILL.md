@@ -3,6 +3,7 @@ name: ae:analyze
 description: Research and analyze a topic, module, or problem domain in the codebase
 argument-hint: "<topic or question>"
 user-invocable: true
+effort: medium
 ---
 
 # /ae:analyze — Codebase Analysis
