@@ -38,7 +38,7 @@ Create a Team with explicit stances. **TL = mediator** (collects, evaluates, and
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family** (skip if `--quick`): Read `cross_family` from pipeline.yml. Include enabled proxy agents as independent evaluators. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family). If proxy ultimately unavailable (after fallback), TL treats as "agent absent" and proceeds.
+**Cross-family** (skip if `--quick`): Read `cross_family` from pipeline.yml. Include enabled proxy agents as independent evaluators. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback. If proxy ultimately unavailable (after fallback), TL treats as "agent absent" and proceeds.
 
 ### Structured Output Schema
 
@@ -67,7 +67,7 @@ Agent(subagent_type: "architect", name: "advocate",
       team_name: "<team>", run_in_background: true,
       prompt: "STANCE: FOR. Argue in favor of this proposal: <proposal + context>.
                Follow Team Communication Protocol.
-               Teammates: critic[, codex-proxy, gemini-proxy].
+               Teammates: critic[, <enabled proxies>].
                YOU MUST use the structured output schema:
                ## Position: FOR
                ### Claims (each with file:line evidence)
@@ -82,7 +82,7 @@ Agent(subagent_type: "challenger", name: "critic",
       team_name: "<team>", run_in_background: true,
       prompt: "STANCE: AGAINST. Argue against this proposal: <proposal + context>.
                Follow Team Communication Protocol.
-               Teammates: advocate[, codex-proxy, gemini-proxy].
+               Teammates: advocate[, <enabled proxies>].
                YOU MUST use the structured output schema:
                ## Position: AGAINST
                ### Claims (each with file:line evidence)
@@ -96,20 +96,11 @@ Agent(subagent_type: "challenger", name: "critic",
 # No mediator agent — TL acts as mediator (see Step 3)
 
 # Cross-family (skip if --quick):
-Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+# For each enabled proxy (check pipeline.yml cross_family):
+# TL picks angles first, assigns to available proxies. If both enabled, different angles.
+Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent evaluation of this proposal: <proposal + context>.
-               Teammates: advocate, critic.
-               YOU MUST use the structured output schema:
-               ## Position: INDEPENDENT
-               ### Claims (each with evidence)
-               ### Conceded Points
-               ### Unaddressed Opponent Points (N/A in Round 1)
-               SendMessage findings to team-lead when done.")
-
-Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Independent evaluation of this proposal: <proposal + context>.
+      prompt: "Independent evaluation of this proposal from <assigned angle>: <proposal + context>.
                Teammates: advocate, critic.
                YOU MUST use the structured output schema:
                ## Position: INDEPENDENT
@@ -128,7 +119,7 @@ TL acts as neutral mediator. Two clearly separated phases.
 If MODE=quick → SKIP Phase 1 entirely. Proceed immediately to Phase 2.
 
 Wait for advocate and critic to send their Round 1 output.
-[If not --quick] Also wait for codex-proxy and gemini-proxy.
+[If not --quick] Also wait for enabled proxy agents.
 If any agent sends `## Position: UNAVAILABLE`, mark them absent and proceed without them.
 
 Once all Round 1 inputs received, produce this EXACT evaluation block. Retain it for Phase 2 synthesis, AND SendMessage it to the debate participants:

@@ -53,16 +53,11 @@ Agent(subagent_type: "<agent2>", name: "<agent2>",
 
 # ... additional agents as needed
 
-# Cross-family (if enabled and needed)
-Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+# Cross-family — for each enabled proxy (check pipeline.yml cross_family):
+# TL picks angles first, assigns to available proxies. If both enabled, different angles.
+Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "<task> via Codex MCP.
-               Teammates: <list>.
-               SendMessage findings to team-lead when done.")
-
-Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-      team_name: "<team>", run_in_background: true,
-      prompt: "<task> via Gemini MCP.
+      prompt: "<task> via <proxy> MCP — <assigned angle>.
                Teammates: <list>.
                SendMessage findings to team-lead when done.")
 ```

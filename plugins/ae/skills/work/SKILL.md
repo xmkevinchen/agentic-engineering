@@ -260,9 +260,9 @@ Fix findings, re-run from Check D until clean pass.
    For plans with >5 steps, checkpoint runs **twice**: at midpoint and at final step. This is intentional — midpoint catches early drift, final step catches late drift.
 
    When triggered:
-   1. Spawn Codex proxy (primary) + Gemini proxy (optional, if enabled) with Doodlestein prompt on `git diff main...HEAD` (accumulated feature diff):
+   1. For each enabled proxy (check pipeline.yml cross_family), spawn with Doodlestein prompt on `git diff main...HEAD` (accumulated feature diff):
       ```
-      Agent(subagent_type: "codex-proxy", run_in_background: true,
+      Agent(subagent_type: "<proxy>", run_in_background: true,
             prompt: "You are a Doodlestein adversarial reviewer performing an accumulated review.
                      Analyze the full feature diff (git diff main...HEAD).
                      Answer 3 questions concisely (1-3 sentences each, cite file:line evidence):

@@ -21,8 +21,7 @@ Review code after each step completion, call cross-family for external opinions.
 2. **Review changes** — `git diff` to see all changes
 3. **Claude review** — check against review checklist
 4. **Cross-family review** — send uncommitted diff to proxy agents for independent review (parallel):
-   - SendMessage to "codex-proxy": ask for code review of the diff
-   - SendMessage to "gemini-proxy": ask for code review of the diff
+   - For each enabled proxy in the team: SendMessage asking for code review of the diff with `<assigned angle>`. If both proxies present, use different angles.
    - If a proxy has not responded within 120s, treat as unavailable and continue without it (See agent-selection Proxy Timeout Protocol)
    - If ALL cross-family proxies are unavailable after fallback, include `cross_family_degraded: true` in your SendMessage to Lead (this triggers ae:work's degraded auto-pass gate)
 5. **SendMessage to the dev**: send findings, each with specific fix suggestion

@@ -39,7 +39,7 @@ Agent(subagent_type: "qa", name: "qa",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this test plan for completeness: <target code summary + proposed test cases>.
                Follow Team Communication Protocol.
-               Teammates: security-reviewer, codex-proxy, gemini-proxy.
+               Teammates: security-reviewer, <enabled proxies>.
                Check: all code paths covered? Edge cases? Error handling?
                Missing scenarios → list them.
                SendMessage findings to team-lead when done.")
@@ -48,20 +48,16 @@ Agent(subagent_type: "security-reviewer", name: "security-reviewer",
       team_name: "<team>", run_in_background: true,
       prompt: "Review test plan for security-relevant test cases: <target code + test cases>.
                Follow Team Communication Protocol.
-               Teammates: qa, codex-proxy, gemini-proxy.
+               Teammates: qa, <enabled proxies>.
                Check: injection, auth bypass, data leaks tested?
                Missing security tests → list them.
                SendMessage findings to team-lead when done.")
 
-Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+# For each enabled proxy (check pipeline.yml cross_family):
+# TL picks angles first, assigns to available proxies. If both enabled, different angles.
+Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review test coverage via Codex MCP — <specialized focus based on context>: <target code + test cases>.
-               Teammates: qa, security-reviewer.
-               SendMessage findings to team-lead when done.")
-
-Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Review test coverage via Gemini MCP — <specialized focus based on context>: <target code + test cases>.
+      prompt: "Review test coverage via <proxy> MCP — <assigned angle>: <target code + test cases>.
                Teammates: qa, security-reviewer.
                SendMessage findings to team-lead when done.")
 ```
