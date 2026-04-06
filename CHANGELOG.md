@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.7.0 — 2026-04-05
+
+### New Features
+- **Step-Summary Artifact**: ae:work post-commit writes persistent 4-field step summary (Decisions/Rejected/Cross-step deps/Actual files) to `<milestones>/<plan-id>/step-summaries.md`. TL reads last 3 blocks at Check 2 for context recovery across long features.
+- **Context Overlap Heuristic**: ae:work compares previous step's actual files with current step's expected files. File overlap triggers injection of prior step summary into dev agent spawn prompt. QA gets fresh eyes (no injection).
+- **run_in_background Detection**: ae:work Check 3 verifies Agent tool schema via ToolSearch before spawning teams. Fail-open when unavailable. Doodlestein checkpoint respects cached result.
+- **Deferred Findings Accountability**: Structured `DEFERRED [Step N]:` format with mandatory Reason field replaces free-form notes.md. Check 4 surfaces due items with required disposition (FIXED/STILL-DEFERRED/WAIVED). ae:review Check 4 audits all deferred items — hard block on silent drops.
+- **Smart Model Selection**: Per-skill effort gradient (5 high, 7 medium, 7 inherit). Doodlestein agents pinned to `model: sonnet, effort: medium`. Model-effort matrix reference doc.
+
+### Improvements
+- **Proxy Quota Fallback**: Gemini/Codex proxies now report quota exhaustion to TL and STOP instead of self-fallbacking to Sonnet. TL decides fallback per CLAUDE.md strategy.
+- **Feature-scoped notes.md**: All milestone notes paths changed from glob to `<milestones>/<plan-id>/notes.md`. Doodlestein uses `CHECKPOINT:` prefix to avoid triggering Check 4 parsing.
+- **Auto-pass Gate**: Added `deferred_resolved` condition — Check 4 dispositions must be written before auto-continue.
+- **Backlog Cleanup**: 26 → 8 items (6 resolved, 9 closed as low-ROI, 2 moved to feature branches, 1 fixed inline).
+
 ## v0.6.2 — 2026-04-05
 
 ### Bug Fixes
