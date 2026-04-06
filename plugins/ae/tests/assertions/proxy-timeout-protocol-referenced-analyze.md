@@ -8,7 +8,7 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- SKILL.md MUST contain text referencing Proxy Timeout Protocol from Agent Selection Reference — found in Step 3 Cross-family section: "Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family)."
+- SKILL.md MUST contain text referencing Proxy Timeout Protocol from Agent Selection Reference — found in Step 3 Cross-family section: "Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback."
 - The additional "**Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference." line at Step 3 end MUST be a reference to the central protocol, not a redefinition
 
 ### MUST_NOT

@@ -62,7 +62,7 @@ Create a Team and launch Teammates in parallel.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles fallback (swap family).
+**Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
 ```
 TeamCreate(team_name: "<topic>-analyze")
@@ -86,21 +86,17 @@ Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
       prompt: "Challenge findings from archaeologist and standards-expert for: <$ARGUMENTS>.
                Follow Team Communication Protocol.
-               Teammates: archaeologist, standards-expert, codex-proxy, gemini-proxy.
+               Teammates: archaeologist, standards-expert, <enabled proxies>.
                Step 1: independent blind-spot review.
                Step 2: wait for teammate findings, then challenge.
                SendMessage challenges to team-lead when done.
                You are pure opposition. Do NOT synthesize — TL synthesizes.")
 
-Agent(subagent_type: "codex-proxy", name: "codex-proxy",
+# For each enabled proxy (check pipeline.yml cross_family):
+# TL picks angles first, assigns to available proxies. If both enabled, different angles.
+Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Research <$ARGUMENTS> via Codex MCP — <specialized focus based on context>.
-               Teammates: archaeologist, standards-expert, challenger.
-               SendMessage findings to team-lead when done.")
-
-Agent(subagent_type: "gemini-proxy", name: "gemini-proxy",
-      team_name: "<team>", run_in_background: true,
-      prompt: "Research <$ARGUMENTS> via Gemini MCP — <specialized focus based on context>.
+      prompt: "Research <$ARGUMENTS> via <proxy> MCP — <assigned angle>.
                Teammates: archaeologist, standards-expert, challenger.
                SendMessage findings to team-lead when done.")
 ```
