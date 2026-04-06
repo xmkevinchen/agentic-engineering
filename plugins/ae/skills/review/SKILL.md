@@ -31,6 +31,28 @@ Deep review of all changes for **$ARGUMENTS**.
 - Run the test command from pipeline.yml. If empty → skip, show "⚠️ No test command configured, skipping tests"
 - If fail → fix first, **refuse to execute**
 
+### Check 4: Deferred Findings Audit
+Read `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`, already loaded at Check 2). If file doesn't exist or has no `DEFERRED` entries → skip: `✅ No deferred findings to audit`
+
+For each `DEFERRED [Step N]:` entry, classify by reading the `Disposition:` line appended by ae:work Check 4:
+- **FIXED** — entry has `Disposition: FIXED` line
+- **WAIVED** — entry has `Disposition: WAIVED: <reason>` line
+- **UNRESOLVED** — no `Disposition:` line present (silent drop — the original problem this feature solves)
+
+If any UNRESOLVED entries exist → **hard block on review verdict**:
+```
+⚠️ UNRESOLVED deferred findings (silent drops):
+- DEFERRED [Step N]: <description>
+
+Options:
+1. Fix now — address before completing review
+2. Waive — accept as-is with documented reason
+3. Move to backlog — BL-NNN for future resolution
+```
+Verdict cannot be written until all UNRESOLVED items are dispositioned.
+
+Include audit results in review report. Add to Outcome Statistics: `Deferred resolution rate: X/Y resolved (Z waived, W to backlog)`
+
 ## Execution: Agent Teams Review
 
 **Review scope**: determine base commit (feature branch: `git diff main...HEAD`, main branch: `git diff <feature-start>..HEAD`).
@@ -201,7 +223,7 @@ Report contents:
 1. TL synthesis report (merged findings from all reviewers + challenger + cross-family, with Disagreement Value Assessment and severity classification)
 2. Outcome statistics (rework rate, P1 escape rate, drift events, fix loop triggers, auto-pass rate)
 3. Fixups squashed
-4. Deferred items written to `pipeline.yml` → `output.milestones` (default: `docs/milestones/`) `*/notes.md`, backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
+4. Deferred findings audit results (FIXED/WAIVED/UNRESOLVED classification from Check 4), backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
 5. Prompt user to create PR
 
 ## Completion Invariant
