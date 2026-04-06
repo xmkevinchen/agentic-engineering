@@ -82,7 +82,7 @@ Compare the **immediately preceding step's** `Actual files:` list (from the last
 3. Cache `AGENT_TEAMS_FULL` for this entire ae:work invocation (all steps). Do not repeat ToolSearch per step.
 
 ### Check 4: Deferred Items
-- Check `<output.milestones>/*/notes.md` for items tagged to current step
+- Read `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`). If file doesn't exist → skip silently.
 - Has unresolved → list and resolve before continuing
 
 ```
@@ -200,7 +200,12 @@ Read the code-review SKILL.md and follow its instructions within the current con
 - **P2 logic/security**: show, human disposition (fix / defer / backlog)
 - **P2 style/naming**: auto-skip
 - **P3 (minor)**: auto-skip
-- Defer → write to `<output.milestones>/*/notes.md`
+- **Defer** — MUST write structured entry to `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`; create directory and file if needed). Format:
+    ```
+    DEFERRED [Step N]: <one-line finding description>
+    Reason: <why deferred, what will resolve it>
+    ```
+    `[Step N]` = target step where this must be addressed (REQUIRED). If no target step can be identified → use backlog (`BL-NNN` in `output.backlog`), not defer. This write is mandatory — defer without writing to notes.md is a protocol violation.
 - Backlog → `BL-NNN-slug.md` in `output.backlog`
 
 ### F. Disposition Challenge
@@ -258,7 +263,7 @@ Fix findings, re-run from Check D until clean pass.
                      SendMessage findings to team-lead.")
       ```
    2. Collect findings. Classify: P1 (critical blind spot) / P2 (concern) / P3 (minor)
-   3. Write findings to `<output.milestones>/*/notes.md`
+   3. Write findings to `<output.milestones>/<plan-id>/notes.md` using `CHECKPOINT:` prefix (not `DEFERRED` — avoids triggering Check 4 parsing)
    4. P1 findings set `no_accumulated_p1 = false`
 
    If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`.
