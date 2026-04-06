@@ -129,21 +129,24 @@ Before AE integration can proceed, Mengdie needs these changes (tracked in `meng
 
 This PRD should be implemented in stages, not all at once:
 
-### Phase A: ae:analyze read + write (validates the loop)
+### Phase A: ae:analyze read + write (validates the loop) — DONE
 
-- Read: already done (Step 3.5)
-- Write: add Knowledge Capture step after synthesis
-- **Gate**: run 5+ ae:analyze sessions with write enabled. Verify that subsequent ae:analyze sessions surface prior findings via read. If AI ignores or misuses injected context, stop and reassess.
+- Read: Step 3.5 (memory_search before synthesis)
+- Write: Step 4.5 (Knowledge Capture after synthesis)
+- **Gate passed**: 5 ae:analyze sessions (006-010), 4/5 surfaced prior findings, 14 memories ingested
 
-### Phase B: ae:discuss read + write
+### Phase B: ae:discuss read + write — DONE
 
-- Depends on Phase A gate passing
-- Highest value: decisions are the most durable knowledge type
+- Read: Step 1.5 (Prior Context after setup, before team spawn)
+- Write: Step 9.5 (Knowledge Capture after conclusion, before shutdown)
+- Compound entity tags + conflict summary added to both skills
 
-### Phase C: remaining skills (ae:plan, ae:review, ae:retrospect, ae:think)
+### Phase C: remaining skills (ae:plan, ae:review, ae:retrospect, ae:think) — NOT STARTED
 
-- Depends on Phase B working
+- Depends on Phase B validation (in progress — plan 002 Step 6 Phase B)
 - Can be done in parallel across skills
+- Each skill needs: read step (memory_search) + write step (memory_ingest)
+- Extraction heuristics already defined in table above and in knowledge-capture-protocol.md
 
 ## Implementation Notes
 
