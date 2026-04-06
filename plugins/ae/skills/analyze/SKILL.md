@@ -172,7 +172,7 @@ Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md
 - Skip findings that restate prior art already surfaced in Step 3.5
 - `source_type`: `conclusion`
 - `knowledge_type`: `factual`
-- `entities`: from the `tags` field in the analysis document frontmatter
+- `entities`: derive from each specific finding, NOT from the broad frontmatter `tags`. Use compound tags specific to the finding (e.g., `fts5-idf-contamination`, `arc-mutex-tokio-safety`). Avoid single broad tags like `search`, `database`, `concurrency` that will match unrelated findings.
 - `source_file`: path to the generated `analysis.md`
 
 **Example**:
@@ -193,6 +193,9 @@ Send shutdown_request to all teammates. Show the user:
 1. Key findings in concise form
 2. Where the full analysis is saved
 3. **Suggested next step based on findings**
+4. **Knowledge capture summary** — report what was ingested and any conflicts:
+   - `Knowledge capture: [N] items ingested, no conflicts`
+   - Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
 
 ## Principles
 

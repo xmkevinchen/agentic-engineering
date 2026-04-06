@@ -13,8 +13,9 @@ Add a Knowledge Capture step at the end of each skill, after the main output is 
 3. **Title format**: `[skill-name]: [concise finding]`
    - Example: `[analyze]: ink renderer is a fork of vadimdemedes/ink`
    - Example: `[discuss]: decided JWT with RS256 over HS256 for asymmetric verification`
-4. **Include rationale** — not just the decision, but why
-5. **Skip restatements** — if a finding restates prior art already in Mengdie context, do not re-ingest it
+4. **Entity tags must be specific and compound** — use `fts5-idf-contamination` not just `fts5`; use `arc-mutex-tokio` not just `concurrency`. Broad single-word tags (`auth`, `database`, `search`) cause false positive conflicts because unrelated findings share them. Each entity tag should be specific enough that two items sharing it are likely about the same narrow topic.
+5. **Include rationale** — not just the decision, but why
+6. **Skip restatements** — if a finding restates prior art already in Mengdie context, do not re-ingest it
 
 ## memory_ingest Call
 
@@ -42,6 +43,9 @@ memory_ingest({
 If `memory_ingest` returns a non-empty `conflicts` array:
 1. Log in skill output footer: `Conflicts detected with: [comma-separated entry IDs]`
 2. Do NOT auto-invalidate — leave for user/retrospect to resolve
+3. In the skill's closing output (Step 5 for ae:analyze, Step 10 for ae:discuss), include a conflict summary line:
+   - If no conflicts: `Knowledge capture: [N] items ingested, no conflicts`
+   - If conflicts: `Knowledge capture: [N] items ingested, conflicts detected with: [comma-separated titles]`
 
 ## Skill-Specific Extraction Heuristics
 
