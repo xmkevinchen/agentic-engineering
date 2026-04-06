@@ -355,7 +355,7 @@ Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md
 - Skip open questions and deferred items
 - `source_type`: `conclusion`
 - `knowledge_type`: `decisional`
-- `entities`: from the `entities` field in the conclusion frontmatter
+- `entities`: derive from each specific decision, NOT from the broad conclusion frontmatter. Use compound tags specific to the decision (e.g., `rust-tech-stack-selection`, `jwt-rs256-auth`). Avoid single broad tags like `auth`, `database`, `search` that will match unrelated findings.
 - `source_file`: path to the generated `conclusion.md`
 
 **Example**:
@@ -376,6 +376,9 @@ memory_ingest({
 
 - All converged, no spawned → "Ready for `/ae:plan`"
 - Has spawned discussions → "Resolve sub-discussions first, then `/ae:plan`"
+- **Knowledge capture summary** — report what was ingested and any conflicts:
+  - `Knowledge capture: [N] items ingested, no conflicts`
+  - Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
 
 ## Principles
 
