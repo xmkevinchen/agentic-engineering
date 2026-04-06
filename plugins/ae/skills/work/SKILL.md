@@ -82,8 +82,17 @@ Compare the **immediately preceding step's** `Actual files:` list (from the last
 3. Cache `AGENT_TEAMS_FULL` for this entire ae:work invocation (all steps). Do not repeat ToolSearch per step.
 
 ### Check 4: Deferred Items
-- Read `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`). If file doesn't exist → skip silently.
-- Has unresolved → list and resolve before continuing
+Read `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`). If file doesn't exist → skip: `✅ Deferred items: none`
+
+Parse lines matching `DEFERRED [Step N]:` where N = current step number. If matches found, display each and require TL to write a disposition before proceeding:
+
+- **FIXED** — finding addressed in this step's implementation. Append `Disposition: FIXED` line to the entry in notes.md.
+- **STILL-DEFERRED [Step M]** — re-queue to step M. Replace `[Step N]` with `[Step M]` in the DEFERRED line only (not Reason: line). If Step M > total plan steps → must use backlog instead.
+- **WAIVED: \<reason\>** — accepted as-is. Append `Disposition: WAIVED: <reason>` line to the entry in notes.md.
+
+All dispositions MUST be written to notes.md (not just in conversation). ae:review Check 4 reads these to classify resolution.
+
+No matches → `✅ Deferred items: none`
 
 ```
 Pre-checks:
@@ -270,9 +279,10 @@ Fix findings, re-run from Check D until clean pass.
 
 3. **Auto-pass gate** (default: ON) — evaluate after every step:
    ```
-   gate = tests_green AND no_p1 AND no_accumulated_p1 AND (no_drift OR drift_approved) AND (NOT cross_family_degraded)
+   gate = tests_green AND no_p1 AND no_accumulated_p1 AND deferred_resolved AND (no_drift OR drift_approved) AND (NOT cross_family_degraded)
    ```
    `no_accumulated_p1` defaults to `true`. Set to `false` only when accumulated checkpoint runs and finds P1.
+   `deferred_resolved` defaults to `true`. Set to `false` when Check 4 found DEFERRED items matching current step but TL did not write dispositions for all of them.
    - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no accumulated P1, no drift, review complete. Continuing to Step N+1.`
    - Any failed → **pause for user confirmation**
    - Drift detected (not approved) → always pause
