@@ -70,9 +70,17 @@ Special cases:
 - Discussion has tags but ALL are stop-words → assign to **Uncategorized**
 - Discussion has no `tags:` field or empty array → assign to **Uncategorized**
 
-### Step 4: Form Clusters
+### Step 4: Form Clusters and Merge Singletons
 
-Group discussions by primary cluster key. Name each cluster using the key tag, capitalized (e.g., tag `testing` → cluster "Testing").
+Group discussions by primary cluster key. Then merge singleton clusters (clusters with only 1 member):
+
+1. For each singleton cluster, find the **largest multi-member cluster** that shares at least one tag with the singleton discussion
+2. Found → merge the singleton into that cluster
+3. Not found → move the discussion to **Uncategorized**
+
+This prevents tag fragmentation from creating too many tiny clusters.
+
+Name each cluster using the key tag, capitalized (e.g., tag `testing` → cluster "Testing").
 
 ### Step 5: Sort Within Clusters
 
@@ -87,13 +95,13 @@ Shallow dependency detection (max 2-hop). Two edge types:
 
 ### Hard Edges (explicit cross-references)
 
-Scan plan frontmatter `discussion:` fields. If two plans reference the same discussion, they share a dependency root. If plan A's discussion is referenced by plan B's conclusion text → A depends on B.
+Scan plan frontmatter `discussion:` fields. If two plans reference the same discussion, they share a dependency root.
 
 Hard edges are labeled **"depends on"** in output.
 
 ### Soft Edges (shared cluster membership)
 
-Discussions in the same cluster with sequential IDs (e.g., 013 → 014 → 019) are likely related iterations. Earlier IDs are likely prerequisites.
+Discussions in the same cluster with sequential IDs (e.g., 013 → 014 → 019) may be related iterations. Sequential IDs indicate chronological creation order, not dependency order — do not infer prerequisite relationships from ID ordering alone.
 
 Soft edges are labeled **"related to"** in output. They suggest but do not dictate sequencing.
 
@@ -164,3 +172,7 @@ Features: N total (A done, B active, C backlog)
 - **Metadata-only**: reads frontmatter (tags, dates, status, cross-refs). Does NOT read discussion content, plan steps, or codebase files. For deep analysis, use `/ae:analyze`.
 - **Lightweight**: no agent teams, no cross-family proxies. Fast single-pass over frontmatter data.
 - **Opinionated but not rigid**: suggests sequencing and version boundaries, user decides.
+
+> **Validation**: Tested on 32-feature corpus (AE plugin, 2026-04-09), produces 9 clusters:
+> Agent-Teams (6), Autonomy (5), Pipeline (5), Uncategorized (4), Dashboard (3), Testing (3), Cross-Family (2), Hooks (2), Test-Plugin (2).
+> Max cluster = 18.8% (under 60% cap). All clusters semantically coherent. Singleton merge step was added after initial run produced 16 clusters (too fragmented).
