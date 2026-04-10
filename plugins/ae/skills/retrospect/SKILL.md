@@ -25,6 +25,16 @@ Analyze historical Outcome Statistics from `/ae:review` output to identify trend
 3. Scan for review files containing Outcome Statistics. **Skip files with `type: test-report` in frontmatter** — only process `type: review` documents.
 4. If no data found → output: "数据不足：尚无 Outcome Statistics。请先完成至少一次 `/ae:review` 以产出数据。"
 
+### 0.5. Prior Context (from Mengdie)
+
+Run this step after Pre-check and before Step 1. Skip in `--compare` mode (comparison reads existing reports, not new context).
+
+1. Call `memory_search` MCP tool with "retrospective insights pipeline trends" or $ARGUMENTS filter as query
+2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 1
+3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
+4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
+5. Compare prior retrospective conclusions with current data in Step 2 (Analyze Trends) — note whether prior insights are confirmed or invalidated by new data
+
 ## Step 1: Collect Outcome Statistics
 
 Read all review files in `output.reviews` directory. Extract these 5 metrics from each:
@@ -123,6 +133,24 @@ compared: ["ID1", "ID2"]
 **You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 
 Show summary to user.
+
+### 4.5. Knowledge Capture (to Mengdie)
+
+Run this step after the retrospect report is written (Step 4) and before presenting Next Steps. **Skip in `--compare` mode** (comparison reports don't generate new insights, only deltas).
+
+Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
+
+**Skill-specific extraction**:
+- One item per actionable trend conclusion from the Actionable Insights section
+- Skip raw statistics and data summaries
+- `source_type`: `retrospect`
+- `knowledge_type`: `experiential`
+- `entities`: derive from each specific insight, NOT from the broad report title. Use compound tags specific to the pattern (e.g., `challenger-highest-value-reviewer`, `per-commit-review-misses-cross-cutting`). Avoid single broad tags.
+- `source_file`: path to the generated retrospect report
+
+**Closing output** — report what was ingested and any conflicts:
+- `Knowledge capture: [N] items ingested, no conflicts`
+- Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
 
 ## Step 5: Comparison Mode
 
