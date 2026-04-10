@@ -55,6 +55,16 @@ Verdict cannot be written until all UNRESOLVED items are dispositioned.
 
 Include audit results in review report. Add to Outcome Statistics: `Deferred resolution rate: X/Y resolved (Z waived, W to backlog)`
 
+### Prior Context (from Mengdie)
+
+Run this step after Pre-checks pass and before creating the review team.
+
+1. Call `memory_search` MCP tool with the feature name from $ARGUMENTS or plan title as query
+2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue
+3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
+4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
+5. Include prior review patterns and known issues in reviewer prompts (Step 3) as additional context — treat as background, does not constrain review
+
 ## Execution: Agent Teams Review
 
 **Review scope**: determine base commit (feature branch: `git diff main...HEAD`, main branch: `git diff <feature-start>..HEAD`).
@@ -223,6 +233,24 @@ Report contents:
 3. Fixups squashed
 4. Deferred findings audit results (FIXED/WAIVED/UNRESOLVED classification from Check 4), backlog items to `pipeline.yml` → `output.backlog` (default: `docs/backlog/`)
 5. Prompt user to create PR
+
+### Knowledge Capture (to Mengdie)
+
+Run this step after the review report is written and before prompting for PR creation.
+
+Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
+
+**Skill-specific extraction**:
+- One item per reusable pattern (P2+ findings that apply beyond this specific code)
+- Skip one-off bugs that are already fixed in the fixup commits
+- `source_type`: `review`
+- `knowledge_type`: `experiential`
+- `entities`: derive from each specific pattern, NOT from the broad review title. Use compound tags specific to the pattern (e.g., `sqlite-migration-column-guard`, `mcp-project-scope-validation`). Avoid single broad tags.
+- `source_file`: path to the generated review file
+
+**Closing output** — report what was ingested and any conflicts:
+- `Knowledge capture: [N] items ingested, no conflicts`
+- Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
 
 ## Completion Invariant
 
