@@ -22,6 +22,16 @@ Perform systematic deep analysis on: **$ARGUMENTS**
 3. Form initial hypothesis
 4. List relevant files and modules
 
+### 1.5. Prior Context (from Mengdie)
+
+Run this step after Frame (Step 1) and before spawning the team (Step 2).
+
+1. Call `memory_search` MCP tool with the $ARGUMENTS problem statement as query
+2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 2
+3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
+4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
+5. Include prior art in the topic brief for agents in Step 2 — treat as background context, does not constrain analysis
+
 ## Step 2: Agent Teams Investigation
 
 Create a Team for parallel deep investigation (Investigation Mode). **TL synthesizes**.
