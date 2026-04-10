@@ -141,12 +141,12 @@ This PRD should be implemented in stages, not all at once:
 - Write: Step 9.5 (Knowledge Capture after conclusion, before shutdown)
 - Compound entity tags + conflict summary added to both skills
 
-### Phase C: remaining skills (ae:plan, ae:review, ae:retrospect, ae:think) — NOT STARTED
+### Phase C: remaining skills (ae:plan, ae:review, ae:retrospect, ae:think) — DONE
 
-- Depends on Phase B validation (in progress — plan 002 Step 6 Phase B)
-- Can be done in parallel across skills
-- Each skill needs: read step (memory_search) + write step (memory_ingest)
-- Extraction heuristics already defined in table above and in knowledge-capture-protocol.md
+- ae:think: Step 1.5 Prior Context (read-only) — ba5fe5d
+- ae:plan: Step 1.5 Prior Context + Step 4.5 Knowledge Capture (gated on status:reviewed) — 22ee40c
+- ae:review: Prior Context before team + Knowledge Capture after report — 7431143
+- ae:retrospect: Step 0.5 Prior Context + Step 4.5 Knowledge Capture (skip in --compare mode) — 3e33a57
 
 ## Implementation Notes
 
