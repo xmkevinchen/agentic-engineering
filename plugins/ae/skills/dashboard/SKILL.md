@@ -10,6 +10,10 @@ Read-only pipeline status viewer. Shows all in-flight features, their current pi
 
 This skill produces no file output — it is a viewer, not a producer.
 
+## Arguments
+
+- `--all` — Expand the Done section to show all completed features (by default, done features are always collapsed)
+
 ## Pre-check
 
 1. Read `.claude/pipeline.yml`
@@ -98,14 +102,15 @@ Stage values: `analyzing` → `discussing` → `awaiting plan` → `plan draft` 
 📋 Summary: N features (X active, Y done)
 📝 Backlog: M open items
 🔗 Cross-family: Codex ✓ | Gemini ✓
+🗺️ Run /ae:roadmap for feature grouping and version suggestions
 ```
 
-### Large Project Handling
+### Done Feature Handling
 
-If more than 15 features:
-- Show active features (not "done") in the table
+Always collapse done features regardless of total feature count:
+- Show active features (not "done") in the table, sorted by stage: most actionable first (work in progress > ready for work > awaiting plan > discussing)
 - Summarize done features as: "N features completed (use /ae:dashboard --all to show)"
-- Sort by stage: most actionable first (work in progress > ready for work > awaiting plan > discussing)
+- When `--all` flag is passed: expand done features into a full table below the active features
 
 ## Edge Cases
 

@@ -19,6 +19,7 @@ Analyze historical Outcome Statistics from `/ae:review` output to identify trend
 1. Read `pipeline.yml` → `output.reviews` (default: `docs/reviews/`) and `output.analyses` (default: `docs/analyses/`)
 2. If `--compare ID1 ID2`:
    - Scan `output.analyses` for retrospect reports matching both IDs (files with `type: retrospect` in frontmatter — exclude `type: retrospect-comparison`)
+   - If ID1 == ID2 → output: "比较失败：两个 ID 相同，无法自比较。请指定两个不同的 retrospect 报告 ID。"
    - If either ID matches a `type: retrospect-comparison` file → output: "比较失败：不支持对比较报告再次比较，请指定 type 为 retrospect 的报告 ID。"
    - If either ID not found → output: "比较失败：未找到 ID 为 [ID] 的 retrospect 报告。请确认报告 ID 存在于 `docs/analyses/` 中。"
    - If both found → skip to Step 5 (Comparison Mode)
