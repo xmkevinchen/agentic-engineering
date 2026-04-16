@@ -22,10 +22,11 @@ Solo developers and small teams who want:
 
 ## Quick Start
 
-**Prerequisites**: [Claude Code](https://docs.anthropic.com/en/docs/claude-code) v1.0.33+ · [Node.js](https://nodejs.org) · [Agent Teams](https://code.claude.com/docs/en/agent-teams) enabled
+**Prerequisites**: [Agent Teams](https://code.claude.com/docs/en/agent-teams) enabled · [Claude Code](https://docs.anthropic.com/en/docs/claude-code) v1.0.33+ · [Node.js](https://nodejs.org) (optional — only for Gemini)
 
 ```bash
-# 1. Enable Agent Teams (required for 12 of 20 commands)
+# 1. Enable Agent Teams (required for /ae:discuss and /ae:review;
+#    /ae:plan and /ae:work fall back to solo mode without it)
 # Add to ~/.claude/settings.json:
 #   { "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
 
@@ -35,7 +36,7 @@ Solo developers and small teams who want:
 
 # 3. In your project
 /ae:setup          # creates .claude/pipeline.yml
-/ae:plan           # generate a plan with acceptance criteria
+/ae:plan add rate limiting middleware   # generate a plan with acceptance criteria
 /ae:work           # execute it (TDD + commit + review loop)
 ```
 
