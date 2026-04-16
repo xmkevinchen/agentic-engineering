@@ -37,8 +37,8 @@ Mode is set by caller (ae:work reads `work.review_mode` from pipeline.yml, or `-
 
 Check `git diff --stat` to determine change scope. Then:
 
-- Discover reviewer agents at runtime: scan all available agents (project `.claude/agents/`, installed plugins, user global `~/.claude/agents/`) whose description indicates a code reviewer role.
-- If project reviewers found: launch matching agents based on changed file types
+- Discover reviewer agents per agent-selection Rule 4: scan `.claude/agents/*.md`, installed plugins, `~/.claude/agents/*.md`. Also check `project_agents` in pipeline.yml for entries with `role: reviewer`. Infer role from `description` keywords per the [Agent Contract Specification](../../docs/decisions/037-agent-contract.md).
+- If project reviewers found: launch matching agents based on changed file types (project agents preferred over built-in)
 - If none found: use the plugin's built-in `code-reviewer` agent
 
 Review `git diff` + `git diff --cached`.
