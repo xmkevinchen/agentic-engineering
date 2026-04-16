@@ -153,9 +153,18 @@ The proxy agents act as device drivers — translating between ae's protocols an
 
 ## Extending ae
 
-ae auto-discovers agents from `.claude/agents/` in your project. Add your own domain experts, custom reviewers, or specialized developers — they'll be preferred over built-in agents when roles match.
+ae auto-discovers agents from `.claude/agents/` in your project. Add a 3-line file and ae includes it in the right teams:
 
-See the [Agent Authoring Guide](docs/agent-authoring.md) for how to write AE-compatible agents.
+```markdown
+# .claude/agents/security-auditor.md
+---
+name: security-auditor
+description: "Reviews code for security vulnerabilities and auth bypass"
+---
+You are a security specialist. Focus on OWASP Top 10 and injection vectors.
+```
+
+Project agents are preferred over built-in agents when roles match. See the [Agent Authoring Guide](docs/agent-authoring.md) for the full contract, role taxonomy, and examples.
 
 ## Project Configuration
 
