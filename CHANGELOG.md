@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.8.1 — 2026-04-15
+
+### Housekeeping
+
+- **ae:retrospect**: Replace 7 Chinese error strings with English equivalents
+- **ae:analyze**: Rename "Second Brain" → "Mengdie" in Step 3.5 header and template
+- **model-effort-matrix.md**: Remove stale `simplicity-reviewer` row (agent deleted in v0.8.0)
+- **ae:plan**: Add consequence note after `--skip-review` — plan stays `status: draft`
+- **docs/quickstart.md**: Reorder prerequisites (Agent Teams first); add Claude-only framing and cross-family unavailable output; add P1/P2/P3 severity glossary; reposition `/ae:next` as primary navigation; add `/ae:discuss` callout
+- **README.md**: Reorder prerequisites to match quickstart; fix Agent Teams description (hard-block vs fallback); add argument to `/ae:plan` example
+- **BL-023**: Confirmed `hooks.json` not auto-registered by plugin system; remove dead `cross-family-status.json` write from `check-cross-family.sh`
+
 ## v0.8.0 — 2026-04-15
 
 ### Theme: Adoption Readiness
