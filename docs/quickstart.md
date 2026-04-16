@@ -4,9 +4,7 @@ Get from zero to a working ae pipeline in 10 minutes.
 
 ## Prerequisites
 
-1. **Claude Code** v1.0.33+ ([install](https://docs.anthropic.com/en/docs/claude-code))
-2. **Node.js** ([install](https://nodejs.org)) — required for the Gemini MCP server
-3. **Agent Teams** enabled — add to `~/.claude/settings.json`:
+1. **Agent Teams** enabled — add to `~/.claude/settings.json`:
    ```json
    {
      "env": {
@@ -14,7 +12,9 @@ Get from zero to a working ae pipeline in 10 minutes.
      }
    }
    ```
-   Then restart Claude Code.
+   Then restart Claude Code. (Most ae commands require this.)
+2. **Claude Code** v1.0.33+ ([install](https://docs.anthropic.com/en/docs/claude-code))
+3. **Node.js** ([install](https://nodejs.org)) — optional, only needed for the Gemini MCP server
 
 ## Step 1: Install the Plugin
 
@@ -55,7 +55,17 @@ Cross-family status:
 Pipeline config written to .claude/pipeline.yml
 ```
 
+If Codex and Gemini aren't set up yet, you'll see:
+```
+Cross-family status:
+  Codex: unavailable (codex CLI not found)
+  Gemini: unavailable (no API key)
+```
+That's fine — ae works with Claude alone. Codex and Gemini add cross-family review coverage but are not required.
+
 If your project doesn't have a test command, ae will ask. You can skip — but `/ae:work` will pause at every step for manual confirmation instead of auto-passing.
+
+**You can now run `/ae:plan` with Claude alone.** Codex and Gemini are optional — see the Cross-Family Setup section in the README if you want to add them later.
 
 ## Step 3: Create a Plan
 
@@ -108,6 +118,12 @@ ae picks up the most recent reviewed plan and executes it step by step:
 
 Each step auto-continues if tests pass and no P1 issues are found.
 
+**Severity glossary** (you'll see these in review output):
+- **P1**: blocker — fix before continuing
+- **P2 logic/security**: review required — ae asks you to decide
+- **P2 style**: auto-skipped
+- **P3**: minor — auto-skipped
+
 **Expected output per step:**
 ```
 Pre-checks:
@@ -150,9 +166,9 @@ Feature complete. Ready for merge.
 
 ## What's Next?
 
+- **`/ae:next`** — run this anytime to see what the pipeline suggests as the next step
 - **`/ae:dashboard`** — see all your features and where they stand
-- **`/ae:next`** — get a suggestion for what to do next
-- **`/ae:discuss`** — start a design discussion before planning a complex feature
+- **`/ae:discuss`** — for complex features, start here before `/ae:plan` to work through design decisions first
 - **`/ae:team`** — spin up an ad-hoc agent team for any task
 
 ## Troubleshooting
