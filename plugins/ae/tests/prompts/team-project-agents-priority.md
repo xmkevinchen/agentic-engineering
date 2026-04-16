@@ -8,13 +8,15 @@ source: generated
 ## Context
 
 - Agent Teams enabled in `~/.claude/settings.json`
-- `.claude/pipeline.yml` exists with custom agent definition:
+- `.claude/pipeline.yml` exists with project agent declaration:
   ```yaml
-  agents:
-    - name: security-reviewer
-      description: "Domain expert for security reviews"
+  project_agents:
+    - name: security-auditor
+      role: reviewer
+      path: .claude/agents/security-auditor.md
   ```
-- Task is security-related, matching the custom agent's domain
+- `.claude/agents/security-auditor.md` exists with `description: "Reviews code for security vulnerabilities"`
+- Task is security-related, matching the project agent's domain
 
 ## Prompt
 

@@ -8,10 +8,12 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [behavior] Selects the project-defined "security-reviewer" agent from pipeline.yml for a security-related task
+- [behavior] Selects the project-defined "security-auditor" agent from pipeline.yml project_agents for a security-related task
+- [behavior] Prefers project agent over built-in security-reviewer when both match the reviewer role
 
 ### MUST_NOT
-- [behavior] MUST NOT ignore project-defined agents and only use built-in plugin agents
+- [behavior] MUST NOT ignore project_agents entries in pipeline.yml
+- [behavior] MUST NOT use only built-in plugin agents when a matching project agent exists
 
 ### SHOULD
-- [behavior] Agent subagent_type matches the type defined in pipeline.yml for project-specific agents
+- [behavior] Agent spawned with name matching the project_agents name field (security-auditor)
