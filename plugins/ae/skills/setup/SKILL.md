@@ -33,7 +33,7 @@ If `.claude/pipeline.yml` does not exist:
    - `reviews: "docs/reviews/"`
    - `analyses: "docs/analyses/"`
 4. Scan existing project directories — if project already has docs in non-default locations (e.g., `results/reviews/` instead of `docs/reviews/`), adjust slot values to match
-5. **Auto-discover project agents**: Discover all available agents (project `.claude/agents/`, installed plugins, user global `~/.claude/agents/`). Read each agent's description to classify as developer or reviewer. Show discovered agents to user for confirmation. Do NOT write agent lists to pipeline.yml — agents are discovered at runtime.
+5. **Auto-discover project agents**: Scan `.claude/agents/*.md`, installed plugin agents, and `~/.claude/agents/*.md`. For each discovered agent, read `description` to infer role per the [Agent Contract Specification](../../docs/decisions/037-agent-contract.md): reviewer (review/audit/security keywords), developer (implement/build keywords), or domain-expert (expert/specialist keywords). Show discovered agents with inferred roles to user for confirmation. Do NOT write agent lists to pipeline.yml — agents are discovered at runtime. The `project_agents:` section in pipeline.yml is for explicit role overrides only (agents outside `.claude/agents/` or when inference is wrong).
 6. **Guide test.command configuration**: If auto-detect found no test command, use AskUserQuestion to prompt user:
    ```
    No test command detected. ae:work's auto-pass gate treats empty test.command as UNVERIFIED,
@@ -50,10 +50,11 @@ If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
 Read current `.claude/pipeline.yml`, compare with template:
 
-1. Check for new fields in template (missing from config) — especially new `output` slots
+1. Check for new fields in template (missing from config) — especially new `output` slots and `project_agents` section
 2. Check for deprecated fields (e.g., old `output.review` → new `output.reviews`)
-3. Show diff, use AskUserQuestion to confirm
-4. Preserve user-customized values, only add missing slots with defaults
+3. **Discover new project agents**: scan `.claude/agents/*.md` for agent files not present when pipeline.yml was last generated. Show newly discovered agents with inferred roles. This is net-new behavior — not all agents may have existed at initial setup.
+4. Show diff, use AskUserQuestion to confirm
+5. Preserve user-customized values, only add missing slots with defaults
 
 ## Output Defaults
 
