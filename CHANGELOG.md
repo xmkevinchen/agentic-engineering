@@ -34,7 +34,7 @@ First release focused on external users. The core pipeline (discuss→plan→wor
 - Total: 118 test pairs (5 new L1 + 1 updated L2)
 
 ### Stats
-- 20 skills, 16 agents, 118 test pairs, 2 MCP servers, 2 hooks
+- 20 skills, 16 agents, 118 test pairs, 2 MCP servers, 1 hook
 
 ## v0.7.0 — 2026-04-05
 

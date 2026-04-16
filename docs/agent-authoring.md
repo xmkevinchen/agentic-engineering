@@ -122,10 +122,9 @@ If your agent is outside `.claude/agents/` or role inference is wrong, declare i
 project_agents:
   - name: security-auditor
     role: reviewer
-    path: custom/agents/security-auditor.md
 ```
 
-This overrides description-based inference. See the [Agent Contract Specification](decisions/037-agent-contract.md) for precedence rules.
+This overrides description-based inference. All agents must still be in `.claude/agents/` to be spawnable. See the [Agent Contract Specification](decisions/037-agent-contract.md) for precedence rules.
 
 ## Tips
 

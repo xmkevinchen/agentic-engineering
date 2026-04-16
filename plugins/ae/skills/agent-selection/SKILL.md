@@ -34,9 +34,9 @@ user-invocable: true
    - Give a **specialized prompt with clear focus** — not generic "review this".
    - **One proxy enabled** → assign one angle. **Both enabled** → prefer different angles; same-angle only when there is genuinely no second valuable blind spot.
    - Example: if Claude has security-reviewer and architecture-reviewer, cross-family angles could be performance + data integrity. If only one proxy is enabled, it gets performance.
-4. **Project agents** (see [Agent Contract Specification](../../docs/decisions/037-agent-contract.md)):
+4. **Project agents** (see [Agent Contract Specification](../../../docs/decisions/037-agent-contract.md)):
    - **Discovery**: scan `.claude/agents/*.md` (project), installed plugin agents, `~/.claude/agents/*.md` (global). Also read `project_agents` from pipeline.yml if present (graceful if absent).
-   - **Role inference**: read agent `description` for role keywords — "review/audit/security" → reviewer, "implement/build/develop" → developer, "expert/specialist/domain" → domain-expert. `project_agents` in pipeline.yml with explicit `role:` overrides inference.
+   - **Role inference**: read agent `description` for role keywords — "review/audit/check/validate/security/quality" → reviewer, "implement/build/develop/write/create" → developer, "expert/specialist/knowledge/domain/advise" → domain-expert. When multiple roles match, prefer: reviewer → developer → domain-expert. `project_agents` in pipeline.yml with explicit `role:` overrides inference.
    - **Slot mapping**: reviewer → review slot (ae:review, ae:code-review), developer → work slot (ae:work), domain-expert → analysis slot (ae:analyze, ae:discuss, ae:team).
    - **Precedence**: project agent preferred over built-in when role matches. Pipeline.yml explicit role overrides description-based inference.
    - **Spawning**: use agent `name` as `subagent_type` — CC resolves `.claude/agents/<name>.md` automatically.

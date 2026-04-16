@@ -40,16 +40,14 @@ work:
     - "migrations/*"
 
 # --- Project Agents (optional) ---
-# Declare project-specific agents for AE to discover.
-# Agents in .claude/agents/ are auto-discovered at runtime; this section is for
-# explicit role assignment or agents outside the default path.
+# Agents in .claude/agents/ are auto-discovered at runtime.
+# Use this section only to override inferred roles.
+# All agents must be in .claude/agents/ to be spawnable.
 # project_agents:
 #   - name: security-auditor
 #     role: reviewer                 # reviewer | developer | domain-expert
-#     path: .claude/agents/security-auditor.md
 #   - name: api-expert
 #     role: domain-expert
-#     path: custom/agents/api-expert.md
 
 # --- Cross-Family Review ---
 # Enable/disable cross-family proxy agents in Agent Teams.

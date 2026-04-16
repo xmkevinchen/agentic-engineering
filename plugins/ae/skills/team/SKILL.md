@@ -81,7 +81,7 @@ Show results to user.
 - **Minimum 2, maximum 5** core agents (excluding cross-family proxies)
 - Don't launch agents that aren't relevant — fewer focused agents > many unfocused ones
 - If the task clearly maps to an existing skill (`ae:think`, `ae:consensus`, `ae:testgen`, `ae:trace`), suggest that skill instead
-- Project-specific agents take priority over built-in agents when roles match — follow agent-selection Rule 4 for discovery, role inference, and precedence (see [Agent Contract Specification](../../docs/decisions/037-agent-contract.md))
+- Project-specific agents take priority over built-in agents when roles match — follow agent-selection Rule 4 for discovery, role inference, and precedence (see [Agent Contract Specification](../../../docs/decisions/037-agent-contract.md))
 
 ## Next Steps
 
