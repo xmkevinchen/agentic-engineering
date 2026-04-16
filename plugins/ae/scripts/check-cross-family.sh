@@ -1,9 +1,10 @@
 #!/bin/bash
 # Check cross-family MCP availability and dependencies at session start
-# Results written to .claude/cross-family-status.json
-
-STATUS_FILE=".claude/cross-family-status.json"
-mkdir -p .claude
+#
+# NOTE (BL-023): hooks.json is NOT auto-registered by the Claude Code plugin system.
+# This script runs only if manually wired into ~/.claude/settings.json SessionStart hooks.
+# The cross-family-status.json output was never consumed by any skill; removed to avoid
+# dead writes. Check logic and stderr warnings preserved for future use.
 
 AGENT_TEAMS=false
 CODEX_AVAILABLE=false
@@ -60,24 +61,9 @@ if [ "$NODE_AVAILABLE" = true ]; then
   fi
 fi
 
-# Build issues JSON array
-ISSUES_JSON="[]"
+# Print issues to stderr (visible in session output if hook is ever wired up)
 if [ ${#ISSUES[@]} -gt 0 ]; then
-  ISSUES_JSON="["
-  for i in "${!ISSUES[@]}"; do
-    [ $i -gt 0 ] && ISSUES_JSON+=","
-    ISSUES_JSON+="\"${ISSUES[$i]}\""
+  for issue in "${ISSUES[@]}"; do
+    echo "[ae] WARNING: $issue" >&2
   done
-  ISSUES_JSON+="]"
 fi
-
-cat > "$STATUS_FILE" <<EOF
-{
-  "agent_teams": $AGENT_TEAMS,
-  "node": $NODE_AVAILABLE,
-  "codex": $CODEX_AVAILABLE,
-  "gemini": $GEMINI_AVAILABLE,
-  "issues": $ISSUES_JSON,
-  "checked_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-}
-EOF
