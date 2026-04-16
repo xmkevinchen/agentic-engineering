@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.8.0 — 2026-04-15
+
+### Theme: Adoption Readiness
+
+First release focused on external users. The core pipeline (discuss→plan→work→review) is mature; this release makes it accessible.
+
+### New Features
+- **README Rewrite**: Problem-first framing, "Who is this for?" section, commands grouped by user journey (First Run → Daily Use → Analysis → Ops). Agent Teams prerequisite moved to Quick Start.
+- **Quickstart Guide** (`docs/quickstart.md`): End-to-end tutorial (install → setup → plan → work → review) using "add rate limiting to Express API" as the concrete example. Expected output at each stage. Troubleshooting for the 3 most common failures.
+- **Agent Contract Specification** (`docs/decisions/037-agent-contract.md`): Defines what makes an agent AE-compatible — required frontmatter, role inference from description keywords, role-to-slot mapping, discovery path, precedence rules.
+- **Agent Authoring Guide** (`docs/agent-authoring.md`): How to write a project agent — minimum viable example, role taxonomy, testing with `/ae:team`, pipeline.yml override.
+- **Agent Templates**: `plugins/ae/templates/agent-template.md` + 2 examples (security-auditor, api-expert) in `plugins/ae/templates/examples/`.
+- **pipeline.yml `project_agents` Schema**: Optional section for explicit role assignment or agents outside `.claude/agents/`. Commented out by default in template.
+- **agent-selection Rule 4 Implementation**: Concrete discovery logic — scan `.claude/agents/*.md`, read pipeline.yml `project_agents`, infer role from description keywords, map to team slots. Project agents preferred over built-in.
+- **ae:code-review Track 1 Alignment**: Track 1 now checks `project_agents` in pipeline.yml for reviewer-role entries (previously only scanned `.claude/agents/`).
+
+### Improvements
+- **ae:setup**: Initialize mode aligns with agent contract spec for role inference. Update mode detects new project agents since last setup.
+- **ae:team**: Discovery rule aligned with agent-selection Rule 4 (single source of truth).
+
+### Housekeeping (pre-v0.8.0)
+- Discussions 033 + 036 closed (status: active → done)
+- README counts fixed (17→20 skills, 17→16 agents)
+- Zombie `simplicity-reviewer.md` deleted (17→16 agents)
+- BL-015 closed (done), BL-016 closed (acceptable as-is)
+- BL-005 promoted to P1 (Scope B), BL-009 demoted to P2
+- New backlog: BL-022 (P1 onboarding), BL-023 (P2 hooks gap)
+
+### Test Suite
+- 5 new L1 tests: agent discovery, ae:setup detection, pipeline routing, role-slot mapping, backwards compatibility
+- Updated `team-project-agents-priority` L2 test: `agents:` → `project_agents:` key (both prompt and assertion)
+- Total: 118 test pairs (5 new L1 + 1 updated L2)
+
+### Stats
+- 20 skills, 16 agents, 118 test pairs, 2 MCP servers, 2 hooks
+
 ## v0.7.0 — 2026-04-05
 
 ### New Features
