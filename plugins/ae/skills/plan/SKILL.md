@@ -118,6 +118,8 @@ If any check fails → fix the plan before proceeding to review. These checks ar
 
 **Skip with `--skip-review`**: If the user passed `--skip-review` flag, skip this entire step and proceed to Step 4 (Doodlestein) or Step 5 (Confirm). Use when: simple changes where full 5-agent review is overhead.
 
+> Note: Plan stays `status: draft`. Use `/ae:plan-review` before `/ae:work`.
+
 After the plan is written, create a Team for parallel review.
 
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).

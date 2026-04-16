@@ -109,7 +109,7 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
 
 Also read project context files (CLAUDE.md, docs/) for background.
 
-### 3.5. Prior Context (from Second Brain)
+### 3.5. Prior Context (from Mengdie)
 
 Run this step only after all agents have SendMessage'd findings to TL and before Step 4 synthesis begins.
 
@@ -140,7 +140,7 @@ tags: [relevant, tags]
 ## Findings
 
 ### Prior Art from Project Knowledge Base
-[Prior decisions from Second Brain, if available. Each with provenance: title, source_file, knowledge_type, valid_from, snippet. Or: "Prior context: unavailable" if tool not registered / no results.]
+[Prior decisions from Mengdie, if available. Each with provenance: title, source_file, knowledge_type, valid_from, snippet. Or: "Prior context: unavailable" if tool not registered / no results.]
 
 ### Relevant Code
 [Key files and modules with paths (from Archaeologist)]

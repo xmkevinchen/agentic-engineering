@@ -19,12 +19,12 @@ Analyze historical Outcome Statistics from `/ae:review` output to identify trend
 1. Read `pipeline.yml` → `output.reviews` (default: `docs/reviews/`) and `output.analyses` (default: `docs/analyses/`)
 2. If `--compare ID1 ID2`:
    - Scan `output.analyses` for retrospect reports matching both IDs (files with `type: retrospect` in frontmatter — exclude `type: retrospect-comparison`)
-   - If ID1 == ID2 → output: "比较失败：两个 ID 相同，无法自比较。请指定两个不同的 retrospect 报告 ID。"
-   - If either ID matches a `type: retrospect-comparison` file → output: "比较失败：不支持对比较报告再次比较，请指定 type 为 retrospect 的报告 ID。"
-   - If either ID not found → output: "比较失败：未找到 ID 为 [ID] 的 retrospect 报告。请确认报告 ID 存在于 `docs/analyses/` 中。"
+   - If ID1 == ID2 → output: "Compare failed: both IDs are the same. Specify two different retrospect report IDs."
+   - If either ID matches a `type: retrospect-comparison` file → output: "Compare failed: comparing a comparison report is not supported. Specify reports with type: retrospect."
+   - If either ID not found → output: "Compare failed: no retrospect report with ID [ID] found. Confirm the ID exists in `docs/analyses/`."
    - If both found → skip to Step 5 (Comparison Mode)
 3. Scan for review files containing Outcome Statistics. **Skip files with `type: test-report` in frontmatter** — only process `type: review` documents.
-4. If no data found → output: "数据不足：尚无 Outcome Statistics。请先完成至少一次 `/ae:review` 以产出数据。"
+4. If no data found → output: "Insufficient data: no Outcome Statistics found. Complete at least one `/ae:review` to generate data."
 
 ### 0.5. Prior Context (from Mengdie)
 
@@ -189,9 +189,9 @@ Based on delta patterns, generate brief analysis:
 Write comparison report using the comparison template from Step 4.
 
 ### Edge Cases
-- **Report format mismatch**: If one report uses an older format without all 5 metrics → compare only shared metrics, note: "指标 [name] 在报告 [ID] 中缺失，已跳过。"
-- **Same ID twice**: → "比较失败：两个 ID 相同，请指定不同的报告 ID。"
-- **Only one retrospect report exists**: → "比较失败：仅找到 1 份 retrospect 报告，至少需要 2 份。"
+- **Report format mismatch**: If one report uses an older format without all 5 metrics → compare only shared metrics, note: "Metric [name] missing in report [ID], skipped."
+- **Same ID twice**: → "Compare failed: both IDs are the same. Specify different report IDs."
+- **Only one retrospect report exists**: → "Compare failed: only 1 retrospect report found; at least 2 are required."
 
 ## Next Steps
 

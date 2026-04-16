@@ -40,7 +40,6 @@ Current model and effort assignments for all AE skills and agents.
 | architecture-reviewer | sonnet | medium | Architecture review |
 | performance-reviewer | sonnet | medium | Performance review |
 | security-reviewer | sonnet | medium | Security review |
-| simplicity-reviewer | sonnet | medium | Simplicity review |
 | doodlestein-strategic | sonnet | medium | Strategic improvement (single question) |
 | doodlestein-adversarial | sonnet | medium | Blind spot detection (single question) |
 | doodlestein-regret | sonnet | medium | Regret prediction (single question) |
