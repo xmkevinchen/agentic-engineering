@@ -439,6 +439,26 @@ Move a BL from its current sprint back to `unscheduled/` (descope). Symmetric to
 5. Log to source's `## Notes`: `YYYY-MM-DD | descope | BL-<ID> | <reason>`.
 6. Output: `Removed BL-<ID> from <source>. Now unscheduled.`
 
+### `/ae:roadmap size <BL-IDs> <T-shirt>`
+
+Write a T-shirt `size:` value to one or more BL frontmatters. Refinement operation — not subject to scope-lock (sizing adjustments are not scope changes).
+
+**Form**:
+- Single: `/ae:roadmap size BL-007 M`
+- Batch: `/ae:roadmap size BL-A,BL-B,BL-C M` (comma-separated, no spaces; applies same size to all)
+
+**Flow**:
+1. Parse `<T-shirt>` — must be one of XS/S/M/L/XL (case-insensitive input, normalized to uppercase for storage). Invalid → refuse: `Invalid size "<value>". Valid: XS, S, M, L, XL.`
+2. For each BL-ID in the list:
+   - Locate `.ae/backlog/**/BL-<ID>-*.md`. If missing → skip with warning (do not fail the whole batch): `⚠ BL-<ID> not found — skipped.`
+   - Write or overwrite `size: <T-shirt>` in frontmatter. If frontmatter has no `size:` field, add it after `priority:` (or at end of frontmatter if priority is absent).
+3. Silent write — no `--reason` required. Sizing is refinement, not scope change (scope-lock rules from move/add/remove do NOT apply).
+4. Output summary: `Sized N items to <T-shirt>. Skipped M (not found).`
+
+**Abstention invariant** (unchanged from Phase A): ae:roadmap NEVER suggests a size. The `size` subcommand writes user-supplied values only. No heuristic-driven size inference in Phase B. All heuristics (discussion length, plan step count, tag-cluster averages) are noise and excluded by design.
+
+**Effect on velocity math** (forward-compatible): when Phase C velocity computation lands, `size:` values are summed per sprint to compute `initial_points`. Sizing done via this subcommand feeds directly into future velocity baseline without re-work.
+
 ### `/ae:roadmap --gaps`
 
 Read-only structural validator. Runs four audits against the backlog + roadmap docs and reports findings by severity. No fixup logic — user runs the validator, reads findings, fixes manually.
