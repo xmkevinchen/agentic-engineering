@@ -228,12 +228,17 @@ Other columns for unscheduled items + completed sprints render in the standard c
 
 Advisory warnings emitted alongside the board view. Baseline-free by design — no historical velocity needed.
 
-**WIP overload warning** — if count of items across the "In Progress" AND "Review" columns combined (across all active sprint dirs) exceeds 2, emit:
+**WIP overload warning** — fires when either per-column count breaches its threshold:
+- `In Progress` column count > 1 (single-piece flow for active development), OR
+- `Review` column count > 1 (review backlog building up), OR
+- Combined `In Progress + Review` > 2 (overall flow breakdown)
+
+Any of these three conditions emits:
 ```
-⚠ WIP overload: <N> items in flight (threshold: 2). Solo-dev flow hygiene: finish before starting more.
+⚠ WIP overload: <breakdown> (active: N / review: M, threshold: 1 active + 1 review). Solo-dev flow hygiene: finish before starting more.
 ```
 
-Threshold 2 is intentional: allows one primary in-flight item plus one in-review item awaiting feedback; 3+ indicates flow breakdown. Single-piece flow (WIP>1) deferred until `pipeline.yml` configurability exists. Review column counts because solo-dev review still consumes primary attention.
+Rationale (per-column matches the mental model): the intended solo-dev flow is one primary active item plus one item in review awaiting feedback. Per-column checks catch BOTH failure modes (2 simultaneously active = attention split, 2 simultaneously in review = reviewer bottleneck) that a combined `>2` check would miss (since 2+0 passes). The combined `>2` check is retained as a backstop for degenerate cases (e.g., 1 active + 2 review). `pipeline.yml` configurability for thresholds deferred to a later iteration.
 
 **Work-item age warning** — for items in "In Progress" or "Review" columns, check the `mtime` of the item's plan file (or `git log -1 --format=%ct <plan-file>` if available and more accurate). If time since last update exceeds 7 days, emit one line per stalled item:
 ```
@@ -373,15 +378,20 @@ All tool-written entries use this format: `YYYY-MM-DD | <action> | BL-ID | <reas
 
 | Action | Producer | Meaning |
 |--------|----------|---------|
-| `add` | `plan` (initial items at commit) + `add` subcommand | BL entered this sprint |
-| `move-in` | `move` subcommand (target side) | BL arrived via inter-sprint relocation |
-| `move-out` | `move` subcommand (source side) | BL left via inter-sprint relocation |
+| `move-in` | `move` subcommand (target side) + `add` subcommand | BL arrived in this sprint (from another sprint or from unscheduled/) |
+| `move-out` | `move` subcommand (source side) | BL left this sprint for another sprint |
 | `descope` | `remove` subcommand | BL returned to unscheduled/ |
-| `close-scope-delta` | `close` subcommand (if Audit 2 deltas at close) | Final scope-delta snapshot at archival |
+| `close-scope-delta` | `close` subcommand (one line per changed item) | Per-item scope-delta snapshot at archival |
+
+Note on `plan`: the `plan` subcommand does NOT emit Notes entries for initial items. The commitment snapshot lives in the roadmap doc's frontmatter `initial_items:` field (Invariant 3). `--gaps` Audit 2 reads `initial_items` as the baseline; Notes entries track CHURN relative to that baseline.
+
+Note on `add`: `add BL-X <target>` is a UX-constrained alias of `move BL-X <target>` where source is locked to `unscheduled/`. Both write `move-in` to the target's `## Notes` — single vocabulary for "BL arrived in this sprint." The enum has no separate `add` action; the subcommand name differs but the logged action is `move-in`.
 
 User-written prose entries need NOT follow this format — they are informational and are ignored by the `--gaps` validator's scope-delta audit.
 
-The `--gaps` Audit 2 (scope-delta) reconciles directory contents against the union of tool-written actions — an `add` + `move-in` - `move-out` - `descope` should equal the current directory contents minus `initial_items`. Unmatched deltas surface as `warn` findings.
+`close-scope-delta` emits **one line per changed item** (not a comma-list). Each line has a single BL-ID in field 3. Example: a close that finds 2 added and 1 removed emits 3 separate `close-scope-delta` lines.
+
+The `--gaps` Audit 2 (scope-delta) reconciles directory contents against the union of tool-written actions: `move-in - move-out - descope` should equal `current_dir - initial_items`. Unmatched deltas (changes in directory without a corresponding Notes entry, OR Notes entries with no directory evidence) surface as `warn` findings.
 
 ### Invariants (non-negotiable)
 
@@ -441,7 +451,7 @@ Close a sprint. Archives the version dir to `done/v<X>/`, annotates the roadmap 
    ⚠ BL-NNN (status: <value>): not marked done — closing anyway.
    ```
    Close proceeds. `--strict` flag escalates to refusal, listing each not-done item. `--force` overrides `--strict`. **Rationale** (defended on close-specific merits): the conclusion's original stricter form required cross-reference validation through plans/ + reviews/ (plan done AND review done), which is fragile — real plan bodies mention BL-IDs only ~12% of the time (adversarial Doodlestein finding), and the `discussion:` → `entities:` traversal chain is inconsistent. Own-frontmatter `status:` is the single deterministic signal. Warn-by-default matches solo-dev reality: housekeeping items routinely ship without full discuss→plan→review pipeline; requiring `--force` on every close would train users to always pass it (defeating the check). `--strict` preserves hard-enforcement opt-in for projects that want it. This rationale stands on close-specific structure, NOT by analogy to T09 scope-lock (which governs mid-sprint add/remove, a different semantic).
-5. **Scope-delta self-check** (audit drift BEFORE archival makes it invisible): compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. If either set is non-empty, append to the roadmap doc's `## Notes` section as a line: `YYYY-MM-DD | close-scope-delta | BL-X,BL-Y | mid-sprint drift logged at close (added=[BL-X], removed=[BL-Y])` — using the canonical action enum `close-scope-delta`. This preserves the drift audit trail after the sprint dir moves to `done/v<X>/` where diff-against-initial_items would otherwise be unrecoverable.
+5. **Scope-delta self-check** (audit drift BEFORE archival makes it invisible): compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. For each BL in `added_after_commit` OR `removed_after_commit`, emit ONE line to the roadmap doc's `## Notes` section (single BL-ID per line — preserves the canonical format where field 3 is always a single BL-ID): `YYYY-MM-DD | close-scope-delta | BL-X | added mid-sprint, logged at close` (or `removed mid-sprint, logged at close`). This preserves the drift audit trail after the sprint dir moves to `done/v<X>/` where diff-against-initial_items would otherwise be unrecoverable.
 6. **`--bump-remaining <target-version>` flag**: before the archival mv, move open items to the target version dir (`mv .ae/backlog/<version>/BL-X.md .ae/backlog/<target-version>/`). Requires target version's roadmap doc to exist (call `plan <target-version>` first). If target roadmap doc missing → refuse: `--bump-remaining target <target-version> has no roadmap doc. Run /ae:roadmap plan <target-version> first.` Each bumped item is logged to the target version's `## Notes` as a mid-sprint add.
 7. **Archive the dir**: `mv .ae/backlog/<version>/ .ae/backlog/done/<version>/` (plain `mv` — `.ae/` gitignored).
 7. **Annotate the roadmap doc**: append `## Closed` section with date + item list:
@@ -527,7 +537,21 @@ Read-only structural validator. Runs four audits against the backlog + roadmap d
 
 **Four audit types**:
 
-1. **Semantic classification audit** — for each BL in `.ae/backlog/done/v<X>/`, verify: (a) frontmatter `status:` is `done` or `closed`, (b) CHANGELOG.md for version `<X>` mentions the BL-ID. For each BL in `.ae/backlog/closed/`, flag if its body text references a shipped commit SHA or version string (likely misclassified). Severity: `error` on misclassification, `warn` on partial match.
+1. **Semantic classification audit** — for each BL in `.ae/backlog/done/v<X>/` or `.ae/backlog/closed/`, classify by the 2×2 matrix below. Severity is deterministic (no "partial match" judgment call):
+
+**Location × Evidence severity matrix**:
+
+| Location | `status:` frontmatter | CHANGELOG v<X> mentions BL | Severity + rationale |
+|----------|----------------------|---------------------------|----------------------|
+| `done/v<X>/` | `done` or `closed` | yes | **pass** — coherent shipped item |
+| `done/v<X>/` | `done` or `closed` | no | **warn** — CHANGELOG gap (shipped but not documented in that version; common for post-bump commits) |
+| `done/v<X>/` | `open` or missing | yes | **error** — status mismatch (CHANGELOG claims shipped, frontmatter says open; likely user error) |
+| `done/v<X>/` | `open` or missing | no | **error** — misclassification (in shipped tier but no evidence of shipment; the Phase A P1 escape class) |
+| `closed/` | any | no | **pass** — coherent discarded item |
+| `closed/` | any | yes | **error** — misclassification (in discarded tier but CHANGELOG claims shipped; the Phase A P1 escape class in its original form) |
+| `closed/` | any | no, but body references shipped commit/version in prose | **warn** — possible misclassification (body prose unreliable; requires user review) |
+
+CHANGELOG.md absent → semantic classification audit skips silently with one `info` line (same as before).
 
 2. **Scope-delta audit** — for each non-closed `.ae/roadmaps/v*.md`, compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. Reconcile against the canonical action enum in `## Notes`: `add` and `move-in` entries should account for `added_after_commit`; `move-out` and `descope` entries should account for `removed_after_commit`. Report **unmatched** deltas (directory change without a corresponding Notes entry in the canonical enum) with severity `warn`. Matched deltas are acceptable churn and NOT flagged. Severity: `warn` for unmatched.
 

@@ -9,10 +9,9 @@ source: manual
 
 ### MUST
 - [text:contains] SKILL.md Board View has a Flow-health signals subsection (heading or bolded section)
-- [text:contains] SKILL.md specifies WIP overload warning with threshold 2
-- [text:contains] SKILL.md clarifies WIP counts "In Progress" AND "Review" columns combined
+- [text:contains] SKILL.md specifies WIP overload warning with per-column thresholds (In Progress > 1 OR Review > 1) plus combined backstop (> 2)
 - [text:contains] SKILL.md specifies work-item age warning threshold of 7 days
-- [text:contains] SKILL.md documents the WIP=2 rationale (allows one primary in-flight + one in-review; 3+ is breakdown; Review counts because solo-dev review consumes attention)
+- [text:contains] SKILL.md documents the WIP rationale (one primary active + one in review; per-column catches failure modes combined threshold misses)
 - [text:contains] SKILL.md states both signals are advisory (warning text only)
 - [text:contains] SKILL.md states both signals are baseline-free (no velocity dependency)
 
