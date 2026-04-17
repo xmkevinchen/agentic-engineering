@@ -224,6 +224,26 @@ Cycle detection: during Blocked column computation, if the `blocked_by:` travers
 
 Other columns for unscheduled items + completed sprints render in the standard cluster view below the board.
 
+### Flow-health signals (v2)
+
+Advisory warnings emitted alongside the board view. Baseline-free by design — no historical velocity needed.
+
+**WIP overload warning** — if count of items across the "In Progress" AND "Review" columns combined (across all active sprint dirs) exceeds 2, emit:
+```
+⚠ WIP overload: <N> items in flight (threshold: 2). Solo-dev flow hygiene: finish before starting more.
+```
+
+Threshold 2 is intentional: allows one primary in-flight item plus one in-review item awaiting feedback; 3+ indicates flow breakdown. Single-piece flow (WIP>1) deferred until `pipeline.yml` configurability exists. Review column counts because solo-dev review still consumes primary attention.
+
+**Work-item age warning** — for items in "In Progress" or "Review" columns, check the `mtime` of the item's plan file (or `git log -1 --format=%ct <plan-file>` if available and more accurate). If time since last update exceeds 7 days, emit one line per stalled item:
+```
+⚠ BL-<ID>: stalled (<N> days since last update).
+```
+
+Both signals are **advisory** (text output only, no block on any operation). Thresholds are hardcoded in Phase B; `pipeline.yml` configurability deferred.
+
+Skip flow-health signals entirely if no active sprint exists (no non-closed roadmap doc).
+
 ## v2 Schemas (Agile/Scrum port)
 
 The following schemas land in Plan 039-a and are consumed by ae:roadmap v2 operations (rendering, `plan`/`close` subcommands, Layer 2 velocity math).
