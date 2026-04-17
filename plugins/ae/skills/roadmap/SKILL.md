@@ -323,10 +323,48 @@ Body sections:
 3. **Commitment snapshot lives in roadmap doc frontmatter** — `committed_at:`, `initial_items: [...]`, `initial_points: N`. Written once at `/ae:roadmap plan <version>` time, NEVER modified after. Items moved mid-sprint do NOT update this snapshot.
 4. **Scope-creep math reads `initial_items` frontmatter**, NOT the body `## Items` section. Body is for humans; frontmatter is for machines. Diff: `Set(frontmatter.initial_items) XOR Set(ls .ae/backlog/<version>/)`.
 
+## Subcommands (v2)
+
+Write operations on backlog state and roadmap docs. All subcommands are explicit — default `/ae:roadmap` with no args stays read-only.
+
+### `/ae:roadmap plan <version>`
+
+Create a sprint. Moves selected items from `unscheduled/` into `v<X>/` and writes the roadmap doc with frozen commitment snapshot in frontmatter.
+
+**Interactive mode** (default, no flags):
+1. Parse version arg (e.g., `v0.9.5`). Refuse if `.ae/roadmaps/<version>.md` already exists — output: `Roadmap doc for <version> already exists. Use move/add (Phase B) or manual edit.`
+2. Create `.ae/backlog/<version>/` directory if absent.
+3. Use `AskUserQuestion` multi-select: "Which unscheduled items belong to <version>?" Display each with `priority`, `size`, `blocked_by` status.
+4. `mv` selected items from `unscheduled/` to `<version>/` (plain `mv` — `.ae/` is gitignored).
+5. Prompt for Theme (single line, required). Prompt for Gate (multiline — Definition of Done, required).
+6. Write `.ae/roadmaps/<version>.md` per schema (see v2 Schemas → Roadmap doc format).
+
+**Non-interactive mode** (CI / automation / L1 tests — all 3 content flags required together):
+```
+/ae:roadmap plan <version> --items BL-007,BL-010 --theme "..." --gate "..." [--yes]
+```
+- `--items <comma-list>` (required): BL IDs from `unscheduled/` to commit
+- `--theme <string>` (required): single-line sprint goal
+- `--gate <string>` (required): Definition of Done (use `\\n` for line breaks if needed)
+- `--yes` (optional): skip the final confirmation prompt
+- If any required flag is missing: refuse with `Non-interactive mode requires --items, --theme, --gate. Omit all to use interactive mode.`
+- Same filesystem effects as interactive mode, but no prompts.
+
+**Common effects (both modes)**:
+- Frontmatter written: `version:`, `committed_at: <today>`, `initial_items: [<BL-IDs>]`, `initial_points:` (sum of size points; 0 if any item unsized), `theme:`, `gate:`
+- Body: `## Theme` (from flag/prompt), `## Gate` (from flag/prompt), `## Items` (auto-generated table from directory), `## Notes` (empty)
+- Scope-lock reminder printed: `Sprint committed with N items (M points). Mid-sprint adds/removes record to ## Notes. See Discussion 039 conclusion for discipline rules.`
+
+**Idempotency**: if `.ae/roadmaps/<version>.md` exists, refuse. User must explicitly `rm` the doc or use Phase B commands.
+
+**Error cases**:
+- Version dir contains files but no roadmap doc → warn: `Version dir exists without roadmap doc. Creating doc for existing items.` Proceed using current dir contents as initial_items.
+- BL referenced by `--items` not found in unscheduled → refuse: `BL-X not found in unscheduled/. Move it there first or check the ID.`
+
 ## Principles
 
-- **Deterministic**: same input → same output. No LLM randomness in clustering.
-- **Read-only by default**: reads pipeline metadata + BL frontmatter, produces text output. Write operations (`plan`/`close`/`move`/etc.) are explicit subcommands with their own spec sections.
+- **Deterministic**: same input → same output. No LLM randomness in clustering or subcommand logic.
+- **Read-only by default**: default `/ae:roadmap` (no subcommand) reads pipeline metadata + BL frontmatter and produces text output only. Write operations (`plan`/`close`/`move`/etc.) are explicit subcommands with their own spec sections.
 - **Metadata-only + directory-aware**: reads frontmatter (tags, dates, status, cross-refs) AND directory path (for sprint classification). Does NOT read discussion body content, plan step detail, or project source code. For deep analysis, use `/ae:analyze`.
 - **Lightweight**: no agent teams, no cross-family proxies. Fast single-pass over frontmatter data + directory listings.
 - **Opinionated but not rigid**: suggests sequencing and version boundaries, user decides.
