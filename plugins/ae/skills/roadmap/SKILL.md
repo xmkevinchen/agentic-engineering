@@ -165,12 +165,111 @@ Features: N total (A done, B active, C backlog)
 → Run /ae:discuss to advance active features
 ```
 
+## v2 Schemas (Agile/Scrum port)
+
+The following schemas land in Plan 039-a and are consumed by ae:roadmap v2 operations (rendering, `plan`/`close` subcommands, Layer 2 velocity math).
+
+### `blocked_by:` — BL item dependency field
+
+Optional frontmatter field on `.ae/backlog/BL-*.md` files. Captures hard scheduling dependency between BL items.
+
+```yaml
+---
+id: BL-028
+blocked_by: BL-026                  # single string
+# or
+blocked_by: [BL-026, BL-005]        # array of BL IDs
+---
+```
+
+Rules:
+- Values MUST be BL IDs referencing files that exist in `.ae/backlog/**/BL-*.md` (any subdirectory). Non-existent BL refs → ae:roadmap reports error with `file:line`.
+- Free-form prose blockers (e.g., "blocked by external platform gap") stay in BL body text, NOT in `blocked_by:`. That field is machine-parseable only.
+- No inverse `blocks:` field — derivable by traversal.
+- Cycle detection: ae:roadmap reports cycle as error with participating BL IDs, does not hang.
+
+### `size:` — Story point field (T-shirt)
+
+Optional frontmatter field on BL items. Required for items in version dirs (`.ae/backlog/v*/`) when velocity math is enabled (Layer 2); optional for `unscheduled/`.
+
+```yaml
+size: M   # one of: XS | S | M | L | XL
+```
+
+Deterministic internal mapping to points (used by velocity math only):
+
+| T-shirt | Points |
+|---------|--------|
+| XS | 1 |
+| S  | 2 |
+| M  | 3 |
+| L  | 5 |
+| XL | 8 |
+
+Rules:
+- ae:roadmap ABSTAINS from suggesting sizes. All available heuristics (description length, plan step count, tag cluster average) are noise. Abstaining protects against anchoring bias.
+- Unsized items in a sprint dir: excluded from velocity sum with a visible once-per-run warning (not silent, not imputed).
+- `size:` is required only for scheduled items when Layer 2 features are active. Phase A allows unsized items globally — velocity is Phase C/Layer 2.
+- XS = 1 point (NOT 0) — prevents the anti-pattern where users under-size to keep velocity clean.
+
+### Roadmap doc format — `.ae/roadmaps/<version>.md`
+
+Per-version sprint planning doc, written by `/ae:roadmap plan <version>` at sprint commit time.
+
+```yaml
+---
+version: v0.9.0                # required; matches the sprint dir name
+committed_at: 2026-04-16       # required; date user ran /ae:roadmap plan
+initial_items: [BL-022, BL-005, BL-025]   # required; BL IDs in sprint at plan time
+initial_points: 10             # required; sum of size points at plan time (0 if any unsized)
+theme: "Onboarding + Measurement"          # required; one-line sprint goal
+gate: "Quickstart runnable by external user + cross-family metric tracked"
+                                # required; Definition of Done
+closed: 2026-05-01             # optional; set by /ae:roadmap close on success
+---
+
+# v0.9.0
+
+## Theme
+Onboarding + Measurement — external users install, run a pipeline loop, get a
+measurable cross-family metric.
+
+## Gate
+- BL-022 quickstart complete (new user installs and runs without author help)
+- Cross-family measurement baseline visible in ae:retrospect
+
+## Items
+<!-- ae:roadmap managed — do not hand-edit; regenerated from .ae/backlog/v0.9.0/ -->
+| ID | Title | Priority | Size | Status | Blocked_by |
+|----|-------|----------|------|--------|-----------|
+| BL-022 | External user onboarding | P1 | L | open | — |
+| BL-005 | Third-party agent integration | P1 | M | open | — |
+| BL-025 | Retrospect user-facing | P1 | S | open | — |
+
+## Notes
+<!-- Churn log; user-owned. Structured bullets (recommended) for retrospect scans: -->
+- 2026-04-20 | add | BL-029 | cross-family measurement was a gate condition, missed in planning
+```
+
+Body sections:
+- `## Theme` — user-owned. 1-line sprint goal. ae:roadmap renders from frontmatter `theme:` initially; user may expand inline.
+- `## Gate` — user-owned. Definition of Done. ae:roadmap renders from frontmatter `gate:` initially; user may expand.
+- `## Items` — ae:roadmap managed. Regenerated from `.ae/backlog/<version>/` directory contents on every ae:roadmap run. User must NOT hand-edit; next run overwrites.
+- `## Notes` — user-owned. Sprint churn log. Structured bullets recommended (`YYYY-MM-DD | action | BL-ID | reason`) for future retrospect scans.
+
+### Invariants (non-negotiable)
+
+1. **Directory IS sprint membership**. ae:roadmap reads BOTH frontmatter AND directory path for classification: `v*/` = active sprint, `done/v*/` = archived, `unscheduled/` = product backlog, `closed/` = discarded.
+2. **Body `## Items` is ALWAYS auto-regenerated** from the sprint directory on every `/ae:roadmap` run. User edits to that section are overwritten on next run. This eliminates stale-doc-vs-live-directory drift.
+3. **Commitment snapshot lives in roadmap doc frontmatter** — `committed_at:`, `initial_items: [...]`, `initial_points: N`. Written once at `/ae:roadmap plan <version>` time, NEVER modified after. Items moved mid-sprint do NOT update this snapshot.
+4. **Scope-creep math reads `initial_items` frontmatter**, NOT the body `## Items` section. Body is for humans; frontmatter is for machines. Diff: `Set(frontmatter.initial_items) XOR Set(ls .ae/backlog/<version>/)`.
+
 ## Principles
 
 - **Deterministic**: same input → same output. No LLM randomness in clustering.
-- **Read-only**: reads pipeline metadata, produces text output. No file writes, no state changes.
-- **Metadata-only**: reads frontmatter (tags, dates, status, cross-refs). Does NOT read discussion content, plan steps, or codebase files. For deep analysis, use `/ae:analyze`.
-- **Lightweight**: no agent teams, no cross-family proxies. Fast single-pass over frontmatter data.
+- **Read-only by default**: reads pipeline metadata + BL frontmatter, produces text output. Write operations (`plan`/`close`/`move`/etc.) are explicit subcommands with their own spec sections.
+- **Metadata-only + directory-aware**: reads frontmatter (tags, dates, status, cross-refs) AND directory path (for sprint classification). Does NOT read discussion body content, plan step detail, or project source code. For deep analysis, use `/ae:analyze`.
+- **Lightweight**: no agent teams, no cross-family proxies. Fast single-pass over frontmatter data + directory listings.
 - **Opinionated but not rigid**: suggests sequencing and version boundaries, user decides.
 
 > **Validation**: Tested on 32-feature corpus (AE plugin, 2026-04-09), produces 9 clusters:
