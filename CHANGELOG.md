@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.2 — 2026-04-16
+
+Cache-refresh bump. Not a formal release — accumulates in-flight changes so local plugin reinstall picks up the new ae:roadmap v2 spec. Full release notes will land in a future version bump when Phase C (velocity math) ships.
+
+### In-flight content carried by this bump
+- BL-024 Doodlestein Bash permission removed
+- BL-030 ae:plan hardcoded `docs/backlog/` replaced with `output.backlog/`
+- ae:roadmap v2 Phase A: migration + path-aware reading + `plan`/`close` subcommands + schema invariants
+- ae:roadmap v2 Phase B: `move`/`add`/`remove`/`size` CRUD + `--gaps` structural validator + flow-health signals (WIP + age) + R2 structural release-readiness flag + canonical `## Notes` action enum
+
 ## v0.8.1 — 2026-04-15
 
 ### Housekeeping
