@@ -188,7 +188,7 @@ Track consecutive fixup rounds. Read `work.max_fix_loops` from pipeline.yml (def
 
 Options:
 1. Fix manually — pause for human intervention
-2. Defer to backlog — write to output.backlog as BL-NNN-slug.md
+2. Defer to backlog — write to `output.backlog/unscheduled/` as BL-NNN-slug.md (new BLs always land unscheduled; user commits to a sprint later via `/ae:roadmap plan`)
 3. Accept as-is — record finding as known issue in review report
 ```
 

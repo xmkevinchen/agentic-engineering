@@ -65,7 +65,7 @@ When `pipeline.yml` is absent or a slot is missing, skills use these defaults:
 | `output.discussions` | `docs/discussions/` | ae:analyze, ae:discuss |
 | `output.plans` | `docs/plans/` | ae:plan |
 | `output.milestones` | `docs/milestones/` | ae:work |
-| `output.backlog` | `docs/backlog/` | ae:work, ae:review, ae:code-review |
+| `output.backlog` | `docs/backlog/` | ae:work, ae:review, ae:code-review (new BL items land in `unscheduled/` subdir; `/ae:roadmap plan` promotes to `v<X>/`) |
 | `output.reviews` | `docs/reviews/` | ae:review |
 | `output.analyses` | `docs/analyses/` | ae:think |
 | `test_plugin.judge` | `codex` | ae:test-plugin |

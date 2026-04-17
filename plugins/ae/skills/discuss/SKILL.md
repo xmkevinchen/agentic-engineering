@@ -279,7 +279,7 @@ Can the team obtain the missing info?
 |------------|------|--------|
 | **Converge now** | Team found new info | `converged` with decision + rationale |
 | **Spawn new discussion** | Independent deep-dive needed | Create sub-discussion dir, link from index.md |
-| **Spawn as backlog** | Execution problem, not design | Write to `output.backlog` |
+| **Spawn as backlog** | Execution problem, not design | Write to `output.backlog/unscheduled/` (new BLs land unscheduled; sprint assignment via `/ae:roadmap plan`) |
 | **Explain + assume** | Delay cost > assumption risk | Record assumption + revisit trigger |
 
 **TL resolves autonomously first.** Only escalate to user when TL genuinely can't resolve.
