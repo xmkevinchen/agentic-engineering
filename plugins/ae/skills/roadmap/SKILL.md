@@ -54,7 +54,7 @@ For each `.md` file under any scope directory:
 
 ### Roadmaps (v2)
 
-For each `.ae/roadmaps/v*.md` file (or `<output.roadmaps>` if configured):
+For each `.ae/roadmaps/v*.md` file (path is fixed at `.ae/roadmaps/` — internal state, not configurable via pipeline.yml, same as `.ae/backlog/` being internal):
 1. Read frontmatter: `version`, `committed_at`, `initial_items`, `initial_points`, `theme`, `gate`, `closed` (optional)
 2. Classify: non-empty `closed:` → archived sprint; absent → active sprint
 3. Determine **current version** deterministically:
@@ -220,13 +220,20 @@ Columns (for the **current version** as determined by Roadmaps → State Reading
 | Done | Item's frontmatter has `status: done`/`status: closed` OR is in `.ae/backlog/done/<current-version>/` |
 | Blocked | Synthetic — item has `blocked_by:` field referencing any BL whose own status is NOT done/closed. Rendered alongside whatever stage column would otherwise apply (item appears in one primary column + the Blocked column annotation) |
 
-Cycle detection: during Blocked column computation, if the `blocked_by:` traversal forms a cycle, render the cycle participants with an `⚠ cycle detected` annotation and do NOT recurse (per Invariant 1 cycle rule).
+Cycle detection: during Blocked column computation, if the `blocked_by:` traversal forms a cycle, render the cycle participants with an `⚠ cycle detected` annotation and do NOT recurse (per v2 Schemas → `blocked_by:` cycle detection rule).
 
 Other columns for unscheduled items + completed sprints render in the standard cluster view below the board.
 
 ## v2 Schemas (Agile/Scrum port)
 
 The following schemas land in Plan 039-a and are consumed by ae:roadmap v2 operations (rendering, `plan`/`close` subcommands, Layer 2 velocity math).
+
+### Terminology: `closed/` vs `closed:` — two different things
+
+- `.ae/backlog/closed/` (directory): DISCARDED items — items closed WITHOUT shipping (e.g., "acceptable as-is", "rejected", "obsolete"). Excluded from velocity math.
+- `closed:` (roadmap doc frontmatter field): SHIPPED version marker — the roadmap doc for a version that has been shipped. Items belonging to that version live in `.ae/backlog/done/v<X>/`.
+
+One is a sink for discarded work, the other is a timestamp on successful delivery. They never cross paths.
 
 ### `blocked_by:` — BL item dependency field
 
@@ -369,13 +376,14 @@ Close a sprint. Archives the version dir to `done/v<X>/`, annotates the roadmap 
 1. Parse version arg. Read `.ae/roadmaps/<version>.md`. If missing → refuse: `No roadmap doc for <version>. Run /ae:roadmap plan <version> first, or create the doc manually.`
 2. **Idempotency check**: if frontmatter already has `closed: <date>` → print `Already closed on <date>. No changes made.` Exit.
 3. **"Done" lookup rule** (deterministic, single-source): a BL item is considered "done" iff its own frontmatter `status:` is `done` or `closed`. This is the ONLY signal — no cross-reference to plans or reviews (adversarial Doodlestein finding: plan bodies mention BL-IDs only ~12% of the time; own-frontmatter is the only deterministic signal).
-4. **Pre-check** (warn-by-default, matches T09 scope-lock pattern): enumerate `.ae/backlog/<version>/` items. For each item whose `status` is NOT done/closed, emit:
+4. **Pre-check** (warn-by-default): enumerate `.ae/backlog/<version>/` items. For each item whose `status` is NOT done/closed, emit:
    ```
    ⚠ BL-NNN (status: <value>): not marked done — closing anyway.
    ```
-   Close proceeds. `--strict` flag escalates to refusal, listing each not-done item. `--force` overrides `--strict`. Rationale: legitimate housekeeping items ship without pipeline artifacts; forcing `--force` on every close is a hostile pattern.
-5. **`--bump-remaining <target-version>` flag**: before the archival mv, move open items to the target version dir (`mv .ae/backlog/<version>/BL-X.md .ae/backlog/<target-version>/`). Requires target version's roadmap doc to exist (call `plan` first). Each bumped item is logged to the target version's `## Notes` as a mid-sprint add.
-6. **Archive the dir**: `mv .ae/backlog/<version>/ .ae/backlog/done/<version>/` (plain `mv` — `.ae/` gitignored).
+   Close proceeds. `--strict` flag escalates to refusal, listing each not-done item. `--force` overrides `--strict`. **Rationale** (defended on close-specific merits): the conclusion's original stricter form required cross-reference validation through plans/ + reviews/ (plan done AND review done), which is fragile — real plan bodies mention BL-IDs only ~12% of the time (adversarial Doodlestein finding), and the `discussion:` → `entities:` traversal chain is inconsistent. Own-frontmatter `status:` is the single deterministic signal. Warn-by-default matches solo-dev reality: housekeeping items routinely ship without full discuss→plan→review pipeline; requiring `--force` on every close would train users to always pass it (defeating the check). `--strict` preserves hard-enforcement opt-in for projects that want it. This rationale stands on close-specific structure, NOT by analogy to T09 scope-lock (which governs mid-sprint add/remove, a different semantic).
+5. **Scope-delta self-check** (audit drift BEFORE archival makes it invisible): compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. If either set is non-empty, append to the roadmap doc's `## Notes` section as a line: `YYYY-MM-DD | scope-delta-at-close | initial=[BL-X], final=[BL-X,BL-Y] | mid-sprint drift logged at close`. This preserves the drift audit trail after the sprint dir moves to `done/v<X>/` where diff-against-initial_items would otherwise be unrecoverable.
+6. **`--bump-remaining <target-version>` flag**: before the archival mv, move open items to the target version dir (`mv .ae/backlog/<version>/BL-X.md .ae/backlog/<target-version>/`). Requires target version's roadmap doc to exist (call `plan <target-version>` first). If target roadmap doc missing → refuse: `--bump-remaining target <target-version> has no roadmap doc. Run /ae:roadmap plan <target-version> first.` Each bumped item is logged to the target version's `## Notes` as a mid-sprint add.
+7. **Archive the dir**: `mv .ae/backlog/<version>/ .ae/backlog/done/<version>/` (plain `mv` — `.ae/` gitignored).
 7. **Annotate the roadmap doc**: append `## Closed` section with date + item list:
    ```markdown
    ## Closed
@@ -383,8 +391,9 @@ Close a sprint. Archives the version dir to `done/v<X>/`, annotates the roadmap 
    Items shipped: BL-XXX, BL-YYY
    ```
 8. **Set frontmatter**: `closed: <today YYYY-MM-DD>`.
-9. **Retrospective (opt-in)**: if `--retro` flag is set, invoke `/ae:retrospect` scoped to this sprint and append its output as a `## Retrospective` section. Default: skip (reto overhead is disproportionate for small versions).
-10. **Final output**: `Closed v<X> — N items shipped. Roadmap doc finalized at .ae/roadmaps/<version>.md.`
+9. **Retrospective (opt-in)**: if `--retro` flag is set, invoke `/ae:retrospect` scoped to this sprint and append its output as a `## Retrospective` section. Default: skip (retro overhead is disproportionate for small versions).
+10. **Commit** (git-tracked files only): stage and commit any git-tracked changes (e.g., CHANGELOG.md updates). Sprint dir moves are on `.ae/` which is gitignored — no git operation for those. Message format: `"[roadmap] close <version> — N items shipped"`.
+11. **Final output**: `Closed v<X> — N items shipped. Roadmap doc finalized at .ae/roadmaps/<version>.md.`
 
 **Error cases**:
 - `--strict` + open items: refuse with list: `Cannot close <version> in strict mode. Open items: BL-X (status: open), BL-Y (status: in_progress). Use --force to override, --bump-remaining <target> to move them, or mark them done first.`

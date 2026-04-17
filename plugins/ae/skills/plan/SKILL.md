@@ -30,7 +30,7 @@ Create an execution plan for: **$ARGUMENTS**
 1. Read project CLAUDE.md for conventions and constraints
 2. Read `docs/` for development plan, architecture, existing decisions
 3. Search codebase for related code, models, interfaces
-4. Check `output.backlog/` (from pipeline.yml) for related items
+4. Check `output.backlog/**/*.md` (from pipeline.yml) for related items — traverse subdirs (`v*/`, `unscheduled/`); exclude `done/` and `closed/` unless specifically researching historical context
 5. If a `docs/discussions/*/conclusion.md` is referenced, read the decisions and validate:
    - Check index.md `pipeline.discuss` — if still `in_progress` → **refuse**: "Discussion not concluded. Run `/ae:discuss` to complete."
    - Has `## Decision Summary` with at least one row where Decision column is non-empty and not "—"? — if no real decisions → **refuse**: "Conclusion has no decisions. Run `/ae:discuss` first."

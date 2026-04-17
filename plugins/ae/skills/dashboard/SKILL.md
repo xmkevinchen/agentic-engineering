@@ -78,6 +78,8 @@ Scan `output.backlog/` recursively:
 
 Report breakdown: `Open: N (M in current sprint, K unscheduled)` when sprint structure is present; fall back to flat count on legacy layout.
 
+**Note on "current sprint" approximation**: ae:dashboard classifies any `v*/` subdirectory as an active sprint via directory pattern alone — it does NOT read `.ae/roadmaps/v*.md` frontmatter. If a sprint dir exists but its roadmap doc has `closed:` frontmatter set (e.g., close subcommand partially failed or was interrupted), ae:dashboard will over-count those items as active. This is a deliberate performance/simplicity tradeoff. For authoritative current-version determination (reading `closed:` frontmatter), use `/ae:roadmap` which applies the full rule from its State Reading → Roadmaps subsection. For day-to-day status checks, the approximation is accurate.
+
 ### Cross-family
 
 Read `pipeline.yml` → `cross_family` config:
