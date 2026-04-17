@@ -399,6 +399,46 @@ Close a sprint. Archives the version dir to `done/v<X>/`, annotates the roadmap 
 - `--strict` + open items: refuse with list: `Cannot close <version> in strict mode. Open items: BL-X (status: open), BL-Y (status: in_progress). Use --force to override, --bump-remaining <target> to move them, or mark them done first.`
 - Version dir doesn't exist (roadmap doc orphaned): warn and proceed — set `closed:` frontmatter, skip the mv step. `Roadmap doc exists but no sprint dir at .ae/backlog/<version>/. Marking closed anyway; no items to archive.`
 
+### `/ae:roadmap move <BL-ID> <target-version>`
+
+Move a BL item between sprint dirs OR between `unscheduled/` and a sprint dir. Operates on `.ae/backlog/` via plain `mv` (gitignored).
+
+**Flow**:
+1. Locate `<BL-ID>` — search `.ae/backlog/**/BL-<ID>-*.md`. If not found → refuse: `BL-<ID> not found in backlog.`
+2. Resolve `<target-version>`: must match an existing sprint dir (`.ae/backlog/v<X>/`) OR the literal string `unscheduled`. If target is a version dir and `.ae/roadmaps/<target-version>.md` doesn't exist → refuse: `Target <target-version> has no roadmap doc. Run /ae:roadmap plan <target-version> first.`
+3. Same-dir check: if source and target are identical → no-op with message `BL-<ID> already in <target>.`
+4. **Active-sprint scope-lock** (mid-sprint add/remove discipline): if either source or target is an ACTIVE sprint (roadmap doc exists without `closed:` frontmatter), require `--reason "..."`. Without `--reason`, refuse:
+   ```
+   Active-sprint move detected (<source> → <target>). Mid-sprint scope changes must be logged.
+   Re-run with --reason "<why>" to proceed.
+   ```
+5. **Cycle check**: if the BL has `blocked_by:` and target contains the blocker (or vice versa), fall back to the v2 Schemas cycle detection rule — refuse with cycle report.
+6. `mv .ae/backlog/<source>/BL-<ID>-*.md .ae/backlog/<target>/`.
+7. **Log to Notes** (symmetric):
+   - If source is active sprint, append to `.ae/roadmaps/<source>.md` `## Notes`: `YYYY-MM-DD | move-out | BL-<ID> | <reason>`
+   - If target is active sprint, append to `.ae/roadmaps/<target>.md` `## Notes`: `YYYY-MM-DD | move-in | BL-<ID> | <reason>`
+8. Output: `Moved BL-<ID>: <source> → <target>.`
+
+### `/ae:roadmap add <BL-ID> <target-version>`
+
+Semantic alias of `move <BL-ID> <target-version>` where source is constrained to `unscheduled/`. Convenience form that makes commit-to-sprint intent explicit in the command name.
+
+**Behavior**: identical to `move` above, but:
+- Refuses if source is NOT `unscheduled/`: `BL-<ID> is not in unscheduled/ (currently in <source>). Use /ae:roadmap move to relocate from another sprint.`
+- Otherwise: same scope-lock rules apply if target is active; same `--reason` requirement.
+
+### `/ae:roadmap remove <BL-ID>`
+
+Move a BL from its current sprint back to `unscheduled/` (descope). Symmetric to `add`.
+
+**Flow**:
+1. Locate `<BL-ID>`. If not found → refuse.
+2. If current location is already `unscheduled/` → no-op: `BL-<ID> already in unscheduled/.`
+3. If current location is a sprint dir with an ACTIVE roadmap doc (no `closed:`), require `--reason "..."` (descope discipline — descope from an active sprint is as significant as a mid-sprint add).
+4. `mv .ae/backlog/<source>/BL-<ID>-*.md .ae/backlog/unscheduled/`.
+5. Log to source's `## Notes`: `YYYY-MM-DD | descope | BL-<ID> | <reason>`.
+6. Output: `Removed BL-<ID> from <source>. Now unscheduled.`
+
 ### `/ae:roadmap --gaps`
 
 Read-only structural validator. Runs four audits against the backlog + roadmap docs and reports findings by severity. No fixup logic — user runs the validator, reads findings, fixes manually.
