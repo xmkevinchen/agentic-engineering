@@ -357,7 +357,7 @@ measurable cross-family metric.
 | BL-025 | Retrospect user-facing | P1 | S | open | — |
 
 ## Notes
-<!-- Churn log; user-owned. Structured bullets (recommended) for retrospect scans: -->
+<!-- Churn log; hybrid ownership (user + tool). Structured bullets REQUIRED for tool-written entries. Format: YYYY-MM-DD | <action> | BL-ID | <reason> -->
 - 2026-04-20 | add | BL-029 | cross-family measurement was a gate condition, missed in planning
 ```
 
@@ -365,7 +365,23 @@ Body sections:
 - `## Theme` — user-owned. 1-line sprint goal. ae:roadmap renders from frontmatter `theme:` initially; user may expand inline.
 - `## Gate` — user-owned. Definition of Done. ae:roadmap renders from frontmatter `gate:` initially; user may expand.
 - `## Items` — ae:roadmap managed. Regenerated from `.ae/backlog/<version>/` directory contents on every ae:roadmap run. User must NOT hand-edit; next run overwrites.
-- `## Notes` — user-owned. Sprint churn log. Structured bullets recommended (`YYYY-MM-DD | action | BL-ID | reason`) for future retrospect scans.
+- `## Notes` — **hybrid ownership**: user freely appends prose observations; ae:roadmap subcommands append structured action entries per the canonical action enum below. No subcommand mutates user-authored prose; subcommands append new lines only.
+
+### Canonical action enum for `## Notes` entries
+
+All tool-written entries use this format: `YYYY-MM-DD | <action> | BL-ID | <reason>`. `<action>` must be one of:
+
+| Action | Producer | Meaning |
+|--------|----------|---------|
+| `add` | `plan` (initial items at commit) + `add` subcommand | BL entered this sprint |
+| `move-in` | `move` subcommand (target side) | BL arrived via inter-sprint relocation |
+| `move-out` | `move` subcommand (source side) | BL left via inter-sprint relocation |
+| `descope` | `remove` subcommand | BL returned to unscheduled/ |
+| `close-scope-delta` | `close` subcommand (if Audit 2 deltas at close) | Final scope-delta snapshot at archival |
+
+User-written prose entries need NOT follow this format — they are informational and are ignored by the `--gaps` validator's scope-delta audit.
+
+The `--gaps` Audit 2 (scope-delta) reconciles directory contents against the union of tool-written actions — an `add` + `move-in` - `move-out` - `descope` should equal the current directory contents minus `initial_items`. Unmatched deltas surface as `warn` findings.
 
 ### Invariants (non-negotiable)
 
@@ -425,7 +441,7 @@ Close a sprint. Archives the version dir to `done/v<X>/`, annotates the roadmap 
    ⚠ BL-NNN (status: <value>): not marked done — closing anyway.
    ```
    Close proceeds. `--strict` flag escalates to refusal, listing each not-done item. `--force` overrides `--strict`. **Rationale** (defended on close-specific merits): the conclusion's original stricter form required cross-reference validation through plans/ + reviews/ (plan done AND review done), which is fragile — real plan bodies mention BL-IDs only ~12% of the time (adversarial Doodlestein finding), and the `discussion:` → `entities:` traversal chain is inconsistent. Own-frontmatter `status:` is the single deterministic signal. Warn-by-default matches solo-dev reality: housekeeping items routinely ship without full discuss→plan→review pipeline; requiring `--force` on every close would train users to always pass it (defeating the check). `--strict` preserves hard-enforcement opt-in for projects that want it. This rationale stands on close-specific structure, NOT by analogy to T09 scope-lock (which governs mid-sprint add/remove, a different semantic).
-5. **Scope-delta self-check** (audit drift BEFORE archival makes it invisible): compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. If either set is non-empty, append to the roadmap doc's `## Notes` section as a line: `YYYY-MM-DD | scope-delta-at-close | initial=[BL-X], final=[BL-X,BL-Y] | mid-sprint drift logged at close`. This preserves the drift audit trail after the sprint dir moves to `done/v<X>/` where diff-against-initial_items would otherwise be unrecoverable.
+5. **Scope-delta self-check** (audit drift BEFORE archival makes it invisible): compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. If either set is non-empty, append to the roadmap doc's `## Notes` section as a line: `YYYY-MM-DD | close-scope-delta | BL-X,BL-Y | mid-sprint drift logged at close (added=[BL-X], removed=[BL-Y])` — using the canonical action enum `close-scope-delta`. This preserves the drift audit trail after the sprint dir moves to `done/v<X>/` where diff-against-initial_items would otherwise be unrecoverable.
 6. **`--bump-remaining <target-version>` flag**: before the archival mv, move open items to the target version dir (`mv .ae/backlog/<version>/BL-X.md .ae/backlog/<target-version>/`). Requires target version's roadmap doc to exist (call `plan <target-version>` first). If target roadmap doc missing → refuse: `--bump-remaining target <target-version> has no roadmap doc. Run /ae:roadmap plan <target-version> first.` Each bumped item is logged to the target version's `## Notes` as a mid-sprint add.
 7. **Archive the dir**: `mv .ae/backlog/<version>/ .ae/backlog/done/<version>/` (plain `mv` — `.ae/` gitignored).
 7. **Annotate the roadmap doc**: append `## Closed` section with date + item list:
@@ -513,7 +529,7 @@ Read-only structural validator. Runs four audits against the backlog + roadmap d
 
 1. **Semantic classification audit** — for each BL in `.ae/backlog/done/v<X>/`, verify: (a) frontmatter `status:` is `done` or `closed`, (b) CHANGELOG.md for version `<X>` mentions the BL-ID. For each BL in `.ae/backlog/closed/`, flag if its body text references a shipped commit SHA or version string (likely misclassified). Severity: `error` on misclassification, `warn` on partial match.
 
-2. **Scope-delta audit** — for each non-closed `.ae/roadmaps/v*.md`, compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. Report non-empty deltas with date context pulled from `## Notes` scope-delta entries (if present). Severity: `warn`.
+2. **Scope-delta audit** — for each non-closed `.ae/roadmaps/v*.md`, compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. Reconcile against the canonical action enum in `## Notes`: `add` and `move-in` entries should account for `added_after_commit`; `move-out` and `descope` entries should account for `removed_after_commit`. Report **unmatched** deltas (directory change without a corresponding Notes entry in the canonical enum) with severity `warn`. Matched deltas are acceptable churn and NOT flagged. Severity: `warn` for unmatched.
 
 3. **Orphan BL-ref audit** — grep BL-IDs in `.ae/discussions/*/conclusion.md` + `.ae/plans/*.md` body. For each referenced ID, flag if no `.ae/backlog/**/<ID>-*.md` file exists. Severity: `warn`. ID-range filter: skip IDs more than 20 above the current max BL ID (suppresses pre-current-numbering mentions like BL-072).
 
@@ -529,7 +545,7 @@ Read-only structural validator. Runs four audits against the backlog + roadmap d
 🔍 /ae:roadmap --gaps — structural validator
 
 [error] semantic-classification: .ae/backlog/closed/BL-023-*.md — body references "shipped v0.8.1" but located in closed/ (discarded tier). CHANGELOG.md v0.8.1 section mentions BL-023. Should be in done/v0.8.1/.
-[warn]  scope-delta: .ae/roadmaps/v0.9.0.md — committed {BL-022, BL-005} but current dir contains {BL-022, BL-005, BL-027}. Added: BL-027. No matching scope-delta entry in ## Notes.
+[warn]  scope-delta: .ae/roadmaps/v0.9.0.md — committed {BL-022, BL-005} but current dir contains {BL-022, BL-005, BL-027}. Added: BL-027. No matching `add` or `move-in` entry in ## Notes (canonical action enum unmatched).
 [info]  frontmatter: .ae/roadmaps/v0.8.2.md — extra field `legacy_id` (unknown).
 
 Summary: 1 error, 1 warn, 1 info across 3 findings.
