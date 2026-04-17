@@ -69,9 +69,14 @@ For each `.md` file in `output.reviews` with `type: review` in frontmatter:
 4. If `verdict: fail` → feature stage = "review failed — needs fixup"
 5. If `verdict` absent → feature stage = "reviewed (verdict unknown)"
 
-### Backlog
+### Backlog (v2 — path-aware traversal)
 
-Count files in `output.backlog` with `status: open` (or all `.md` files if no status field).
+Scan `output.backlog/` recursively:
+- **Include** items in `v*/` (active sprint), `unscheduled/` (product backlog), and `BL-*.md` at root (legacy flat layout during migration)
+- **Exclude** items in `done/v*/` (archived — shipped in that version) and `closed/` (discarded, not shipped) from open counts
+- Count files with `status: open` (or all `.md` files if no status field) across included scopes
+
+Report breakdown: `Open: N (M in current sprint, K unscheduled)` when sprint structure is present; fall back to flat count on legacy layout.
 
 ### Cross-family
 
