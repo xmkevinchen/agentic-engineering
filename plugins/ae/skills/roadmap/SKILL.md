@@ -22,7 +22,7 @@ Proactively analyze project features, cluster them by shared themes, propose exe
 
 ## State Reading
 
-Read all pipeline metadata. This skill reads structured frontmatter only — it does NOT read file content, run code, or spawn agent teams.
+Read all pipeline metadata. This skill reads structured frontmatter AND directory path (for sprint classification, per v2 Invariant 1). It does NOT read body content of discussions/plans or run code.
 
 ### Discussions
 
@@ -36,15 +36,38 @@ For each `.md` file in `output.plans`:
 1. Read frontmatter: `id`, `title`, `status`, `discussion`, `created`
 2. Count checkboxes: `- [x]` (done) vs `- [ ]` (pending)
 
-### Backlog
+### Backlog (v2 — path-aware)
 
-For each `.md` file in `output.backlog`:
-1. Read frontmatter: `id`, `title`, `status`, `priority` (if present)
+Traverse subdirectories of `output.backlog`. Each subdirectory name determines the item's scope classification (per Invariant 1):
+
+| Subdir pattern | Classification | Read? |
+|----------------|---------------|-------|
+| `v<X>.<Y>.<Z>/` (e.g., `v0.9.0/`) | **Active sprint** (committed work) | Yes — default view |
+| `unscheduled/` | **Product backlog** (not yet committed) | Yes — default view |
+| `done/v<X>/` | **Archived** (shipped in version X) | Read only when velocity / history queries run; excluded from default view |
+| `closed/` | **Discarded** (not shipped) | Read only on explicit `--include-closed`; excluded from default view |
+| `BL-*.md` at root (pre-migration layout) | **Legacy flat** | Read with warning — suggest running `/ae:roadmap bootstrap` to migrate |
+
+For each `.md` file under any scope directory:
+1. Read frontmatter: `id`, `title`, `status`, `priority`, `size`, `blocked_by` (if present)
+2. Record the item's scope (from parent dir name) alongside its frontmatter
+
+### Roadmaps (v2)
+
+For each `.ae/roadmaps/v*.md` file (or `<output.roadmaps>` if configured):
+1. Read frontmatter: `version`, `committed_at`, `initial_items`, `initial_points`, `theme`, `gate`, `closed` (optional)
+2. Classify: non-empty `closed:` → archived sprint; absent → active sprint
+3. Determine **current version** deterministically:
+   - List all active (non-closed) roadmap docs
+   - Zero matches → no current version
+   - Exactly one → that's current
+   - Multiple (rare, but possible when user pre-plans future sprints) → pick lowest semver version as current (earliest-actionable sprint is most relevant; prevents tiebreaker ambiguity)
 
 ### Graceful Handling
 - Directory missing → skip, note in output
 - File missing frontmatter → skip
 - No discussions found → output: `No features found. Start with /ae:discuss.` Stop.
+- Pre-migration flat backlog detected → output warning + hint: `⚠ Flat backlog layout detected. Run /ae:roadmap bootstrap to migrate to sprint structure.`
 
 ## Clustering Algorithm
 
@@ -105,15 +128,31 @@ Discussions in the same cluster with sequential IDs (e.g., 013 → 014 → 019) 
 
 Soft edges are labeled **"related to"** in output. They suggest but do not dictate sequencing.
 
-## Version Boundary Suggestions
+## Version Lanes (v2 — render from roadmap docs + directories)
 
-For each cluster, evaluate completion:
+For each non-closed roadmap doc (from State Reading → Roadmaps), render a **version lane** as a top-level output section:
 
-- **All features done** (`plan status: done`, or no plan + `discussion status: concluded`) → suggest as **release candidate**: "This theme is complete — consider including in next release."
-- **Mixed active/done** → show remaining work: "N of M features complete. Remaining: [list active features]."
-- **All active/pending** → "Theme in progress. Earliest actionable: [most-advanced feature]."
+```
+## Version v0.9.0 — <theme from frontmatter>
+  Gate: <gate from frontmatter (first line)>
+  Committed: YYYY-MM-DD (N items, M points)
+  Scope delta: +K items since commitment  # if directory content differs from initial_items
+  [item list rendered from .ae/backlog/v0.9.0/ contents, sorted by priority then status]
+```
 
-Cross-cluster suggestion: when 2+ clusters are all-complete or near-complete, suggest bundling as a version: "Clusters [A] and [B] are both complete — natural version boundary."
+### Scope-delta annotation (Invariant 4)
+
+For each version lane, compute:
+```
+added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)
+removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)
+```
+
+Render if non-empty: `Scope delta: +K items (BL-X, BL-Y) / -L items (BL-Z bumped to v1.0.0)`. Reads `initial_items` from frontmatter, NOT the body `## Items` section.
+
+### Legacy cluster-based suggestions (retained for unscheduled/)
+
+The pre-v2 clustering algorithm still operates, but on `unscheduled/` items only (scheduled items have already been committed to a sprint — no re-clustering needed). Cross-cluster version suggestions now phrase as: "Theme [X] is complete across [versions] — consider a themed release milestone." This is advisory only; user decides.
 
 ## Output Format
 
@@ -164,6 +203,26 @@ Features: N total (A done, B active, C backlog)
 → Run /ae:dashboard for current pipeline status
 → Run /ae:discuss to advance active features
 ```
+
+## Board View (v2)
+
+Derived column rendering from directory + pipeline stage + `blocked_by:`. No new status field required — all state is computed.
+
+Columns (for the **current version** as determined by Roadmaps → State Reading):
+
+| Column | Derivation rule |
+|--------|-----------------|
+| Committed | Item is in `.ae/backlog/<current-version>/`, no discussion for it yet (no `.ae/discussions/*/` with matching entity) |
+| Discussing | Item has a discussion with `status: active` or `pipeline.discuss: in_progress` |
+| Planned | Item has a plan with `status: reviewed` and no associated review yet |
+| In Progress | Item's plan has `status: reviewed` AND at least one `- [x]` step AND at least one `- [ ]` step |
+| Review | Item's plan is fully `- [x]` AND has a review file with no verdict yet |
+| Done | Item's frontmatter has `status: done`/`status: closed` OR is in `.ae/backlog/done/<current-version>/` |
+| Blocked | Synthetic — item has `blocked_by:` field referencing any BL whose own status is NOT done/closed. Rendered alongside whatever stage column would otherwise apply (item appears in one primary column + the Blocked column annotation) |
+
+Cycle detection: during Blocked column computation, if the `blocked_by:` traversal forms a cycle, render the cycle participants with an `⚠ cycle detected` annotation and do NOT recurse (per Invariant 1 cycle rule).
+
+Other columns for unscheduled items + completed sprints render in the standard cluster view below the board.
 
 ## v2 Schemas (Agile/Scrum port)
 
