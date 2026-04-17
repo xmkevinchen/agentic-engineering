@@ -399,6 +399,40 @@ Close a sprint. Archives the version dir to `done/v<X>/`, annotates the roadmap 
 - `--strict` + open items: refuse with list: `Cannot close <version> in strict mode. Open items: BL-X (status: open), BL-Y (status: in_progress). Use --force to override, --bump-remaining <target> to move them, or mark them done first.`
 - Version dir doesn't exist (roadmap doc orphaned): warn and proceed — set `closed:` frontmatter, skip the mv step. `Roadmap doc exists but no sprint dir at .ae/backlog/<version>/. Marking closed anyway; no items to archive.`
 
+### `/ae:roadmap --gaps`
+
+Read-only structural validator. Runs four audits against the backlog + roadmap docs and reports findings by severity. No fixup logic — user runs the validator, reads findings, fixes manually.
+
+**Motivating example** (why this exists): during Plan 039-a Phase A, BL-023 and BL-024 — both shipped in v0.8.1 per CHANGELOG.md — were misclassified into `.ae/backlog/closed/` (the "discarded, not shipped" tier) instead of `.ae/backlog/done/v0.8.1/` (the "shipped" tier). The migration step's pre-commit gate checked file counts and frontmatter validity but NOT semantic alignment against authoritative sources. The misclassification would have poisoned Phase C velocity baseline (v0.8.1 appearing as 0 items shipped). This escape class is exactly what the four audits below are designed to catch.
+
+**Four audit types**:
+
+1. **Semantic classification audit** — for each BL in `.ae/backlog/done/v<X>/`, verify: (a) frontmatter `status:` is `done` or `closed`, (b) CHANGELOG.md for version `<X>` mentions the BL-ID. For each BL in `.ae/backlog/closed/`, flag if its body text references a shipped commit SHA or version string (likely misclassified). Severity: `error` on misclassification, `warn` on partial match.
+
+2. **Scope-delta audit** — for each non-closed `.ae/roadmaps/v*.md`, compute `added_after_commit = Set(ls .ae/backlog/<version>/) - Set(frontmatter.initial_items)` and `removed_after_commit = Set(frontmatter.initial_items) - Set(ls .ae/backlog/<version>/) - Set(ls .ae/backlog/done/<version>/)`. Report non-empty deltas with date context pulled from `## Notes` scope-delta entries (if present). Severity: `warn`.
+
+3. **Orphan BL-ref audit** — grep BL-IDs in `.ae/discussions/*/conclusion.md` + `.ae/plans/*.md` body. For each referenced ID, flag if no `.ae/backlog/**/<ID>-*.md` file exists. Severity: `warn`. ID-range filter: skip IDs more than 20 above the current max BL ID (suppresses pre-current-numbering mentions like BL-072).
+
+4. **Frontmatter integrity audit** — for each roadmap doc, verify required fields: `version`, `committed_at`, `initial_items`, `initial_points`, `theme`, `gate`. Missing fields → severity `error`. Extra unknown fields → severity `info`.
+
+**CHANGELOG.md parse contract**:
+- Version header regex: `^## v[0-9]+\.[0-9]+\.[0-9]+` (matches `## v0.8.0`, `## v0.8.1`, etc.). Fallback regex: `^## \[?[0-9]+\.[0-9]+\.[0-9]+\]?` for bracket-style changelogs.
+- BL-ID appearance rule: exact word match on `BL-[0-9]+` regex within the version's section body (from the version header to the next `##` at level 2). Substring matches inside words (e.g., `BBL-123`) are rejected.
+- Missing CHANGELOG.md → semantic classification audit skips silently, emits one `info` line: `CHANGELOG.md not found; semantic classification audit skipped.`
+
+**Output format**:
+```
+🔍 /ae:roadmap --gaps — structural validator
+
+[error] semantic-classification: .ae/backlog/closed/BL-023-*.md — body references "shipped v0.8.1" but located in closed/ (discarded tier). CHANGELOG.md v0.8.1 section mentions BL-023. Should be in done/v0.8.1/.
+[warn]  scope-delta: .ae/roadmaps/v0.9.0.md — committed {BL-022, BL-005} but current dir contains {BL-022, BL-005, BL-027}. Added: BL-027. No matching scope-delta entry in ## Notes.
+[info]  frontmatter: .ae/roadmaps/v0.8.2.md — extra field `legacy_id` (unknown).
+
+Summary: 1 error, 1 warn, 1 info across 3 findings.
+```
+
+**Read-only invariant**: `--gaps` MUST NOT mutate any files. All findings reported to stdout only. Fixup is explicitly the user's responsibility (auto-fix deferred to a later phase — out of Phase B scope).
+
 ## Principles
 
 - **Deterministic**: same input → same output. No LLM randomness in clustering or subcommand logic.
