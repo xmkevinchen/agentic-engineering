@@ -244,6 +244,30 @@ Both signals are **advisory** (text output only, no block on any operation). Thr
 
 Skip flow-health signals entirely if no active sprint exists (no non-closed roadmap doc).
 
+## Release-readiness flag (R2 structural)
+
+Advisory output emitted for each active version alongside its version lane. Structural-only — NO timing language. Discussion 039 Topic 4 established: timing language requires ≥3 archived versions with size data (Phase C velocity baseline). Until Phase C lands, R2 reports only structural readiness.
+
+**Criteria** (both must hold for a version to be "ready"):
+1. Every BL in `.ae/backlog/<version>/` has frontmatter `status:` set to `done` or `closed`
+2. No BL in the sprint has an active `blocked_by:` referring to a BL whose own status is NOT done/closed
+
+**When ready, emit** (action-cued phrasing):
+```
+✓ <version>: all items done, 0 open blockers. Structural release checklist is clear; next action: run `/ae:roadmap close <version>` when you choose to cut the release.
+```
+
+**When not ready, emit**:
+```
+<version>: <N>/<M> items done, <K> open blockers. Not ready.
+```
+
+**Forbidden**:
+- No "ship now" / "release today" / date projections — these require velocity baseline (Phase C).
+- No ordering across versions (e.g., "ship v0.9.0 before v1.0.0") — R2 is per-version only.
+
+**Consumer scope** (Phase B boundary): ae:next does NOT consume R2 output. An ae:next integration ("suggest `/ae:roadmap close <version>` when R2 fires") is deferred to Phase C. R2's advisory output is visible only when user runs `/ae:roadmap` directly.
+
 ## v2 Schemas (Agile/Scrum port)
 
 The following schemas land in Plan 039-a and are consumed by ae:roadmap v2 operations (rendering, `plan`/`close` subcommands, Layer 2 velocity math).
