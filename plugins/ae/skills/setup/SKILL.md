@@ -272,7 +272,8 @@ Smart-recommend library agents based on current project profile.
 
 **Algorithm**: see `docs/references/agent-selection-scorer.md` for signal definitions, weights, noise-floor rules, threshold, and `--why` output format. Briefly: 6-signal deterministic scorer (keyword_overlap / description_match / role_gap_bonus / category_match / library_source_boost / stack_mismatch), threshold 0.35, output cap 8, no-confident-match path suggests writing a custom agent.
 
-Inputs used:
+Inputs used (token UNION across all sources — richer input = better scoring):
+- **Project `CLAUDE.md`** — tech-stack / architecture / current-focus tokens. Empirically critical per Mengdie dogfood (2026-04-18); without it, corpus is too narrow and suppresses valid matches.
 - Latest `.ae/analyses/*.md` by mtime (project profile)
 - Latest active discussion's tags + topic titles + Key Questions
 - `project_agents` + built-in agents roster (for role-gap detection)
