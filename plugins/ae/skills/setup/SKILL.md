@@ -46,6 +46,104 @@ If `.claude/pipeline.yml` does not exist:
 
 If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
+### `agents` argument: Library-to-project agent curation (BL-005)
+
+`/ae:setup agents [subcommand]` curates third-party or hand-written agents into `.claude/agents/`. The flat `.claude/agents/` namespace is mandatory — CC resolves `subagent_type` by filename stem (see `docs/references/agent-contract.md`).
+
+Phase 1 CLI surface (full list; Steps 3/4/6 of plan 041 add import/suggest/governance subcommands — this section documents the baseline scaffolding + browse/remove/phase subflags):
+
+```
+/ae:setup agents --library <path>                     # declare library (multi-library supported)
+/ae:setup agents --list [--category <cat>]            # browse configured libraries
+/ae:setup agents --add <name|library:name>            # import (Step 3 adds import mechanism)
+/ae:setup agents --remove <name>                      # delete + cleanup
+/ae:setup agents --sync [--diff]                      # upstream drift detection (Step 3)
+/ae:setup agents --detach <name>                      # break upstream link (Step 3)
+/ae:setup agents --suggest [--phase <enum>] [--why]   # smart selection (Step 4)
+/ae:setup agents --refresh                            # advisory audit (Step 4)
+```
+
+Library reference is persistent — set once via `--library`, reused across subsequent `--suggest` / `--add` runs.
+
+#### `--library <path>`
+
+Declare an external agent library for curation. Multi-library supported.
+
+Behavior:
+
+1. **Validate path**: resolve `<path>` relative to project root (or accept absolute). If path does not exist → refuse with `[ae:setup] path not found: <path>`.
+2. **Scan library structure**: list immediate subdirectories — these become `category` values. If no subdirectories (flat library), record `categories: []` and treat all agents as a single uncategorized bucket.
+3. **Prompt for library name**: use `AskUserQuestion` asking for a short identifier (default: derive from last path segment, e.g., `agency-agents` from `../agency-agents`). Name must be unique across `agent_libraries:` in pipeline.yml.
+4. **Append to pipeline.yml**: add new entry under `agent_libraries:` array with `name`, `source`, `categories` (if detected), `checked_at: <today>`. If `agent_libraries:` section doesn't exist, create it.
+5. **Name collision**: if user-supplied name matches an existing library entry → refuse with `[ae:setup] library name '<name>' already declared. Remove existing entry first or pick a different name.`
+6. **Low-signal-library warning** (one-shot at `--library` time, not on every `--suggest`): scan corpus after adding — if >50% of agent descriptions are <50 chars OR >70% lack any role-inference keyword (`review|audit|implement|build|expert|specialist`) → emit `[ae:setup] library '<name>' has thin metadata: N/M agents have <50-char descriptions, K/M lack role keywords. --suggest results may be limited; consider --list + manual browsing`.
+
+Example output:
+```
+$ /ae:setup agents --library ../agency-agents
+Detected 20 categories (engineering, product, design, testing, ...)
+Library name [agency-agents]: <Enter>
+[ae:setup] Added library 'agency-agents' (source: ../agency-agents, 226 agents across 20 categories)
+[ae:setup] library 'agency-agents' has thin metadata: 158/226 agents have <50-char descriptions, 82/226 lack role keywords. --suggest results may be limited; consider --list + manual browsing
+```
+
+#### `--list [--category <cat>]`
+
+Browse configured libraries. Presents a table (library, category, name, first-line-description).
+
+Behavior:
+
+1. **Read `agent_libraries:` from pipeline.yml**. Absent → print `[ae:setup] No library configured. Run /ae:setup agents --library <path> first.` and exit.
+2. **Traverse each library**: for each library source, list `.md` files under configured categories (or all if flat). Read frontmatter `name`, `description`. Skip files with malformed YAML (warn once per library: `[ae:setup] <library>: M/N agents have malformed YAML, skipped`).
+3. **Library-path-missing tolerance**: if a library's `source:` path no longer exists → warn `[ae:setup] library '<name>' path missing: <source>. Skipping.` and continue with remaining libraries (do not abort).
+4. **Filter by `--category <cat>`** (optional): show only agents whose category matches. Case-insensitive match on directory name. If no agents match → print `No agents in category '<cat>'`.
+5. **Output format**: pretty table with columns `library-qualified-id | category | role-hint | description`. `library-qualified-id` = `<library>:<filename-stem>`. Role hint is inferred per `docs/references/agent-contract.md` role-inference heuristic.
+
+Example:
+```
+$ /ae:setup agents --list --category engineering
+library-qualified-id                                  category     role          description
+agency-agents:engineering-code-reviewer               engineering  reviewer      Expert code reviewer who provides constructive feedback...
+agency-agents:engineering-software-architect          engineering  domain-expert System design, DDD, architectural patterns expert...
+agency-agents:engineering-security-engineer           engineering  reviewer      Security vulnerabilities, auth bypass, injection vectors...
+(23 agents in category engineering)
+```
+
+#### `--remove <name>`
+
+Remove an imported agent and clean up references.
+
+Behavior:
+
+1. **Resolve target**: `<name>` is the filename stem (e.g., `engineering-code-reviewer`). Also accept library-qualified form (`agency-agents:engineering-code-reviewer`) — both resolve to the same filename.
+2. **Delete agent file**: `rm .claude/agents/<name>.md`. If file doesn't exist → refuse with `[ae:setup] agent not found: .claude/agents/<name>.md`.
+3. **Remove pipeline.yml entry**: delete matching `project_agents[]` entry by `name:` field.
+4. **Governance rule cleanup**: if `.claude/agent-governance.md` exists, scan for `rules[].agent: <name>` entries. For each match, prompt user: `Rule references removed agent '<name>' (context: [X, Y], scope: <s>). Delete rule? [Y/n]`. On Y, remove rule from file.
+5. **Summary output**: report file deleted, pipeline.yml entry removed, N governance rules cleaned.
+
+#### `--phase <early | build | scale | maintenance>`
+
+Closed enum flag for `--suggest`. When provided, biases smart-selection scoring toward phase-appropriate agents. When absent, no phase bias.
+
+Phase-appropriate agents (heuristic, used by scorer — full bias rules in `docs/references/agent-selection-scorer.md`, written in Step 4):
+
+| Phase | Favored roles / specialties |
+|-------|----------------------------|
+| `early` | architect, minimal-change-engineer, rapid-prototyper |
+| `build` | reviewer, security-engineer, technical-writer, developer |
+| `scale` | performance-engineer, devops-automator, sre, incident-response |
+| `maintenance` | bug-hunter, refactorer, deprecation-specialist |
+
+**Phase 1 manual-only**: no auto-inference from roadmap/LOC/commit density. Conclusion 040 T7: auto-inference deferred to Phase 4 because no industry framework auto-adjusts toolset by phase (npm/cargo/asdf/nvm all static).
+
+Invalid phase value → refuse with `[ae:setup] invalid phase '<value>'. Valid: early | build | scale | maintenance`.
+
+#### Cross-flag error semantics
+
+- Flags that mutate pipeline.yml (`--library`, `--add`, `--remove`, `--sync`, `--detach`): require write access to project `.claude/pipeline.yml`. On ENOENT/EACCES → refuse with clear message.
+- Flags that need `agent_libraries:` configured (`--list`, `--add`, `--suggest`, `--refresh`, `--sync`): if absent → prompt user to run `--library <path>` first; do not silently no-op.
+- Batch operations (`--add a,b,c` or `--suggest` batch-apply Y) emit a summary at end listing successes + skipped agents with reasons.
+
 ### `update` argument: Update existing config
 
 Read current `.claude/pipeline.yml`, compare with template:
