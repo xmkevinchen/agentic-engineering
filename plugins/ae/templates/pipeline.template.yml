@@ -39,15 +39,42 @@ work:
     - "*.key"
     - "migrations/*"
 
+# --- Agent Libraries (optional, BL-005) ---
+# Declare external agent libraries AE can curate from. Multi-library supported.
+# Agents are NOT auto-imported — use `/ae:setup agents --suggest` or `--add <library:name>` to curate.
+# Local paths only in Phase 1; git URL / remote sources deferred to Phase 4.
+# See docs/references/agent-contract.md for the frontmatter contract.
+# agent_libraries:
+#   - name: agency-agents                    # project-local identifier (required)
+#     source: "../agency-agents"             # local path (required)
+#     categories: [engineering, product]     # optional — biases smart-suggest (weight multiplier)
+#     # filter: strict                       # optional — hard-filter category in --list / --suggest
+#   - name: personal-agents
+#     source: "~/Workspace/personal-agents"
+
 # --- Project Agents (optional) ---
 # Agents in .claude/agents/ are auto-discovered at runtime.
-# Use this section only to override inferred roles.
-# All agents must be in .claude/agents/ to be spawnable.
+# Use this section only to:
+#   (a) override inferred roles for hand-written agents, OR
+#   (b) record upstream provenance for library-imported agents (written by `/ae:setup agents --add`).
+# All agents must be in .claude/agents/ to be spawnable. CC resolves by filename stem, not the name: field.
 # project_agents:
+#   # Hand-written project agent (minimum form):
 #   - name: security-auditor
-#     role: reviewer                 # reviewer | developer | domain-expert
-#   - name: api-expert
-#     role: domain-expert
+#     role: reviewer                         # reviewer | developer | domain-expert
+#     specialty: security                    # optional free-form tag
+#     tech_stack: [rust, mcp]                # optional — used by smart-selection stack-mismatch signal
+#
+#   # Library-imported agent (--add writes these fields):
+#   - name: engineering-code-reviewer        # filename stem (canonical spawn identifier)
+#     role: reviewer
+#     source: "agency-agents:engineering/engineering-code-reviewer.md"
+#     source_sha: abc1234                    # git SHA from library; sha256 fallback when non-git
+#     display_name: "Code Reviewer"          # from original name: field — shown in --list output
+#     imported_at: 2026-04-18
+#     modified: false                        # auto-updated by --sync on drift detection
+#     priority: 50                           # optional — Rule 4 best-N ordering (default 50)
+#     required: false                        # optional — when true, always spawn regardless of best-N cap
 
 # --- Cross-Family Review ---
 # Enable/disable cross-family proxy agents in Agent Teams.
