@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.8.3 — 2026-04-18
+
+Cache-refresh bump. In-flight content carried so local plugin reinstall picks up BL-005 Phase 1 (third-party agent integration) specs — not yet validated in dogfood. BL-036 tracks post-dogfood tuning revision.
+
+### In-flight content carried by this bump
+
+BL-005 Phase 1 — library-to-project agent curation (6/7 plan 041 steps committed; Step 7 Mengdie dogfood deferred to user session):
+
+- **`docs/references/agent-contract.md`** (new) — canonical 3-tier frontmatter contract (REQUIRED `name`/`description`; RECOMMENDED `role`/`tools`/`model`/`tech_stack`/`specialty`; TOLERATED `color`/`emoji`/`vibe`/unknown). Documents CC filename-stem spawn resolution and AE no-normalize-on-import rule.
+- **`docs/references/agent-selection-scorer.md`** (new) — canonical 6-signal deterministic scorer spec (weights/threshold/noise-floor/stack-detection/--why output format). Marked `Post-Phase-1 Tuning Expectation`: weights are empirical defaults, in-scope for Phase 1 revision after dogfood.
+- **`docs/references/agent-governance-format.md`** (new) — `.claude/agent-governance.md` YAML rule schema (`agent`, `action: force|prefer`, `context`, `scope`, `added_at`, `added_reason`). Documents platform-decoupling (AE reads governance file directly; `@include` in CLAUDE.md is user-visibility only).
+- **`plugins/ae/templates/pipeline.template.yml`** — added `agent_libraries:` array + extended `project_agents[]` with `source`, `source_sha`, `display_name`, `priority`, `required`, `tech_stack`, `specialty`.
+- **`plugins/ae/skills/setup/SKILL.md`** — new `agents` subcommand section: `--library`, `--list`, `--add --reason`, `--remove`, `--sync`, `--detach`, `--suggest --phase --why`, `--refresh`, governance bootstrap flow, pattern-detection triggers (Trigger A: --add rationale; Trigger B: 3-consecutive-spawn), `--rule-cleanup`.
+- **`plugins/ae/skills/agent-selection/SKILL.md`** — Rule 4 rewritten as 3-layer short-circuit chain (Layer 1 CLAUDE.md rules → Layer 2 6-signal scorer → Layer 3 user one-pick).
+- **`docs/decisions/037-agent-contract.md`** — superseded notice pointing to the three new canonical reference docs.
+
+Phase 1 is SPEC-only until:
+- Mengdie dogfood (plan 041 Step 7) surfaces tuning targets for BL-036
+- Phase 2 Layer-2 behavioral test verifies Rule 4 runtime execution (conclusion 040 T5 gate)
+
 ## v0.8.2 — 2026-04-16
 
 Cache-refresh bump. Not a formal release — accumulates in-flight changes so local plugin reinstall picks up the new ae:roadmap v2 spec. Full release notes will land in a future version bump when Phase C (velocity math) ships.
