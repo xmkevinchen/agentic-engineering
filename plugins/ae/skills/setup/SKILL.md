@@ -55,7 +55,7 @@ Phase 1 CLI surface (full list; Steps 3/4/6 of plan 041 add import/suggest/gover
 ```
 /ae:setup agents --library <path>                     # declare library (multi-library supported)
 /ae:setup agents --list [--category <cat>]            # browse configured libraries
-/ae:setup agents --add <name|library:name>            # import (Step 3 adds import mechanism)
+/ae:setup agents --add <name|library:name> [--reason <text>]  # import (Step 3 adds import mechanism)
 /ae:setup agents --remove <name>                      # delete + cleanup
 /ae:setup agents --sync [--diff]                      # upstream drift detection (Step 3)
 /ae:setup agents --detach <name>                      # break upstream link (Step 3)
@@ -121,9 +121,11 @@ Behavior:
 4. **Governance rule cleanup**: if `.claude/agent-governance.md` exists, scan for `rules[].agent: <name>` entries. For each match, prompt user: `Rule references removed agent '<name>' (context: [X, Y], scope: <s>). Delete rule? [Y/n]`. On Y, remove rule from file.
 5. **Summary output**: report file deleted, pipeline.yml entry removed, N governance rules cleaned.
 
-#### `--add <name | library:name>`
+#### `--add <name | library:name> [--reason "<text>"]`
 
 Import a library agent into `.claude/agents/` with upstream tracking.
+
+Optional `--reason "<text>"` captures the user's rationale for importing this agent. Used by the governance pattern-detection Trigger A (see "Governance file bootstrap" below) to propose a `prefer` rule grounded in the user's stated reason. When `--reason` is absent AND this is an interactive invocation (not batch), AE prompts: `Reason for importing <name>? (optional; press Enter to skip — no governance rule will be proposed)`. Batch invocations (from `--suggest --apply-all` etc.) do NOT prompt.
 
 Behavior (ordered protocol):
 
@@ -304,6 +306,138 @@ End output: `Run /ae:setup agents --suggest to review` suggestion.
 Not a standalone command — a flag for `--suggest`. See scorer spec's `--why Flag Output Template` section for format.
 
 Reserved for future standalone use (`/ae:setup agents --why <library:name>` to show why a specific agent would or would not be included) — not in Phase 1 scope.
+
+#### Governance file bootstrap
+
+AE writes agent-selection governance rules to `.claude/agent-governance.md` (see [agent-governance-format.md](../../../../docs/references/agent-governance-format.md) for the YAML schema). AE **never edits CLAUDE.md body** — the only line AE writes to CLAUDE.md is an `@include` reference, and only once after user confirmation.
+
+##### First-governance-event flow
+
+Triggered when AE is about to write the first rule to `.claude/agent-governance.md` (via `--add` with user-supplied rationale, or via automatic pattern detection — see below).
+
+1. **Detect existing @include**: check the project root `CLAUDE.md` for any line containing `@.claude/agent-governance.md` or `@agent-governance.md` (case-sensitive; tolerant of surrounding whitespace).
+2. **If already present**: skip bootstrap. AE writes to `.claude/agent-governance.md` and the user's existing include line surfaces the rules in their CC context.
+3. **If absent**: use `AskUserQuestion` once:
+   ```
+   AE is about to write its first governance rule for this project. Governance rules
+   live in `.claude/agent-governance.md` — a separate file AE owns entirely.
+   
+   To make these rules visible in your CC context, add `@.claude/agent-governance.md`
+   to CLAUDE.md now? (AE will append a single line to the bottom of CLAUDE.md.
+   This is the only line AE ever writes to CLAUDE.md.)
+   
+   Options:
+   1. Yes — append the @include line now
+   2. No — write to agent-governance.md anyway; I'll add the include line manually later
+   3. Later — defer the decision; ask again next time
+   ```
+4. **On Y**: append `\n@.claude/agent-governance.md\n` to the END of CLAUDE.md (preserve trailing newlines). Do NOT insert into existing sections or reorder content.
+5. **On n**: proceed to write `.claude/agent-governance.md` anyway. Emit warning: `[ae:governance] Governance rules written to .claude/agent-governance.md but @include not added to CLAUDE.md. Rules will not surface in your CC context until you add '@.claude/agent-governance.md' to CLAUDE.md manually.` — warning is persistent (shown every governance-file write until include is added).
+6. **On later**: defer the ask; repeat at next governance event. No write to either file this turn (the rule proposal is abandoned — user sees "governance rule proposal cancelled").
+
+##### Migration from hand-written `## Agent Governance` section
+
+If AE detects an existing `## Agent Governance` section in CLAUDE.md (heading match, case-insensitive) on the first-governance-event:
+
+1. Read the section body. Attempt to interpret common patterns:
+   - Lines like `always use <agent> for <context>` → candidate `force` rule
+   - Lines like `prefer <agent> for <context>` → candidate `prefer` rule
+   - Tables with agent/context columns → parse per row
+2. Present parsed rules via `AskUserQuestion`:
+   ```
+   Detected existing `## Agent Governance` section in CLAUDE.md with N rules:
+   
+   1. force rust-mcp-expert for [mcp, auth]
+   2. prefer security-engineer for [vulnerability, security]
+   
+   Migrate to `.claude/agent-governance.md` and replace the section with @include? [Y/n]
+   ```
+3. **On Y**: write parsed rules to `.claude/agent-governance.md`. Delete the `## Agent Governance` section from CLAUDE.md (section only, including its heading; do not touch surrounding content). Append `@.claude/agent-governance.md` at the section's former location (preserves read order).
+4. **On n**: leave CLAUDE.md untouched; emit warning that AE-managed governance and hand-written governance will coexist (AE reads only `.claude/agent-governance.md`).
+
+If AE cannot parse any rules from the section (freeform prose with no recognizable pattern) → do NOT migrate automatically; warn once:
+```
+[ae:governance] CLAUDE.md has a hand-written ## Agent Governance section that AE cannot parse.
+Your governance will coexist with AE's rules in .claude/agent-governance.md.
+Consider manually migrating by running `/ae:setup agents --rule-add <agent> ...`.
+```
+
+##### Pattern-detection triggers (Phase 1)
+
+AE proposes new governance rules at specific trigger points. Phase 1 implements two triggers:
+
+**Trigger A: `--add` with user-supplied rationale**
+
+When `/ae:setup agents --add <name>` is invoked with an explicit rationale string (passed via `--reason "<text>"` flag or interactively prompted for during import):
+
+1. Tokenize the rationale per the scorer spec tokenization rules.
+2. Extract top 3-5 tokens by relevance (non-stopwords, with at least one that appears in the agent's description).
+3. Propose a `prefer` rule:
+   ```
+   [ae:governance] Propose rule: prefer engineering-security-engineer for contexts [security, mcp, auth]?
+     Derived from import rationale: "MCP server security profile"
+     Action: prefer    Scope: all    Confidence: medium
+   
+   Options:
+   1. Accept — add rule to .claude/agent-governance.md
+   2. Modify — change action/context/scope before adding
+   3. Skip — import without creating governance rule
+   ```
+
+**Trigger B: `/ae:discuss` or `/ae:review` spawning same project agent 3+ consecutive times**
+
+AE tracks project-agent usage in recent team runs (detection source: `~/.claude/teams/*/config.json` created in last 30 days; fallback: `.ae/milestones/*/step-summaries.md` spawn mentions).
+
+1. On every `/ae:discuss` or `/ae:review` invocation, increment a counter for each project agent spawned.
+2. If a project agent has been spawned in 3 or more consecutive runs of the SAME skill (e.g., 3 `/ae:discuss` runs with same agent) AND no existing `prefer` rule covers the overlap between recent contexts:
+3. Derive context keywords: intersection of tokens across the 3 triggering team runs' contexts (topic tags, diff files, etc.). Require ≥2 overlapping tokens.
+4. Propose:
+   ```
+   [ae:governance] Pattern detected: 'rust-mcp-expert' spawned in 3 consecutive discussions with
+   overlapping keywords [mcp, tool-auth]. Propose rule?
+     prefer rust-mcp-expert for contexts [mcp, tool-auth] in discuss scope
+     Action: prefer    Scope: discuss
+   
+   Options:
+   1. Accept — add rule
+   2. Modify — refine action/context/scope
+   3. Skip — continue without rule (pattern counter resets)
+   ```
+
+Pattern counter resets on user "Skip" AND on any skill run where the agent is NOT spawned. Prevents infinite re-proposal for declined rules.
+
+**`/ae:next` periodic audit** — NOT implemented in Phase 1. Per plan 041 Step 6, `/ae:next` as an audit trigger is Phase 2 scope. Do not spec or implement it in Phase 1.
+
+##### `--rule-cleanup`
+
+Scan `.claude/agent-governance.md` for rules referencing agents no longer in `project_agents[]` or `.claude/agents/`. Present each stale rule for user confirmation:
+
+```
+[ae:governance] Stale rule detected:
+  Rule: force rust-mcp-expert for [mcp, tool-auth] (scope: discuss)
+  Issue: Agent 'rust-mcp-expert' not found in project_agents or .claude/agents/
+  Added: 2026-04-18 (reason: "pattern detection: 3 consecutive discussions")
+  
+  Options:
+  1. Delete — remove this rule from .claude/agent-governance.md
+  2. Keep — retain rule (perhaps agent will be re-imported)
+  3. Skip — decide later
+```
+
+Batch summary at end: `N stale rules found, M deleted, K kept, L skipped`.
+
+Automatic invocation: `/ae:setup agents --remove <name>` (Step 2 spec) calls this flow scoped to the removed agent only — offers to clean any rules referencing just that agent.
+
+##### Integration read-through (Step 6 protocol)
+
+After writing the governance-bootstrap subsection, read the full `plugins/ae/skills/setup/SKILL.md` top-to-bottom and verify cross-references are coherent:
+
+- `--add` Step 3 flow uses `--reason "<text>"` flag → captured here for pattern-detection Trigger A
+- `--remove` Step 2 spec references governance rule cleanup → implemented here via `--rule-cleanup` scoped invocation
+- `--suggest` Step 4 batch-apply never writes governance rules (proposal-only; user triggers rule writes separately)
+- No flag conflicts (e.g., `--phase` is scoped to `--suggest`, not a global flag)
+
+Inconsistencies found → fix within this step before committing. This is a one-time audit to seal the multi-step setup/SKILL.md edits into a coherent document.
 
 #### Cross-flag error semantics
 
