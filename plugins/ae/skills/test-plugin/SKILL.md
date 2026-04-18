@@ -295,6 +295,24 @@ Layer 2 failures are advisory — may need human review for edge cases.
 
 ## Phase 3: Report
 
+### Pre-report: Orphan test-file detection
+
+Before writing the report, scan `plugins/ae/tests/prompts/` and `plugins/ae/tests/assertions/` for **orphan files** — prompts without a matching assertion (or vice versa). Both directories should contain files with identical base names (e.g., `prompts/foo.md` ↔ `assertions/foo.md`). Any unmatched file is an orphan.
+
+For each orphan, emit one line in the test report's `## Summary` section under an `## Orphan test files` subsection:
+- `⚠ prompt without assertion: plugins/ae/tests/prompts/<name>.md`
+- `⚠ assertion without prompt: plugins/ae/tests/assertions/<name>.md`
+
+Orphan detection is **advisory** (listed in report, does not fail the suite). Rationale: orphans typically indicate an interrupted test-authoring session or a mid-refactor state; the test-plugin shouldn't block valid runs over them, but should surface them so users notice.
+
+Implementation:
+1. List all `*.md` files in `prompts/`, strip the `.md` suffix → set A
+2. List all `*.md` files in `assertions/`, strip the `.md` suffix → set B
+3. `prompts-only = A - B`, `assertions-only = B - A`
+4. If either set is non-empty, include the corresponding `## Orphan test files` subsection in the report with one line per orphan
+
+### Write report
+
 Write test report to `pipeline.yml` → `output.reviews` as `NNN-test-report-slug.md`:
 
 ```markdown
@@ -313,6 +331,10 @@ target: "[skill/agent name]"
 - Layer 1: X/Y pass (Z%)
 - Layer 2: A/B pass (C%)
 - Overall: PASS / FAIL
+
+## Orphan test files (only shown when orphans exist)
+- ⚠ prompt without assertion: plugins/ae/tests/prompts/foo.md
+- ⚠ assertion without prompt: plugins/ae/tests/assertions/bar.md
 
 ## Execution Info
 - Isolation: worktree (/tmp/test-<id>)
