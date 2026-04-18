@@ -48,7 +48,7 @@ If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
 ### `agents` argument: Library-to-project agent curation (BL-005)
 
-`/ae:setup agents [subcommand]` curates third-party or hand-written agents into `.claude/agents/`. The flat `.claude/agents/` namespace is mandatory — CC resolves `subagent_type` by filename stem (see `docs/references/agent-contract.md`).
+`/ae:setup agents [subcommand]` curates third-party or hand-written agents into `.claude/agents/`. The flat `.claude/agents/` namespace is mandatory — CC resolves `subagent_type` by filename stem (see `../../docs/references/agent-contract.md`).
 
 Phase 1 CLI surface (full list; Steps 3/4/6 of plan 041 add import/suggest/governance subcommands — this section documents the baseline scaffolding + browse/remove/phase subflags):
 
@@ -97,7 +97,7 @@ Behavior:
 2. **Traverse each library**: for each library source, list `.md` files under configured categories (or all if flat). Read frontmatter `name`, `description`. Skip files with malformed YAML (warn once per library: `[ae:setup] <library>: M/N agents have malformed YAML, skipped`).
 3. **Library-path-missing tolerance**: if a library's `source:` path no longer exists → warn `[ae:setup] library '<name>' path missing: <source>. Skipping.` and continue with remaining libraries (do not abort).
 4. **Filter by `--category <cat>`** (optional): show only agents whose category matches. Case-insensitive match on directory name. If no agents match → print `No agents in category '<cat>'`.
-5. **Output format**: pretty table with columns `library-qualified-id | category | role-hint | description`. `library-qualified-id` = `<library>:<filename-stem>`. Role hint is inferred per `docs/references/agent-contract.md` role-inference heuristic.
+5. **Output format**: pretty table with columns `library-qualified-id | category | role-hint | description`. `library-qualified-id` = `<library>:<filename-stem>`. Role hint is inferred per `../../docs/references/agent-contract.md` role-inference heuristic.
 
 Example:
 ```
@@ -144,7 +144,7 @@ Behavior (ordered protocol):
    ```yaml
    project_agents:
      - name: <filename-stem>
-       role: <inferred>                # per docs/references/agent-contract.md role-inference fallback
+       role: <inferred>                # per ../../docs/references/agent-contract.md role-inference fallback
        source: "<library-name>:<category>/<filename>.md"
        source_sha: <sha>
        display_name: "<original name: field>"
@@ -253,7 +253,7 @@ Summary output at end: counts of clean / upstream-updated / locally-modified / b
 
 Closed enum flag for `--suggest`. When provided, biases smart-selection scoring toward phase-appropriate agents. When absent, no phase bias.
 
-Phase-appropriate agents (heuristic, used by scorer — full bias rules in `docs/references/agent-selection-scorer.md`, written in Step 4):
+Phase-appropriate agents (heuristic, used by scorer — full bias rules in `../../docs/references/agent-selection-scorer.md`, written in Step 4):
 
 | Phase | Favored roles / specialties |
 |-------|----------------------------|
@@ -270,7 +270,7 @@ Invalid phase value → refuse with `[ae:setup] invalid phase '<value>'. Valid: 
 
 Smart-recommend library agents based on current project profile.
 
-**Algorithm**: see `docs/references/agent-selection-scorer.md` for signal definitions, weights, noise-floor rules, threshold, and `--why` output format. Briefly: 6-signal deterministic scorer (keyword_overlap / description_match / role_gap_bonus / category_match / library_source_boost / stack_mismatch), threshold 0.35, output cap 8, no-confident-match path suggests writing a custom agent.
+**Algorithm**: see `../../docs/references/agent-selection-scorer.md` for signal definitions, weights, noise-floor rules, threshold, and `--why` output format. Briefly: 6-signal deterministic scorer (keyword_overlap / description_match / role_gap_bonus / category_match / library_source_boost / stack_mismatch), threshold 0.35, output cap 8, no-confident-match path suggests writing a custom agent.
 
 Inputs used (token UNION across all sources — richer input = better scoring):
 - **Project `CLAUDE.md`** — tech-stack / architecture / current-focus tokens. Empirically critical per Mengdie dogfood (2026-04-18); without it, corpus is too narrow and suppresses valid matches.
@@ -282,7 +282,7 @@ Inputs used (token UNION across all sources — richer input = better scoring):
 Behavior:
 
 1. **Prerequisites check**: require `agent_libraries:` configured. If absent → `[ae:setup] No library configured. Run /ae:setup agents --library <path> first.`
-2. **Run scorer** per `docs/references/agent-selection-scorer.md`.
+2. **Run scorer** per `../../docs/references/agent-selection-scorer.md`.
 3. **Output**: ranked proposal (max 8, or fewer if threshold filters more, or "no confident match" with uncovered-roles list).
 4. **Present for batch apply**: after ranked list, prompt:
    ```
@@ -298,7 +298,7 @@ Behavior:
 
 Advisory audit of current `project_agents` roster against the current project state.
 
-**Algorithm**: see `docs/references/agent-selection-scorer.md` → "`--refresh` Advisory Behavior" section. Briefly: emits three lists (unused imports based on recent-team-run telemetry; new candidates scoring higher than current imports in the same role; stale mismatches from project stack evolution). Advisory only — never removes or adds anything automatically.
+**Algorithm**: see `../../docs/references/agent-selection-scorer.md` → "`--refresh` Advisory Behavior" section. Briefly: emits three lists (unused imports based on recent-team-run telemetry; new candidates scoring higher than current imports in the same role; stale mismatches from project stack evolution). Advisory only — never removes or adds anything automatically.
 
 End output: `Run /ae:setup agents --suggest to review` suggestion.
 
@@ -310,7 +310,7 @@ Reserved for future standalone use (`/ae:setup agents --why <library:name>` to s
 
 #### Governance file bootstrap
 
-AE writes agent-selection governance rules to `.claude/agent-governance.md` (see [agent-governance-format.md](../../../../docs/references/agent-governance-format.md) for the YAML schema). AE **never edits CLAUDE.md body** — the only line AE writes to CLAUDE.md is an `@include` reference, and only once after user confirmation.
+AE writes agent-selection governance rules to `.claude/agent-governance.md` (see [agent-governance-format.md](../../docs/references/agent-governance-format.md) for the YAML schema). AE **never edits CLAUDE.md body** — the only line AE writes to CLAUDE.md is an `@include` reference, and only once after user confirmation.
 
 ##### First-governance-event flow
 
