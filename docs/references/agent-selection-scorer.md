@@ -150,19 +150,13 @@ No confident match found for current project profile.
 
 Uncovered roles: [list of roles not in project_agents + builtin_agents]
 
-Signal inputs seen: CLAUDE.md (N tokens), analyses (M tokens), active discussion (K tokens)
-                   [if CLAUDE.md missing or <100 tokens]: ⚠️ CLAUDE.md is thin or absent —
-                   scorer matches on project vocabulary. Consider adding tech stack /
-                   architecture / current-focus sections to CLAUDE.md, then re-run --suggest.
-
 Options:
 1. Run /ae:setup agents --list to browse the library manually
 2. Write a custom agent in .claude/agents/ tailored to your project
 3. Add more library sources via /ae:setup agents --library <path>
-4. Enrich CLAUDE.md (tech stack, architecture, current focus) and re-run --suggest
 ```
 
-The "suggest custom agent" path is explicit — users should see that a library-gap is a legitimate outcome, not a tool failure. The CLAUDE.md hint is conditional (only surfaces when the token corpus is demonstrably thin) — a learned lesson from the 2026-04-18 Mengdie dogfood: sparse project-token inputs produce false zero-matches that look like library failures but are actually input failures.
+The "suggest custom agent" path is explicit — users should see that a library-gap is a legitimate outcome, not a tool failure.
 
 ## Noise-Floor Mitigations
 
