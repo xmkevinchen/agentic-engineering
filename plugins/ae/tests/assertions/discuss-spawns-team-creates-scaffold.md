@@ -1,0 +1,26 @@
+---
+id: discuss-spawns-team-creates-scaffold
+target: ae:discuss
+layer: 2
+source: manual
+---
+
+## Expected Behavior
+
+### MUST
+- [file:exists] `.ae/discussions/<NNN>-<slug>/index.md` created after Setup step
+- [file:contains] index.md frontmatter has `status: active`
+- [file:contains] index.md frontmatter has `pipeline.discuss: in_progress`
+- [file:exists] At least one `topic-NN-slug/summary.md` created
+- [file:contains] topic summary.md has `status: pending` in frontmatter
+- [team:exists] A TeamCreate call occurred with a team name matching the discussion slug (inbox dir exists under ~/.claude/teams/)
+- [behavior] Team has TL (moderator) role + at least one role agent spawned as teammate
+
+### MUST_NOT
+- [file:exists] MUST NOT pre-populate `topic-NN-slug/summary.md` with A/B/C option choices (options emerge from team discussion per ae:discuss design)
+- [behavior] MUST NOT skip the Setup → Spawn Team sequence (scaffold before team, not parallel)
+
+### SHOULD
+- [text:contains] Output confirms Discussion N created with topic count
+- [file:contains] index.md lists topics in a table with `status: pending` and empty `decision:` column
+- [behavior] Team Discussion Mode (all equal participants, no forced FOR/AGAINST) per ae:agent-teams protocol
