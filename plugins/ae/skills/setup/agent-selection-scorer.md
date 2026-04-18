@@ -35,7 +35,7 @@ Per candidate agent, extract from frontmatter + body:
 - `agent_description_tokens`: tokenize `description:` prose.
 - `agent_category`: directory name under the library (e.g., `engineering`, `product`); may be absent for flat libraries.
 - `agent_tech_stack`: from frontmatter `tech_stack:` field if present, else inferred from filename prefix (e.g., `engineering-laravel-*.md` → `laravel`), else empty set.
-- `agent_role`: from frontmatter `role:` field if present, else inferred per `docs/references/agent-contract.md` role-inference fallback chain.
+- `agent_role`: from frontmatter `role:` field if present, else inferred per [agent-contract.md](./agent-contract.md) role-inference fallback chain.
 - `agent_specialty`: from frontmatter `specialty:` field if present.
 
 ### Project state
@@ -317,10 +317,11 @@ The actual emit logic lives in `plugins/ae/skills/setup/SKILL.md` `--library` se
 `/ae:setup agents --suggest` in setup/SKILL.md contains only a short stub:
 
 ```
-Algorithm: see docs/references/agent-selection-scorer.md for signal definitions, weights,
-noise-floor rules, threshold, and --why output format. Briefly: 6-signal deterministic
-scorer (keyword/description/role-gap/category/library-source/stack-mismatch), threshold
-0.35, output cap 8, no-confident-match path suggests custom agent.
+Algorithm: see ./agent-selection-scorer.md (colocated with this skill) for signal
+definitions, weights, noise-floor rules, threshold, and --why output format. Briefly:
+6-signal deterministic scorer (keyword/description/role-gap/category/library-source/
+stack-mismatch), threshold 0.35, output cap 8, no-confident-match path suggests
+custom agent.
 ```
 
 Same for `ae:agent-selection` Layer 2 — it cites this doc, does not duplicate the algorithm.

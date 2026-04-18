@@ -34,7 +34,7 @@ user-invocable: true
    - Give a **specialized prompt with clear focus** — not generic "review this".
    - **One proxy enabled** → assign one angle. **Both enabled** → prefer different angles; same-angle only when there is genuinely no second valuable blind spot.
    - Example: if Claude has security-reviewer and architecture-reviewer, cross-family angles could be performance + data integrity. If only one proxy is enabled, it gets performance.
-4. **Project agents** — 3-layer short-circuit chain (BL-005 Phase 1; see [Agent Contract](../../docs/references/agent-contract.md), [Governance Format](../../docs/references/agent-governance-format.md), [Selection Scorer](../../docs/references/agent-selection-scorer.md)):
+4. **Project agents** — 3-layer short-circuit chain (BL-005 Phase 1; see [Agent Contract](../setup/agent-contract.md), [Governance Format](../setup/agent-governance-format.md), [Selection Scorer](../setup/agent-selection-scorer.md)):
 
    **Discovery**: scan `.claude/agents/*.md` (project), installed plugin agents, `~/.claude/agents/*.md` (global). Also read `project_agents` from pipeline.yml. CC resolves agents by filename stem — spawn identifier = filename (without `.md`), NOT the `name:` frontmatter field.
 
@@ -51,7 +51,7 @@ user-invocable: true
 
    ### Layer 1 — CLAUDE.md governance rules
 
-   AE reads `.claude/agent-governance.md` directly via its Read tool (**not** via CC's `@include` mechanism — see [Governance Format](../../docs/references/agent-governance-format.md) for the platform-decoupling rationale).
+   AE reads `.claude/agent-governance.md` directly via its Read tool (**not** via CC's `@include` mechanism — see [Governance Format](../setup/agent-governance-format.md) for the platform-decoupling rationale).
 
    Parse YAML `rules:` block. For each rule whose `scope` matches the active skill AND whose `context:` keywords match current skill context:
 
@@ -66,7 +66,7 @@ user-invocable: true
 
    ### Layer 2 — 6-signal deterministic scorer
 
-   For remaining slots, run the smart-selection scorer per [Agent Selection Scorer](../../docs/references/agent-selection-scorer.md). Briefly:
+   For remaining slots, run the smart-selection scorer per [Agent Selection Scorer](../setup/agent-selection-scorer.md). Briefly:
 
    - 6 signals (keyword_overlap +0.30, description_match +0.25, role_gap_bonus +0.20, category_match +0.10, library_source_boost +0.05, stack_mismatch −0.25)
    - Threshold 0.35, noise-floor mitigations (2-signal rule, category/generic caps, strong-stack-mismatch kill), cap at 8

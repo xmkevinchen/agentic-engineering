@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8.5 — 2026-04-18
+
+Cache-refresh bump. Move the 3 BL-005 Phase 1 reference docs from `plugins/ae/docs/references/` (shared-docs convention) to `plugins/ae/skills/setup/` (colocated with primary consumer). Eliminates the fragile `../../docs/references/` path coupling in SKILL.md files.
+
+- `setup/SKILL.md` references its colocated docs as `./agent-contract.md` etc. — 0-level path depth.
+- `agent-selection/SKILL.md` references cross-skill as `../setup/agent-contract.md` etc. — 1-level path (unavoidable since 2 skills consume the same spec; setup picked as owner because it has more references, 8 vs 3).
+- No changes to doc content.
+- Pre-existing broken ref in setup/SKILL.md line 36 (`../../../docs/decisions/037-agent-contract.md` — outside plugin, wouldn't resolve in installed cache) also fixed to point at colocated `./agent-contract.md`.
+
 ## v0.8.4 — 2026-04-18
 
 Cache-refresh bump. v0.8.3 shipped with the 3 BL-005 Phase 1 reference docs

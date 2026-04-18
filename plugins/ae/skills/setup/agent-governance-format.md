@@ -149,7 +149,7 @@ For role-slot filling, AE reads `project_agents[]` + built-in list; ranks by:
 1. `required: true` agents first (spawn regardless of cap)
 2. Governance `force` rules that match current context (spawn regardless of cap)
 3. Declared `priority: <int>` descending
-4. Algorithm score from `docs/references/agent-selection-scorer.md`
+4. Algorithm score from [agent-selection-scorer.md](./agent-selection-scorer.md)
 5. Default cap N=3 per role slot (configurable via `work.max_agents_per_role` in future; Phase 1 hardcoded)
 
 **Phase 2 Layer-2 test gates finalization** — per conclusion 040 T5 deferred resolution, the actual runtime behavior of Rule 4 has never been verified by a Layer-2 behavioral test. Phase 2 will add that test; the precedence semantics above may be adjusted based on runtime truth.
