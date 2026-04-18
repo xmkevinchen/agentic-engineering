@@ -121,6 +121,132 @@ Behavior:
 4. **Governance rule cleanup**: if `.claude/agent-governance.md` exists, scan for `rules[].agent: <name>` entries. For each match, prompt user: `Rule references removed agent '<name>' (context: [X, Y], scope: <s>). Delete rule? [Y/n]`. On Y, remove rule from file.
 5. **Summary output**: report file deleted, pipeline.yml entry removed, N governance rules cleaned.
 
+#### `--add <name | library:name>`
+
+Import a library agent into `.claude/agents/` with upstream tracking.
+
+Behavior (ordered protocol):
+
+1. **Resolve target**. Accept plain filename stem (e.g., `engineering-code-reviewer`) OR library-qualified form (`agency-agents:engineering-code-reviewer`). If plain form AND multiple libraries contain the same stem → refuse with `[ae:setup] name '<stem>' ambiguous — present in libraries: <A>, <B>. Use library-qualified form: <A>:<stem>`.
+2. **Read library file**. Open `<library.source>/<category>/<name>.md` (or flat path if library has no categories).
+3. **Parse YAML frontmatter**. If malformed → skip this agent with warning `[ae:setup] skip <name>: malformed YAML (line N)`. Do NOT abort. (Relevant in batch contexts — single `--add` refuses, `--suggest` batch-apply continues.)
+4. **Compute source SHA**.
+   - If library is a git repo: `git -C <library.source> hash-object <relative-file-path>` → record as `source_sha`.
+   - Else: compute `sha256` of file content → record as `source_sha`.
+   - If BOTH fail (e.g., file read error): skip this agent with warning `[ae:setup] skip <name>: cannot compute content hash`. Do NOT proceed with partial import.
+5. **Ensure `.claude/agents/` exists**. Equivalent to `mkdir -p .claude/agents/`. Safe if already exists.
+6. **Filename collision check**: if `.claude/agents/<name>.md` already exists → present options (see "Filename collision handling" below). Do NOT overwrite silently.
+7. **Built-in spawn-identifier shadowing check**: if `<name>` matches an AE built-in agent filename stem (see "Built-in shadowing" below), warn and prompt before proceeding.
+8. **Copy file as-is**. Write original library file bytes to `.claude/agents/<name>.md`. Do NOT modify `name:` field or any other frontmatter (conclusion 040 T1 — CC resolves by filename stem, `name:` is display-only).
+9. **Append project_agents entry**:
+   ```yaml
+   project_agents:
+     - name: <filename-stem>
+       role: <inferred>                # per docs/references/agent-contract.md role-inference fallback
+       source: "<library-name>:<category>/<filename>.md"
+       source_sha: <sha>
+       display_name: "<original name: field>"
+       imported_at: <YYYY-MM-DD>
+       modified: false
+       # Optional fields populated if frontmatter provides them:
+       tech_stack: <from library frontmatter or []>
+       specialty: <from library frontmatter or "">
+       priority: 50                    # Phase 1 default
+       required: false
+   ```
+10. **Summary output**: `[ae:setup] Imported <library>:<name> → .claude/agents/<name>.md (role: <role>, sha: <sha>)`.
+
+##### Filename collision handling
+
+If `.claude/agents/<filename-stem>.md` already exists when `--add` attempts to write:
+
+```
+[ae:setup] Collision: .claude/agents/<name>.md already exists.
+
+Options:
+1. Overwrite — replace existing file with library version (existing pipeline.yml entry updated)
+2. Rename copy — provide a new filename stem; library agent lands at .claude/agents/<new-stem>.md
+3. Abort — no changes
+
+Choose [1/2/3]:
+```
+
+- Option 1: overwrite. Read existing file's sha first; if it differs from the stored `source_sha` in the current pipeline.yml entry (i.e., user has local edits), require explicit confirmation: "Existing file has local modifications. Overwrite anyway? [y/N]". Default N.
+- Option 2: rename. User provides new stem (validate: kebab-case, no path separators, not matching another built-in or project agent). New stem becomes the filename; `name:` field in the copied file is NOT rewritten (canonical spawn identifier = filename stem per contract).
+- Option 3: abort. No file written, no pipeline.yml change.
+
+##### Built-in shadowing
+
+Before writing to `.claude/agents/<name>.md`, check if `<name>` matches an AE built-in agent filename stem. Built-ins are enumerated at runtime from:
+
+- `plugins/ae/agents/workflow/*.md` (e.g., `architect`, `qa`, `challenger`, `codex-proxy`, `gemini-proxy`, `team-lead`, `test-lead`, `doodlestein-strategic`, `doodlestein-adversarial`, `doodlestein-regret`)
+- `plugins/ae/agents/review/*.md` (e.g., `code-reviewer`, `architecture-reviewer`, `performance-reviewer`, `security-reviewer`)
+- `plugins/ae/agents/research/*.md` (e.g., `archaeologist`, `dependency-analyst`, `standards-expert`)
+
+If `<name>` matches any built-in stem:
+
+```
+[ae:setup] Warning: '<name>' shadows AE built-in agent.
+
+Project agents take precedence over built-ins in agent-selection Rule 4 Layer 2.
+Importing this agent will cause it to be preferred over the built-in of the same name.
+
+Options:
+1. Accept shadow — import as '<name>' (built-in will be preferred)
+2. Rename copy — import under a different stem (both will coexist)
+3. Abort
+
+Choose [1/2/3]:
+```
+
+Shadow acceptance is legitimate when user intentionally replaces a built-in (e.g., their own stricter `code-reviewer`). Rename is preferred when the user wants both perspectives.
+
+##### Batch error reporting
+
+When `--add` receives multiple targets (comma-separated, or invoked by `--suggest` batch-apply flow), emit a single summary at the end:
+
+```
+[ae:setup] Import summary:
+  ✅ Imported: 4 agents
+  ⚠️ Skipped: 2 agents
+     - engineering-filament-expert: malformed YAML (line 3)
+     - design-obscure-agent: cannot compute content hash
+```
+
+A single-file `--add` invocation still benefits from the summary format (1-line success) to keep output consistent.
+
+#### `--detach <name>`
+
+Break upstream link for an imported agent without deleting the file.
+
+Behavior:
+
+1. **Locate project_agents entry** matching `<name>`. If no entry or the entry has no `source:` field → refuse with `[ae:setup] <name> is not a library-sourced agent (no upstream to detach)`.
+2. **Remove upstream-tracking fields** from the entry: `source`, `source_sha`, `imported_at`, `modified`. Keep: `name`, `role`, `display_name` (promoted to optional — user can remove manually), `priority`, `required`, `tech_stack`, `specialty`.
+3. **Retain file**: `.claude/agents/<name>.md` stays as-is. `--sync` will no longer process this agent.
+
+Detach is a one-way operation. To re-link, run `--remove` then `--add` again (this will recompute `source_sha` from current library head).
+
+#### `--sync [--diff]`
+
+Drift detection against library upstream.
+
+Behavior:
+
+1. **Scan project_agents with `source:`**. Skip entries without `source:` (hand-written agents; `--detach`ed agents).
+2. **Per-agent sync check**:
+   - Re-locate library file by `source:` field. If library path missing → warn `[ae:setup] <name>: library '<library-name>' path missing. Skipping.` and continue.
+   - Compute current library-file SHA (git hash-object or sha256 per same protocol as `--add` step 4).
+   - Compute current `.claude/agents/<name>.md` SHA.
+   - **Case 1**: library SHA == stored `source_sha` AND local SHA == stored `source_sha` → no drift. No action.
+   - **Case 2**: library SHA != stored `source_sha` AND local SHA == stored `source_sha` → upstream update available. Mark agent `modified: false` (unchanged), emit `[ae:setup] <name>: upstream updated (from <old_sha> to <new_sha>). Run --sync --diff to preview, --add --force-update to apply.`
+   - **Case 3**: library SHA == stored `source_sha` AND local SHA != stored `source_sha` → user has local edits. Set `modified: true` in pipeline.yml entry. Emit `[ae:setup] <name>: local modifications detected (sha drift from <source_sha>).`
+   - **Case 4**: both differ (library updated AND user edited) → set `modified: true`, emit `[ae:setup] <name>: both upstream and local have diverged. Manual merge required. Run --sync --diff to preview differences.`
+3. **With `--diff` flag**: for each non-clean case, show `diff` output between three pairs as applicable: stored (source_sha content not cached locally — use library history if available) vs current library vs current local file. If stored content can't be retrieved, show only `local vs library` diff.
+4. **No automatic overwrite**. `--sync` never writes to `.claude/agents/` files. Separate `--add --force-update <name>` (out of scope for Phase 1; user can manually `--remove` + `--add` to refresh) is the path to accept upstream updates.
+
+Summary output at end: counts of clean / upstream-updated / locally-modified / both-diverged / library-missing agents.
+
 #### `--phase <early | build | scale | maintenance>`
 
 Closed enum flag for `--suggest`. When provided, biases smart-selection scoring toward phase-appropriate agents. When absent, no phase bias.
