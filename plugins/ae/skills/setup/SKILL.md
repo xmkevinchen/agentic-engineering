@@ -264,6 +264,47 @@ Phase-appropriate agents (heuristic, used by scorer — full bias rules in `docs
 
 Invalid phase value → refuse with `[ae:setup] invalid phase '<value>'. Valid: early | build | scale | maintenance`.
 
+#### `--suggest [--phase <enum>] [--why]`
+
+Smart-recommend library agents based on current project profile.
+
+**Algorithm**: see `docs/references/agent-selection-scorer.md` for signal definitions, weights, noise-floor rules, threshold, and `--why` output format. Briefly: 6-signal deterministic scorer (keyword_overlap / description_match / role_gap_bonus / category_match / library_source_boost / stack_mismatch), threshold 0.35, output cap 8, no-confident-match path suggests writing a custom agent.
+
+Inputs used:
+- Latest `.ae/analyses/*.md` by mtime (project profile)
+- Latest active discussion's tags + topic titles + Key Questions
+- `project_agents` + built-in agents roster (for role-gap detection)
+- Detected project tech stack (per scorer spec stack-detection section)
+
+Behavior:
+
+1. **Prerequisites check**: require `agent_libraries:` configured. If absent → `[ae:setup] No library configured. Run /ae:setup agents --library <path> first.`
+2. **Run scorer** per `docs/references/agent-selection-scorer.md`.
+3. **Output**: ranked proposal (max 8, or fewer if threshold filters more, or "no confident match" with uncovered-roles list).
+4. **Present for batch apply**: after ranked list, prompt:
+   ```
+   Apply all? [Y / select subset (e.g., 1,3,5) / n]:
+   ```
+   On `Y`: invoke `--add` for each via the batch flow (unified summary at end). On `select`: parse indices, invoke `--add` for the chosen subset. On `n`: exit with no changes.
+5. **`--why` flag**: include per-agent signal breakdown (included AND suppressed agents) per the scorer spec's `--why` output template.
+6. **`--phase <enum>` flag**: when provided, biases role-gap + category scoring toward phase-appropriate agents per the scorer spec. Absent → no phase bias.
+
+**Never silently populates project_agents**. User action (Y / select / n) is required before any file is copied — proposal-only UX, per conclusion 040 T8.
+
+#### `--refresh`
+
+Advisory audit of current `project_agents` roster against the current project state.
+
+**Algorithm**: see `docs/references/agent-selection-scorer.md` → "`--refresh` Advisory Behavior" section. Briefly: emits three lists (unused imports based on recent-team-run telemetry; new candidates scoring higher than current imports in the same role; stale mismatches from project stack evolution). Advisory only — never removes or adds anything automatically.
+
+End output: `Run /ae:setup agents --suggest to review` suggestion.
+
+#### `--why`
+
+Not a standalone command — a flag for `--suggest`. See scorer spec's `--why Flag Output Template` section for format.
+
+Reserved for future standalone use (`/ae:setup agents --why <library:name>` to show why a specific agent would or would not be included) — not in Phase 1 scope.
+
 #### Cross-flag error semantics
 
 - Flags that mutate pipeline.yml (`--library`, `--add`, `--remove`, `--sync`, `--detach`): require write access to project `.claude/pipeline.yml`. On ENOENT/EACCES → refuse with clear message.
