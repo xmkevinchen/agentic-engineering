@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.8.4 — 2026-04-18
+
+Cache-refresh bump. v0.8.3 shipped with the 3 BL-005 Phase 1 reference docs
+(`agent-contract.md`, `agent-selection-scorer.md`, `agent-governance-format.md`)
+at repo-level `docs/references/` — NOT packaged with the plugin. Installed
+plugin users had broken path references in `plugins/ae/skills/setup/SKILL.md`
+and `plugins/ae/skills/agent-selection/SKILL.md`.
+
+Fix: moved all 3 reference docs into `plugins/ae/docs/references/` (alongside
+existing plugin-internal docs like `cross-family-review.md`). Relative paths
+in the two consuming SKILL.md files updated from `../../../docs/references/`
+to `../../docs/references/`. Now the docs ship with the plugin and resolve
+correctly in both repo and installed layouts.
+
+Also: scorer doc lists CLAUDE.md as Project-tokens input source #1 (learned
+from 2026-04-18 Mengdie dogfood — CLAUDE.md tech-stack signals were the
+reason the scorer worked empirically).
+
 ## v0.8.3 — 2026-04-18
 
 Cache-refresh bump. In-flight content carried so local plugin reinstall picks up BL-005 Phase 1 (third-party agent integration) specs — not yet validated in dogfood. BL-036 tracks post-dogfood tuning revision.
