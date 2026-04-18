@@ -34,12 +34,69 @@ user-invocable: true
    - Give a **specialized prompt with clear focus** — not generic "review this".
    - **One proxy enabled** → assign one angle. **Both enabled** → prefer different angles; same-angle only when there is genuinely no second valuable blind spot.
    - Example: if Claude has security-reviewer and architecture-reviewer, cross-family angles could be performance + data integrity. If only one proxy is enabled, it gets performance.
-4. **Project agents** (see [Agent Contract Specification](../../../docs/decisions/037-agent-contract.md)):
-   - **Discovery**: scan `.claude/agents/*.md` (project), installed plugin agents, `~/.claude/agents/*.md` (global). Also read `project_agents` from pipeline.yml if present (graceful if absent).
-   - **Role inference**: read agent `description` for role keywords — "review/audit/check/validate/security/quality" → reviewer, "implement/build/develop/write/create" → developer, "expert/specialist/knowledge/domain/advise" → domain-expert. When multiple roles match, prefer: reviewer → developer → domain-expert. `project_agents` in pipeline.yml with explicit `role:` overrides inference.
-   - **Slot mapping**: reviewer → review slot (ae:review, ae:code-review), developer → work slot (ae:work), domain-expert → analysis slot (ae:analyze, ae:discuss, ae:team).
-   - **Precedence**: project agent preferred over built-in when role matches. Pipeline.yml explicit role overrides description-based inference.
-   - **Spawning**: use agent `name` as `subagent_type` — CC resolves `.claude/agents/<name>.md` automatically.
+4. **Project agents** — 3-layer short-circuit chain (BL-005 Phase 1; see [Agent Contract](../../../docs/references/agent-contract.md), [Governance Format](../../../docs/references/agent-governance-format.md), [Selection Scorer](../../../docs/references/agent-selection-scorer.md)):
+
+   **Discovery**: scan `.claude/agents/*.md` (project), installed plugin agents, `~/.claude/agents/*.md` (global). Also read `project_agents` from pipeline.yml. CC resolves agents by filename stem — spawn identifier = filename (without `.md`), NOT the `name:` frontmatter field.
+
+   **Role inference fallback**: `pipeline.yml project_agents[].role` override → frontmatter `role:` field → description keyword heuristic (review/audit → reviewer; implement/build → developer; expert/specialist → domain-expert) → `domain-expert` as conservative default.
+
+   **Slot mapping** (role maps to skill slot):
+   - `reviewer` role maps to review slot (ae:review, ae:code-review)
+   - `developer` role maps to work slot (ae:work)
+   - `domain-expert` role maps to analysis slot (ae:analyze, ae:discuss, ae:team)
+
+   `architect`/`qa` remain name-spawned built-ins in Phase 1 — project agents needing architect focus use `role: domain-expert` + `specialty: architecture`.
+
+   **Precedence (Rule 4 core)**: project agent preferred over built-in when role matches. Pipeline.yml explicit `role:` overrides frontmatter-inferred role. Full precedence ladder is under "Phase 1 precedence semantics" below.
+
+   ### Layer 1 — CLAUDE.md governance rules
+
+   AE reads `.claude/agent-governance.md` directly via its Read tool (**not** via CC's `@include` mechanism — see [Governance Format](../../../docs/references/agent-governance-format.md) for the platform-decoupling rationale).
+
+   Parse YAML `rules:` block. For each rule whose `scope` matches the active skill AND whose `context:` keywords match current skill context:
+
+   - `action: force` → include the agent in the team; short-circuit Layers 2+3 for that slot.
+   - `action: prefer` → bias Layer 2 scoring for that agent (+0.20 bonus); Layer 2 still gates on threshold.
+
+   **Broken rule (agent missing)**:
+   - `prefer` → warn + fall-through to Layer 2 without boost.
+   - `force` → ESCALATE via AskUserQuestion (continue with Layer 2 fallback vs. cancel vs. remove rule).
+
+   Malformed YAML → warn + skip all rules for this run (fall-through to Layer 2 for every slot).
+
+   ### Layer 2 — 6-signal deterministic scorer
+
+   For remaining slots, run the smart-selection scorer per [Agent Selection Scorer](../../../docs/references/agent-selection-scorer.md). Briefly:
+
+   - 6 signals (keyword_overlap +0.30, description_match +0.25, role_gap_bonus +0.20, category_match +0.10, library_source_boost +0.05, stack_mismatch −0.25)
+   - Threshold 0.35, noise-floor mitigations (2-signal rule, category/generic caps, strong-stack-mismatch kill), cap at 8
+   - `prefer` rules from Layer 1 add +0.20 to the relevant agent's score before threshold check
+   - Sort descending; tiebreak alphabetically
+
+   ### Layer 3 — User one-pick (lightweight disambiguation)
+
+   Triggered ONLY when Layer 2's **top-2 candidates have a score delta < 0.10** within the same role slot. AE surfaces a 3-option numbered menu via AskUserQuestion with 1-line rationale per option. Max 3 candidates shown.
+
+   Layer 3 is intentionally lightweight — NOT a full `ae:consensus` Debate Mode. User picks and the skill continues. Respects user attention budget.
+
+   Skipped in `ae:discuss` multi-instance contexts (discuss spawns multiple of same role by design; no disambiguation needed).
+
+   ### Phase 1 precedence semantics (best-N + priority)
+
+   For role-slot filling:
+
+   1. `project_agents[].required: true` agents (always spawn)
+   2. Layer 1 `force` matches (always spawn)
+   3. Remaining candidates ranked by: Layer 1 `prefer` boost → `project_agents[].priority: <int>` descending → Layer 2 score
+   4. Cap at N=3 per role slot (Phase 1 hardcoded default)
+
+   **Phase 2 Layer-2 test gates finalization** — per conclusion 040 T5 deferred resolution, Rule 4 runtime execution has not been Layer-2 behaviorally verified (test-report 041 shows 5 failing tests attributed to "BL-005 Scope B gap"). Phase 2 will add the Layer-2 test; precedence semantics may be tuned based on runtime truth.
+
+   **Spawning**: use agent filename stem as `subagent_type` — CC resolves `.claude/agents/<stem>.md` automatically.
+
+   ### Debug flag
+
+   `--agent-debug` on any skill shows the full 3-layer decision tree (rules checked, Layer 2 scores, Layer 3 trigger reason or lack thereof).
 5. **Show selected team** to user before launching. User can adjust.
 
 ## Cross-family Prompt Reference
