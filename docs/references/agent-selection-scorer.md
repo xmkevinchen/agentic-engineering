@@ -18,11 +18,12 @@ Future contributors: treat these numbers as a baseline, not as a frozen contract
 
 ### Project tokens
 
-Extracted from (priority order, first-match-wins for coarse extraction, but TOKEN UNION at the final step):
+Extracted from ALL sources below (token UNION, not priority — richer input = better scoring):
 
-1. **Latest `.ae/analyses/*.md`** (by mtime) — tokens from `title:` frontmatter + prose body.
-2. **Latest active discussion**: `.ae/discussions/*/index.md` where `pipeline.discuss: in_progress`. Tokens from `tags:` + each topic `title:` + Key Questions section text.
-3. **Fallback (dir-structure signals)**: if neither analysis nor active discussion exists, derive tokens from project root directory names (e.g., `src/`, `tests/`, `api/`) + detected tech_stack.
+1. **Project `CLAUDE.md`** — tokens from the tech-stack / architecture / current-focus sections. Empirically critical: Mengdie dogfood (2026-04-18) showed the scorer is well-behaved when CLAUDE.md contributes; without it, token corpus is too narrow and over-suppresses valid matches. Tokenize the whole file; drop stopwords per normal rules.
+2. **Latest `.ae/analyses/*.md`** (by mtime) — tokens from `title:` frontmatter + prose body.
+3. **Latest active discussion**: `.ae/discussions/*/index.md` where `pipeline.discuss: in_progress`. Tokens from `tags:` + each topic `title:` + Key Questions section text.
+4. **Fallback (dir-structure signals)**: if none of the above exist, derive tokens from project root directory names (e.g., `src/`, `tests/`, `api/`) + detected tech_stack.
 
 Outputs: `project_tokens` (set of strings).
 
