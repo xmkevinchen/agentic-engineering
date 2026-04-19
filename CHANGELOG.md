@@ -1,31 +1,28 @@
 # Changelog
 
-## v0.8.5 — 2026-04-18
-
-Cache-refresh bump. Move the 3 BL-005 Phase 1 reference docs from `plugins/ae/docs/references/` (shared-docs convention) to `plugins/ae/skills/setup/` (colocated with primary consumer). Eliminates the fragile `../../docs/references/` path coupling in SKILL.md files.
-
-- `setup/SKILL.md` references its colocated docs as `./agent-contract.md` etc. — 0-level path depth.
-- `agent-selection/SKILL.md` references cross-skill as `../setup/agent-contract.md` etc. — 1-level path (unavoidable since 2 skills consume the same spec; setup picked as owner because it has more references, 8 vs 3).
-- No changes to doc content.
-- Pre-existing broken ref in setup/SKILL.md line 36 (`../../../docs/decisions/037-agent-contract.md` — outside plugin, wouldn't resolve in installed cache) also fixed to point at colocated `./agent-contract.md`.
-
 ## v0.8.4 — 2026-04-18
 
-Cache-refresh bump. v0.8.3 shipped with the 3 BL-005 Phase 1 reference docs
-(`agent-contract.md`, `agent-selection-scorer.md`, `agent-governance-format.md`)
-at repo-level `docs/references/` — NOT packaged with the plugin. Installed
-plugin users had broken path references in `plugins/ae/skills/setup/SKILL.md`
-and `plugins/ae/skills/agent-selection/SKILL.md`.
+Cache-refresh bump. v0.8.3 shipped the 3 BL-005 Phase 1 reference docs at
+repo-level `docs/references/` — NOT packaged with the plugin. Installed
+plugin users had broken path references in the SKILL.md files.
 
-Fix: moved all 3 reference docs into `plugins/ae/docs/references/` (alongside
-existing plugin-internal docs like `cross-family-review.md`). Relative paths
-in the two consuming SKILL.md files updated from `../../../docs/references/`
-to `../../docs/references/`. Now the docs ship with the plugin and resolve
-correctly in both repo and installed layouts.
+Final layout (post-iteration): the 3 reference docs live in
+`plugins/ae/skills/setup/` (colocated with the primary consumer skill),
+not in a separate shared `docs/references/` dir. This eliminates the
+fragile `../../docs/references/` path coupling and keeps each skill's
+spec documentation next to its SKILL.md.
 
-Also: scorer doc lists CLAUDE.md as Project-tokens input source #1 (learned
-from 2026-04-18 Mengdie dogfood — CLAUDE.md tech-stack signals were the
-reason the scorer worked empirically).
+- `setup/SKILL.md` references colocated docs as `./agent-contract.md` etc.
+- `agent-selection/SKILL.md` references cross-skill as `../setup/agent-contract.md` etc.
+  (setup owns the specs because it's the primary consumer — 8+ references
+  vs agent-selection's 3.)
+- Pre-existing broken ref in setup/SKILL.md (`../../../docs/decisions/037-agent-contract.md` — outside plugin boundary, unresolvable in installed cache) also fixed to point at the colocated `./agent-contract.md`.
+
+Scorer doc content changes:
+- CLAUDE.md listed as Project-tokens input source #1 (learned from
+  2026-04-18 Mengdie dogfood — CLAUDE.md tech-stack signals were the
+  reason the scorer worked empirically; manual simulation without them
+  produced false zero-matches).
 
 ## v0.8.3 — 2026-04-18
 
