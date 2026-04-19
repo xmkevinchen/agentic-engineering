@@ -50,17 +50,18 @@ If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 
 `/ae:setup agents [subcommand]` curates third-party or hand-written agents into `.claude/agents/`. The flat `.claude/agents/` namespace is mandatory — CC resolves `subagent_type` by filename stem (see `./agent-contract.md`).
 
-Phase 1 CLI surface (full list; Steps 3/4/6 of plan 041 add import/suggest/governance subcommands — this section documents the baseline scaffolding + browse/remove/phase subflags):
+Phase 1 CLI surface (all subcommands below are implemented and documented in subsections further down):
 
 ```
-/ae:setup agents --library <path>                     # declare library (multi-library supported)
-/ae:setup agents --list [--category <cat>]            # browse configured libraries
-/ae:setup agents --add <name|library:name> [--reason <text>]  # import (Step 3 adds import mechanism)
-/ae:setup agents --remove <name>                      # delete + cleanup
-/ae:setup agents --sync [--diff]                      # upstream drift detection (Step 3)
-/ae:setup agents --detach <name>                      # break upstream link (Step 3)
-/ae:setup agents --suggest [--phase <enum>] [--why]   # smart selection (Step 4)
-/ae:setup agents --refresh                            # advisory audit (Step 4)
+/ae:setup agents --library <path>                              # declare library (multi-library supported)
+/ae:setup agents --list [--category <cat>]                     # browse configured libraries
+/ae:setup agents --add <name|library:name> [--reason <text>]   # import with upstream tracking
+/ae:setup agents --remove <name>                               # delete + cleanup (incl. governance rules)
+/ae:setup agents --sync [--diff]                               # upstream drift detection
+/ae:setup agents --detach <name>                               # break upstream link (keep file)
+/ae:setup agents --suggest [--phase <enum>] [--why]            # smart selection (6-signal scorer)
+/ae:setup agents --refresh                                     # advisory audit (unused / new / stale)
+/ae:setup agents --rule-cleanup                                # governance stale-rule cleanup
 ```
 
 Library reference is persistent — set once via `--library`, reused across subsequent `--suggest` / `--add` runs.

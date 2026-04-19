@@ -132,6 +132,24 @@ Clipping:
 - Below 0.0 → display as 0.0 but **use the raw (pre-clip) value for suppression checks** (strong stack mismatch can drag score well below 0.0; that's meaningful signal to drop the agent).
 - No upper clip.
 
+### `prefer` rule interaction (from governance Layer 1)
+
+When a governance `prefer` rule matches an agent (see agent-governance-format.md), add `+0.20` bonus to that agent's raw score **BEFORE** noise-floor mitigations and threshold check.
+
+Ordering is explicit:
+1. Compute 6-signal raw score (aggregation formula above)
+2. Add `+0.20` if `prefer` rule matched
+3. Apply noise-floor mitigations (2-signal rule, caps, strong-stack-mismatch kill)
+4. Compare against 0.35 threshold
+
+**A `prefer` rule can NOT lift an agent that noise-floor kills** (e.g., strong-stack-mismatch) — the kill rules are hard gates. A preferred Laravel agent on a Rust project stays suppressed. This is intentional: noise-floor rules encode "this agent is wrong for this project" invariants; a user's `prefer` shouldn't override stack-mismatch evidence.
+
+**A `prefer` rule CAN lift an agent whose raw score was below threshold** (pre-bonus 0.20, post-bonus 0.40 clears threshold) — this is the common case where a user's governance wants to weight in a niche-match agent.
+
+When a `prefer` rule is dropped by a noise-floor kill, emit diagnostic output under `--why`: `<agent> — prefer rule matched (+0.20) but suppressed by <rule>. Governance override would not surface this agent; consider updating your agent-governance.md rule scope or removing the stack/category mismatch source.`
+
+No bonus stacking: multiple `prefer` rules matching the same agent contribute at most +0.20 total (not +0.40 etc.). Cap enforced at the rule-matching step before scoring.
+
 ## Threshold & Output
 
 **Global threshold: `score ≥ 0.35`.**
