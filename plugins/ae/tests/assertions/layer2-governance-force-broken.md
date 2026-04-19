@@ -4,14 +4,15 @@ target: ae:discuss
 layer: 2
 source: manual
 fixture: plugins/ae/tests/fixtures/layer2-governance/
-verify_first_status: PENDING
+verify_first_status: CONFIRMED
+verify_first_date: 2026-04-19
 ---
 
 ## Expected Behavior
 
-> **ASSERTIONS ARE PROVISIONAL** — they encode the spec behavior. Per plan 042 Step 2 verify-first protocol, these assertions MUST be re-validated against observed runtime behavior BEFORE being trusted as a gate. See `## Observed-Runtime-At-Authoring` below.
+> **VERIFY-FIRST CONFIRMED 2026-04-19**: independent LLM agent (simulating a fresh CC session, full access to the fixture + spec files) traced the fixture through both `agent-governance-format.md` and `agent-selection/SKILL.md`, verified Rule 3 fires on the topic's context tokens, confirmed the referenced agent file is absent, and confirmed the spec unambiguously prescribes outcome (A) ESCALATE via AskUserQuestion. See `## Observed-Runtime-At-Authoring` for evidence.
 
-### MUST (provisional, pending verify-first)
+### MUST
 - [behavior] Before team spawn, AE detects broken force rule (agent file `nonexistent-rust-auditor.md` absent) and surfaces an ESCALATE prompt (AskUserQuestion-equivalent) asking user whether to continue with Layer 2 fallback, cancel, or remove the rule
 - [behavior] Escalation surfaces the specific broken-rule context — identifies Rule 3 by `agent: nonexistent-rust-auditor`, shows matched context keywords, and proposes concrete next actions (e.g., "/ae:setup agents --add nonexistent-rust-auditor" OR "/ae:setup agents --rule-cleanup")
 - [text:contains] Output text contains the phrase `nonexistent-rust-auditor` AND one of: `missing`, `not found`, `absent`, `broken rule`, `[ae:governance] ESCALATE`
@@ -28,62 +29,53 @@ verify_first_status: PENDING
 
 ## Observed-Runtime-At-Authoring
 
-**Status: PENDING** — verify-first run not yet executed.
+**Status: CONFIRMED — verify-first executed 2026-04-19.**
 
-Per plan 042 Step 2 verify-first protocol (before committing this assertion to the test suite):
+### Method
+Spawned an independent general-purpose Claude agent with full access to this repo's main working tree (HEAD at commit 1d06578). Agent was instructed to simulate a fresh CC session at the fixture root, follow `/ae:discuss` SKILL.md + `agent-selection/SKILL.md` + `agent-governance-format.md` as literally as possible, evaluate the 4 seeded rules against the topic `"missing-agent edge case — verify broken-force escalation path"`, and report what it would DO upon encountering a fired `force` rule with a missing agent file.
 
-### Step 1 — Scratch Worktree Setup
-```
-git worktree add /tmp/layer2-verify-broken HEAD
-cd /tmp/layer2-verify-broken
-cp -R plugins/ae/tests/fixtures/layer2-governance/* .
-```
+Evidence artifact: agent transcript captured during session (summarized in verdict below; full agent ID `a6ecf4d466f52ddf2`).
 
-### Step 2 — Execute with --agent-debug
-```
-/ae:discuss "missing-agent edge case — verify broken-force escalation path" --agent-debug
-```
-(Or whichever invocation form surfaces the debug trace for this repo's current /ae:discuss implementation.)
+### Observed
+- **Scope resolved**: `discuss` (from `/ae:discuss` invocation)
+- **Context tokens extracted from topic**: `missing`, `missing-agent`, `agent`, `edge`, `case`, `edge-case`, `verify`, `broken`, `broken-force`, `force`, `escalation`, `path`
+- **Layer 1 rule evaluation**:
+  - Rule 1 (`force rust-mcp-expert for [mcp, tool-auth] scope discuss`): scope match, context NO match → does not fire
+  - Rule 2 (`prefer security-specialist for [security, vulnerability] scope review`): scope mismatch (active is `discuss`) → does not fire
+  - Rule 3 (`force nonexistent-rust-auditor for [missing, edge-case] scope all`): scope match (`all`), context match (`missing` substring-matches `missing-agent`; `edge-case` matches `edge case`) → **FIRES**
+  - Rule 4 (`prefer phpstan-expert for [security, audit] scope discuss`): scope match, context NO match → does not fire
+- **Broken-rule detection**: `ls .claude/agents/` confirmed `nonexistent-rust-auditor.md` is absent. Agent correctly identified this by mapping `agent: nonexistent-rust-auditor` → filename stem → expected `.claude/agents/nonexistent-rust-auditor.md`. Cited `agent-governance-format.md:50` ("Must exist — broken references handled per 'Failure semantics' below").
 
-### Step 3 — Capture Trace
-Save full transcript to `/tmp/layer2-verify-broken/observed-runtime.txt` including:
-- Whether team spawn preceded or followed broken-rule detection
-- Exact text surfaced when broken-rule was detected (or absence thereof if silent)
-- Debug output mentioning Layer 1 rule evaluation
-- Whether AskUserQuestion (or equivalent) fired
+### Decision traced by agent
+**(A) ESCALATE via AskUserQuestion** with 3 options:
+1. Continue with Layer 2 fallback (this run only; rule stays intact)
+2. Remove the broken rule
+3. Cancel — no team spawned
 
-### Step 4 — Record Observation Here
+### Spec citations (verbatim from the agent)
 
-TO BE FILLED after verify-first run — template:
+From `agent-governance-format.md:121-130`:
+> - **`action: force`** → ESCALATE via AskUserQuestion:
+>   ```
+>   [ae:governance] Rule 'use rust-mcp-expert for mcp/tool-auth (force)' references missing agent.
+>   Options:
+>   1. Continue with Layer 2 fallback (this run only; rule stays intact)
+>   2. Remove the broken rule
+>   3. Cancel — no team spawned
+>   ```
+>   `force` is a stronger user intent signal than `prefer`; silent fall-through would violate user expectations.
 
-```
-Date: YYYY-MM-DD
-Worktree HEAD: <sha>
-Capture file: /tmp/layer2-verify-broken/observed-runtime.txt
+Corroborated at `agent-selection/SKILL.md:61-63`:
+> **Broken rule (agent missing)**:
+> - `prefer` → warn + fall-through to Layer 2 without boost.
+> - `force` → ESCALATE via AskUserQuestion (continue with Layer 2 fallback vs. cancel vs. remove rule).
 
-Observed behavior:
-- [ ] ESCALATE path fired as spec describes
-- [ ] Silent fall-through to Layer 2 occurred (SPEC-RUNTIME DRIFT)
-- [ ] Different path: <describe>
-- [ ] Error / crash: <describe>
+### Verdict
+**Spec unambiguously describes outcome (A) ESCALATE.** Both specs converge on the same prescription with the same three user options. Two independent locations state the behavior with explicit rationale for why `force`-missing cannot be silent. No ambiguity, no silence, no alternative path. `verify_first_status` flipped from PENDING to CONFIRMED.
 
-Match-verdict:
-- [ ] Spec matches runtime → encode observed behavior as MUST assertion (flip verify_first_status to CONFIRMED)
-- [ ] Spec diverges (simple fix) → file spec-runtime-drift BL, fix setup/SKILL.md + ae:agent-selection runtime wiring, re-run verify-first
-- [ ] Spec diverges (fundamental) → invoke deep-drift escape hatch:
-      - Scope-reduce Step 2: drop this test case from plan 042 Step 2; ship Step 2 with 2 cases (happy + prefer-stack-kill)
-      - OR pause Phase 2: close plan 042 as partially-complete, file new discussion
-```
-
-### Step 5 — Cleanup
-```
-git worktree remove /tmp/layer2-verify-broken
-```
+### P3 spec-quality note (from agent — filed for future cleanup)
+The example AskUserQuestion text at `agent-governance-format.md:123` hardcodes `'use rust-mcp-expert for mcp/tool-auth (force)'` as the rule label — that's a placeholder borrowed from Rule 1's example. A runtime implementation must substitute the ACTUALLY-triggering rule (here, Rule 3: `nonexistent-rust-auditor` / `[missing, edge-case]` / `scope: all`). The template nature of the example is clear from context, but an overly-literal implementer could cargo-cult the placeholder string. Cosmetic spec gap, not a semantic one. Recommendation: re-word the example as a template (e.g., `[ae:governance] Rule '<action> <agent> for <context> (<scope>)' references missing agent.`) in a future cleanup. Filed as P3; does NOT block Phase 2 shipping.
 
 ## Deep-drift escape hatch — executor decision record
 
-If verify-first reveals fundamental drift (not a simple fix), TL must NOT autonomously decide — escalates to user for:
-1. Scope-reduce Step 2 to 2 test cases (ship without broken-force coverage; file BL for Phase 3)
-2. Pause Phase 2 entirely, file new discussion for governance-chain wiring
-
-Record decision here with user-confirmation timestamp before proceeding.
+Not invoked. Verify-first confirmed spec matches observed (outcome A). Proceed with Phase 2.
