@@ -364,9 +364,9 @@ Your governance will coexist with AE's rules in .claude/agent-governance.md.
 Consider manually migrating by running `/ae:setup agents --rule-add <agent> ...`.
 ```
 
-##### Pattern-detection triggers (Phase 1)
+##### Pattern-detection triggers
 
-AE proposes new governance rules at specific trigger points. Phase 1 implements two triggers:
+AE proposes new governance rules at specific trigger points. Phase 1 implements one trigger (A). Automatic-pattern detection (B) is deferred to Phase 3 pending AE-owned telemetry infrastructure.
 
 **Trigger A: `--add` with user-supplied rationale**
 
@@ -386,29 +386,13 @@ When `/ae:setup agents --add <name>` is invoked with an explicit rationale strin
    3. Skip — import without creating governance rule
    ```
 
-**Trigger B: `/ae:discuss` or `/ae:review` spawning same project agent 3+ consecutive times**
+**Automatic pattern detection (3-consecutive-spawn) — deferred to Phase 3**
 
-AE tracks project-agent usage in recent team runs (detection source: `~/.claude/teams/*/config.json` created in last 30 days; fallback: `.ae/milestones/*/step-summaries.md` spawn mentions).
+Automatic auto-propose based on "`/ae:discuss` or `/ae:review` spawning same project agent 3+ consecutive times" is deferred to Phase 3. Discussion 041 topic-03 verified that the current detection sources (`~/.claude/teams/*/config.json` + `.ae/milestones/*/step-summaries.md`) are structurally incapable of providing the required skill-invocation context + ordered timestamps — team configs have no skill-invocation context and no history after TeamDelete; step-summaries are free-form prose with zero structured spawn logs.
 
-1. On every `/ae:discuss` or `/ae:review` invocation, increment a counter for each project agent spawned.
-2. If a project agent has been spawned in 3 or more consecutive runs of the SAME skill (e.g., 3 `/ae:discuss` runs with same agent) AND no existing `prefer` rule covers the overlap between recent contexts:
-3. Derive context keywords: intersection of tokens across the 3 triggering team runs' contexts (topic tags, diff files, etc.). Require ≥2 overlapping tokens.
-4. Propose:
-   ```
-   [ae:governance] Pattern detected: 'rust-mcp-expert' spawned in 3 consecutive discussions with
-   overlapping keywords [mcp, tool-auth]. Propose rule?
-     prefer rust-mcp-expert for contexts [mcp, tool-auth] in discuss scope
-     Action: prefer    Scope: discuss
-   
-   Options:
-   1. Accept — add rule
-   2. Modify — refine action/context/scope
-   3. Skip — continue without rule (pattern counter resets)
-   ```
+If user workflow reveals a real 3-consecutive-spawn pattern, open a Phase 3 discussion for AE-owned telemetry design (e.g., `.ae/telemetry/spawns.jsonl` with structured `{ts, skill, agent, session_id}` schema written by `/ae:discuss`, `/ae:review`, `/ae:work`, `/ae:team` at TeamCreate time). Until then, Trigger A covers explicit governance bootstrap cleanly and without new infrastructure.
 
-Pattern counter resets on user "Skip" AND on any skill run where the agent is NOT spawned. Prevents infinite re-proposal for declined rules.
-
-**`/ae:next` periodic audit** — NOT implemented in Phase 1. Per plan 041 Step 6, `/ae:next` as an audit trigger is Phase 2 scope. Do not spec or implement it in Phase 1.
+**`/ae:next` periodic audit** — NOT implemented in Phase 1 or Phase 2. Tracked as Phase 3+ alongside telemetry-based auto-detection.
 
 ##### `--rule-cleanup`
 
