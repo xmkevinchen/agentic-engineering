@@ -22,15 +22,15 @@ layer2-governance/
 | # | Rule | Agent | Action | Scope | Context | Purpose |
 |---|------|-------|--------|-------|---------|---------|
 | 1 | force+match | `rust-mcp-expert` | force | discuss | mcp, tool-auth | Happy-path force test — forced agent should spawn |
-| 2 | prefer+match | `security-specialist` | prefer | review | security, vulnerability | Prefer-boost test (not exercised in test cases; reserved for future coverage) |
+| 2 | prefer+match | `security-specialist` | prefer | review | security, vulnerability | Prefer-hint test — surfaces agent as context hint to Claude (not exercised in test cases; reserved for future coverage) |
 | 3 | broken-force | `nonexistent-rust-auditor` | force | all | missing, edge-case | Force rule references agent file that does NOT exist → expected ESCALATE via AskUserQuestion |
-| 4 | prefer+stack-kill | `phpstan-expert` | prefer | discuss | security, audit | Prefer-matching agent whose stack mismatches project stack → expected SUPPRESSED despite +0.20 bonus (strong-stack-mismatch kill wins) |
+| 4 | prefer+stack-kill | `phpstan-expert` | prefer | discuss | security, audit | Prefer-matching agent whose stack mismatches project stack → surfaced to Claude as hint, then filtered by stack-mismatch hard constraint before Claude's pick |
 
 ## Test Cases (in `plugins/ae/tests/prompts/`)
 
 1. **layer2-governance-force-happy** — `/ae:discuss "MCP tool-auth design"` should include `rust-mcp-expert` in spawned team via Rule 1.
 2. **layer2-governance-force-broken** — `/ae:discuss "missing-agent edge case"` should ESCALATE via AskUserQuestion because Rule 3's `nonexistent-rust-auditor` is absent.
-3. **layer2-governance-prefer-stack-kill** — `/ae:discuss "security audit of Rust module"` should NOT include `phpstan-expert` in team despite Rule 4's prefer-boost (strong-stack-mismatch-kill overrides).
+3. **layer2-governance-prefer-stack-kill** — `/ae:discuss "security audit of Rust module"` should NOT include `phpstan-expert` in team despite Rule 4 surfacing it as a prefer hint (stack-mismatch hard constraint removes it before Claude's Layer 2 pick).
 
 ## Assertions
 

@@ -65,9 +65,10 @@ From `agent-governance-format.md:121-130`:
 >   ```
 >   `force` is a stronger user intent signal than `prefer`; silent fall-through would violate user expectations.
 
-Corroborated at `agent-selection/SKILL.md:61-63`:
+Corroborated at `agent-selection/SKILL.md`:
 > **Broken rule (agent missing)**:
-> - `prefer` → warn + fall-through to Layer 2 without boost.
+> - `prefer` → warn + fall-through to Layer 2; the hint is dropped.
+> - `exclude` → warn + fall-through to Layer 2; no agent is filtered (rule had nothing to remove).
 > - `force` → ESCALATE via AskUserQuestion (continue with Layer 2 fallback vs. cancel vs. remove rule).
 
 ### Verdict

@@ -11,10 +11,10 @@ fixture: plugins/ae/tests/fixtures/layer2-governance/
 ### MUST
 - [team:exists] Spawned team config.json members[] array contains an entry with `name: rust-mcp-expert` (filename-stem resolution per agent contract)
 - [behavior] Team spawn debug output (either `--agent-debug` transcript or team-lead synthesis mention) shows Rule 1 matched via context keywords `mcp` + `tool-auth` AND the match fired at Layer 1 (not Layer 2 score-based inclusion)
-- [behavior] The reasoning chain for `rust-mcp-expert`'s inclusion cites the governance force rule, NOT the scorer's 6-signal score
+- [behavior] The reasoning chain for `rust-mcp-expert`'s inclusion cites the governance force rule, NOT Claude's Layer 2 judgment
 
 ### MUST_NOT
-- [behavior] The scorer's 6-signal score for `rust-mcp-expert` must NOT be the reason-of-record for inclusion (a force rule bypasses scoring; if scoring is cited as the reason, Layer 1 was skipped and the fixture is catching the Scope B gap from test-report 041)
+- [behavior] Claude's Layer 2 judgment for `rust-mcp-expert` must NOT be the reason-of-record for inclusion (a force rule bypasses Layer 2; if Layer 2 reasoning is cited as the reason, Layer 1 was skipped)
 - [team:exists] MUST NOT spawn `phpstan-expert` (prefer rule is scope: discuss + context [security, audit] — topic is mcp/tool-auth, not a match)
 
 ### SHOULD

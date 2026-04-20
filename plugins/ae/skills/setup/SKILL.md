@@ -59,7 +59,7 @@ Phase 1 CLI surface (all subcommands below are implemented and documented in sub
 /ae:setup agents --remove <name>                               # delete + cleanup (incl. governance rules)
 /ae:setup agents --sync [--diff]                               # upstream drift detection
 /ae:setup agents --detach <name>                               # break upstream link (keep file)
-/ae:setup agents --suggest [--phase <enum>] [--why]            # smart selection (6-signal scorer)
+/ae:setup agents --suggest [--phase <enum>] [--why]            # LLM-based recommendation
 /ae:setup agents --refresh                                     # advisory audit (unused / new / stale)
 /ae:setup agents --rule-cleanup                                # governance stale-rule cleanup
 ```
@@ -254,7 +254,7 @@ Summary output at end: counts of clean / upstream-updated / locally-modified / b
 
 Closed enum flag for `--suggest`. When provided, biases smart-selection scoring toward phase-appropriate agents. When absent, no phase bias.
 
-Phase-appropriate agents (heuristic, used by scorer — full bias rules in `./agent-selection-scorer.md`, written in Step 4):
+Phase-appropriate agents (hints passed to Claude's judgment — see `./agent-selection-rubric.md` for the rubric):
 
 | Phase | Favored roles / specialties |
 |-------|----------------------------|
@@ -269,43 +269,47 @@ Invalid phase value → refuse with `[ae:setup] invalid phase '<value>'. Valid: 
 
 #### `--suggest [--phase <enum>] [--why]`
 
-Smart-recommend library agents based on current project profile.
+LLM-based recommendation: Claude reads project context + library agents, proposes a curated subset to import into `.claude/agents/`.
 
-**Algorithm**: see `./agent-selection-scorer.md` for signal definitions, weights, noise-floor rules, threshold, and `--why` output format. Briefly: 6-signal deterministic scorer (keyword_overlap / description_match / role_gap_bonus / category_match / library_source_boost / stack_mismatch), threshold 0.35, output cap 8, no-confident-match path suggests writing a custom agent.
+See `./agent-selection-rubric.md` for the scoring rubric (signals-as-hints, not math) and the `--why` output template.
 
-Inputs used (token UNION across all sources — richer input = better scoring):
-- **Project `CLAUDE.md`** — tech-stack / architecture / current-focus tokens. Empirically critical per Mengdie dogfood (2026-04-18); without it, corpus is too narrow and suppresses valid matches.
-- Latest `.ae/analyses/*.md` by mtime (project profile)
-- Latest active discussion's tags + topic titles + Key Questions
-- `project_agents` + built-in agents roster (for role-gap detection)
-- Detected project tech stack (per scorer spec stack-detection section)
+Inputs (read directly, no tokenization preprocessing):
+- Project `CLAUDE.md` (tech stack, architecture, current focus)
+- Latest `.ae/analyses/*.md` by mtime — if present
+- Latest active discussion's `index.md` — if present
+- `project_agents` + built-in AE agents roster (for role-coverage awareness)
+- Each library agent's `name` + `description` + category path (read body first ~20 lines only if description is thin)
+- Active `force` / `prefer` rules from `.claude/agent-governance.md` (if any)
 
 Behavior:
 
 1. **Prerequisites check**: require `agent_libraries:` configured. If absent → `[ae:setup] No library configured. Run /ae:setup agents --library <path> first.`
-2. **Run scorer** per `./agent-selection-scorer.md`.
-3. **Output**: ranked proposal (max 8, or fewer if threshold filters more, or "no confident match" with uncovered-roles list).
-4. **Present for batch apply**: after ranked list, prompt:
+2. **Governance hard rules applied first** (mechanical, not LLM): `action: force` → agent pre-selected; `action: exclude` → agent removed from candidate pool.
+3. **Claude reviews remaining candidates** against project context per `./agent-selection-rubric.md`. Targets 3-8 recommendations — prefers fewer-but-confident over padding the list.
+4. **Output**: ranked proposal with one-line rationale each. If nothing fits → `No library agents fit this project well. Consider writing a custom agent in .claude/agents/ or browsing --list manually.`
+5. **Present for batch apply**:
    ```
    Apply all? [Y / select subset (e.g., 1,3,5) / n]:
    ```
-   On `Y`: invoke `--add` for each via the batch flow (unified summary at end). On `select`: parse indices, invoke `--add` for the chosen subset. On `n`: exit with no changes.
-5. **`--why` flag**: include per-agent signal breakdown (included AND suppressed agents) per the scorer spec's `--why` output template.
-6. **`--phase <enum>` flag**: when provided, biases role-gap + category scoring toward phase-appropriate agents per the scorer spec. Absent → no phase bias.
+   On `Y`: invoke `--add` for each via batch flow. On `select`: parse indices, invoke `--add` for subset. On `n`: exit with no changes.
+6. **`--why` flag**: Claude's per-agent rationale is more detailed (2-3 sentences each, cites project evidence).
+7. **`--phase <enum>` flag**: passed to Claude as context hint ("this is an `early`-phase project — bias toward setup/scaffolding agents"). No mechanical weight adjustments.
 
-**Never silently populates project_agents**. User action (Y / select / n) is required before any file is copied — proposal-only UX, per conclusion 040 T8.
+**Never silently populates project_agents**. User action (Y / select / n) is required before any file is copied — proposal-only UX.
+
+**Why LLM, not mechanical scoring**: semantic matching between ~200-token agent descriptions and project context is exactly what LLMs do well. Mechanical Jaccard/keyword-overlap scoring requires per-project tuning of weights/thresholds/stopwords that never converges (see BL-005 Phase 2 pivot note in `./agent-selection-rubric.md`).
 
 #### `--refresh`
 
 Advisory audit of current `project_agents` roster against the current project state.
 
-**Algorithm**: see `./agent-selection-scorer.md` → "`--refresh` Advisory Behavior" section. Briefly: emits three lists (unused imports based on recent-team-run telemetry; new candidates scoring higher than current imports in the same role; stale mismatches from project stack evolution). Advisory only — never removes or adds anything automatically.
+**Algorithm**: see `./agent-selection-rubric.md` → "`--refresh` Advisory Behavior" section. Briefly: emits three advisory lists (unused imports; new candidates that would now fit better; stale mismatches from project stack evolution). Advisory only — never removes or adds anything automatically.
 
 End output: `Run /ae:setup agents --suggest to review` suggestion.
 
 #### `--why`
 
-Not a standalone command — a flag for `--suggest`. See scorer spec's `--why Flag Output Template` section for format.
+Not a standalone command — a flag for `--suggest`. See `./agent-selection-rubric.md` → `--why Output Template` section for format.
 
 Reserved for future standalone use (`/ae:setup agents --why <library:name>` to show why a specific agent would or would not be included) — not in Phase 1 scope.
 
@@ -372,7 +376,7 @@ AE proposes new governance rules at specific trigger points. Phase 1 implements 
 
 When `/ae:setup agents --add <name>` is invoked with an explicit rationale string (passed via `--reason "<text>"` flag or interactively prompted for during import):
 
-1. Tokenize the rationale per the scorer spec tokenization rules.
+1. Extract top 3-5 content-bearing terms from the rationale (Claude's judgment; no mechanical tokenization required).
 2. Extract top 3-5 tokens by relevance (non-stopwords, with at least one that appears in the agent's description).
 3. Propose a `prefer` rule:
    ```

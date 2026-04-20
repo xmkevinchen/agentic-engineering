@@ -9,11 +9,11 @@ Cache-refresh bump. In-flight content carried so local plugin reinstall picks up
 BL-005 Phase 1 — library-to-project agent curation (6/7 plan 041 steps committed; Step 7 Mengdie dogfood deferred to user session):
 
 - **`docs/references/agent-contract.md`** (new) — canonical 3-tier frontmatter contract (REQUIRED `name`/`description`; RECOMMENDED `role`/`tools`/`model`/`tech_stack`/`specialty`; TOLERATED `color`/`emoji`/`vibe`/unknown). Documents CC filename-stem spawn resolution and AE no-normalize-on-import rule.
-- **`docs/references/agent-selection-scorer.md`** (new) — canonical 6-signal deterministic scorer spec (weights/threshold/noise-floor/stack-detection/--why output format). Marked `Post-Phase-1 Tuning Expectation`: weights are empirical defaults, in-scope for Phase 1 revision after dogfood.
+- **`docs/references/agent-selection-scorer.md`** (new in v0.8.3, **superseded in Phase 2** — replaced by `plugins/ae/skills/setup/agent-selection-rubric.md` after Phase 2 validation showed the 6-signal math collapsed on real-project corpora. The deprecated spec remains archived as `plugins/ae/skills/setup/agent-selection-scorer.md.deprecated` for reference.)
 - **`docs/references/agent-governance-format.md`** (new) — `.claude/agent-governance.md` YAML rule schema (`agent`, `action: force|prefer`, `context`, `scope`, `added_at`, `added_reason`). Documents platform-decoupling (AE reads governance file directly; `@include` in CLAUDE.md is user-visibility only).
 - **`plugins/ae/templates/pipeline.template.yml`** — added `agent_libraries:` array + extended `project_agents[]` with `source`, `source_sha`, `display_name`, `priority`, `required`, `tech_stack`, `specialty`.
 - **`plugins/ae/skills/setup/SKILL.md`** — new `agents` subcommand section: `--library`, `--list`, `--add --reason`, `--remove`, `--sync`, `--detach`, `--suggest --phase --why`, `--refresh`, governance bootstrap flow, pattern-detection triggers (Trigger A: --add rationale; Trigger B: 3-consecutive-spawn), `--rule-cleanup`.
-- **`plugins/ae/skills/agent-selection/SKILL.md`** — Rule 4 rewritten as 3-layer short-circuit chain (Layer 1 CLAUDE.md rules → Layer 2 6-signal scorer → Layer 3 user one-pick).
+- **`plugins/ae/skills/agent-selection/SKILL.md`** — Rule 4 rewritten as 3-layer short-circuit chain (Layer 1 CLAUDE.md rules → Layer 2 Claude semantic selection via agent-selection-rubric.md → Layer 3 user one-pick). **v0.8.3 initially shipped a Layer 2 6-signal deterministic scorer; Phase 2 validation replaced it with LLM-based rubric.**
 - **`docs/decisions/037-agent-contract.md`** — superseded notice pointing to the three new canonical reference docs.
 
 Phase 1 is SPEC-only until:

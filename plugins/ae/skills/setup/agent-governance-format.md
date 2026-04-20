@@ -48,7 +48,7 @@ The file is a markdown file containing a single YAML code block with a top-level
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `agent` | string | yes | Filename stem (canonical spawn identifier) from `.claude/agents/`. Must exist — broken references handled per "Failure semantics" below. |
-| `action` | enum | yes | `force` or `prefer`. See Action Semantics. |
+| `action` | enum | yes | `force`, `exclude`, or `prefer`. See Action Semantics. |
 | `context` | list of strings | yes | Keyword list. Rule fires when any keyword appears in current skill context (topic tags, discussion titles, review diff, etc.). Empty list `[]` means "apply unconditionally within scope" (equivalent to `context: any`). |
 | `scope` | enum | yes | `discuss`, `review`, `work`, `analyze`, or `all`. Limits rule firing to specific skills. |
 | `added_at` | ISO date | yes | When rule was created. Used for `--refresh` audits and future rule-sunsetting. |
@@ -64,18 +64,36 @@ When the rule fires (context matches + scope matches), AE **short-circuits the e
 
 Use case: "always use `rust-mcp-expert` for MCP discussions" — user has decided this agent is mandatory for the context.
 
+### `action: exclude`
+
+When the rule fires (context + scope match), AE **removes the specified agent from the candidate pool** before Claude sees it. Hard negative constraint.
+
+Use case: "never use `engineering-rapid-prototyper` for security reviews" — user has decided an agent is banned for a context.
+
 ### `action: prefer`
 
-When the rule fires, AE **biases Layer 2 scoring toward the specified agent**: adds a fixed bonus to the agent's score during the 6-signal scorer aggregation (bonus magnitude: +0.20, enough to surface the agent reliably but not enough to override strong negative signals like stack mismatch).
+When the rule fires, AE **surfaces the preferred agent as context to Claude's Layer 2 judgment**: the rule's rationale is included in Claude's selection prompt. Claude weighs the preference alongside task fit, stack compatibility, and role coverage — it is not a mechanical bonus.
 
 Use case: "for security reviews, prefer `engineering-security-engineer` when available" — expresses preference without mandating inclusion.
 
-Multiple `prefer` rules matching the same agent do NOT stack (max +0.20).
+`prefer` does not override hard constraints (stack mismatch, `exclude` rules).
 
 ### Interaction with Layer 2
 
-- `force`: bypasses scorer entirely for the specified agent; agent is included regardless of threshold.
-- `prefer`: +0.20 score boost in Layer 2 aggregation, then scorer threshold still applies. A preferred agent with a total score still below 0.35 after the boost is suppressed per normal noise-floor rules.
+- `force`: bypasses Layer 2 entirely for the specified agent; agent is included regardless of Claude's judgment. **Does not bypass `exclude`** — see precedence below.
+- `exclude`: applied before Layer 2; Claude never sees the excluded agent.
+- `prefer`: presented to Claude as a hint during Layer 2 selection. Claude may surface the preferred agent above other candidates when task context matches, but may also choose a better-fit candidate. When Claude chooses against a prefer hint, the deviation is recorded in the team-lead synthesis narrative (and in `--agent-debug` output if enabled) — the user can trace which prefer rules fired and whether Claude honored or overrode each.
+
+### Precedence (conflicting rules on the same agent)
+
+When multiple rules fire for the same agent in the same context+scope, precedence is:
+
+1. **`exclude` wins over `force`**. If governance has both `force` and `exclude` for agent X, X is removed. Rationale: hard negative constraint takes precedence over intent; no agent can be force-included if governance has explicitly banned it.
+2. **`exclude` wins over stack-mismatch** (trivially — both remove the agent).
+3. **`force` bypasses stack-mismatch filter**. A `force`d agent is included even if its declared `tech_stack` doesn't match the project's. Rationale: user has explicitly overridden fit judgment for this context. The Layer 1 trace records this bypass for audit.
+4. **`prefer` never overrides** hard constraints (`exclude`, stack-mismatch). If a prefer-matched agent is filtered by either, the prefer rule is a no-op (Layer 1 trace records the no-op).
+
+For implementation in trace output, see the Layer 1 Trace Format section in `plugins/ae/skills/agent-selection/SKILL.md`.
 
 ## Scope values
 
@@ -93,7 +111,7 @@ Unknown scope value → rule is silently skipped (do not apply, do not warn). Re
 
 AE collects "current context keywords" at rule-evaluation time from sources relevant to the active skill:
 
-- `/ae:discuss`: topic tags + topic titles + topic Key Questions (tokenized per scorer spec).
+- `/ae:discuss`: topic tags + topic titles + topic Key Questions (read by Claude, not tokenized).
 - `/ae:review`: diff-file-path tokens + commit message tokens.
 - `/ae:work`: plan step title + AC text tokens.
 - `/ae:analyze`, `/ae:think`: user's query text + any referenced discussion tags.
@@ -108,7 +126,7 @@ Example: rule with `context: [mcp, tool-auth]`, `scope: discuss` fires when the 
 
 When a rule references an agent that doesn't exist in `.claude/agents/<name>.md`:
 
-- **`action: prefer`** → warn + fall-through to Layer 2 without applying the boost:
+- **`action: prefer`** → warn + fall-through to Layer 2; the prefer hint is dropped for this run:
   ```
   [ae:governance] WARNING: Rule references missing agent 'rust-mcp-expert'
     (file not found: .claude/agents/rust-mcp-expert.md)
@@ -151,10 +169,8 @@ For role-slot filling, AE reads `project_agents[]` + built-in list; ranks by:
 1. `required: true` agents first (spawn regardless of cap)
 2. Governance `force` rules that match current context (spawn regardless of cap)
 3. Declared `priority: <int>` descending
-4. Algorithm score from [agent-selection-scorer.md](./agent-selection-scorer.md)
+4. Claude's Layer 2 judgment per [agent-selection-rubric.md](./agent-selection-rubric.md), with `prefer` rules and `priority` passed as context
 5. Default cap N=3 per role slot (configurable via `work.max_agents_per_role` in future; Phase 1 hardcoded)
-
-**Phase 2 Layer-2 test gates finalization** — per conclusion 040 T5 deferred resolution, the actual runtime behavior of Rule 4 has never been verified by a Layer-2 behavioral test. Phase 2 will add that test; the precedence semantics above may be adjusted based on runtime truth.
 
 ## Debug flag
 
@@ -165,12 +181,12 @@ For role-slot filling, AE reads `project_agents[]` + built-in list; ranks by:
   rule #1 (force rust-mcp-expert in [mcp, tool-auth], scope: discuss): MATCH → forcing include
   rule #2 (prefer engineering-security-engineer in [security, vulnerability, auth], scope: all): no context match → skipped
 
-[ae:governance] Layer 2 — 6-signal scorer applied to remaining slots:
-  ... [per-agent scoring per scorer --why format] ...
+[ae:governance] Layer 2 — Claude selects from remaining candidates per rubric:
+  ... [per-agent rationale: what fits, what doesn't, 1-line per candidate] ...
 
-[ae:governance] Layer 3 — user-pick triggered: NO (score delta > 0.10 between top-2)
+[ae:governance] Layer 3 — user-pick triggered: NO (Claude had a confident match)
 
-[ae:governance] Final team: [rust-mcp-expert (forced), code-reviewer (score 0.52), ...]
+[ae:governance] Final team: [rust-mcp-expert (forced), code-reviewer (Claude's pick: reviewer role, MCP context fit), ...]
 ```
 
 Rationale: when governance produces surprising selections, debug output makes the reasoning inspectable without re-running with extra flags.

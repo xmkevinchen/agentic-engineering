@@ -13,14 +13,14 @@ Run inside the fixture project. Fixture has:
 - `phpstan-expert` project agent with tech_stack `[php, laravel]` (mismatch)
 - `.claude/agent-governance.md` Rule 4: `prefer phpstan-expert for context [security, audit] in scope discuss`
 
-Per scorer spec (`agent-selection-scorer.md`):
-1. Rule 4 fires at Layer 1 because context keywords "security" + "audit" match (topic below)
-2. `prefer` adds +0.20 bonus to Layer 2 scoring — per revised scoring order, the bonus applies BEFORE noise-floor mitigations
-3. Strong-stack-mismatch kill rule (Layer 2 noise-floor): if agent declares tech_stack NOT in project stack AND lacks generalist indicators, drop entirely regardless of positive score
-4. `phpstan-expert`'s description is PHP/Laravel-specific → no generalist indicators → strong-stack-mismatch kill wins
-5. Final behavior: `phpstan-expert` SUPPRESSED despite the +0.20 prefer bonus
+Per Layer 1 flow in `plugins/ae/skills/agent-selection/SKILL.md` (strict step order):
+1. **Force apply** — none firing (rule 1 targets different context)
+2. **Hard-constraint filter** — stack-mismatch removes `phpstan-expert` from the pool: agent declares `tech_stack: [php, laravel]`, project declares `tech_stack: [rust, mcp]` → disjoint → filtered BEFORE Claude sees the pool
+3. **Prefer annotate** — rule 4 fires on context [security, audit], but `phpstan-expert` is already gone from the pool; prefer annotation is a no-op (Layer 1 trace records this)
+4. **Claude picks** — from the filtered pool (no `phpstan-expert` in it)
+5. Final behavior: `phpstan-expert` NOT SPAWNED; the Layer 1 trace shows rule 4 fired but was defeated by the stack-mismatch filter
 
-This is the silent-failure mode from review 042 F1 — if the implementation is wrong, the prefer bonus could override the stack-mismatch kill and spawn a PHP expert on a Rust/MCP project.
+This is the silent-failure mode from review 042 F1 — if the implementation is wrong, Claude could follow the `prefer` hint past the stack-mismatch filter and spawn a PHP expert on a Rust/MCP project.
 
 ## Prompt
 
@@ -28,4 +28,4 @@ This is the silent-failure mode from review 042 F1 — if the implementation is 
 /ae:discuss "security audit of Rust MCP module — tool-authentication flows"
 ```
 
-Expected: team composition does NOT include `phpstan-expert` (suppressed by strong-stack-mismatch kill). Debug output (if `--agent-debug`) shows Rule 4 matched but was killed by stack-mismatch, with the +0.20 bonus noted but overridden.
+Expected: team composition does NOT include `phpstan-expert` (excluded by stack-mismatch hard constraint). Debug output (if `--agent-debug`) shows Rule 4 matched and surfaced `phpstan-expert` as a prefer hint, but the hard-constraint filter removed it before Claude's Layer 2 pick.

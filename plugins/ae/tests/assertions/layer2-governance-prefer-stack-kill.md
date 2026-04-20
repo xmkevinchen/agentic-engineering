@@ -9,14 +9,13 @@ fixture: plugins/ae/tests/fixtures/layer2-governance/
 ## Expected Behavior
 
 ### MUST
-- [team:exists] Spawned team config.json members[] array does NOT contain `name: phpstan-expert` — agent suppressed despite prefer rule match
-- [behavior] Debug output (or team-lead synthesis) documents the suppression reason specifically citing the noise-floor strong-stack-mismatch-kill rule — not a generic "agent not selected" explanation
-- [behavior] Debug output notes that Rule 4 (prefer phpstan-expert for [security, audit]) DID match at Layer 1, AND that the +0.20 bonus WAS applied, AND that the bonus was then overridden by the stack-mismatch kill. The three-step chain is observable — if debug output shows only "not selected" without the force→bonus→kill sequence, the implementation has skipped the intended diagnostic path.
+- [team:exists] Spawned team config.json members[] array does NOT contain `name: phpstan-expert` — agent filtered in Layer 1 step 2 (stack-mismatch hard constraint) before Claude saw the candidate pool
+- [behavior] Layer 1 trace (via `--agent-debug` or team-lead synthesis report) documents the chain: (a) prefer rule 4 **fired** on `phpstan-expert` for [security, audit], (b) stack-mismatch **filtered** `phpstan-expert` because `tech_stack: [php, laravel]` is disjoint from project `tech_stack: [rust, mcp]`, (c) prefer annotation had nothing to attach because the agent was already removed. This is AE's Layer 1 audit trace, NOT Claude's own reasoning — Claude never saw `phpstan-expert` in its input pool.
 
 ### MUST_NOT
 - [team:exists] MUST NOT include `phpstan-expert` in the team — a PHP/Laravel expert on a Rust/MCP project is the exact silent-failure mode this test guards against
-- [behavior] MUST NOT suppress the agent silently — the suppression reason MUST be visible in debug output OR in the team-lead synthesis narrative (which consumes the debug trace). Silent suppression = assertion fails.
+- [behavior] MUST NOT suppress the agent silently — the Layer 1 trace MUST show both the prefer-fired event AND the stack-mismatch-filter event. An implementation that skips the filter (spawning `phpstan-expert`) or skips the trace logging (team-lead has no record of the rule chain) fails the assertion.
 
 ### SHOULD
-- [behavior] If `--agent-debug` is used, output includes a structured annotation resembling: `phpstan-expert — score after prefer bonus: 0.XX + 0.20 = 0.YY → SUPPRESSED (suppression_rule: strong-stack-mismatch-kill; agent stack [php, laravel] not in project stack [rust, mcp])`
-- [behavior] Suppression message suggests concrete follow-up: user can `--detach phpstan-expert` or rewrite the prefer rule's context to be less broad, IF phpstan-expert is genuinely wanted on this project
+- [behavior] If `--agent-debug` is used, trace includes a structured annotation resembling: `rule-4 (prefer phpstan-expert for [security, audit]): FIRED | stack-mismatch filter: REMOVED phpstan-expert (agent tech_stack [php, laravel] ⊄ project tech_stack [rust, mcp]) | prefer annotation: NO-OP (target already filtered)`
+- [behavior] Trace message suggests concrete follow-up: user can `--detach phpstan-expert` or rewrite the prefer rule's context to be less broad, IF phpstan-expert is genuinely wanted on this project

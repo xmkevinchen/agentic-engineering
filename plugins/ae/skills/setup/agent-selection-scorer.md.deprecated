@@ -1,4 +1,12 @@
-# Agent Selection Scorer — Canonical Spec
+# Agent Selection Scorer — Canonical Spec (DEPRECATED, archived)
+
+> **DEPRECATED 2026-04-19 (Phase 2).** This 6-signal deterministic scorer was replaced by LLM-based selection in `plugins/ae/skills/setup/agent-selection-rubric.md` after Phase 2 validation found the math collapsed on real-project corpora (description_match Jaccard < 0.03 across test profiles).
+>
+> **For the current spec, see**: [agent-selection-rubric.md](./agent-selection-rubric.md) → "Why Not Mechanical Scoring (Phase 2 Pivot Note)" for the full reasoning.
+>
+> Content below is archived verbatim for historical reference only. Do not implement against it.
+
+---
 
 Deterministic 6-signal scorer used by `/ae:setup agents --suggest` and by `ae:agent-selection` Layer 2 (governance chain). This is the **single source of truth** — both consumers cite this doc to prevent spec drift.
 

@@ -34,7 +34,7 @@ user-invocable: true
    - Give a **specialized prompt with clear focus** — not generic "review this".
    - **One proxy enabled** → assign one angle. **Both enabled** → prefer different angles; same-angle only when there is genuinely no second valuable blind spot.
    - Example: if Claude has security-reviewer and architecture-reviewer, cross-family angles could be performance + data integrity. If only one proxy is enabled, it gets performance.
-4. **Project agents** — 3-layer short-circuit chain (BL-005 Phase 1; see [Agent Contract](../setup/agent-contract.md), [Governance Format](../setup/agent-governance-format.md), [Selection Scorer](../setup/agent-selection-scorer.md)):
+4. **Project agents** — 3-layer short-circuit chain (BL-005 Phase 1; see [Agent Contract](../setup/agent-contract.md), [Governance Format](../setup/agent-governance-format.md), [Selection Rubric](../setup/agent-selection-rubric.md)):
 
    **Discovery**: scan `.claude/agents/*.md` (project), installed plugin agents, `~/.claude/agents/*.md` (global). Also read `project_agents` from pipeline.yml. CC resolves agents by filename stem — spawn identifier = filename (without `.md`), NOT the `name:` frontmatter field.
 
@@ -56,26 +56,62 @@ user-invocable: true
    Parse YAML `rules:` block. For each rule whose `scope` matches the active skill AND whose `context:` keywords match current skill context:
 
    - `action: force` → include the agent in the team; short-circuit Layers 2+3 for that slot.
-   - `action: prefer` → bias Layer 2 scoring for that agent (+0.20 bonus); Layer 2 still gates on threshold.
+   - `action: exclude` → remove the agent from the candidate pool before Claude sees it (hard negative constraint).
+   - `action: prefer` → surface the preferred agent as context hint to Claude's Layer 2 judgment (not a mechanical bonus); Claude weighs it alongside task fit.
 
    **Broken rule (agent missing)**:
-   - `prefer` → warn + fall-through to Layer 2 without boost.
+   - `prefer` → warn + fall-through to Layer 2; the hint is dropped.
+   - `exclude` → warn + fall-through to Layer 2; no agent is filtered (rule had nothing to remove).
    - `force` → ESCALATE via AskUserQuestion (continue with Layer 2 fallback vs. cancel vs. remove rule).
 
    Malformed YAML → warn + skip all rules for this run (fall-through to Layer 2 for every slot).
 
-   ### Layer 2 — 6-signal deterministic scorer
+   ### Layer 2 — LLM-based selection (two-tier)
 
-   For remaining slots, run the smart-selection scorer per [Agent Selection Scorer](../setup/agent-selection-scorer.md). Briefly:
+   Layer 2 uses a **two-tier pool** to balance signal quality vs context budget. Claude picks per slot, starting from the primary pool; only falls back to the library when the primary pool has no fit.
 
-   - 6 signals (keyword_overlap +0.30, description_match +0.25, role_gap_bonus +0.20, category_match +0.10, library_source_boost +0.05, stack_mismatch −0.25)
-   - Threshold 0.35, noise-floor mitigations (2-signal rule, category/generic caps, strong-stack-mismatch kill), cap at 8
-   - `prefer` rules from Layer 1 add +0.20 to the relevant agent's score before threshold check
-   - Sort descending; tiebreak alphabetically
+   **Primary pool** (always in scope — Claude picks purely on task fit, source is not a priority order):
+   - Project agents (`.claude/agents/*.md`) — hand-written or imported via `--add`
+   - User agents (`~/.claude/agents/*.md`)
+   - AE built-in agents (`plugins/ae/agents/{workflow,review,research}/*.md`)
+   - `pipeline.yml project_agents[]` provides metadata overlay (role/priority/specialty/required) on the files in `.claude/agents/` — these hints help Claude judge fit, but do NOT auto-prioritize these agents over equally-fitting built-ins.
+
+   **Library fallback** (scanned only on primary-pool miss):
+   - Each entry in `pipeline.yml` `agent_libraries[]` → enumerate `<source>/**/*.md`
+   - Apply hard constraints (stack mismatch, `action: exclude`) before presenting to Claude
+   - Claude picks an ad-hoc candidate or returns "no fit in library either"
+
+   **Flow per slot** (strict order; Claude only sees what survives Layer 1):
+   1. **Force apply**: `action: force` governance rules pre-select the named agent into the team for this slot. `force` agents are NOT subject to the stack-mismatch filter (the user has explicitly overridden fit judgment for this context); an `action: exclude` rule on the same agent wins (exclude is the hardest signal).
+   2. **Hard-constraint filter** (mechanical, BEFORE Claude):
+      - `action: exclude` governance rules remove the named agent from the candidate pool.
+      - Stack-mismatch: agent declares `tech_stack: [X, Y, ...]` in its frontmatter or `pipeline.yml project_agents[]` entry; project declares `tech_stack` at the top level of `pipeline.yml` (source of truth — no file-extension auto-detection). Disjoint sets → filtered out.
+   3. **Prefer annotate**: `action: prefer` rules that fire on this context annotate matching **surviving** agents with the rule's `added_reason` as a context hint. (If a prefer-matched agent was already filtered in step 2, the prefer rule has nothing to annotate — AE records this in the Layer 1 trace as "prefer fired on X but X was filtered".)
+   4. **Claude picks**: Claude reads the filtered-and-annotated primary pool + current task context + project CLAUDE.md → picks best fit per [Agent Selection Rubric](../setup/agent-selection-rubric.md).
+   5. **Library fallback**: if primary pool has no confident match, Claude scans library fallback (enumerated from `pipeline.yml agent_libraries[]` sources) — same hard-constraint filter applied before Claude sees candidates.
+   6. If neither pool has a fit → return "no match; fall through to built-in default for this slot, or prompt user to author a custom agent".
+
+   **Fallback cost discipline**: library scan only triggers on primary miss. For common role slots (reviewer, developer, domain-expert), the primary pool should almost always have a fit — library scan is reserved for genuinely novel task shapes where existing agents don't cover.
+
+   **Layer 1 trace format**: every rule firing and filter action is recorded in a structured trace. Two surfaces:
+
+   - **`--agent-debug` flag** (per-invocation): trace is printed to stdout before Claude is invoked, one line per event, format: `[layer1] <step>: <rule/filter> <agent-name> → <outcome> (<reason>)`. Example sequence for the prefer+stack-kill test case:
+     ```
+     [layer1] force-apply: no rules firing in context
+     [layer1] hard-constraint: stack-mismatch filter REMOVED phpstan-expert (agent tech_stack [php, laravel] ⊄ project tech_stack [rust, mcp])
+     [layer1] prefer-annotate: rule-4 FIRED for phpstan-expert on context [security, audit] → NO-OP (target already filtered)
+     [layer1] claude-input: pool = [rust-mcp-expert, ...] (phpstan-expert absent)
+     ```
+   - **Team-lead synthesis report** (end of skill run): a `## Agent Selection Trace` section in the report summarizes the Layer 1 events for this invocation. Same structured format as `--agent-debug` but embedded in the skill's final written output, so it persists beyond the console session.
+
+   This is the audit path for "did the prefer hint reach Claude, or was it filtered first?" — the trace shows every Layer 1 event with explicit outcome, so the user can verify AE enforced the governance contract before Claude's pick.
+
+   - No numerical scores, no thresholds — Claude either has a confident match (primary or fallback) or returns no match.
+   - Task fit → stack compatibility → role coverage → specialty specificity is the rubric priority order.
 
    ### Layer 3 — User one-pick (lightweight disambiguation)
 
-   Triggered ONLY when Layer 2's **top-2 candidates have a score delta < 0.10** within the same role slot. AE surfaces a 3-option numbered menu via AskUserQuestion with 1-line rationale per option. Max 3 candidates shown.
+   Triggered when Layer 2 returns multiple viable candidates and Claude's judgment is not confident (e.g., 2-3 candidates look similarly plausible for the task). AE surfaces a 3-option numbered menu via AskUserQuestion with 1-line rationale per option. Max 3 candidates shown.
 
    Layer 3 is intentionally lightweight — NOT a full `ae:consensus` Debate Mode. User picks and the skill continues. Respects user attention budget.
 
@@ -87,16 +123,14 @@ user-invocable: true
 
    1. `project_agents[].required: true` agents (always spawn)
    2. Layer 1 `force` matches (always spawn)
-   3. Remaining candidates ranked by: Layer 1 `prefer` boost → `project_agents[].priority: <int>` descending → Layer 2 score
+   3. Remaining candidates picked by Claude per Layer 2 rubric, with Layer 1 `prefer` rules and `project_agents[].priority: <int>` as context hints
    4. Cap at N=3 per role slot (Phase 1 hardcoded default)
-
-   **Phase 2 Layer-2 test gates finalization** — per conclusion 040 T5 deferred resolution, Rule 4 runtime execution has not been Layer-2 behaviorally verified (test-report 041 shows 5 failing tests attributed to "BL-005 Scope B gap"). Phase 2 will add the Layer-2 test; precedence semantics may be tuned based on runtime truth.
 
    **Spawning**: use agent filename stem as `subagent_type` — CC resolves `.claude/agents/<stem>.md` automatically.
 
    ### Debug flag
 
-   `--agent-debug` on any skill shows the full 3-layer decision tree (rules checked, Layer 2 scores, Layer 3 trigger reason or lack thereof).
+   `--agent-debug` on any skill shows the full 3-layer decision tree (rules checked, Layer 2 candidates considered + Claude's rationale, Layer 3 trigger reason or lack thereof).
 5. **Show selected team** to user before launching. User can adjust.
 
 ## Cross-family Prompt Reference
