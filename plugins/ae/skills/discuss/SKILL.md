@@ -8,7 +8,7 @@ effort: high
 ---
 
 **Protocol Map** — if detail for any step is missing below, read this SKILL.md file directly before proceeding.
-Steps: 1.Setup → 2.Spawn Team → 3.Discussion Rounds → 4.Consensus Verification → 5.TL Scores → 6.Present & Record → 7.Doodlestein → 8.Sweep → 9.Conclusion → 10.Shutdown
+Steps: 1.Setup → 2.Spawn Team → 3.Discussion Rounds → 4.Consensus Verification → 5.TL Scores → 6.Present & Record → 7.Sweep → 8.Conclusion → 9.Doodlestein (post-conclusion) → 10.Shutdown
 
 ## Argument Inference
 
@@ -45,19 +45,47 @@ File format templates are in the Appendix at the end of this file.
    - `$ARGUMENTS` is a topic description → check `<output.discussions>` for related directory
      - Found → add topics to that directory
      - Not found → create `<output.discussions>/NNN-slug/`
-2. **If new discussion**: create `index.md` with Problem Statement
+2. **If new discussion**: create two files in the directory:
+   - `index.md` — minimal scaffolding (title, pipeline status, topic list placeholder, links)
+   - `framing.md` — **separate file** containing Problem Statement. Describe the problem to be solved; do NOT pre-commit to solution directions, list option A/B/C, or embed specific mechanisms. Framing will be reviewed in Step 1.5 before Round 1 spawns.
 3. **If existing**: show convergence status:
    ```
    📊 Discussion NNN: N topics
    - converged: X ✅  revisit: Y 🔄  deferred: Z ⏳  pending: W
    ```
 4. **Route**:
-   - All converged + no deferred → go to Doodlestein (step 7)
-   - Has revisit or pending → spawn/continue team (step 2)
+   - All converged + no deferred → go to Sweep (step 7) / Conclusion (step 8) / Doodlestein (step 9)
+   - Has revisit or pending → Step 1.5 (new discussion or framing changed) or Step 2 (resume)
 
-### 1.5. Prior Context (from Mengdie)
+### 1.5. Round 0 — Framing Review (new discussions only)
 
-Run this step after Setup (Step 1) resolves the discussion directory and before spawning the team (Step 2).
+Before spawning the team, Round 0 reviews `framing.md` for neutral / focused / open properties. Goal: catch bias anchoring or framing-by-solution before Round 1 agents lock on it.
+
+Applies to **new discussions** and any discussion where `framing.md` was changed. Skip for pure resumes.
+
+1. **Spawn `doodlestein-framing`** as a single-agent one-shot (no team setup required):
+   ```
+   Agent(subagent_type: "doodlestein-framing",
+         name: "doodlestein-framing",
+         prompt: "Review framing at <discussion-dir>/framing.md. Evaluate neutral / focused / open per your mandate. SendMessage verdict to team-lead.")
+   ```
+
+2. **Wait for verdict** (APPROVED or REVISE).
+
+3. **On APPROVED**: log the verdict in `<discussion-dir>/framing.md` frontmatter (`round_0: approved`, ISO date). Proceed to Step 1.6.
+
+4. **On REVISE**: halt. Present the specific issue + suggested edit to the user. User choices:
+   - **Revise**: TL updates `framing.md`, re-runs Round 0
+   - **Override**: skip Round 0 for this discussion. Log `round_0: overridden` in frontmatter with user-supplied reason. Proceed to Step 1.6.
+   - **Cancel**: abort discussion
+
+5. **Limit**: 3 consecutive REVISE verdicts with no user response → escalate to user (do not keep looping).
+
+**Why Round 0 exists (not a mechanism you can inline into later rounds)**: once Round 1 spawns, agents anchor on whatever framing is provided. Mid-round reviewers (challenger, Doodlestein at conclusion) evaluate within the framing. Round 0 is the only point where framing itself is the object of evaluation, before it infects Round 1 context.
+
+### 1.6. Prior Context (from Mengdie)
+
+Run this step after Round 0 approves framing (Step 1.5) and before spawning the team (Step 2). Query uses the approved `framing.md` content as the search query.
 
 1. Call `memory_search` MCP tool with the discussion topic/problem statement as query
 2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 2
@@ -69,7 +97,7 @@ Run this step after Setup (Step 1) resolves the discussion directory and before 
 
 **The core of ae:discuss is team discussion.** One team lives for the entire discussion — only add agents, never remove.
 
-**DO NOT delete the team between topics, after scoring, or before Doodlestein.** The team persists from Step 2 through Step 9 (Conclusion). Doodlestein agents join this team in Step 7 and original participants must be alive to respond to challenges. Deleting the team early breaks the Doodlestein challenge-response cycle.
+**DO NOT delete the team between topics, after scoring, or before Doodlestein.** The team persists from Step 2 through Doodlestein (Step 9). Original participants must be alive in case Doodlestein's review of the conclusion kicks off a new round.
 
 If the team already exists (resuming), skip to step 3. Otherwise:
 
@@ -96,12 +124,18 @@ Agent(subagent_type: "<per agent-selection>",
                Topics: <topic brief>
 
                Round 1: Research independently. Read code, find evidence, form your
-               position on each topic. SendMessage findings to team-lead.
-               Do NOT read other agents' findings yet.
+               position on each topic. Write your full findings to
+               `<discussion-dir>/round-01/<your-agent-name>.md` (you own this file;
+               TL does not write it). SendMessage a 3-5 line summary to team-lead
+               pointing at the file. Do NOT read other agents' findings yet.
 
-               Round 2+: Respond to other agents' findings. Agree, build on,
-               or challenge with evidence. Evolving your position based on new
-               evidence is expected — not failure.
+               Round 2+: REQUIRED READING before forming any position:
+               <explicit list of per-agent files from prior round, e.g.
+                round-01/architect.md, round-01/challenger.md, ...>
+               TL synthesis is orientation only — do not derive arguments from
+               synthesis. Any claim about a peer's position must cite the
+               per-agent file and specific line numbers.
+               Write your Round N findings to `<discussion-dir>/round-NN/<your-name>.md`.
 
                Use structured output per ae:agent-teams Discussion Mode:
                ## Findings (with file:line evidence)
@@ -122,28 +156,33 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 
 **TL is the moderator.** TL drives rounds, routes messages, highlights disagreements, identifies convergence. Per `ae:agent-teams` Discussion Mode.
 
+**Per-agent files are the primary artifact.** Each agent writes `round-NN/<agent-name>.md` themselves in every round. TL does NOT author these files and does NOT paraphrase their content into synthesis. Synthesis is an index/orientation layer on top of the per-agent files, not a replacement for them.
+
 **Round 1 — Independent Research** (no cross-talk):
 - All agents research topics independently
-- Each forms their own position with evidence
-- All report findings to team-lead (not to each other)
+- Each writes full findings to their own `round-01/<name>.md` file
+- SendMessage summary to TL pointing at the file (3-5 lines)
 - TL does NOT share findings between agents yet
 
 **Round 2 — Share & Explore**:
-- TL compiles all Round 1 findings, highlights disagreements and gaps
-- TL sends compiled summary to all agents
-- Agents respond to each other's findings — agree, build on, or challenge with evidence
-- Positions may evolve based on new evidence — this is expected
-- Use Discussion Mode structured output: Findings + Agreements + Disagreements + Open Questions
+- TL's Round 2 spawn/send prompt includes REQUIRED READING with explicit list of Round 1 per-agent files
+- Agents read peers' `round-01/*.md` directly — not TL synthesis
+- Agents respond, cite peer claims by file path + line numbers
+- Each writes `round-02/<name>.md`; SendMessage summary
 
 **Round 3+ — Convergence**:
+- Same per-agent file pattern continues
 - TL pushes converging topics toward conclusion
-- Topics with genuine disagreement get more rounds
 - **Unanimous Agreement Gate**: when all agents agree on a topic direction, TL runs UAG per `ae:agent-teams` Discussion Mode — structured falsification question, agents must search for counterexamples. Passed UAG = genuine convergence.
 - Sub-questions resolved in-team — do NOT bubble up to user
 - Continue until all topics have either clear direction (UAG passed) or genuine disagreement
 
-**TL compiles synthesis** when rounds complete:
-- Per topic: direction backed by evidence, UAG result, dissenting views, resolved sub-questions
+**TL synthesis format (mandatory 4 fields, written in each round's `round-NN/synthesis.md`)**:
+
+1. **Pruned section**: explicit "Pruned: [what], reason: [why]" per item. If nothing pruned this round, write "Pruned: nothing; all inputs advanced" — **empty or missing Pruned section is a protocol violation**.
+2. **Of-framing disposition**: list every of-framing challenge raised this round + TL's disposition (integrate / reject-with-reason / defer-to-followup-BL). TL fills this; do NOT rely on agent self-tagging of challenges.
+3. **Verification artifact**: any claim of "verified / computed / checked" must cite a concrete artifact (file path, script output, document section). No artifact → mark `unvalidated`; do not mark such claims converged.
+4. **Frame-challenge disappearance self-check**: before writing synthesis, compare Round N-1's of-framing markers against Round N — did any silently disappear without explicit resolution? regex / keyword comparison is acceptable tooling. Record the check outcome in synthesis.
 
 ### 4. Consensus Verification
 
@@ -216,52 +255,13 @@ For escalated topics: use `AskUserQuestion` with team findings + genuine dilemma
 - TL scores again after team reports back
 - Continue until all topics converged or deferred
 
-### 7. Doodlestein Challenge
+### 7. Sweep: Resolve All Deferred
 
-**Triggered when**: all topics converged or deferred (zero revisit remaining). Before Sweep and Conclusion.
-
-Per `ae:agent-teams` Doodlestein Protocol. Three fresh agents, each answering ONE focused question.
-
-1. Compile: topic titles + decisions + rationale + key evidence + summary of debate
-2. **Spawn all three Doodlestein agents INTO the existing team simultaneously**:
-
-```
-Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
-      team_name: "<existing team>", run_in_background: true,
-      prompt: "<compiled decisions + debate summary + file paths to read>
-               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
-
-Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
-      team_name: "<existing team>", run_in_background: true,
-      prompt: "<compiled decisions + debate summary + file paths to read>
-               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
-
-Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
-      team_name: "<existing team>", run_in_background: true,
-      prompt: "<compiled decisions + debate summary + file paths to read>
-               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
-```
-
-3. Each Doodlestein agent SendMessage findings to team-lead
-4. **TL moderates response** per `ae:agent-teams` Doodlestein Protocol:
-   - TL routes challenges to ALL team members simultaneously
-   - All agents respond — no agent's response is weighted higher than others
-   - If a challenge is valid → TL opens new discussion rounds (all agents participate)
-   - If refuted with evidence → TL records the exchange
-   - Continue until all Doodlestein issues resolved
-
-5. TL processes:
-   - Challenge resolved → record in Doodlestein Review
-   - Challenge opened valid concern → topic reverts to `revisit`, back to step 3
-   - Genuine dilemma → escalate to user
-
-### 8. Sweep: Resolve All Deferred
-
-**Triggered when**: all topics converged or deferred, Doodlestein complete.
+**Triggered when**: all topics converged or deferred (zero revisit remaining).
 
 **Rule: No deferred item survives the Sweep.** Every deferred item MUST have a result before Conclusion.
 
-The existing team (including Doodlestein agents) participates in Sweep.
+The existing team participates in Sweep.
 
 **Decision tree** for each deferred item:
 
@@ -288,7 +288,7 @@ Update summary.md and index.md for each resolution.
 
 **After Sweep: zero deferred, zero revisit.** Every output is plannable or spawned.
 
-### 9. Generate Conclusion
+### 8. Generate Conclusion
 
 ```markdown
 ---
@@ -343,9 +343,9 @@ entities: []
 
 Update index.md: set `pipeline.discuss: done`, add conclusion link.
 
-### 9.5. Knowledge Capture (to Mengdie)
+### 8.5. Knowledge Capture (to Mengdie)
 
-Run this step after the conclusion is written (Step 9) and before team shutdown (Step 10).
+Run this step after the conclusion is written (Step 8) and before Doodlestein post-conclusion review (Step 9).
 
 Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
 
@@ -370,9 +370,43 @@ memory_ingest({
 })
 ```
 
+### 9. Doodlestein — Post-Conclusion Review
+
+**Triggered when**: Conclusion document is written. Doodlestein reviews the **written conclusion**, not the discussion in progress. No round extensions from Doodlestein findings.
+
+Per `ae:agent-teams` Doodlestein Protocol. Three fresh agents, each answering ONE focused question against the conclusion document.
+
+```
+Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
+      team_name: "<existing team>", run_in_background: true,
+      prompt: "<path to conclusion.md> — single smartest improvement?
+               Your answer is post-conclusion review, not a reopen signal.
+               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+
+Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
+      team_name: "<existing team>", run_in_background: true,
+      prompt: "<path to conclusion.md> — where does this first fail in real use?
+               Your answer is post-conclusion review, not a reopen signal.
+               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+
+Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
+      team_name: "<existing team>", run_in_background: true,
+      prompt: "<path to conclusion.md> — which decision most likely reversed in 6mo?
+               Your answer is post-conclusion review, not a reopen signal.
+               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+```
+
+**TL processes findings**:
+
+1. **Valid finding requiring response → kick off new round**. The team discusses the Doodlestein challenge directly. After the round, TL updates the conclusion to reflect the outcome. Then Doodlestein may run again on the revised conclusion (bounded by whether new Doodlestein agents produce new findings — identical findings mean convergence, not loop).
+2. **Refuted finding** → record the exchange in the conclusion's Doodlestein Review section. No round.
+3. **Out-of-scope finding** → record as a new backlog item in `output.backlog/unscheduled/`. No round.
+
+**The key difference from pre-conclusion Doodlestein** (044 failure mode): Doodlestein audits **the actual written conclusion**, not an anticipated conclusion. If a new round fires, it's because a real finding challenges a written decision — not because of anticipatory churn. Team reviews a concrete artifact, not a moving target.
+
 ### 10. Team Shutdown & Next Steps
 
-**Shutdown the team ONLY after Conclusion is written.**
+**Shutdown the team ONLY after Conclusion is written AND Doodlestein (Step 9) is complete.**
 
 - All converged, no spawned → "Ready for `/ae:plan`"
 - Has spawned discussions → "Resolve sub-discussions first, then `/ae:plan`"
@@ -385,7 +419,7 @@ memory_ingest({
 - **Discussion Mode**: TL = moderator, all agents = equal participants. No forced proposer/opposition. Positions evolve based on evidence. Per `ae:agent-teams` Discussion Mode.
 - **Team explores, TL synthesizes**: The value of ae:discuss is multi-agent collaborative exploration with code evidence. If the team didn't explore it, don't present it to the user.
 - **Consensus verification**: Topics with decisions get stress-tested via temporary Debate Mode (forced FOR/AGAINST) before being marked converged. Discussion finds the direction, consensus confirms it.
-- **One team, one lifecycle**: Spawn once, add agents as needed, never remove. Shutdown only at Conclusion.
+- **One team, one lifecycle**: Spawn once, add agents as needed, never remove. Shutdown only after Doodlestein post-conclusion review completes.
 - **Strong opinions welcome**: Agents with dissenting views are assets. Genuine disagreement is valuable signal.
 - **Dynamic composition**: Agent roles determined by discussion content via `ae:agent-selection`. Multiple instances of same backend with different roles encouraged.
 - **Discussion before user**: Team runs minimum 2 rounds (research → explore). Sub-questions resolved internally. Only genuine dilemmas reach the user.
@@ -404,9 +438,22 @@ memory_ingest({
 ### Topic directory structure
 
 ```
-topic-NN-slug/
-  summary.md       # Current state — agent reads ONLY this each round
-  round-01.md      # Round discussion record (archived after round ends)
+<discussion-dir>/
+  framing.md                 # problem statement, round_0 verdict (Step 1/1.5)
+  index.md                   # minimal scaffolding
+  topic-NN-slug/
+    summary.md               # current state — agent reads ONLY this each round
+  round-01/                  # per-round directory
+    <agent-name>.md          # each agent's own file (self-written, TL does not edit)
+    synthesis.md             # TL index/orientation + 4 mandatory fields (Pruned / Of-framing disposition / Verification artifact / Frame-challenge self-check)
+  round-02/
+    <agent-name>.md
+    synthesis.md
+  conclusion.md              # Step 8
+  round-doodlestein/         # Step 9 post-conclusion review
+    strategic.md
+    adversarial.md
+    regret.md
 ```
 
 **summary.md** (agent reads this every round — keep concise):
