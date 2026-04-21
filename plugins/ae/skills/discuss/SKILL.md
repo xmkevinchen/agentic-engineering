@@ -59,27 +59,132 @@ File format templates are in the Appendix at the end of this file.
 
 ### 1.5. Round 0 — Framing Review (new discussions only)
 
-Before spawning the team, Round 0 reviews `framing.md` for neutral / focused / open properties. Goal: catch bias anchoring or framing-by-solution before Round 1 agents lock on it.
+**Framing quality review is its own task**, with its own TeamCreate/TeamDelete lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two teams is consistent with ae:agent-teams "one team per task"; it is not a pre-flight hack.
+
+**Goal**: catch three failure modes before Round 1 anchors on the framing:
+1. **Bias anchoring** — framing reflects TL's pre-commitments → caught by cross-family peer review
+2. **Scope narrowing** — framing forecloses Round 1 solution classes → caught by Doodlestein strategic + adversarial
+3. **Over-complication** — framing complicates the problem → caught by engineering-minimal-change-engineer's refuse-scope-creep discipline
 
 Applies to **new discussions** and any discussion where `framing.md` was changed. Skip for pure resumes.
 
-1. **Spawn `doodlestein-framing`** as a single-agent one-shot (no team setup required):
-   ```
-   Agent(subagent_type: "doodlestein-framing",
-         name: "doodlestein-framing",
-         prompt: "Review framing at <discussion-dir>/framing.md. Evaluate neutral / focused / open per your mandate. SendMessage verdict to team-lead.")
-   ```
+**TL first writes the `framing.md` draft** (standard problem statement — no pre-committed mechanisms), then opens the review task.
 
-2. **Wait for verdict** (APPROVED or REVISE).
+#### 1.5.1. Spawn framing-review team
 
-3. **On APPROVED**: log the verdict in `<discussion-dir>/framing.md` frontmatter (`round_0: approved`, ISO date). Proceed to Step 1.6.
+**Preflight — project agent presence check**: before `TeamCreate`, verify that `engineering-minimal-change-engineer` exists in one of these discovery locations:
+- `.claude/agents/engineering-minimal-change-engineer.md` (project-local)
+- `~/.claude/agents/engineering-minimal-change-engineer.md` (user)
+- installed plugin agents
 
-4. **On REVISE**: halt. Present the specific issue + suggested edit to the user. User choices:
-   - **Revise**: TL updates `framing.md`, re-runs Round 0
-   - **Override**: skip Round 0 for this discussion. Log `round_0: overridden` in frontmatter with user-supplied reason. Proceed to Step 1.6.
+If not found, emit `[layer1] preflight: engineering-minimal-change-engineer NOT FOUND. Round 0 will run with 4 agents (2 cross-family + 2 Doodlestein). Quorum threshold reduces to 3 of 4. Over-complication detection coverage is LOST for this discussion — consider importing the agent via /ae:setup agents --add or accepting the coverage gap.` and continue with 4 agents.
+
+**Note**: the framing_context convention below is a **prompt-embedded key**, not an `Agent(...)` parameter. All 5 (or 4) spawn prompts must include the line `framing_context: <discussion-dir>/framing.md` at the top of their prompt string so the agent reliably locates the review target.
+
+```
+TeamCreate(team_name: "<discussion-id>-framing-review")
+```
+
+Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), each with `framing_context:` in the prompt:
+
+```
+Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
+      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      prompt: "framing_context: <discussion-dir>/framing.md
+               Review angle: bias anchoring. Read ONLY the framing file.
+               Does this framing embed TL's pre-commitments (specific mechanisms,
+               ruled-out alternatives, loaded language)? Report verdict: APPROVED
+               / REVISE: <specific issue> | suggested edit: <concrete revision>.
+               If MCP connection fails / times out / rate-limited / quota exhausted,
+               SendMessage 'unavailable: <reason>' to team-lead and exit.
+               Do not retry. SendMessage verdict to team-lead.")
+
+Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
+      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      prompt: "framing_context: <discussion-dir>/framing.md
+               Review angle: bias anchoring (Google-family lens; if Gemini API
+               unavailable, fall back to local gemma4:26b per CLAUDE.md).
+               Read ONLY the framing file. Report verdict per the 3-state format.
+               If MCP connection fails / times out / rate-limited / quota exhausted
+               (and gemma4 fallback also fails), SendMessage 'unavailable: <reason>'
+               to team-lead and exit. Do not retry.
+               SendMessage verdict to team-lead.")
+
+Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic",
+      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      prompt: "framing_context: <discussion-dir>/framing.md
+               Review angle: scope narrowing. Read ONLY the framing file.
+               What is the single smartest improvement to this framing — especially
+               any alternative framing that was foreclosed by the current wording?
+               Report APPROVED if framing is open; REVISE with a concrete alternative
+               if a better framing exists. SendMessage verdict to team-lead.")
+
+Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-adversarial",
+      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      prompt: "framing_context: <discussion-dir>/framing.md
+               Review angle: Round 1 scope narrowing. Read ONLY the framing file.
+               If Round 1 agents researched independently under this framing, what is
+               the first solution class they would hit a wall on? Report APPROVED
+               if no obvious wall; REVISE with the blocked solution class if one exists.
+               SendMessage verdict to team-lead.")
+
+Agent(subagent_type: "engineering-minimal-change-engineer", name: "minimal-change-engineer",
+      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      prompt: "framing_context: <discussion-dir>/framing.md
+               Review angle: problem over-complication / scope creep. Read ONLY the framing file.
+               Is this framing bigger than the problem requires? Is there a simpler
+               framing that covers the same problem with less machinery?
+               Report APPROVED if minimal; REVISE with the simpler framing if one exists.
+               SendMessage verdict to team-lead.")
+```
+
+#### 1.5.2. Wait for verdicts + timeout
+
+TL waits for **all 5 verdicts** before aggregating. **No early-exit on first REVISE** — in-flight agents must complete or time out.
+
+**Timeout rules**:
+- Proxy agents (`codex-proxy`, `gemini-proxy`): 120s per agent, per `plugins/ae/skills/agent-selection/SKILL.md` Proxy Timeout Protocol. On timeout the proxy must SendMessage `unavailable: timeout` and exit.
+- Claude-native agents (`doodlestein-strategic`, `doodlestein-adversarial`, `engineering-minimal-change-engineer`): 180s wall-clock each. If a Claude-native agent does not respond within 180s, TL treats it as `unavailable: timeout`. **Missing verdict is NEVER implicit APPROVED.**
+
+#### 1.5.3. Verdict aggregation
+
+Each verdict is one of three states:
+- `APPROVED: <one-line reason>`
+- `REVISE: <specific issue> | suggested edit: <concrete revision>`
+- `unavailable: <reason>` (proxy or Claude-native, from timeout or MCP failure)
+
+**Aggregation rules** — apply in this exact order; first match wins:
+
+1. **Quorum check** (precondition): a majority of **spawned** agents must return `APPROVED` or `REVISE` (non-`unavailable`). Thresholds: ≥3 of 5 (standard spawn), or ≥3 of 4 (preflight dropped minimal-change-engineer). Below the threshold → halt, report to user "framing-review quorum not reached; cannot assess. Retry or skip Round 0?" Stop; no further rules apply.
+2. **Any REVISE** → halt. Set `round_0: revise_requested` in `framing.md` frontmatter, populate `round_0_notes` with consolidated REVISE feedback across all responding agents. Present consolidated list to user with options:
+   - **Revise**: TL rewrites `framing.md` per feedback, re-runs Round 0 (will transition `round_0` to `approved` or back to `revise_requested`)
+   - **Override**: skip Round 0 outcome for this discussion. Log `round_0: overridden` with user-supplied reason. Proceed to Step 1.6.
    - **Cancel**: abort discussion
+3. **Cross-family degraded** (precondition: rules 1–2 passed, i.e. quorum met and zero REVISE; at this point all available verdicts are APPROVED) — BOTH `codex-proxy` and `gemini-proxy` returned `unavailable`:
+   - Bias-anchoring coverage is zero. **Do NOT auto-approve.** Halt and present to user:
+     - Current: 3 Claude-family reviewers all APPROVED; both cross-family reviewers unavailable.
+     - Options:
+       - **Accept degraded**: log `round_0: approved (cross-family-degraded)` in frontmatter, proceed. User explicitly accepts the reduced bias-anchoring coverage.
+       - **Retry**: re-spawn both proxies (they may recover).
+       - **Cancel**: abort discussion.
+4. **Unanimous APPROVED with full coverage** — at least one cross-family proxy returned `APPROVED` AND all non-`unavailable` verdicts are `APPROVED`:
+   - Log `round_0: approved` in `framing.md` frontmatter, write per-agent verdict files, proceed to Step 1.6.
 
-5. **Limit**: 3 consecutive REVISE verdicts with no user response → escalate to user (do not keep looping).
+**Rerun limit** (separate from aggregation — applies to the outer loop driven by Rule 2's Revise option): if the user selects **Revise + rerun** 3 consecutive times without the framing converging to APPROVED, escalate to the user rather than looping further. This is not an aggregation rule (single-run aggregation has no loop; all verdicts arrive in one batch).
+
+Rationale for rule order (addresses review-043 P1s): rule 2 fires before rule 3/4 so any REVISE halts cleanly. Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
+
+#### 1.5.4. Per-agent verdict files + team teardown
+
+After aggregation:
+- **Verdict files first** — write each agent's verdict (including `unavailable` and timed-out entries) to `<discussion-dir>/round-00/<agent-name>.md` (create dir if needed). File contents: agent name, verdict state, verdict content verbatim, timestamp. These files are the durable audit trail — captured BEFORE any `shutdown_request` is sent so a hung or timed-out agent still has its record written. Agents already marked `unavailable` by §1.5.2 timeout get their files written here; they are not waited for again.
+- **Parallel shutdown** — send `shutdown_request` to all spawned agents in parallel (single broadcast pass). Wait up to **30s wall-clock total** (not per agent) for `shutdown_response` replies. Worst-case teardown latency is 30s regardless of team size.
+- **Force-abandon path** — any agent that has not responded within the 30s wall-clock window (e.g., hung on long Bash call, MCP stuck, or already crashed) is marked `abandoned` in its verdict file and skipped. `TeamDelete()` is called regardless — the CC team manager reaps the abandoned subprocess. This prevents the framing-review team from blocking the next task (Step 2) when one agent refuses to exit cleanly. A `[layer1] teardown: <agent> abandoned after 30s` entry is appended to the Layer 1 trace for audit.
+- `TeamDelete()` the framing-review team.
+
+#### 1.5.5. Boundary to Step 2
+
+Step 2 spawns a **separate, newly created team** (`<discussion-id>-council`). Step 2's agent selection follows `ae:agent-selection` normal rules driven by discussion content — **Round 0 agent outcomes do NOT influence Step 2's team composition**. The framing-review team is a quality gate, not a signal for discussion team design.
 
 **Why Round 0 exists (not a mechanism you can inline into later rounds)**: once Round 1 spawns, agents anchor on whatever framing is provided. Mid-round reviewers (challenger, Doodlestein at conclusion) evaluate within the framing. Round 0 is the only point where framing itself is the object of evaluation, before it infects Round 1 context.
 
@@ -439,8 +544,15 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
 
 ```
 <discussion-dir>/
-  framing.md                 # problem statement, round_0 verdict (Step 1/1.5)
+  framing.md                 # problem statement + round_0 verdict (Step 1/1.5)
   index.md                   # minimal scaffolding
+  round-00/                  # Step 1.5 framing review artifacts
+    codex-proxy.md           # per-agent verdict (APPROVED / REVISE / unavailable + reason)
+    gemini-proxy.md
+    doodlestein-strategic.md
+    doodlestein-adversarial.md
+    minimal-change-engineer.md
+    dogfood-evidence.md      # optional — session evidence for protocol verification
   topic-NN-slug/
     summary.md               # current state — agent reads ONLY this each round
   round-01/                  # per-round directory
@@ -454,6 +566,30 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
     strategic.md
     adversarial.md
     regret.md
+```
+
+**framing.md** (written by TL in Step 1; reviewed by the framing-review team in Step 1.5):
+
+```markdown
+---
+id: "NNN"
+stage: framing
+created: YYYY-MM-DD
+round_0: pending             # pending → approved | approved (cross-family-degraded) | revise_requested | overridden
+round_0_reviewers: []        # populated by Step 1.5 after aggregation; list of reviewer names
+round_0_notes: ""            # human-readable rationale for override, or aggregation notes
+---
+
+# Framing — [title]
+
+## Problem Statement
+[What needs to be solved. Describe the problem; do NOT pre-commit to solution mechanisms, list A/B/C options, or embed specific tools.]
+
+## Scope
+[What's in and out. Keep open to Round 1 exploration.]
+
+## Reference Material
+[Links to prior discussions / BLs / data that inform the problem.]
 ```
 
 **summary.md** (agent reads this every round — keep concise):
