@@ -9,6 +9,33 @@ user-invocable: true
 
 Initialize or update the current project's `.claude/pipeline.yml`.
 
+## Non-interactive mode
+
+For Layer 2 automated test runs (and other non-interactive contexts), set the env var `AE_SETUP_NONINTERACTIVE=1` (exact string match). When set, `/ae:setup` skips all `AskUserQuestion` prompts in the base initialize/update flow and uses conservative defaults documented at each call site.
+
+**Exact-match semantics** — only the literal string `1` enables non-interactive mode. All other values fall back to interactive mode (default behavior):
+
+| `AE_SETUP_NONINTERACTIVE` value | Mode |
+|---|---|
+| `1` | Non-interactive (skip prompts, use defaults) |
+| unset / missing | Interactive |
+| empty string | Interactive |
+| `0` | Interactive |
+| `true` / `false` / anything else | Interactive |
+
+**Scope**: base initialize/update flow only. The `/ae:setup agents` subcommand and the governance-event bootstrap (first-rule writes) are NOT guarded by this env var — their L2 testability is a separate concern (out of scope for BL-021).
+
+**Conservative defaults per call-site** (when `AE_SETUP_NONINTERACTIVE=1`):
+
+| Call site | Default used | Rationale |
+|---|---|---|
+| test.command configuration | `test.command: ""` (empty) | Fail-safe — ae:work's auto-pass gate treats empty as UNVERIFIED → will pause per step, never silently assume tests pass |
+| init config confirmation | accept generated config as-is | The config was auto-detected from project files; non-interactive accepts that auto-detection verbatim |
+| update diff confirmation | apply all new default slots | Update only adds missing slots with defaults; existing user values are preserved by the earlier "preserve user-customized values" rule |
+| Agent Teams enable | do NOT auto-enable; emit `[WARN]`-prefixed log and skip | Fail-safe — auto-enabling would modify `~/.claude/settings.json` without user consent, violating the MUST_NOT in `setup-agent-teams-check-settings.md` |
+
+All skip events are emitted with a structured `[WARN]` or `[ae:setup]` prefix so Layer 2 test assertions can match them deterministically.
+
 ## Mode
 
 ### No argument: Initialize
@@ -34,14 +61,18 @@ If `.claude/pipeline.yml` does not exist:
    - `analyses: "docs/analyses/"`
 4. Scan existing project directories — if project already has docs in non-default locations (e.g., `results/reviews/` instead of `docs/reviews/`), adjust slot values to match
 5. **Auto-discover project agents**: Scan `.claude/agents/*.md`, installed plugin agents, and `~/.claude/agents/*.md`. For each discovered agent, read `description` to infer role per [agent-contract.md](./agent-contract.md): reviewer (review/audit/security keywords), developer (implement/build keywords), or domain-expert (expert/specialist keywords). Show discovered agents with inferred roles to user for confirmation. Do NOT write agent lists to pipeline.yml — agents are discovered at runtime. The `project_agents:` section in pipeline.yml is for explicit role overrides only (agents outside `.claude/agents/` or when inference is wrong).
-6. **Guide test.command configuration**: If auto-detect found no test command, use AskUserQuestion to prompt user:
-   ```
-   No test command detected. ae:work's auto-pass gate treats empty test.command as UNVERIFIED,
-   which pauses every step for confirmation. Options:
-   1. Enter test command now (e.g., "npm test", "pytest", "cargo test")
-   2. Skip — I'll configure later (auto-pass will pause each step)
-   ```
-7. Use AskUserQuestion to confirm generated config
+6. **Guide test.command configuration**: If auto-detect found no test command:
+   - **Non-interactive mode** (`AE_SETUP_NONINTERACTIVE=1`): skip prompt, set `test.command: ""` (empty — ae:work auto-pass gate will treat as UNVERIFIED on every step)
+   - **Interactive mode** (default): use AskUserQuestion to prompt user:
+     ```
+     No test command detected. ae:work's auto-pass gate treats empty test.command as UNVERIFIED,
+     which pauses every step for confirmation. Options:
+     1. Enter test command now (e.g., "npm test", "pytest", "cargo test")
+     2. Skip — I'll configure later (auto-pass will pause each step)
+     ```
+7. Confirm generated config:
+   - **Non-interactive mode**: skip AskUserQuestion, accept generated config as-is (proceed to step 8)
+   - **Interactive mode**: use AskUserQuestion to confirm generated config
 8. Write `.claude/pipeline.yml`
 
 If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
@@ -442,7 +473,9 @@ Read current `.claude/pipeline.yml`, compare with template:
 1. Check for new fields in template (missing from config) — especially new `output` slots and `project_agents` section
 2. Check for deprecated fields (e.g., old `output.review` → new `output.reviews`)
 3. **Discover new project agents**: scan `.claude/agents/*.md` for agent files not present when pipeline.yml was last generated. Show newly discovered agents with inferred roles. This is net-new behavior — not all agents may have existed at initial setup.
-4. Show diff, use AskUserQuestion to confirm
+4. Show diff, then confirm:
+   - **Non-interactive mode** (`AE_SETUP_NONINTERACTIVE=1`): skip AskUserQuestion, accept diff (apply all new slots with defaults)
+   - **Interactive mode**: use AskUserQuestion to confirm
 5. Preserve user-customized values, only add missing slots with defaults
 
 ## Output Defaults
@@ -475,9 +508,11 @@ Empty does NOT block execution. Not all projects have tests, not all changes nee
 Check if Agent Teams is enabled (required for multi-agent workflows):
 
 1. Read `~/.claude/settings.json` — look for `"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"` in the `env` object
-2. If **not enabled** → use AskUserQuestion: "Agent Teams is not enabled. Most ae commands require it. Enable it now? (This will update ~/.claude/settings.json)"
-   - **User confirms** → read `~/.claude/settings.json`, add/merge `"env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }` into the JSON, write back. Tell user: "Agent Teams enabled."
-   - **User declines** → warn: "Skipped. Commands that use Agent Teams (plan, work, review, team, analyze, think, consensus, testgen, trace) will refuse to execute."
+2. If **not enabled**:
+   - **Non-interactive mode** (`AE_SETUP_NONINTERACTIVE=1`): skip AskUserQuestion, do NOT auto-enable. Warn: `[ae:setup] Agent Teams not enabled and non-interactive mode is on — skipping prompt. Most ae commands will refuse to execute until AE_SETUP_NONINTERACTIVE is unset and Agent Teams is enabled.`
+   - **Interactive mode**: use AskUserQuestion: "Agent Teams is not enabled. Most ae commands require it. Enable it now? (This will update ~/.claude/settings.json)"
+     - **User confirms** → read `~/.claude/settings.json`, add/merge `"env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }` into the JSON, write back. Tell user: "Agent Teams enabled."
+     - **User declines** → warn: "Skipped. Commands that use Agent Teams (plan, work, review, team, analyze, think, consensus, testgen, trace) will refuse to execute."
 3. If already enabled → `✅ Agent Teams: enabled`
 
 ## Cross-Family Setup
