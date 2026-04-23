@@ -132,7 +132,12 @@ TeamCreate(team_name: "<feature>-work")
 
 Agent(subagent_type: "<dev-agent>", name: "<dev-agent>",
       team_name: "<team>", run_in_background: true,
-      prompt: "[If overlap heuristic triggered] Prior step context: <previous step summary block>
+      prompt: "<PRIMARY CONTEXT — assembled per 'Per-step Primary Context Load' section below:
+                 1. Current step spec (full ### Step N block)
+                 2. Full plan AC list (entire ## Acceptance Criteria section)
+                 3. Conclusion body (verbatim <discussion-dir>/conclusion.md, when plan is discussion-referenced per Check 5)
+                 4. Framing body (verbatim <discussion-dir>/framing.md, load-if-exists)>
+               [If overlap heuristic triggered] Prior step context: <previous step summary block>
                Execute Step N. Strict TDD: write test → red → implement → green.
                Teammates: [other devs], qa.
                SendMessage to qa when done.")
@@ -144,9 +149,36 @@ Agent(subagent_type: "qa", name: "qa",
                Pass → SendMessage to dev confirming.")
 ```
 
+The dev-agent prompt MUST include all 4 primary inputs on every step (see "## Per-step Primary Context Load" below for exact content rules and fresh-per-step disk-read mandate). The QA agent deliberately receives NO primary context (fresh-eyes evaluation).
+
 No developer agents found → Lead executes directly.
 
+## Per-step Primary Context Load
+
+Before each step's TDD Cycle (or direct Lead execution in single-platform mode), the step-execution prompt MUST contain as primary input the four items below. This is BL-033 Layer 2 — cumulative input propagation at the plan→work phase boundary.
+
+**Target agent**: in Agent Teams mode, "step-execution prompt" = the developer agent's spawn prompt. The QA agent receives NO primary context load (fresh-eyes evaluation). In solo mode (no developer agents found, or Agent Teams unavailable), "step-execution prompt" = the Lead agent's own context for the TDD cycle; Lead covers both developer and QA roles with full context loaded — the fresh-eyes property of QA is structurally absent in solo mode (documented Known Limit, not a bug). Note: this load is **unconditional** (always fires when Check 5 passed), distinct from the Check 2 Context Overlap Heuristic prior-step-summary injection which is **conditional** on file overlap. The two loaders both target the developer agent's spawn prompt but run on independent triggers.
+
+**Required primary inputs**:
+
+1. **Current step spec**: the full text of the plan's current `### Step N: <title>` block, including all subtasks (`- [ ]` bullets), the step's "Expected files:" line, and any inline notes.
+2. **Full plan AC list**: the entire `## Acceptance Criteria` section (or `## AC`) of the plan — not just the ACs referenced by the current step. Downstream steps depend on invariants the current step may need to honor.
+3. **Conclusion body** (when plan is discussion-referenced — Check 5 gate confirms this): the full verbatim body of `<discussion-dir>/conclusion.md`. "Primary input" = equivalent in role to CLAUDE.md or user instructions; NOT an `@reference`, NOT a summary, NOT a "read if needed" footnote.
+4. **Framing body** (optional, load-if-exists): the full body of `<discussion-dir>/framing.md` if the file exists at that path. Silently skip if absent.
+
+**Standalone plan exemption**: if plan's `discussion:` field is empty (re-read from plan frontmatter per step — do NOT cache a boolean from Pre-check Check 5; compaction between Pre-checks and per-step execution is a small but real risk), skip items 3 and 4; load only items 1 and 2.
+
+**Fresh per-step disk read**: items 1–4 MUST be re-read fresh from disk at each step's TDD cycle start. Do NOT rely on `conclusion.md` / `framing.md` / plan body remaining in the agent's context from a prior step. Context compaction between steps in a multi-step plan will silently drop large documents; only a fresh disk read guarantees the per-step primary-input contract. This reduces Layer 2's compounding-context cost to zero per-step marginal risk (each step starts from a clean load).
+
+**Context size note**: Layer 1 alone (conclusion loaded once per plan in `/ae:plan`) is usually fine. Layer 2 loads the same conclusion on every step; the cost profile differs by mode:
+- **Agent Teams mode**: each developer agent spawn is a fresh context, so a 20KB conclusion costs 20KB per spawn. The aggregate is a token/billing concern, not a single-context truncation concern.
+- **Solo mode**: Lead's context accumulates across steps (unless compaction fires). A 10-step plan × 20KB conclusion = 200KB of conclusion-body text in one context — real truncation risk as the plan progresses.
+
+The ~30KB-and-5-steps threshold is carried forward from Plan 046 Known Limits — documented approximation, not a measured protocol invariant. If this becomes painful, re-file as targeted BL.
+
 ## TDD Cycle
+
+The agent begins each step's TDD cycle with the Primary Context already loaded (see "Per-step Primary Context Load" above).
 
 If `test.command` is empty → skip TDD, implement directly.
 
