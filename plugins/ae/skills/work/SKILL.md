@@ -95,11 +95,28 @@ All dispositions MUST be written to notes.md (not just in conversation). ae:revi
 
 No matches → `✅ Deferred items: none`
 
+### Check 5: Plan's Discussion Source Valid
+
+Read plan frontmatter `discussion:` field.
+
+- **`discussion:` is empty** → standalone plan exemption: skip this check silently, log `[WORK] Plan is standalone (no discussion); primary context load scoped to plan only.`
+- **`discussion:` is non-empty string** (treated as a directory path): verify `<discussion-dir>/conclusion.md` exists, is readable, and is non-empty (file size > 0 bytes).
+  - **Exists, readable, non-empty** → pass, continue to Execution Mode Selection.
+  - **Missing, unreadable, or empty (zero bytes)** → **refuse to execute**:
+    ```
+    Plan references discussion directory <discussion-dir> but <discussion-dir>/conclusion.md is missing/unreadable/empty.
+    Either conclude the discussion (run /ae:discuss <discussion-dir>) or remove plan's 'discussion:' frontmatter field to treat this plan as standalone.
+    ```
+    The refusal MUST show the discussion-**directory** path (same as plan's `discussion:` field value), NOT the `conclusion.md` file path, so the suggested `/ae:discuss` fix-command is directly runnable. Empty conclusion is rejected because Layer 2 (Per-step Primary Context Load) requires the "full verbatim body" as primary input; a zero-byte file would silently erase all discussion-derived constraints despite passing a file-exists check.
+
+**Placement rationale**: Check 5 is a blocking gate with the same cost class as Check 1 file-read but more consequential semantics (refuses execution rather than patching state). Grouping it last in the Pre-check chain keeps entry gates together and mirrors Plan 046's Pre-check item 4 placement at the tail of `/ae:plan`'s Pre-check section. Independent of Check 2-4 ordering: Check 2 parses the plan body (step checkboxes), Check 4 parses milestone notes; neither depends on the conclusion.md file that Check 5 guards.
+
 ```
 Pre-checks:
 ✅ Plan exists: docs/plans/003-feature.md
 ✅ Current step: Step 3 (Steps 1-2 done)
 ✅ Deferred items: none
+✅ Plan's discussion source valid (or: standalone plan; primary context load scoped to plan only)
 ```
 
 ## Execution Mode Selection
