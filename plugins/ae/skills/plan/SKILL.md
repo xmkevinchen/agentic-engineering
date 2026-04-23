@@ -54,6 +54,7 @@ Create an execution plan for: **$ARGUMENTS**
 1. Confirm `.claude/pipeline.yml` exists
 2. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
 3. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL writing plan directly (skip Step 3 team review + Step 4 Doodlestein). Plan stays `status: draft`. Output: "Plan created in solo mode. Run /ae:plan-review or enable Agent Teams before using with /ae:work."
+4. **Discussion source valid** (fires only when Argument Inference resolved a discussion-dir — Forms 1 and 2 above): verify `<dir>/conclusion.md` exists and is readable. Missing or unreadable → **refuse**: `Referenced discussion has no readable conclusion.md at <path>. Run /ae:discuss to conclude, or supply a different discussion directory.` This Pre-check is the entry gate; Step 1 Research #5 below executes unconditionally because this Pre-check already confirmed the conclusion file exists. Standalone plans (Form 3 free text) skip this check.
 
 ## Step 1: Research
 
@@ -61,7 +62,11 @@ Create an execution plan for: **$ARGUMENTS**
 2. Read `docs/` for development plan, architecture, existing decisions
 3. Search codebase for related code, models, interfaces
 4. Check `output.backlog/**/*.md` (from pipeline.yml) for related items — traverse subdirs (`v*/`, `unscheduled/`); exclude `done/` and `closed/` unless specifically researching historical context
-5. If a `docs/discussions/*/conclusion.md` is referenced, read the decisions and validate:
+5. **When a source discussion is resolved** (Pre-check item 4 confirms this): the agent's plan-generation prompt MUST contain the full verbatim body of `<discussion-dir>/conclusion.md` as primary input, PLUS `<discussion-dir>/framing.md` body if the file exists (silently skip if absent). "Primary input" = equivalent in role to CLAUDE.md or user instructions, NOT an `@reference`, NOT a summary, NOT a "read if needed" footnote. The agent reasons from these bodies when drafting the plan.
+
+   Context size note: if conclusion.md exceeds ~30KB the agent may truncate and plan quality depends on the visible portion. Layer 1 alone is usually fine; Layer 2 + Layer 3 (downstream phases, future plans) will compound this.
+
+   Downstream validation (applied after the load):
    - Check index.md `pipeline.discuss` — if still `in_progress` → **refuse**: "Discussion not concluded. Run `/ae:discuss` to complete."
    - Has `## Decision Summary` with at least one row where Decision column is non-empty and not "—"? — if no real decisions → **refuse**: "Conclusion has no decisions. Run `/ae:discuss` first."
    - Has `## Process Metadata`? — if missing → **refuse**: "Conclusion missing Process Metadata. May have bypassed discuss flow."
@@ -70,6 +75,8 @@ Create an execution plan for: **$ARGUMENTS**
    - Has `## Deferred Resolutions` with `explained` items? → warn: "Some decisions based on assumptions. Review assumptions before planning."
    - `Autonomous decisions: 0` AND `User escalations: 0` in metadata → warn: "Discussion may not have been properly conducted (no decisions recorded)."
    - Missing other sections → warn: "Conclusion may be incomplete (missing [section]). Proceed with caution."
+
+   Standalone plans (Form 3 free text — no resolved discussion) skip this entire #5 mandatory load.
 
 ### 1.5. Prior Context (from Mengdie)
 
