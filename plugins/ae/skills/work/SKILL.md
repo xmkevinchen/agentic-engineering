@@ -247,7 +247,30 @@ Fix findings, re-run from Check D until clean pass.
 
    Also echo the summary content in conversation (replacing the previous ephemeral "Brief summary" behavior).
 
-2. **Accumulated Doodlestein Checkpoint** (before gate)
+2. **Track 4 persistence rename** (after commit, before checkpoint)
+
+   After successful commit, if `/ae:code-review` was invoked in full mode during D-step, it wrote a staging file at `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md` per the **Per-commit persistence** section in `plugins/ae/skills/code-review/SKILL.md` (which also documents the shared plan-id presence contract). The rename logic:
+
+   1. **Commit-validation guard**: run `git rev-parse --verify HEAD`. If it fails (commit didn't succeed, detached HEAD, or shell error — including new-repo-first-commit edge case before HEAD exists), emit `[AE-TRACK4] commit=unknown status=unavailable` and skip the rename. No file written is better than invalid file. Otherwise compute `<short-sha>` via `git rev-parse --short HEAD`.
+   2. Compute staging path: `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md` where `<plan-id>` = plan frontmatter `id:` and `<N>` = current step number (same contract as code-review/SKILL.md).
+   3. **Staging file exists**:
+      a. **YAML sanity check**: verify the staging file's frontmatter has a closing `---` separator. If missing, the output is malformed (LLM non-compliance) → emit `[AE-TRACK4] commit=<short-sha> status=unavailable`, skip rename, log warning `Staging file missing YAML close marker — Track 4 output invalid`.
+      b. **Ensure output path**: `mkdir -p <output.reviews>/per-commit/` (defensive: handles external deletion of output dir between staging write and rename).
+      c. **Capture status field** from staging file (`clean` or `findings`) BEFORE any mutation — this is the marker value; capturing after mv risks re-reading a moved/renamed file.
+      d. **Prepend `commit:` + `committed_at:`** to the staging file's existing YAML frontmatter (current UTC `YYYY-MM-DDTHH:MM:SSZ`). Existing fields (`plan`, `step`, `status`) are preserved — the prepend only adds two new lines above them inside the frontmatter block.
+      e. **Rename atomically**: `mv <staging-path> <output.reviews>/per-commit/<short-sha>.md` (POSIX mv on same filesystem is atomic).
+      f. **Emit terminal marker**: `[AE-TRACK4] commit=<short-sha> status=<status captured in 3c>`.
+      g. SHA collision (amend re-runs `/ae:work` on same commit): overwrite acceptable — amend = semantically same commit (see Non-goals).
+   4. **Staging file absent** (light mode / code-review skipped / Track 4 failed silently / new-repo-first-commit before Track 4 wrote anything): emit `[AE-TRACK4] commit=<short-sha> status=unavailable`; no file written.
+   5. **Missing `<output.reviews>` path** (pipeline.yml broken): skip silently with warning `⚠️ output.reviews path not configured; Track 4 persistence skipped`. Do not fail commit post-hoc.
+
+   This step relies on the Track 4 output contract and staging file schema documented in `plugins/ae/skills/code-review/SKILL.md` — do not redeclare the schema here. State flows through the filesystem (staging file), not through LLM context, so it survives compaction between D-step and Post-commit.
+
+   **Non-goals**:
+   - Concurrent `/ae:work` invocations on the same plan-id + step (race on staging path). Single active `/ae:work` per plan is assumed. Engineer for this only if concurrent usage becomes an observed failure.
+   - Amend-overwrite audit trail preservation. Amend re-runs `/ae:work` → latest findings overwrite prior. Losing a pre-amend finding is acceptable (see Plan 045 non-goals). If this becomes painful, re-file as targeted BL.
+
+3. **Accumulated Doodlestein Checkpoint** (before gate)
 
    **Skip if** `pipeline.yml → work.accumulated_doodlestein: false` OR `AGENT_TEAMS_FULL = false` (run_in_background unavailable — log: `[Doodlestein checkpoint skipped: run_in_background unavailable]`). Initialize `no_accumulated_p1 = true`.
 
@@ -278,7 +301,7 @@ Fix findings, re-run from Check D until clean pass.
 
    If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`.
 
-3. **Auto-pass gate** (default: ON) — evaluate after every step:
+4. **Auto-pass gate** (default: ON) — evaluate after every step:
    ```
    gate = tests_green AND no_p1 AND no_accumulated_p1 AND deferred_resolved AND (no_drift OR drift_approved) AND (NOT cross_family_degraded)
    ```
@@ -299,7 +322,7 @@ Fix findings, re-run from Check D until clean pass.
      ```
    - UNVERIFIED states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
-3. All steps done → run Completion Invariant, then `All steps complete. Next: /ae:review <plan-file-path>`
+5. All steps done → run Completion Invariant, then `All steps complete. Next: /ae:review <plan-file-path>`
 
 ## Completion Invariant
 

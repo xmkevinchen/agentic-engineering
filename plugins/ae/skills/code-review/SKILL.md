@@ -102,6 +102,50 @@ Status mapping (derived from the three field values):
 - Track 4 didn't run (light mode) → `unavailable`
 - **Malformed output** (missing field, unexpected key, wrong ordering) → treat as `unavailable` — persistence consumers MUST NOT guess intent from partial output
 
+#### Per-commit persistence (staging write)
+
+At the END of Track 4 (after the Results merge below, before `/ae:code-review` returns), Track 4 writes its structured payload to a deterministic staging file so `/ae:work` Post-commit can rename it to `<short-sha>.md` after the commit succeeds. State flows through the filesystem — not through LLM context — so it survives context compaction between D-step and Post-commit.
+
+**Staging path**: `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md`
+
+**Plan-id presence contract** (shared between `/ae:code-review` and `/ae:work` Post-commit):
+- When `/ae:code-review` is invoked from `/ae:work` D-step, plan-id + step-number context is passed through. Track 4 writes at `.staging-<plan-id>-step-<N>.md`. `/ae:work` Post-commit reads from the same path.
+- When `/ae:code-review` is invoked manually (no plan context), Track 4 uses fallback `<plan-id>` = `manual`, `<N>` = `<iso-8601-timestamp>`. `/ae:work` Post-commit is not running in this case — no rename, no orphan.
+- The determinism works because both sides agree: if plan context exists → deterministic path; if not → manual-mode self-cleanup.
+
+Field semantics:
+- `<plan-id>` = plan frontmatter `id:` from the calling `/ae:work`'s plan
+- `<N>` = current step number (1-indexed) in the plan
+
+**Manual invocation** (no plan context):
+- Write staging file with `<plan-id>` = `manual` + `<N>` = `<iso-8601-timestamp>`
+- Emit to stdout the terminal marker `[AE-TRACK4-MANUAL] file=<staging-path>` (logging only; no downstream consumer)
+- Delete the staging file before returning. **If deletion fails** (permission denied, file locked, etc.) → emit `[AE-TRACK4-MANUAL-WARNING] file=<staging-path> deletion_failed=<reason>` and continue. Do NOT fail `/ae:code-review` — orphaned staging files are recoverable.
+
+**Directory**: `mkdir -p <output.reviews>/per-commit/` before write (idempotent; safe across worktrees).
+
+**Missing `output.reviews` path** (unusual — pipeline.yml broken): skip silently with warning; do not fail `/ae:code-review`.
+
+**Light mode**: Track 4 doesn't run at all in light mode → no staging file written → `/ae:work` Post-commit will emit `status=unavailable` marker.
+
+**Staging file schema** (markdown with YAML frontmatter):
+```
+---
+plan: <plan path from /ae:work context>
+step: <N>
+status: <clean|findings>
+---
+## Track 4 — Per-commit Doodlestein
+**Strategic**: <content or "No concern.">
+**Adversarial**: <content or "No concern.">
+**Regret**: <content or "No concern.">
+```
+
+Notes on the staging variant:
+- `plan`, `step`, `status` are in frontmatter. `commit` and `committed_at` are added by `/ae:work` Post-commit during rename.
+- **Do NOT include `type: review` in frontmatter** — this prevents per-commit files from being misread by `dashboard` / `next` / `retrospect` consumers that scan `<output.reviews>` for `type: review`.
+- `status` value is derived per the Status mapping rules above.
+
 ## Results
 
 Output directly to terminal:
