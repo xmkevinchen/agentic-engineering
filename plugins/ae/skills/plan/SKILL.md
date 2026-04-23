@@ -9,11 +9,41 @@ effort: high
 
 ## Argument Inference
 
+Resolve `$ARGUMENTS` into an optional **source discussion directory** before running Pre-check. Three argument forms (in priority order):
+
+### Form 1 — Discussion-dir path
+
+If `$ARGUMENTS` starts with `.ae/discussions/` or matches `*/discussions/*/` (ends with `/`), accept as-is. Resolve:
+- `conclusion.md` path = `<arg>/conclusion.md`
+- `framing.md` path = `<arg>/framing.md` (optional, load-if-exists)
+
+Example: `/ae:plan .ae/discussions/047-pipeline-quality-wave-cluster/`
+
+### Form 2 — BL-ID
+
+If `$ARGUMENTS` matches regex `^BL-\d{3}$` (e.g., `BL-033`):
+
+1. Locate the BL file via `<output.backlog>/**/BL-NNN*.md` glob, where `<output.backlog>` is read from `pipeline.yml` (default: `.ae/backlog/`; projects with custom paths use their configured value). Traverse `unscheduled/`, `v*/`, `done/v*/` subdirs; exclude `closed/`.
+2. Parse the BL file's YAML frontmatter `narrowed_by:` field. **Parse rule**: (a) strip everything from the first space, `+`, or newline onward; (b) strip a trailing `/conclusion.md` if present; (c) ensure the result ends with `/` (append if missing) — this normalizes to Form 1's directory format.
+   - Example: `narrowed_by: ".ae/discussions/047-pipeline-quality-wave-cluster/conclusion.md + Addenda 4+5+6"` → after (a) `.ae/discussions/047-pipeline-quality-wave-cluster/conclusion.md` → after (b) `.ae/discussions/047-pipeline-quality-wave-cluster` → after (c) `.ae/discussions/047-pipeline-quality-wave-cluster/`
+3. If `narrowed_by:` is missing/empty, fall back to body-text grep for a discussion reference: first match of `\.ae/discussions/[^ ]+/` (already terminates with `/`; skip normalization step c).
+4. If no discussion reference resolves → **refuse**: `/ae:plan <BL-ID> — BL file has no resolvable discussion reference (checked frontmatter narrowed_by: and body-text). Supply the discussion directory explicitly: /ae:plan .ae/discussions/NNN-slug/`
+
+Once resolved, treat as Form 1.
+
+### Form 3 — Empty or free-text feature description
+
 If `$ARGUMENTS` is empty:
 1. Check `output.discussions` for the most recent discussion with `pipeline.discuss: done` and a `conclusion.md`
-2. Found → use that conclusion as the basis: "Create plan based on docs/discussions/NNN-slug/conclusion.md"
+2. Found → use that as Form-1 source discussion
 3. Not found → check conversation context for a topic being discussed
 4. Still nothing → ask user what to plan
+
+If `$ARGUMENTS` is free text (no discussion path, no BL-ID pattern): use as the feature title for a **standalone plan**. No source discussion is resolved; the discussion-dependent Pre-check does not fire; any discussion-dependent quality checks (Plan Quality Self-check and similar) skip as standalone-plan exemption.
+
+### Argument-form error parity
+
+Refusal wording MUST be consistent across Form 1 and Form 2 for the **same terminal condition** (both forms resolve to the same discussion dir, that dir's `conclusion.md` is missing) — both emit Pre-check item 4's "Discussion source valid" refusal. Distinct terminal conditions (Form 2 BL with no resolvable discussion reference at all vs Form 1 or Form 2 with a resolved-but-incomplete discussion) legitimately emit distinct messages targeted at the actionable fix for each.
 
 # /ae:plan — Feature Plan
 
