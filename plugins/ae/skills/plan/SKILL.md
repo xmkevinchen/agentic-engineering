@@ -148,6 +148,7 @@ After writing the plan, verify before proceeding to review:
 1. **Step completeness**: Does every step have a clear completion condition? (not just "implement X" — what specifically is done when it's done?)
 2. **AC verifiability**: Does every AC have a concrete verification method? (test command, manual check, metric threshold — not "results should be reasonable")
 3. **Evidence for drift detection**: Does every step list the files expected to be modified? (This enables Phase 2 contract extraction for drift detection during `/ae:work`)
+4. **Decision coverage** (discussion-referenced plans only; standalone plans skip this check as a documented exemption): for each row in `<discussion-dir>/conclusion.md`'s `## Decision Summary` table, confirm the plan body either (a) cites the Topic text, (b) maps the decision to a plan step or AC, or (c) explicitly records it under a "## Decisions not implemented" section with a stated reason. Heuristic grep: for each Decision Summary Topic, run `grep -F "<topic text>" <plan-file>` — missing match is a signal, not a proof. **Missing coverage on a discussion-referenced plan → emit P2 warning, do NOT auto-block**. Plan author disposes (fix plan body OR add "Decisions not implemented" section with reason). Prose-only heuristic; intentionally not a semantic guarantee (per failure case 2 LLM-theater bound).
 
 If any check fails → fix the plan before proceeding to review. These checks are self-checks by the writing agent, not a separate review step.
 
