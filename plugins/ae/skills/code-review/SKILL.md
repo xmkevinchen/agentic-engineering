@@ -96,11 +96,21 @@ regret: <content or "No concern.">
 
 This contract is consumed by downstream persistence (added in Step 2 of Plan 045). Field names are stable; any change is a breaking change to persistence consumers.
 
+**Acceptance grammar** (what counts as compliant output): the reply MUST match this regex when parsed line-by-line:
+
+```
+^strategic:\s+.+$
+^adversarial:\s+.+$
+^regret:\s+.+$
+```
+
+Three lines, in this exact order. Each field name is lowercase followed by `:` and at least one whitespace + non-empty content. Blank lines between fields are NOT permitted. Prose before the first field or after the third field is permitted but ignored by consumers. Any deviation (missing field, wrong ordering, extra key, empty value) is **malformed** — the reply fails the contract regardless of how "close" the prose is.
+
 Status mapping (derived from the three field values):
 - All three = `No concern.` → `clean`
 - At least one substantive finding → `findings`
 - Track 4 didn't run (light mode) → `unavailable`
-- **Malformed output** (missing field, unexpected key, wrong ordering) → treat as `unavailable` — persistence consumers MUST NOT guess intent from partial output
+- **Malformed output** (violates acceptance grammar above) → treat as `unavailable` — persistence consumers MUST NOT guess intent from partial output
 
 #### Per-commit persistence (staging write)
 
@@ -118,9 +128,11 @@ Field semantics:
 - `<N>` = current step number (1-indexed) in the plan
 
 **Manual invocation** (no plan context):
-- Write staging file with `<plan-id>` = `manual` + `<N>` = `<iso-8601-timestamp>`
+- Write staging file with `<plan-id>` = `manual` + `<N>` = exact filename-safe timestamp format: `YYYYMMDDTHHMMSSsssZ` (UTC, millisecond precision, no colons/dashes inside the time segment to keep the filename safe across filesystems). Example path: `.staging-manual-step-20260423T162205123Z.md`. Millisecond precision avoids collision on rapid back-to-back manual invocations.
 - Emit to stdout the terminal marker `[AE-TRACK4-MANUAL] file=<staging-path>` (logging only; no downstream consumer)
 - Delete the staging file before returning. **If deletion fails** (permission denied, file locked, etc.) → emit `[AE-TRACK4-MANUAL-WARNING] file=<staging-path> deletion_failed=<reason>` and continue. Do NOT fail `/ae:code-review` — orphaned staging files are recoverable.
+
+**Stale manual-orphan TTL cleanup** (defensive): at the very start of each `/ae:code-review` invocation (before Track 4 runs), scan `<output.reviews>/per-commit/` for `.staging-manual-*.md` files older than 1 hour (mtime-based). For each match, delete and log `[AE-TRACK4-CLEANUP] removed stale manual orphan: <path>`. This prevents unbounded orphan accumulation from interrupted manual sessions without affecting recent in-progress invocations. Work-driven `.staging-<plan-id>-step-<N>.md` files are NOT touched — their lifecycle is tied to `/ae:work` Post-commit.
 
 **Directory**: `mkdir -p <output.reviews>/per-commit/` before write (idempotent; safe across worktrees).
 
