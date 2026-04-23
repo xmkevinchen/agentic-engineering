@@ -68,9 +68,21 @@ If multiple → apply tiebreaker (highest ID). If unique → output directly. If
 
 ### Step 5: Concluded discussions without plan
 
-Check: any discussion `index.md` has `pipeline.discuss: done` AND `plan:` field is empty string `""` or missing.
+Check: any discussion `index.md` has `pipeline.discuss: done` AND `plan:` field is empty string `""` or missing AND `pipeline.plan` is in `{pending, in_progress}` or missing.
 
-**Guard**: `plan: ""` means no plan exists — treat empty string as absent.
+**Guard** — TWO fields must be checked (they are distinct):
+- `plan:` (top-level) is the plan-file path — `""` or missing means no plan file exists yet. Necessary but not sufficient.
+- `pipeline.plan:` (under `pipeline:`) is the lifecycle state enum. If missing, treat as `pending`. Fire Step 5 only when the state is `pending` or `in_progress`.
+
+| `pipeline.plan:` value | Step 5 fires? |
+|---|---|
+| `pending` | YES |
+| `in_progress` | YES |
+| (missing) | YES (fallback → pending) |
+| `skipped` | NO (discussion explicitly decided no plan is needed) |
+| `done` | NO (plan already exists — should have been caught earlier in chain) |
+
+*Note: this table only disambiguates the `pipeline.plan:` dimension. Both preconditions from the opening check must still hold — Step 5 fires only when `plan:` (top-level) is empty/missing AND the `pipeline.plan:` value above says YES.*
 
 ```
 Discussion concluded, ready for planning: [title]
