@@ -307,9 +307,17 @@ When all plan steps are `[x]`, write pipeline state before suggesting next steps
 
 - [ ] Do NOT update plan `status` — leave as `reviewed`. ae:review will set `status: done` after verdict. This preserves the work → review handoff (ae:review argument inference filters `status: done`).
 - [ ] Read plan `discussion:` field. If non-empty → read that discussion's `index.md`:
-  - Set `pipeline.work: done` (note: not read by dashboard/next, but documents completion)
+  - If `index.md` path does not exist → log `[WRITEBACK] Discussion index.md not found: <path>`, skip writeback (non-fatal, continue).
+  - If discussion contains a comma-separated `discussion:` value (multi-parent — not currently supported by schema) → log `[WRITEBACK] Multi-parent discussion not supported: <value>`, skip writeback.
+  - Otherwise, update two fields:
+    - Set `pipeline.work: done` unconditionally (note: not read by dashboard/next, but documents completion)
+    - Top-level `status:` field:
+      - If current value is exactly `active` → overwrite to `concluded`. Log: `[WRITEBACK] Discussion status → concluded`
+      - Any other value (`concluded`, `cancelled`, `revisit_requested`, etc.) → preserve as-is. Log: `[WRITEBACK] Discussion status preserved (current: <value>)`
   - Log: `[WRITEBACK] Discussion pipeline.work → done`
-- [ ] If `discussion:` is empty → log: `[WRITEBACK] All steps complete (standalone plan)`
+  - **Why two fields**: `pipeline.work` is the lifecycle state; top-level `status` is the human-readable label that `/ae:roadmap` reads (line 216: `status: active OR pipeline.discuss: in_progress` → "Discussing"). Writing `status: concluded` when it was `active` ensures roadmap stops labeling shipped work as still-discussing. Non-`active` values are preserved because the user may have explicitly set them (e.g., `cancelled`).
+  - **Atomicity and idempotency**: the two writes (`pipeline.work: done` and conditional `status:`) are independent — each is idempotent on its own. If one fails the other still runs (best-effort, per-write log on failure). A second `/ae:work` run on the same plan is safe: `pipeline.work: done` → stays `done`, `status:` → already `concluded` takes the preserve path. No atomic-write guarantee needed because both outcomes are convergent under the preserve rule.
+- [ ] If `discussion:` is empty → log: `[WRITEBACK] Standalone plan, no discussion`
 
 ## Output
 
