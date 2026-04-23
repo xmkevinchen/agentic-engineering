@@ -203,7 +203,13 @@ Read `work.review_mode` from pipeline.yml (default: `full`). Override with `--li
 - **full**: Lead executes `/ae:code-review` inline with all 4 tracks (Claude + Codex + Gemini + Doodlestein)
 - **light**: Lead executes `/ae:code-review` inline with Track 1 only (Claude review, skip cross-family and Doodlestein)
 
-Read the code-review SKILL.md and follow its instructions within the current context, passing the mode.
+Read the code-review SKILL.md and follow its instructions within the current context, passing the following explicit parameters (required for Track 4 persistence — see code-review/SKILL.md's "Plan-id presence contract" section):
+- `mode` = `full` or `light` (from above)
+- `plan_id` = plan frontmatter `id:` (current plan)
+- `step_number` = current step number (1-indexed)
+- `plan_path` = path to plan file
+
+`/ae:code-review` MUST use these values to compute the Track 4 staging path. Falling back to manual-mode is NOT permitted when invoked from `/ae:work` — the parameters are always present in this call site.
 
 ### E. Disposition
 - **P1 (blocker)**: always show, fix now
@@ -249,18 +255,21 @@ Fix findings, re-run from Check D until clean pass.
 
 2. **Track 4 persistence rename** (after commit, before checkpoint)
 
+   **Authority**: schema and path-derivation rules live in `plugins/ae/skills/code-review/SKILL.md` — that file is the single source of truth. This step only consumes those rules. Do NOT diverge from code-review's path computation; if refactoring the path schema, update code-review/SKILL.md FIRST, then this section.
+
    After successful commit, if `/ae:code-review` was invoked in full mode during D-step, it wrote a staging file at `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md` per the **Per-commit persistence** section in `plugins/ae/skills/code-review/SKILL.md` (which also documents the shared plan-id presence contract). The rename logic:
 
    1. **Commit-validation guard**: run `git rev-parse --verify HEAD`. If it fails (commit didn't succeed, detached HEAD, or shell error — including new-repo-first-commit edge case before HEAD exists), emit `[AE-TRACK4] commit=unknown status=unavailable` and skip the rename. No file written is better than invalid file. Otherwise compute `<short-sha>` via `git rev-parse --short HEAD`.
-   2. Compute staging path: `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md` where `<plan-id>` = plan frontmatter `id:` and `<N>` = current step number (same contract as code-review/SKILL.md).
+   2. Compute staging path: `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md` using the `plan_id` and `step_number` values passed into `/ae:code-review` at D-step (see Check D). This is the same path Track 4 wrote.
    3. **Staging file exists**:
-      a. **YAML sanity check**: verify the staging file's frontmatter has a closing `---` separator. If missing, the output is malformed (LLM non-compliance) → emit `[AE-TRACK4] commit=<short-sha> status=unavailable`, skip rename, log warning `Staging file missing YAML close marker — Track 4 output invalid`.
-      b. **Ensure output path**: `mkdir -p <output.reviews>/per-commit/` (defensive: handles external deletion of output dir between staging write and rename).
-      c. **Capture status field** from staging file (`clean` or `findings`) BEFORE any mutation — this is the marker value; capturing after mv risks re-reading a moved/renamed file.
-      d. **Prepend `commit:` + `committed_at:`** to the staging file's existing YAML frontmatter (current UTC `YYYY-MM-DDTHH:MM:SSZ`). Existing fields (`plan`, `step`, `status`) are preserved — the prepend only adds two new lines above them inside the frontmatter block.
-      e. **Rename atomically**: `mv <staging-path> <output.reviews>/per-commit/<short-sha>.md` (POSIX mv on same filesystem is atomic).
-      f. **Emit terminal marker**: `[AE-TRACK4] commit=<short-sha> status=<status captured in 3c>`.
-      g. SHA collision (amend re-runs `/ae:work` on same commit): overwrite acceptable — amend = semantically same commit (see Non-goals).
+      a. **Stale-file guard** (prior rename failed mid-prepend): read the staging file's frontmatter. If it already contains a `commit:` field, the prior Post-commit run prepended but the `mv` failed — re-prepending now would double-add the field and corrupt the frontmatter. Delete the stale staging file, emit `[AE-TRACK4] commit=<short-sha> status=unavailable`, skip rename, log warning `Stale staging file detected (prior rename failed); prior findings lost, marking unavailable`.
+      b. **YAML+status validation**: parse the staging file's frontmatter. MUST have: opening `---`, closing `---`, `status:` field with value in `{clean, findings}`. Any of (missing open/close, missing `status`, duplicated `status`, `status` value outside enum) → emit `[AE-TRACK4] commit=<short-sha> status=unavailable`, skip rename, log warning `Staging file frontmatter invalid — Track 4 output non-compliant`. This check subsumes the earlier "closing ---" check.
+      c. **Ensure output path**: `mkdir -p <output.reviews>/per-commit/` (defensive: handles external deletion of output dir between staging write and rename).
+      d. **Capture status value** from staging file (the parsed `status:` field from 3b) into a local variable. Do this BEFORE any mutation — after `mv`, the staging path no longer exists, and re-reading from the destination risks divergence from the pre-validated staging payload. The captured value is what the terminal marker reports, and what the audit trail reflects.
+      e. **Prepend `commit:` + `committed_at:`** to the staging file's existing YAML frontmatter (current UTC in exact `YYYY-MM-DDTHH:MM:SSZ` format — second precision matches git's commit timestamp idiom). Existing fields (`plan`, `step`, `status`) are preserved — the prepend only adds two new lines above them inside the frontmatter block.
+      f. **Rename atomically**: `mv <staging-path> <output.reviews>/per-commit/<short-sha>.md` (POSIX mv on same filesystem is atomic).
+      g. **Emit terminal marker**: `[AE-TRACK4] commit=<short-sha> status=<status captured in 3d>`.
+      h. SHA collision (amend re-runs `/ae:work` on same commit): overwrite acceptable — amend = semantically same commit (see Non-goals).
    4. **Staging file absent** (light mode / code-review skipped / Track 4 failed silently / new-repo-first-commit before Track 4 wrote anything): emit `[AE-TRACK4] commit=<short-sha> status=unavailable`; no file written.
    5. **Missing `<output.reviews>` path** (pipeline.yml broken): skip silently with warning `⚠️ output.reviews path not configured; Track 4 persistence skipped`. Do not fail commit post-hoc.
 
@@ -269,6 +278,7 @@ Fix findings, re-run from Check D until clean pass.
    **Non-goals**:
    - Concurrent `/ae:work` invocations on the same plan-id + step (race on staging path). Single active `/ae:work` per plan is assumed. Engineer for this only if concurrent usage becomes an observed failure.
    - Amend-overwrite audit trail preservation. Amend re-runs `/ae:work` → latest findings overwrite prior. Losing a pre-amend finding is acceptable (see Plan 045 non-goals). If this becomes painful, re-file as targeted BL.
+   - Failure-mode disambiguation within `status=unavailable` (light-mode vs timeout vs malformed are all collapsed). Audit trail is improved by this feature but full reliability verifiability is a separate concern — see BL-047.
 
 3. **Accumulated Doodlestein Checkpoint** (before gate)
 
