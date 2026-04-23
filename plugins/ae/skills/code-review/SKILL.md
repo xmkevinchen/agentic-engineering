@@ -51,7 +51,7 @@ Launch each enabled proxy agent to review the diff with an `<assigned angle>`. T
 
 **Purpose**: proactive adversarial challenge on the current diff — "what did the other tracks miss?"
 
-Launch 1 combined Doodlestein agent (sonnet model, independent subagent — no team_name) with the current diff scope (`git diff + git diff --cached`). The agent answers 3 questions in a single pass:
+Launch 1 combined Doodlestein agent (sonnet model, independent subagent — no team_name) with the current diff scope (`git diff + git diff --cached`). The agent answers 3 questions in a single pass and MUST structure its reply per the **Track 4 output contract** below:
 
 ```
 Agent(subagent_type: "general-purpose", model: "sonnet",
@@ -61,16 +61,20 @@ Agent(subagent_type: "general-purpose", model: "sonnet",
 
                <current diff>
 
-               Answer these 3 questions concisely (1-3 sentences each):
+               Answer these 3 questions concisely (1-3 sentences each). Structure your
+               SendMessage reply per the Track 4 output contract: three named fields
+               (strategic, adversarial, regret) in that order. Each value is the answer
+               or the literal string 'No concern.'
 
+               Questions:
                1. STRATEGIC: What is the single smartest improvement to this change?
                2. ADVERSARIAL: What mistake, oversight, or blind spot exists in this change?
                3. REGRET: Which part of this change is most likely to be reverted or reworked?
 
-               If the change is clean and you have no substantive concern for a question,
+               If the change is clean and no substantive concern exists for a question,
                say 'No concern.' Do not force issues.
 
-               SendMessage your answers to team-lead.")
+               SendMessage the structured reply (3 named fields) to team-lead.")
 ```
 
 **Scope binding**: the diff is passed inline in the prompt. The agent MUST NOT independently query `git diff main...HEAD` or any accumulated diff. This keeps per-commit Doodlestein focused on the current step only.
@@ -79,6 +83,24 @@ Agent(subagent_type: "general-purpose", model: "sonnet",
 - Substantive concern → **Warning**
 - Critical blind spot (security, data loss) → **Block**
 - "No concern" on all 3 → no output (silent pass)
+
+#### Track 4 output contract
+
+Track 4's SendMessage reply MUST contain these three named fields, in this order:
+
+```
+strategic: <content or "No concern.">
+adversarial: <content or "No concern.">
+regret: <content or "No concern.">
+```
+
+This contract is consumed by downstream persistence (added in Step 2 of Plan 045). Field names are stable; any change is a breaking change to persistence consumers.
+
+Status mapping (derived from the three field values):
+- All three = `No concern.` → `clean`
+- At least one substantive finding → `findings`
+- Track 4 didn't run (light mode) → `unavailable`
+- **Malformed output** (missing field, unexpected key, wrong ordering) → treat as `unavailable` — persistence consumers MUST NOT guess intent from partial output
 
 ## Results
 
