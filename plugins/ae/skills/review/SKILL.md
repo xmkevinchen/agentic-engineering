@@ -69,7 +69,7 @@ Read plan frontmatter `discussion:` field.
     ```
     The refusal MUST show the discussion-**directory** path (same as plan's `discussion:` field value), NOT the `conclusion.md` file path, so the suggested `/ae:discuss` fix-command is directly runnable. Empty conclusion is rejected because the Per-review Primary Context Bundle requires the "full verbatim body" as primary input; a zero-byte file would silently erase all discussion-derived constraints despite passing a file-exists check.
 
-**Placement rationale**: Check 5 is a blocking gate with the same cost class as Check 2 plan-read but more consequential semantics (refuses execution rather than auditing state). Grouping it last in the Pre-check chain keeps entry gates together and mirrors Plan 047's Pre-check Check 5 placement at the tail of `/ae:work`'s Pre-check section.
+**Placement rationale**: Check 5 is a blocking gate that re-uses the plan file already loaded by Check 2 (Plan All Done) — adding only one frontmatter-field read plus a conclusion.md stat/read. Independent of Check 2-4 ordering: Check 2 scans step checkboxes, Check 4 parses milestone notes; neither depends on the conclusion.md file Check 5 guards. Grouping it last in the Pre-check chain keeps entry gates together and mirrors Plan 047's Pre-check Check 5 placement at the tail of `/ae:work`'s Pre-check section.
 
 ### Prior Context (from Mengdie)
 
@@ -80,6 +80,31 @@ Run this step after Pre-checks pass and before creating the review team.
 3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
 4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
 5. Include prior review patterns and known issues in reviewer prompts (Step 3) as additional context — treat as background, does not constrain review
+
+## Per-review Primary Context Bundle
+
+Assemble the primary-context bundle **once per /ae:review invocation** (before spawning any reviewer). The bundle MUST be embedded **verbatim** in every reviewer spawn prompt — specialized Claude-native reviewers, challenger, and cross-family proxies (Codex/Gemini) alike. Path-ref handoff to proxies is deliberately rejected (Discussion 050 Round 3): silent self-read failure is an undetectable class, and verbatim-for-all eliminates it at trivial cost (median ~9KB aggregate, max ~34KB across both proxies).
+
+**Substitution semantics**: the `<PRIMARY CONTEXT BUNDLE — ...>` angle-bracket block in section 3's spawn templates is a **substitution marker** — when TL spawns reviewers, this marker MUST be replaced with the literal assembled bundle text (file bodies inline). Summaries, descriptions, file path references, or sub-bullets that paraphrase the contents are NOT compliant — Discussion 050 Round 3's verbatim-for-all decision rejected exactly that pattern. Self-test: after spawning, the reviewer's `prompt:` field byte count MUST be ≥ the observability log's `<total>B` value (plus role-specific instructions).
+
+This is BL-033 Layer 3 — cumulative input propagation at the work→review phase boundary.
+
+Bundle contents:
+
+1. **Plan AC list**: the entire `## Acceptance Criteria` (or `## AC`) section of the plan — full text, not just ACs touched by reviewed commits.
+2. **Conclusion body** (when plan is discussion-referenced — see Check 5 gate): the full verbatim body of `<discussion-dir>/conclusion.md`. "Primary input" = equivalent in role to CLAUDE.md or user instructions; NOT an `@reference`, NOT a summary, NOT a "read if needed" footnote.
+3. **Framing body** (optional, load-if-exists): the full body of `<discussion-dir>/framing.md` if the file exists. Silently skip if absent.
+4. **Commit range descriptor**: the base→HEAD range computed per Review scope (feature branch: `main...HEAD`; main branch: `<feature-start>..HEAD`). Descriptor is the range string — NOT the full diff (reviewers run `git diff` themselves; the bundle declares the agreed-upon range).
+
+**Standalone plan exemption**: if plan's `discussion:` is empty (re-read from plan frontmatter at bundle-assembly time — do NOT cache a boolean from Check 5; compaction between Pre-checks and bundle assembly is a small but real risk), skip items 2 and 3; bundle reduces to items 1 and 4.
+
+**Fresh per-invocation disk read**: assemble the bundle fresh from disk at invocation start. Do NOT rely on plan body / conclusion / framing remaining in TL's context from an earlier skill (`/ae:work` just completed; TL's working context may be post-compaction).
+
+**Context size note**: uniform verbatim-for-all across N reviewers compounds per-invocation token cost (~plan_AC + conclusion + framing) × (reviewers + challenger + enabled proxies). On constrained fallback models (Haiku) the aggregate spawn prompt may crowd reasoning budget; this is an accepted Known Limit with a reopen trigger (markedly shallower reviewer output on bundles > 10KB). If cost or quality signal fires, re-file as BL — do not solve speculatively now.
+
+**Observability log**: at assembly time, TL emits one line: `[REVIEW] Primary context bundle assembled: <N>B (plan_AC=<a>B, conclusion=<b>B, framing=<c>B)`. Zero architecture change; creates the measurable surface the cost-signal reopen trigger needs (without it, "aggregate per-/ae:review cost spike" has no observable signal and the trigger fires invisibly).
+
+**Interaction with `### Prior Context (from Mengdie)`**: the Prior Context step (above) separately retrieves Mengdie prior-art results and per its own spec includes them in reviewer spawn prompts "as additional context — treat as background, does not constrain review". The primary bundle and Mengdie results are BOTH inserted into each reviewer spawn prompt but at different hierarchy levels: primary bundle = primary input (same role as CLAUDE.md); Mengdie results = advisory background appended AFTER the primary bundle. Do NOT merge them into one block; do NOT drop Mengdie results when embedding the bundle.
 
 ## Execution: Agent Teams Review
 
@@ -102,6 +127,8 @@ TaskCreate("Cross-family challenge + synthesis")
 
 ### 3. Select and Launch Reviewers
 
+Every reviewer spawn prompt below embeds the primary-context bundle verbatim (see "## Per-review Primary Context Bundle" above). Cross-family proxies receive the bundle text in their spawn prompt — NOT a path reference.
+
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** (pure opposition).
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — different angles per proxy. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
@@ -112,14 +139,24 @@ TaskCreate("Cross-family challenge + synthesis")
 # For each selected reviewer:
 Agent(subagent_type: "<reviewer>", name: "<reviewer>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review <diff-range> for <your domain>. Follow Team Communication Protocol.
+      prompt: "<PRIMARY CONTEXT BUNDLE — substitute literal assembled bundle text here per 'Per-review Primary Context Bundle' section above:
+                 1. Plan AC list
+                 2. Conclusion body (verbatim, when discussion-referenced per Check 5)
+                 3. Framing body (verbatim, if exists)
+                 4. Commit range descriptor>
+               Review <diff-range> for <your domain>. Follow Team Communication Protocol.
                Teammates: [other selected reviewers], challenger.
                SendMessage findings to team-lead when done.")
 
 # Always include challenger (pure opposition — does NOT synthesize):
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
-      prompt: "Operate in /review mode per Team Communication Protocol.
+      prompt: "<PRIMARY CONTEXT BUNDLE — substitute literal assembled bundle text here per 'Per-review Primary Context Bundle' section above:
+                 1. Plan AC list
+                 2. Conclusion body (verbatim, when discussion-referenced per Check 5)
+                 3. Framing body (verbatim, if exists)
+                 4. Commit range descriptor>
+               Operate in /review mode per Team Communication Protocol.
                Review scope: <diff-range>.
                Teammates: [selected reviewers], <enabled proxies>.
                Step 1: independent review of blind spots.
@@ -129,9 +166,16 @@ Agent(subagent_type: "challenger", name: "challenger",
 
 # Cross-family — for each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
+# Verbatim bundle text embedded in spawn prompt; the proxy agent's two-layer assembly
+# forwards it into the MCP message field. Do NOT pass a path-ref instead of the bundle.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review <diff-range> via <proxy> MCP. <assigned angle>.
+      prompt: "<PRIMARY CONTEXT BUNDLE — substitute literal assembled bundle text here per 'Per-review Primary Context Bundle' section above:
+                 1. Plan AC list
+                 2. Conclusion body (verbatim, when discussion-referenced per Check 5)
+                 3. Framing body (verbatim, if exists)
+                 4. Commit range descriptor>
+               Review <diff-range> via <proxy> MCP. <assigned angle>.
                SendMessage findings to team-lead when done.")
 ```
 
