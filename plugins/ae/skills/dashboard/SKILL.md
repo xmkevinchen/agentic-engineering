@@ -45,8 +45,25 @@ For each subdirectory in `output.discussions`:
 2. Determine current stage from `pipeline.*` fields:
    - `analyze: in_progress` → stage = "analyzing", action = `/ae:analyze <dir>`
    - `discuss: in_progress` → stage = "discussing"
-   - `discuss: done`, `plan:` field is `""` or missing → stage = "awaiting plan", action = `/ae:plan`
+   - `discuss: done`, `plan:` field is `""` or missing, AND `pipeline.plan` is in `{pending, in_progress}` or missing → stage = "awaiting plan", action = `/ae:plan`
+   - `discuss: done`, `plan:` field is `""` or missing, AND `pipeline.plan` is `skipped` or `done` → stage = "done" (collapses into done bucket per Done Feature Handling section). Discussion 已 conclude 且 explicitly 决定不需要 plan（或 plan 已交付但路径未回写）—— 不再有 actionable next step。
    - `discuss: done`, `plan: <path>` (non-empty) → follow plan (see Plans below)
+
+**Guard — when does "awaiting plan" stage fire?**
+
+TWO frontmatter fields must be checked (they are distinct):
+- `plan:` (top-level) is the plan-file path — `""` or missing means no plan file exists yet. Necessary but not sufficient.
+- `pipeline.plan:` (under `pipeline:`) is the lifecycle state enum. If missing, treat as `pending`. Fire "awaiting plan" stage only when the state is `pending` or `in_progress`.
+
+| `pipeline.plan:` value | awaiting plan fires? |
+|---|---|
+| `pending` | YES |
+| `in_progress` | YES |
+| (missing) | YES (fallback → pending) |
+| `skipped` | NO (discussion explicitly decided no plan is needed → classify as "done") |
+| `done` | NO (plan already exists — should have been caught earlier in chain → classify as "done") |
+
+*Note: this table only disambiguates the `pipeline.plan:` dimension. Both preconditions from the opening rule must still hold — "awaiting plan" fires only when `plan:` (top-level) is empty/missing AND the `pipeline.plan:` value above says YES. When `pipeline.plan:` is `skipped` or `done` with empty `plan:`, the discussion is classified as "done" (not "awaiting plan") and falls into the done bucket. **The "done" classification on `skipped`/`done` rows is dashboard-only behavior — `/ae:next` Step 5 (the reference fix at `next/SKILL.md:71-85`) only suppresses, does not classify, because it outputs a single most-actionable suggestion rather than a stage table. Do NOT propagate this fallback back to `/ae:next`.**
 
 ### Plans
 
@@ -121,7 +138,7 @@ Always collapse done features regardless of total feature count:
 
 ## Edge Cases
 
-- Discussion with `status: done` but `plan: ""` and no matching plan file → stage = "awaiting plan"
+- Discussion with `status: done` but `plan: ""`, no matching plan file, AND `pipeline.plan` is in `{pending, in_progress}` or missing → stage = "awaiting plan". When `pipeline.plan: skipped` or `done` (with empty `plan:`), classify as "done" (collapses into done bucket per Done Feature Handling) — see Discussions → Guard block above.
 - Plan file with `discussion: ""` or missing → standalone plan (not linked to discussion), show as independent row
 - Plan with all steps done but no review file with matching `target` → stage = "awaiting review"
 - Review file with `target` pointing to non-existent plan → skip with note
