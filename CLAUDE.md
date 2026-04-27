@@ -1,5 +1,11 @@
 # Agentic Engineering Plugin Development
 
+## Language Convention
+
+- **聊天** — 中文（与 user 的对话）
+- **Git-tracked docs** — English（仓库里 committed 的文件：README, CHANGELOG, SKILL.md, agent definitions, `docs/` 下的 references/decisions 等）
+- **非归档 docs** — 中文（gitignored 的过程产物：`.ae/` 下的 discussions / plans / reviews / analyses / milestones）
+
 ## Versioning
 
 Version bumps are for **intentional releases**, not every commit. Accumulate changes and bump once when there's a meaningful release.
