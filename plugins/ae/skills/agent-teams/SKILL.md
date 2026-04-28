@@ -372,3 +372,90 @@ Beyond the env var check, auto-fallback skills can verify `run_in_background` pa
 - **Killing dissenters**: Removing an agent because they disagree. Strong opinions are assets.
 - **Round-per-team**: Spawning a new team each round. One team, one lifecycle.
 - **Routing lateral**: Agent .md files containing conditional routing logic ("in /ae:review send to X, in /ae:plan send to Y"). Routing decisions belong in skill spawn prompts, not agent definitions.
+
+---
+
+## Skill step progress tracking
+
+Multi-step skills proactively use the Claude Code Task APIs (`TaskCreate` / `TaskUpdate`) to surface execution progress in the persistent task panel above the prompt. This complements (does NOT replace) the durable per-step disk artifact (`step-summaries.md` written by `/ae:work` post-commit). Tasks live for the conversation; step-summaries live across sessions.
+
+### A. Canonical phase IDs
+
+Each modified SKILL.md hard-lists its own phase IDs. Phase IDs are exactly one of these forms (NO subtitles, NO reordering, NO parenthetical suffixes):
+
+- `Pre-check` — singular. ONE task for the whole pre-check section, even when there are multiple sub-checks (Check 1, Check 2, etc.). Sub-checks are sub-actions, not phases.
+- `Step N` — integer step number only (e.g., `Step 3`). NOT `Step 3: Locate Current Step`, NOT `Step 3 (Pre-check)`.
+- `Phase N` — for skills using Phase numbering (ae:test-plugin, ae:discuss).
+- `TDD Cycle` — ae:work specific, for the per-step TDD inner loop (when used as a tracked phase rather than as a sub-action).
+- Review track names verbatim (ae:review only): `Security review`, `Performance review`, `Architecture review`, `Cross-family challenge + synthesis`.
+
+**Subject string format**: `"<skill-name>: <phase-id>"` — colon + space separator. Examples: `"ae:work: Pre-check"`, `"ae:work: Step 3"`, `"ae:review: Security review"`.
+
+Each modified SKILL.md MUST inline its full canonical phase list at the top of its execution flow section. The agent-teams reference (this section) is teaching documentation, NOT a runtime parser — agents executing a skill consult that skill's inline list, not this table.
+
+### B. Per-skill task list (canonical)
+
+| Skill | Tasks created | Total |
+|---|---|---|
+| `ae:work` | `Pre-check`, `Step N` (one per plan step, plan-dependent dispatch) | 1 + N |
+| `ae:plan` | `Pre-check`, `Step 1`, `Step 2`, `Step 3`, `Step 4`, `Step 5` | 6 |
+| `ae:review` | `Pre-check`, then the 4 review tracks (`Security review`, `Performance review`, `Architecture review`, `Cross-family challenge + synthesis`) | 5 |
+| `ae:analyze` | `Pre-check`, `Mode A` or `Mode B` (mutually exclusive), `Research`, `Synthesize` | 4 |
+| `ae:discuss` | `Pre-check`, `Step 1 Setup`, `Step 1.5 Round 0`, `Step 2 Spawn`, `Step 3 Discussion`, `Step 7 Sweep`, `Step 8 Conclusion`, `Step 9 Doodlestein` | 8 |
+| `ae:test-plugin` | `Pre-check`, `Phase 1`, `Phase 2`, `Phase 3` | 4 |
+
+Sub-actions deliberately excluded (analysis flagged them as noise): TDD sub-cycles (write/red/implement/green/refactor), individual Pre-commit Checks A-G in ae:work, Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant in ae:review, Steps 4-6 (Consensus / TL Scores / Present) and Step 10 (Shutdown) in ae:discuss.
+
+The per-skill task list is **static and design-time** — agents do NOT estimate phase duration at runtime to decide which to track. The static list is the contract.
+
+### C. Lifecycle
+
+1. **At skill start**: batch-create all known tasks via one `TaskCreate` per row in the per-skill list above. For ae:work specifically, the `Step N` rows are plan-dependent — defer the per-step `TaskCreate` calls until after Pre-check Check 2 reads the plan body, then create one task per `### Step N` heading found.
+
+2. **Mid-plan resumes** (ae:work entering on step 3 of 5 because steps 1-2 are `[x]`): create tasks for ALL plan steps; immediately call `TaskUpdate(taskId, status: "completed")` for already-`[x]` steps; leave pending steps at default `pending` status. Panel reflects accurate state on resume.
+
+3. **Phase begin**: immediately before the first tool call, file read/write, user-visible decision, or delegated agent spawn within the phase, call `TaskUpdate(taskId, status: "in_progress")`. The "begin" boundary is precise — not at conceptual phase entry, but at the first observable action.
+
+4. **Phase complete**: when the phase satisfies its **completion criterion** (see section D), call `TaskUpdate(taskId, status: "completed")`.
+
+### D. Per-phase completion criteria
+
+| Phase | Completion criterion |
+|---|---|
+| `Pre-check` (any skill) | All numbered checks evaluated to pass; control reached the next phase |
+| `Step N` (ae:work) | Pre-commit Check G (Fix & Re-review) returned clean AND `git commit` returned 0 |
+| `Step N` (ae:plan) | Plan file written to disk AND frontmatter status set per the step's intent |
+| Review tracks (ae:review) | Track agent's findings received via SendMessage at TL |
+| `Mode A` / `Mode B` (ae:analyze) | Promote completed (Mode A) or feature dir + index.md created (Mode B) |
+| `Research` / `Synthesize` (ae:analyze) | Agent Teams findings collected (Research) or analysis.md written (Synthesize) |
+| Discussion phases (ae:discuss) | The phase's spec'd output state reached (per Step 1.5.5 boundary, Round 1 file written, etc.) |
+| `Phase N` (ae:test-plugin) | Phase's spec'd terminal output produced (per Phase 1.3 / Phase 2 Class A or B / Phase 3 report) |
+
+If a phase exits by **refusal**, **blocker**, **unhandled error**, or **user pause** before its completion criterion is satisfied, do NOT call `TaskUpdate(completed)`. The task stays at `in_progress` so the user sees exactly where execution stopped.
+
+Only allowed status enum values: `pending | in_progress | completed | deleted`. Do NOT invent novel states like `completed_with_warning` or `failed`.
+
+### E. Owner field for self-tracking
+
+Tasks created by skills for self-tracking MUST omit the `owner` field entirely (do not pass it). Self-tracking tasks are not for claim by other agents.
+
+- `owner=null` (omitted) means: the harness treats this as unassigned. The skill creating and completing the task does not claim ownership; ownership is intentionally absent for skill self-tracking tasks.
+- This differs from agent-claimed tasks (where `owner` is the assigned agent name from a TeamCreate spawn).
+- Fallback if a future Claude Code update enforces `owner` on `TaskUpdate`: change to `owner: "skill:<skill-name>"` (plain identifier — no UUID, no session ID).
+
+### F. Concurrent invocation note
+
+Two concurrent skill runs producing the same subject (e.g., `"ae:work: Pre-check"` × 2 from parallel sessions) are visible separately in the panel because the harness assigns each `TaskCreate` a unique task ID. Task IDs disambiguate at the harness level; subjects do not. The panel may show duplicate-titled tasks under heavy concurrent use; this is a readability tradeoff, not a correctness bug. If panel readability degrades materially under sustained concurrency (3+ skills running simultaneously), file a follow-on BL — do not pre-engineer a session-uuid prefix scheme.
+
+### G. Interaction with `step-summaries.md`
+
+Tasks and step-summaries serve different time horizons:
+
+- **Tasks**: ephemeral, conversation-scoped, visible during execution.
+- **`step-summaries.md`**: durable, written post-commit by ae:work, readable across sessions, consumed by the Context Overlap Heuristic in subsequent ae:work runs.
+
+They are complementary, not redundant. A skill execution that completes successfully will produce both (tasks visible during the run; step-summaries persisted to `<output.milestones>/<plan-id>/step-summaries.md` after each commit).
+
+### Auto-compact panel freeze (known limit)
+
+The Claude Code task panel can freeze rendering during auto-compact for long-running skills (10+ phase transitions in one run). The underlying state is consistent — only the rendering is frozen. If a skill appears stuck in the panel but the conversation is progressing, trust the conversation; the panel will catch up after the next refresh.
