@@ -74,10 +74,17 @@ Per the convention in `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill ste
   ```
 
 ### Check 2: Locate Current Step
-- `- [x]` = done, `- [ ]` = pending. Current step = first pending.
-- All done → suggest `/ae:review`, **refuse to execute**
 
-**Task dispatch (plan-dependent)**: After locating the current step but before reading step-summaries, batch-create per-step tasks via `TaskCreate(subject: "ae:work: Step N")` — one per `### Step N` heading in the plan body. For already-`[x]` steps: immediately `TaskUpdate(taskId, status: "completed")`. Pending steps stay default `pending`. Track the task IDs (one per step) for later TaskUpdate calls in TDD cycle and Post-commit.
+**Step completion detection rule** (deterministic — applies to all checkbox parsing in this skill):
+
+- A `### Step N` block is COMPLETED iff every `- [...]` checkbox inside that block (between this `### Step N` heading and the next `### Step` heading or `## ` heading, whichever comes first) is `- [x]`.
+- A block is PENDING iff at least one of its checkboxes is `- [ ]`.
+- The **current step** = the first PENDING block in document order.
+- Edge case: a `### Step N` block with NO checkboxes at all is treated as PENDING (defensive — matches authors who wrote prose-only step descriptions; prefer adding at least one checkbox during plan write).
+
+`- [x]` = done, `- [ ]` = pending. All steps completed → suggest `/ae:review`, **refuse to execute**.
+
+**Task dispatch (plan-dependent)**: After locating the current step but before reading step-summaries, batch-create per-step tasks via `TaskCreate(subject: "ae:work: Step N")` — one per `### Step N` heading in the plan body. Apply the completion-detection rule above to each block: COMPLETED blocks get immediate `TaskUpdate(taskId, status: "completed")`. PENDING blocks stay default `pending`. Track the task IDs (one per step) for later TaskUpdate calls in TDD cycle and Post-commit.
 
 #### Step-Summary Context
 
@@ -201,7 +208,13 @@ The ~30KB-and-5-steps threshold is carried forward from Plan 046 Known Limits �
 
 The agent begins each step's TDD cycle with the Primary Context already loaded (see "Per-step Primary Context Load" above).
 
-**Task lifecycle**: immediately before the first action of TDD (write test, OR direct implementation if `test.command` is empty), call `TaskUpdate(stepTaskId, status: "in_progress")` for the current step's task. The completed transition fires later in Post-commit, NOT here. Do NOT create or update tasks for individual TDD sub-cycles (write/red/implement/green/refactor) — they are sub-actions, not phases.
+**Task lifecycle (precise sequencing)**: the `in_progress` transition for the current step's task fires **as early as possible upon entering the step's execution scope**, BEFORE any context loading or agent spawn — to ensure the panel reflects step entry even if context loading takes seconds. Sequence:
+
+1. `TaskUpdate(stepTaskId, status: "in_progress")` — UNCONDITIONAL, immediately upon entering the step's scope (before primary context load, before TDD start, before any tool call).
+2. Per-step Primary Context Load (re-read conclusion.md / framing.md / plan body fresh from disk).
+3. TDD cycle starts (write test → red → implement → green → refactor) OR direct Lead implementation if `test.command` is empty.
+4. (TDD sub-cycles are sub-actions; do NOT create or update tasks for write/red/implement/green/refactor.)
+5. The `completed` transition fires later in Post-commit (NOT here) — see Post-commit section below for the criterion.
 
 If `test.command` is empty → skip TDD, implement directly.
 

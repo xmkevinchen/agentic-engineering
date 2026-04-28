@@ -381,13 +381,15 @@ Multi-step skills proactively use the Claude Code Task APIs (`TaskCreate` / `Tas
 
 ### A. Canonical phase IDs
 
-Each modified SKILL.md hard-lists its own phase IDs. Phase IDs are exactly one of these forms (NO subtitles, NO reordering, NO parenthetical suffixes):
+Each modified SKILL.md hard-lists its own phase IDs. Phase IDs are one of these forms (NO subtitles, NO reordering, NO parenthetical suffixes — except where an explicit exception is documented):
 
 - `Pre-check` — singular. ONE task for the whole pre-check section, even when there are multiple sub-checks (Check 1, Check 2, etc.). Sub-checks are sub-actions, not phases.
-- `Step N` — integer step number only (e.g., `Step 3`). NOT `Step 3: Locate Current Step`, NOT `Step 3 (Pre-check)`.
-- `Phase N` — for skills using Phase numbering (ae:test-plugin, ae:discuss).
+- `Step N` — integer step number only (e.g., `Step 3`). NOT `Step 3: Locate Current Step`, NOT `Step 3 (Pre-check)`. **Generic rule** — applies to ae:work, ae:plan, ae:test-plugin (when test-plugin uses `Phase N` instead, see below).
+- `Phase N` — for skills using Phase numbering (ae:test-plugin only — see Exception below for ae:discuss).
 - `TDD Cycle` — ae:work specific, for the per-step TDD inner loop (when used as a tracked phase rather than as a sub-action).
 - Review track names verbatim (ae:review only): `Security review`, `Performance review`, `Architecture review`, `Cross-family challenge + synthesis`.
+
+**Exception — ae:discuss uses titled Step IDs**: ae:discuss has 8 distinct phases that span very different work types (Setup vs Round 0 vs Sweep vs Doodlestein); a bare integer `Step N` would be unreadable in the panel. ae:discuss therefore uses titled forms `Step 1 Setup`, `Step 1.5 Round 0`, `Step 2 Spawn`, `Step 3 Discussion`, `Step 7 Sweep`, `Step 8 Conclusion`, `Step 9 Doodlestein` (matching the SKILL.md heading text verbatim, with the leading `### ` stripped). The fractional `Step 1.5` is allowed for this skill only. The generic "integer-only" rule does NOT apply to ae:discuss. This exception is the only one — all other multi-step skills follow the integer-only rule strictly.
 
 **Subject string format**: `"<skill-name>: <phase-id>"` — colon + space separator. Examples: `"ae:work: Pre-check"`, `"ae:work: Step 3"`, `"ae:review: Security review"`.
 
