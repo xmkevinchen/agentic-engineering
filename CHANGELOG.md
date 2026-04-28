@@ -1,5 +1,43 @@
 # Changelog
 
+## v0.9.1 — 2026-04-28
+
+Plan 052 (F-001 / BL-051): skills proactively use Claude Code Task APIs (`TaskCreate` / `TaskUpdate`) for step progress tracking. The persistent task panel above the prompt now reflects which phase a multi-step skill is in, transitioning through `pending → in_progress → completed` per phase boundary. Convention complements (does not replace) the durable per-step `step-summaries.md` artifact (Plan 049) — tasks are conversation-scoped, step-summaries are cross-session.
+
+### Convention (single source of truth at `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`)
+
+- **Canonical phase IDs**: `Pre-check` (singular), `Step N`, `Phase N`, `TDD Cycle`, review-track names verbatim. Subject format: `"<skill-name>: <phase-id>"`.
+- **Per-skill task list (static, design-time)**: ae:work = 1 + N (plan-dependent), ae:plan = 6, ae:review = 5, ae:analyze = 4, ae:discuss = 8, ae:test-plugin = 4.
+- **Lifecycle**: batch-create at skill start (defer plan-dependent dispatch until Pre-check Check 2 reads the plan), `in_progress` immediately before first observable action, `completed` only when phase satisfies its completion criterion (per-phase table). Mid-plan resume: create all tasks, immediately mark `[x]`-completed steps as `completed`.
+- **Per-phase completion criteria**: Pre-check = all checks pass; ae:work Step N = `git commit` returned 0; ae:review review-tracks = findings received at TL via SendMessage; ae:analyze Mode A = promote complete; etc.
+- **Owner field**: omit for self-tracking tasks (not for claim by other agents). Documented fallback to `skill:<name>` if a future Claude Code update enforces `owner` on `TaskUpdate`.
+- **On error**: leave in-flight tasks at `in_progress` so user sees where execution stopped. Allowed status enum: `pending | in_progress | completed | deleted` only.
+- **Sub-actions deliberately excluded**: TDD sub-cycles (write/red/implement/green/refactor), individual Pre-commit Checks A-G, individual Pre-check sub-checks (Check 1-5), per-phase sub-actions in ae:review (Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant), Steps 4-6 + 10 in ae:discuss.
+
+### Skills updated (6 multi-step skills)
+
+- `ae:work`: 1 Pre-check task + N step tasks (plan-dependent dispatch after Check 2). TaskUpdate at TDD start (`in_progress`) and Post-commit (`completed` after `git rev-parse --verify HEAD` succeeds).
+- `ae:plan`: 6 tasks at skill start (Pre-check + Step 1-5). With `--skip-review`: Steps 3+4 transition `pending → completed` directly.
+- `ae:review`: 5 tasks (Pre-check + 4 review tracks `Security review` / `Performance review` / `Architecture review` / `Cross-family challenge + synthesis`). Existing 4-track cluster preserved with canonical subject format. Per-track `in_progress` at reviewer spawn; `completed` when findings arrive at TL.
+- `ae:analyze`: 4 tasks (Pre-check + Mode A or B + Research + Synthesize). Mode task created post-selection (mutually exclusive A/B).
+- `ae:discuss`: 8 tasks (Pre-check + Step 1 Setup + Step 1.5 Round 0 + Step 2 Spawn + Step 3 Discussion + Step 7 Sweep + Step 8 Conclusion + Step 9 Doodlestein).
+- `ae:test-plugin`: 4 tasks (Pre-check + Phase 1 + Phase 2 + Phase 3).
+
+### Known limits (accepted)
+
+- Auto-compact panel-freeze risk for long skills (10+ phase transitions in one run): underlying state remains consistent, only rendering may freeze.
+- Latency cost: ~100-500ms per `TaskCreate`/`TaskUpdate` call. A 5-step ae:work cycle = ~15 writes ≈ 1.5-7.5s overhead. Accepted for steps over a few seconds.
+- Coupling between SKILL.md phase structure and task subjects: renaming a phase requires updating its task ID. Bounded by review process; reopen trigger if 3+ phase renames per sprint.
+- Concurrent skill runs with same subject (e.g., 2 parallel `/ae:work` Pre-checks) are visible separately in the panel because task IDs disambiguate; subjects do not. If panel readability degrades materially under sustained 3+ concurrency, follow-on BL.
+- `owner=null` semantics depend on Claude Code Task API contract for self-tracking tasks. Documented fallback to `skill:<name>` if API enforces non-null `owner` on `TaskUpdate`.
+
+### Process
+
+- F-001 was the first feature dogfooded end-to-end through the new GTD model (BL-051 → ae:analyze promote → ae:discuss [cancelled, over-engineered] → ae:plan → ae:plan-review → ae:work). The plan file lives at `.ae/features/active/F-001-skills-proactively-use-taskcreate-api-to/plan.md` (in feature dir directly, ahead of Plan 051's path migration).
+- Plan ID 052 (not 051): Plan 050's known-limits reserved 051 for the path-migration plan that systematizes putting plan files in feature dirs.
+- /ae:plan-review caught 6 Must Fix items (cache-refresh dependency, ae:review double-counting, owner-field semantics, subject ambiguity, runtime-time-estimation drift, error-state enforcement); all applied as inline plan revisions before /ae:work.
+- During /ae:work execution, the very feature being built was dogfooded — the `/ae:work` invocation used `TaskCreate` / `TaskUpdate` per the convention being shipped. Live demo of the panel rendering through 5 steps.
+
 ## v0.9.0 — 2026-04-28
 
 GTD-aligned project management model. Plan 050 maps AE skills to GTD's 5+1 phases (Capture / Clarify / Organize / Reflect short-cycle / Reflect long-cycle / Engage / Archive — plus an AE-self-development sidebar for plugin delivery metrics). Supersedes Discussion 052's heavier proposal (kind: enum, ae:triage skill, threshold-based Task primitive, Liquibase schema.md, Tier 0/1/2/3 migration — all rejected as over-engineered for solo-dev self-use).
