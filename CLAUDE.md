@@ -112,6 +112,14 @@ All skills that read feature `index.md` frontmatter (`ae:analyze`, `ae:roadmap`,
 - **List-or-scalar fields** (`origin_bl`, `depends_on`): readers MUST normalize to list internally — `origin_bl: BL-042` and `origin_bl: [BL-042, BL-051]` are semantically equivalent.
 - **Missing `theme`**: features without a `theme:` value group under a uniform bucket named `(unthemed)` — never invented from title or body. All grouping skills (`ae:roadmap` section (a) feature listing, `ae:retrospect` section (1) recently-shipped grouping) MUST use this exact bucket name to prevent silent divergence.
 
+### Path-derived feature ID convention (Plan 051+)
+
+For feature-resident plan, review, and discussion artifacts inside `.ae/features/<state>/F-NNN-<slug>/`, the feature ID is **path-derived** from the parent directory name. Readers MUST extract `F-NNN` from the directory path; this is the canonical lookup.
+
+- **Optional `feature:` frontmatter** on plan/review/discussion files (NOT on the feature `index.md` — that container already encodes `id: F-NNN`): when present, readers validate frontmatter matches path-derived `F-NNN` and warn on mismatch. **Path always wins.** When absent, readers derive ID from path silently.
+- **Legacy plan/review/discussion files** (under `output.plans/`, `output.reviews/`, `output.discussions/`) have no `feature:` field. They link to features (when applicable) via `discussion:` chains or are unaffiliated.
+- **Reader behavior**: skills that surface review/plan state across the project MUST scan BOTH `output.{plans,reviews,discussions}/` (legacy) AND `.ae/features/{active,done,abandoned}/F-*/...` (feature-resident) — union the results. No surface-index pointer files; readers, not writers, bridge the two locations.
+
 ### Schema evolution
 
 To add a new field: update this section AND the SKILL.md files that consume it. No Liquibase versioning, no separate `schema.md` file (intentional — supersedes discussion 052's heavier proposal).

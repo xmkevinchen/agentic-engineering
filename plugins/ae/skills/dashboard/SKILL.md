@@ -47,16 +47,17 @@ For each feature, determine the **current stage**:
 | `review failed` | linked plan has all `- [x]` AND linked review with `verdict: fail` |
 | `done` | feature `index.md` frontmatter `status: done` (i.e., already in `features/done/`, only shown under `--all`) |
 
-### Plan linkage during Plan 050 transition
+### Plan linkage (Plan 051+)
 
-Plan 050 ships the feature dir model but does NOT migrate `discuss/plan/work/review` outputs into the feature dir (that's Plan 051). During the transition, the dashboard infers plan linkage in priority order:
+The dashboard infers plan linkage in priority order:
 
-1. `<feature-dir>/plan.md` exists → use it.
-2. Otherwise: legacy plan in `output.plans` with frontmatter `feature: F-NNN` → use it.
-3. Otherwise: legacy plan with frontmatter `discussion:` matching a discussion that linked this feature → use it (best-effort fallback).
-4. Otherwise: stage = `awaiting plan` (no linkage available).
+1. **`<feature-dir>/plan.md`** exists (Plan 051+ feature-dir-resident plans) → use it. Feature ID is path-derived from parent dir; no frontmatter required.
+2. **Legacy plan with `discussion:` field** matching a discussion that linked this feature → use it (legacy bridge for pre-Plan-051 plans).
+3. Otherwise → stage = `awaiting plan` (no linkage available).
 
 If multiple legacy plans match → tiebreaker is highest plan-id; secondary tiebreaker is most recent `created:`.
+
+The Plan 050 transition's speculative scan-by-filename step is no longer needed — feature-dir plans are deterministic (path-derived) and legacy plans use the discussion-id chain.
 
 ## Legacy State Reading (only invoked under `--legacy`)
 
@@ -97,8 +98,12 @@ TWO frontmatter fields must be checked (they are distinct):
 
 ### Plans
 
-For each `.md` file in `output.plans`:
-1. Read frontmatter: `id`, `title`, `status` (draft/reviewed/done), `discussion`
+Scan BOTH locations (union — Plan 051+):
+- **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
+- **Legacy plans (fallback)**: `output.plans/*.md`
+
+For each plan file:
+1. Read frontmatter: `id` (legacy) or path-derived `F-NNN` (feature-dir), `title`, `status` (draft/reviewed/done), `discussion`
 2. Count checkboxes: `- [x]` (done) vs `- [ ]` (pending)
 3. Determine stage:
    - `status: done` → "done" (skip review check — plan is explicitly marked complete)
@@ -109,12 +114,18 @@ For each `.md` file in `output.plans`:
 
 ### Reviews
 
-For each `.md` file in `output.reviews` with `type: review` in frontmatter:
+Scan BOTH locations (union — Plan 051+):
+- **Feature-dir reviews (primary)**: `.ae/features/{active,done}/F-*/review.md`
+- **Legacy reviews (fallback)**: `output.reviews/*.md` with `type: review` in frontmatter
+
+For each review file:
 1. Read: `target` (plan path), `verdict` (pass/fail, may be absent in older files)
-2. Match to plan via `target` field
+2. Match to plan via `target` field (or, for feature-dir reviews without `target:`, the sibling `plan.md` is the implicit target)
 3. If `verdict: pass` → feature stage = "done"
 4. If `verdict: fail` → feature stage = "review failed — needs fixup"
 5. If `verdict` absent → feature stage = "reviewed (verdict unknown)"
+
+Tiebreaker when both legacy and feature-dir reviews target the same plan: most recent `created:` wins. No surface-index pointer files; the union scan is the bridge.
 
 ### Backlog (v2 — path-aware traversal)
 

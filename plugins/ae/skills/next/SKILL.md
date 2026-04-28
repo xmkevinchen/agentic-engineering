@@ -14,7 +14,7 @@ Execute these checks in order. Stop at the first match and output the suggestion
 
 ### Step 0: Active feature with actionable plan (GTD primary path)
 
-Check: `.ae/features/active/*/index.md` has at least one feature whose plan-linkage chain (per `ae:dashboard` "Plan linkage during Plan 050 transition" rule) yields a plan file with `status: reviewed` AND ≥ 1 `- [ ]` checkbox.
+Check: `.ae/features/active/*/index.md` has at least one feature whose plan-linkage chain (per `ae:dashboard` "Plan linkage" rule — Plan 051+: feature-dir `<feature-dir>/plan.md` first, legacy `output.plans/*.md` with matching `discussion:` field as fallback) yields a plan file with `status: reviewed` AND ≥ 1 `- [ ]` checkbox. Plans are scanned across BOTH `.ae/features/active/F-*/plan.md` (primary) and `output.plans/*.md` (legacy fallback).
 
 For each match, the most-actionable feature has a plan with the highest pending-step ratio (most work remaining). Tiebreaker: highest `id:` (most recent feature first).
 
@@ -141,9 +141,13 @@ Tiebreaker always produces a unique result (IDs are unique), so this step never 
 
 ### Step 8: Completed plans without review
 
+Scan plans across BOTH `.ae/features/active/F-*/plan.md` AND `output.plans/*.md` (union — Plan 051+).
+
 Check: any plan file has all checkboxes `- [x]` AND either:
-- No review file in `output.reviews` has a `target:` pointing to this plan, OR
-- A review file exists but has `verdict: fail` (needs re-review after fixup)
+- For feature-dir plans: sibling `<feature-dir>/review.md` does not exist, OR exists with `verdict: fail`.
+- For legacy plans: no review file in `output.reviews/*.md` has a `target:` pointing to this plan, OR exists with `verdict: fail`.
+
+Review-state detection scans BOTH `<feature-dir>/review.md` (feature-resident) and `output.reviews/*.md` (legacy) — no surface-index pointer files needed.
 
 ```
 All plan steps complete, ready for review: [title]
