@@ -106,9 +106,25 @@ Bundle contents:
 
 **Interaction with `### Prior Context (from Mengdie)`**: the Prior Context step (above) separately retrieves Mengdie prior-art results and per its own spec includes them in reviewer spawn prompts "as additional context — treat as background, does not constrain review". The primary bundle and Mengdie results are BOTH inserted into each reviewer spawn prompt but at different hierarchy levels: primary bundle = primary input (same role as CLAUDE.md); Mengdie results = advisory background appended AFTER the primary bundle. Do NOT merge them into one block; do NOT drop Mengdie results when embedding the bundle.
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:review creates exactly **5 tasks** per invocation (1 Pre-check + 4 review tracks). NO additional per-phase tasks for Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant — those are sub-actions of the review cycle.
+
+| Phase | When created | When `in_progress` | When `completed` |
+|---|---|---|---|
+| `ae:review: Pre-check` | At skill start (before Check 1) | Immediately before Check 1 | After Check 5 passes |
+| `ae:review: Security review` | At skill start (with Pre-check, even though spawn happens later — batch-create per agent-teams §C.1) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
+| `ae:review: Performance review` | (same) | (same) | (same) |
+| `ae:review: Architecture review` | (same) | (same) | (same) |
+| `ae:review: Cross-family challenge + synthesis` | (same) | (same) | (same) |
+
+**Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
+
 ## Execution: Agent Teams Review
 
 **Review scope**: determine base commit (feature branch: `git diff main...HEAD`, main branch: `git diff <feature-start>..HEAD`).
+
+**Task lifecycle (Pre-check)**: at the very start of Pre-checks (before Check 1), `TaskCreate(subject: "ae:review: Pre-check")` and immediately `TaskUpdate(taskId, status: "in_progress")`. After Check 5 passes (control reaches Per-review Primary Context Bundle assembly), `TaskUpdate(taskId, status: "completed")`.
 
 ### 1. Create Team
 
@@ -118,12 +134,16 @@ TeamCreate(team_name: "<feature>-review")
 
 ### 2. Create Tasks
 
+Batch-create the 4 review-track tasks at this point (per agent-teams §C.1 — created at skill start phase, even though their `in_progress` transition fires later when the corresponding reviewer is spawned):
+
 ```
-TaskCreate("Security review")
-TaskCreate("Performance review")
-TaskCreate("Architecture review")
-TaskCreate("Cross-family challenge + synthesis")
+TaskCreate(subject: "ae:review: Security review")
+TaskCreate(subject: "ae:review: Performance review")
+TaskCreate(subject: "ae:review: Architecture review")
+TaskCreate(subject: "ae:review: Cross-family challenge + synthesis")
 ```
+
+Track the 4 task IDs alongside the team handle. Do NOT create additional tasks beyond these 5 (Pre-check + 4 tracks). Synthesis, Fixup, Outcome Statistics, Output, Knowledge Capture, and Completion Invariant are sub-actions; they do NOT get their own tasks (would produce ~16-task panel noise — explicitly rejected per Plan 052).
 
 ### 3. Select and Launch Reviewers
 
@@ -132,6 +152,8 @@ Every reviewer spawn prompt below embeds the primary-context bundle verbatim (se
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** (pure opposition).
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — different angles per proxy. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
+
+**Task lifecycle (per-track)**: when each reviewer agent is spawned, immediately `TaskUpdate(reviewerTaskId, status: "in_progress")` for the track that reviewer covers. Track-to-task mapping: security-reviewer → `Security review`, performance-reviewer → `Performance review`, architecture-reviewer → `Architecture review`, challenger + cross-family proxies → `Cross-family challenge + synthesis` (one shared task). Track IDs come from the Step 2 batch-create.
 
 **Launch all in one message** (`run_in_background: true`):
 
@@ -184,6 +206,8 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
 **Proxy timeout**: Apply Proxy Timeout Protocol from Agent Selection Reference — proxy 120s MCP timeout + 120s wait timeout.
 
 ### 4. TL Synthesizes Final Report
+
+**Task lifecycle (per-track completion)**: when each track's findings arrive at TL via SendMessage, immediately `TaskUpdate(reviewerTaskId, status: "completed")` for that track. The 4 review-track tasks transition independently as their reviewers finish. The "Cross-family challenge + synthesis" task transitions when the last cross-family / challenger reply arrives (it's a shared task across challenger + 2 proxies).
 
 TL collects all findings from reviewers + challenger + cross-family proxies, then synthesizes:
 - Merge overlapping findings, resolve contradictions
