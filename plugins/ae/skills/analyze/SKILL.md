@@ -323,5 +323,5 @@ Recovery is documented as a manual flow because automating it would require pers
 Based on the analysis output, suggest:
 
 - Decision points remain → `/ae:discuss .ae/features/active/F-NNN-<slug>/`
-- Path is clear → `/ae:plan` (will create a plan inside the feature dir per Step 5 of Plan 051's path migration; until then, plan files still land in `.ae/plans/` and link via plan frontmatter `feature:` field).
+- Path is clear → `/ae:plan` will create `<feature-dir>/plan.md` inside this feature dir (Plan 051+ behavior: feature ID is path-derived from the parent dir; optional `feature:` frontmatter is validation-only).
 - Deeper investigation needed → `/ae:trace` (execution flow) or `/ae:think` (focused deep-dive).

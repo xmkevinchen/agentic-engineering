@@ -52,12 +52,13 @@ For each feature, determine the **current stage**:
 The dashboard infers plan linkage in priority order:
 
 1. **`<feature-dir>/plan.md`** exists (Plan 051+ feature-dir-resident plans) → use it. Feature ID is path-derived from parent dir; no frontmatter required.
-2. **Legacy plan with `discussion:` field** matching a discussion that linked this feature → use it (legacy bridge for pre-Plan-051 plans).
-3. Otherwise → stage = `awaiting plan` (no linkage available).
+2. **Legacy plan with `feature: F-NNN` frontmatter** matching this feature's ID → use it (optional bridge for legacy plans that explicitly tag a feature dir; mirrors `ae:review` Phase 1 fallback chain).
+3. **Legacy plan with `discussion:` field** matching a discussion that linked this feature → use it (legacy bridge via discussion-id chain for pre-Plan-051 plans).
+4. Otherwise → stage = `awaiting plan` (no linkage available).
 
 If multiple legacy plans match → tiebreaker is highest plan-id; secondary tiebreaker is most recent `created:`.
 
-The Plan 050 transition's speculative scan-by-filename step is no longer needed — feature-dir plans are deterministic (path-derived) and legacy plans use the discussion-id chain.
+The Plan 050 transition's speculative scan-by-filename step is no longer needed — feature-dir plans are deterministic (path-derived); legacy plans use the optional `feature:` field or the discussion-id chain.
 
 ## Legacy State Reading (only invoked under `--legacy`)
 
@@ -68,11 +69,20 @@ Scan each output directory. Handle gracefully:
 
 ### Discussions
 
-For each subdirectory in `output.discussions`:
+Scan BOTH locations (union — Plan 051+):
+- **Feature-internal discussions (primary)**: each subdir under `.ae/features/{active,done,abandoned}/F-*/discussions/`
+- **Legacy discussions (fallback)**: each subdir under `output.discussions`
+
+For each discussion subdirectory:
 1. Read `index.md` frontmatter:
    - `id`, `title`, `status` (active/done/concluded)
    - `pipeline.analyze`, `pipeline.discuss`, `pipeline.plan`, `pipeline.work`
    - `plan` — path to plan file (empty string `""` = no plan yet)
+   - `feature` — optional, F-NNN identifier (path-derived ID is canonical for feature-internal discussions)
+2. **Staleness validation (Plan 051+)** — for feature-internal discussions, derive `F-NNN` from the parent feature dir's name and compare to the discussion `index.md` frontmatter `feature:` field:
+   - Frontmatter absent → silently OK (path-derived is canonical).
+   - Frontmatter matches path-derived `F-NNN` → silently OK.
+   - Frontmatter conflicts with parent dir path → emit warning: `[STALENESS] Discussion <discussion-dir>: frontmatter feature: <X> conflicts with parent dir <Y>; using path-derived <Y>. Manually edit frontmatter to fix.` Continue with path-derived ID. Do NOT auto-relocate or auto-rewrite frontmatter.
 2. Determine current stage from `pipeline.*` fields:
    - `analyze: in_progress` → stage = "analyzing", action = `/ae:analyze <dir>`
    - `discuss: in_progress` → stage = "discussing"
