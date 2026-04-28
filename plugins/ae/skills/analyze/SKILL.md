@@ -12,6 +12,35 @@ Research the codebase + organize the result into a feature directory at `.ae/fea
 
 Skill input: **$ARGUMENTS**
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:analyze creates 4 tasks per invocation. Mode A and Mode B are mutually exclusive — only one is created at runtime based on Mode selection.
+
+| Phase | Subject | Created at | `in_progress` | `completed` |
+|---|---|---|---|---|
+| Pre-check | `ae:analyze: Pre-check` | Skill start | Before pre-check 1 | After pre-checks pass |
+| Mode A or Mode B | `ae:analyze: Mode A` OR `ae:analyze: Mode B` | After Mode selection (deferred until input is parsed) | At Mode entry | Mode A: BL moved + index.md written; Mode B: feature dir + index.md created |
+| Research | `ae:analyze: Research` | Skill start (batch) | When agent-teams Research team spawned | When all reviewer findings received at TL |
+| Synthesize | `ae:analyze: Synthesize` | Skill start (batch) | When TL begins synthesis | When analysis.md persisted to disk |
+
+At skill start, batch-create:
+
+```
+TaskCreate(subject: "ae:analyze: Pre-check")
+TaskCreate(subject: "ae:analyze: Research")
+TaskCreate(subject: "ae:analyze: Synthesize")
+```
+
+After Mode selection (Mode A vs Mode B determined from $ARGUMENTS), create the mode-specific task:
+
+```
+TaskCreate(subject: "ae:analyze: Mode A")    # if BL-NNN input
+# OR
+TaskCreate(subject: "ae:analyze: Mode B")    # if free-text input
+```
+
+Owner field: omit. On error: stay `in_progress`.
+
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists. Missing → `Run /ae:setup first.` Stop.

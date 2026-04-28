@@ -9,6 +9,28 @@ effort: medium
 **Protocol Map** — if detail for any step is missing below, read this SKILL.md file directly before proceeding.
 Phases: Pre-check → Phase 1 (Generation: 1.1 Spawn Team → 1.2 Review → 1.3 Writers Shutdown) → Phase 2 (Execution: Layer 1 Static → Layer 2 Live → Class A/B → Artifacts → Judge) → Phase 3 (Report)
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:test-plugin creates 4 tasks per invocation. Sub-phases (1.1, 1.2, 1.3, Layer 1/2, Class A/B, Artifacts, Judge) are sub-actions, NOT separate tasks.
+
+| Phase | Subject | Created at | `in_progress` | `completed` |
+|---|---|---|---|---|
+| Pre-check | `ae:test-plugin: Pre-check` | Skill start | Before pre-check 1 | After pre-checks pass |
+| Phase 1 | `ae:test-plugin: Phase 1` | Skill start (batch) | When test-lead team spawned (1.1) | After Writers Shutdown (1.3) — generation outputs persisted |
+| Phase 2 | `ae:test-plugin: Phase 2` | Skill start (batch) | When Layer 1 static analysis starts | After Judge produces verdict (Class A or Class B path) |
+| Phase 3 | `ae:test-plugin: Phase 3` | Skill start (batch) | When report generation starts | After report file written |
+
+At skill start, batch-create:
+
+```
+TaskCreate(subject: "ae:test-plugin: Pre-check")
+TaskCreate(subject: "ae:test-plugin: Phase 1")
+TaskCreate(subject: "ae:test-plugin: Phase 2")
+TaskCreate(subject: "ae:test-plugin: Phase 3")
+```
+
+Owner field: omit. On error: stay `in_progress`.
+
 # /ae:test-plugin — Adversarial Behavioral Testing (v2)
 
 Generate and execute adversarial test cases for AE plugin skills/agents. Tests behavior compliance, not output content.

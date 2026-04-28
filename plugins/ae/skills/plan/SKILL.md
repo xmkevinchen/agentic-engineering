@@ -49,6 +49,32 @@ Refusal wording MUST be consistent across Form 1 and Form 2 for the **same termi
 
 Create an execution plan for: **$ARGUMENTS**
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:plan creates 6 tasks per invocation. Subjects use canonical format `<skill>: <phase-id>`.
+
+| Phase | Subject | Created at | `in_progress` | `completed` |
+|---|---|---|---|---|
+| Pre-check | `ae:plan: Pre-check` | Skill start | Before Check 1 | After all pre-checks pass |
+| Step 1 | `ae:plan: Step 1` | Skill start (batch) | Before Research starts | After Research summary written |
+| Step 2 | `ae:plan: Step 2` | Skill start (batch) | Before plan body write | After plan file persisted to disk |
+| Step 3 | `ae:plan: Step 3` | Skill start (batch) | When agent-teams plan-review team spawned | When all reviewer findings received at TL |
+| Step 4 | `ae:plan: Step 4` | Skill start (batch) | When Doodlestein agents spawned | When all 3 Doodlestein replies received |
+| Step 5 | `ae:plan: Step 5` | Skill start (batch) | When confirmation prompt prepared | When user confirmation received |
+
+Owner field: omit. On error: stay `in_progress`. With `--skip-review`: Step 3 + Step 4 transition `pending → completed` directly (no `in_progress`, no work done).
+
+At skill start, batch-create all 6 tasks:
+
+```
+TaskCreate(subject: "ae:plan: Pre-check")
+TaskCreate(subject: "ae:plan: Step 1")
+TaskCreate(subject: "ae:plan: Step 2")
+TaskCreate(subject: "ae:plan: Step 3")
+TaskCreate(subject: "ae:plan: Step 4")
+TaskCreate(subject: "ae:plan: Step 5")
+```
+
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists
