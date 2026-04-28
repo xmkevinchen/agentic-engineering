@@ -116,20 +116,35 @@ Run this step after Research (Step 1) and before Write Plan (Step 2).
 
 ## Step 2: Write Plan
 
-Write the plan file to the directory specified in `pipeline.yml` → `output.plans` (default: `docs/plans/`).
+Apply **Feature context resolution** to determine the write target. This resolution rule is canonical for both `/ae:plan` and `/ae:discuss` — the two skills MUST use identical resolution semantics (do not restate in different words elsewhere).
 
-File naming: `NNN-slug.md` — three-digit sequential number + slug derived from title.
+### Feature context resolution
+
+Given `$ARGUMENTS` (already classified into Form 1/2/3 by Argument Inference), resolve against existing feature directories:
+
+1. **Form 2 (BL-NNN) — promoted BL**: BL file lives in `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` → resolve to that feature dir.
+2. **Form 1 (discussion-dir path)**:
+   - Discussion path matches `.ae/features/<state>/F-NNN-<slug>/discussions/...` (path-derived) → resolve to that feature dir.
+   - Discussion `index.md` carries `feature: F-NNN` (legacy discussion location) → resolve to that feature dir.
+3. **Form 3 (free text)**: topic clearly maps to a single existing `.ae/features/active/F-NNN-<slug>/` via LLM title-overlap judgment → resolve to that dir. Multiple matches or no match → fall through.
+4. **Otherwise** (Form 2 unpromoted BL, Form 3 with no clear match, Form 1 with neither path-derive nor frontmatter resolution) → no feature dir resolved.
+
+### Write target
+
+- **Feature dir resolved** → write `<feature-dir>/plan.md` (singular at the feature level). Frontmatter `feature: F-NNN` is OPTIONAL on feature-resident plans (path-derived ID is canonical); when present, readers validate that frontmatter matches the parent dir's `F-NNN` and warn on mismatch — **path always wins**.
+- **No feature dir** → write to `pipeline.yml` → `output.plans` (default: `.ae/plans/`) using filename `NNN-slug.md` (legacy fallback). No `feature:` field set.
 
 ### Structure
 
 ```markdown
 ---
-id: "NNN"
+id: "NNN"                  # legacy fallback only; feature-dir plans MAY omit (path is canonical)
 title: "<title>"
 type: plan
 created: YYYY-MM-DD
 status: draft              # Valid status: draft | reviewed | done | cancelled
-discussion: ""             # path to source discussion directory (e.g., ".ae/discussions/029-slug/")
+discussion: ""             # path to source discussion directory (e.g., ".ae/discussions/029-slug/" or "<feature-dir>/discussions/<id>-slug/")
+feature: ""                # OPTIONAL on feature-resident plans (e.g., "F-002"); empty/absent on legacy plans
 ---
 
 # Feature: <title>
@@ -278,7 +293,12 @@ Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md
 
 ## Step 5: Confirm
 
-Show the complete plan to the user. Indicate next step is `/ae:work <plan file path>`.
+Show the complete plan to the user. State the actual write path explicitly so the user knows whether the plan landed in a feature dir or the legacy `output.plans` location:
+
+- Feature-dir plan: `Plan written to <feature-dir>/plan.md (feature-resident; F-NNN derived from path).`
+- Legacy plan: `Plan written to <output.plans>/<NNN-slug>.md (legacy; no feature dir resolved).`
+
+Indicate next step is `/ae:work <plan file path>`.
 
 ## Output
 
