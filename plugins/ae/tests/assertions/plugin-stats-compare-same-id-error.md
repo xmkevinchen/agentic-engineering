@@ -1,6 +1,6 @@
 ---
-id: retrospect-compare-same-id-error
-target: ae:retrospect
+id: plugin-stats-compare-same-id-error
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---

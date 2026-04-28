@@ -1,6 +1,6 @@
 ---
-id: retrospect-compare-recompare-error
-target: ae:retrospect
+id: plugin-stats-compare-recompare-error
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---
@@ -11,7 +11,7 @@ source: generated
 - `output.analyses` also contains regular `type: retrospect` reports
 
 ## Prompt
-/ae:retrospect --compare 005 002
+/ae:plugin-stats --compare 005 002
 
 ## Prompt Variants
-- /ae:retrospect --compare 001 005
+- /ae:plugin-stats --compare 001 005

@@ -1,6 +1,6 @@
 ---
-id: retrospect-compare-insufficient-data
-target: ae:retrospect
+id: plugin-stats-compare-insufficient-data
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---
@@ -11,7 +11,7 @@ source: generated
 - No second retrospect report exists for comparison
 
 ## Prompt
-/ae:retrospect --compare 001 002
+/ae:plugin-stats --compare 001 002
 
 ## Prompt Variants
-- /ae:retrospect --compare 001 003
+- /ae:plugin-stats --compare 001 003

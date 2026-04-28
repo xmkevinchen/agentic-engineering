@@ -1,6 +1,6 @@
 ---
-id: retrospect-skips-test-report-type
-target: ae:retrospect
+id: plugin-stats-skips-test-report-type
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---

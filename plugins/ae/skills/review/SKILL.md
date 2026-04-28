@@ -321,9 +321,35 @@ After writing the review file with `verdict:`, update pipeline state:
 
 ### Feature-level archive trigger (GTD)
 
-When `verdict: pass` AND the target plan's feature dir is in `.ae/features/active/F-NNN-slug/`, archive the feature:
+When `verdict: pass` AND the target plan's feature dir is in `.ae/features/active/F-NNN-slug/`, archive the feature.
 
-1. **Locate the feature dir.** Read the plan's frontmatter `feature:` field if present; otherwise infer the feature from any `<feature-dir>/plan.md` symlink/copy that points at this plan, or scan `.ae/features/active/*/index.md` for one whose body or analysis references this plan path. If no feature dir can be located → skip the archive trigger silently (legacy plans without feature linkage are not archived). Log: `[ARCHIVE] No feature dir linkage for plan; skipping archive trigger.`
+**Plan 050 window — linkage gap and manual fallback**: during Plan 050's transition (before Plan 051's path migration ships), `/ae:plan` does not yet write `feature: F-NNN` into plan frontmatter. Without that field, the trigger has no deterministic way to map plan → feature dir. Three things follow:
+
+- The locate-step below uses a fallback chain — frontmatter first, then a best-effort filesystem scan, then explicit "manual archive needed" output. The trigger does NOT silently skip.
+- If linkage cannot be resolved, the skill prints an explicit `📦 Manual archive required:` message naming the feature dir(s) the user likely wants to mv. This converts a silent failure into a visible action item.
+- Plan 051 will retire the fallback by adding `feature:` to plan frontmatter at plan-creation time, making the trigger deterministic.
+
+#### Locate the feature dir
+
+Try in order:
+
+1. **Plan frontmatter `feature: F-NNN`** (Plan 051+) → resolves directly.
+2. **Inside-feature plan file**: any `<feature-dir>/plan.md` (Plan 051+) whose absolute path equals the target plan path → resolves directly.
+3. **Best-effort scan** (Plan 050 fallback): scan `.ae/features/active/*/analysis.md` AND `.ae/features/active/*/index.md` body for the plan's filename (e.g., `050-gtd-pm-model.md`). Single match → resolves.
+4. **No match** → emit:
+   ```
+   📦 Manual archive required:
+      Plan <plan-path> verdict pass, but no feature dir linkage found
+      (Plan 050 transition — /ae:plan does not yet write feature: frontmatter).
+
+      If this plan corresponds to a feature in .ae/features/active/, run:
+        mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/
+      and edit index.md to set status: done + done: <today>.
+
+      Skipping automatic archive.
+   ```
+   Log: `[ARCHIVE] Manual fallback: no feature linkage; user-action recommended.`
+5. **Multiple matches** (ambiguous scan): emit a similar "manual archive required" message listing all candidates; the user decides which to mv.
 
 2. **Move the feature dir**: `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/`. Plain `mv` — `.ae/` is gitignored. Atomic on the same filesystem.
 

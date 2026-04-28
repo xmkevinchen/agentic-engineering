@@ -1,6 +1,6 @@
 ---
-id: retrospect-compare-same-id-error
-target: ae:retrospect
+id: plugin-stats-compare-same-id-error
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---
@@ -10,7 +10,7 @@ source: generated
 - At least two retrospect reports (`type: retrospect`) exist in `output.analyses`
 
 ## Prompt
-/ae:retrospect --compare 001 001
+/ae:plugin-stats --compare 001 001
 
 ## Prompt Variants
-- /ae:retrospect --compare 003 003
+- /ae:plugin-stats --compare 003 003

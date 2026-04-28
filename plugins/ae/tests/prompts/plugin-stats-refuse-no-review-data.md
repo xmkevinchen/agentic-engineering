@@ -1,6 +1,6 @@
 ---
-id: retrospect-refuse-no-review-data
-target: ae:retrospect
+id: plugin-stats-refuse-no-review-data
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---
@@ -10,7 +10,7 @@ source: generated
 - The reviews directory is empty — no review files containing Outcome Statistics exist
 
 ## Prompt
-/ae:retrospect
+/ae:plugin-stats
 
 ## Prompt Variants
-- /ae:retrospect all
+- /ae:plugin-stats all

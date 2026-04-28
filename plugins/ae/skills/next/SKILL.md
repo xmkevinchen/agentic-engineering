@@ -40,22 +40,27 @@ Run: /ae:setup
 
 ### Step 2: Cold start (no output files)
 
-Check: `pipeline.yml` exists, but no files exist in any `output.*` directory.
+Check: `pipeline.yml` exists, but no files exist in any `output.*` directory AND `.ae/features/active/` is empty.
 
 ```
 Project configured but no work started yet.
 
-The AE pipeline:
-  /ae:analyze  — research a topic before deciding
-  /ae:discuss  — structured design discussion with agent team
-  /ae:plan     — create an execution plan with acceptance criteria
-  /ae:work     — execute plan (TDD + commit + review per step)
-  /ae:review   — deep multi-agent review (feature completion gate)
+GTD entry points (recommended):
+  /ae:backlog <idea>    — Capture: drop a one-line idea into the inbox
+  /ae:roadmap           — Clarify: see promote candidates from backlog
+  /ae:analyze <BL-NNN>  — Organize: promote a BL into a feature dir
+
+Direct pipeline (when scope is already clear):
+  /ae:analyze <topic>   — research a topic before deciding
+  /ae:discuss <topic>   — structured design discussion with agent team
+  /ae:plan <feature>    — create an execution plan with acceptance criteria
+  /ae:work              — execute plan (TDD + commit + review per step)
+  /ae:review            — deep multi-agent review (feature completion gate)
 
 Start with:
-  /ae:analyze <topic>   — if you need to research first
-  /ae:discuss <topic>   — if you're ready to make design decisions
+  /ae:backlog <idea>    — if you have ideas to capture but aren't sure which to work on
   /ae:plan <feature>    — if requirements are already clear
+  /ae:analyze <topic>   — if you need to research first
 ```
 
 ### Step 3: Active analysis

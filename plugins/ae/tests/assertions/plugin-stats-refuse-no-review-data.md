@@ -1,6 +1,6 @@
 ---
-id: retrospect-refuse-no-review-data
-target: ae:retrospect
+id: plugin-stats-refuse-no-review-data
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---

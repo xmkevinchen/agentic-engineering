@@ -1,6 +1,6 @@
 ---
-id: retrospect-compare-insufficient-data
-target: ae:retrospect
+id: plugin-stats-compare-insufficient-data
+target: ae:plugin-stats
 layer: 1
 source: generated
 ---
