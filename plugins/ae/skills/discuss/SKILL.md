@@ -70,13 +70,12 @@ Owner field: omit. On error: stay `in_progress`. Steps 4-6 and 10 are sub-action
 
 ## Step 1. Setup
 
-1. **Resolve discussion directory**:
-   - `$ARGUMENTS` points to existing directory → load `index.md`
-   - `$ARGUMENTS` is a topic description → check `<output.discussions>` for related directory
-     - Found → add topics to that directory
-     - Not found → create `<output.discussions>/NNN-slug/`
+1. **Resolve discussion directory** — apply the **Feature context resolution** rule defined in `plugins/ae/skills/plan/SKILL.md` Step 2. Both skills MUST use identical resolution semantics; do NOT restate the rule here in different words. Resolution outcomes:
+   - `$ARGUMENTS` points to an existing directory → load its `index.md`.
+   - `$ARGUMENTS` resolves to a feature dir (BL-NNN promoted, feature dir path, or unambiguous title-overlap with `.ae/features/active/F-NNN-<slug>/`) → write target = `<feature-dir>/discussions/<NNN>-<slug>/` (one discussion per topic family inside the feature). Existing topic dir under that feature → add topics to it; otherwise create a new one.
+   - `$ARGUMENTS` does NOT resolve to a feature (free-text discussion not tied to a feature) → write target = `<output.discussions>/NNN-slug/` per existing convention (legacy fallback).
 2. **If new discussion**: create two files in the directory:
-   - `index.md` — minimal scaffolding (title, pipeline status, topic list placeholder, links)
+   - `index.md` — minimal scaffolding (title, pipeline status, topic list placeholder, links). On feature-internal discussions, the `index.md` frontmatter MAY include optional `feature: F-NNN` (path-derived; validation-only — `ae:dashboard` reading discussion state flags mismatch when frontmatter conflicts with parent dir path; no automatic relocation).
    - `framing.md` — **separate file** containing Problem Statement. Describe the problem to be solved; do NOT pre-commit to solution directions, list option A/B/C, or embed specific mechanisms. Framing will be reviewed in Step 1.5 before Round 1 spawns.
 3. **If existing**: show convergence status:
    ```
@@ -90,6 +89,8 @@ Owner field: omit. On error: stay `in_progress`. Steps 4-6 and 10 are sub-action
 ### 1.5. Round 0 — Framing Review (new discussions only)
 
 **Framing quality review is its own task**, with its own TeamCreate/TeamDelete lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two teams is consistent with ae:agent-teams "one team per task"; it is not a pre-flight hack.
+
+**Path note**: throughout sections 1.5.x and 2-8 below, the symbolic `<discussion-dir>` resolves to whichever path Step 1 chose. For feature-internal discussions, `<discussion-dir>` = `<feature-dir>/discussions/<NNN>-<slug>/` (Plan 051+); for free-text discussions, `<discussion-dir>` = `<output.discussions>/NNN-slug/` (legacy fallback). Round-00, round-NN, and conclusion files all live under `<discussion-dir>/` regardless of which location was resolved.
 
 **Goal**: catch three failure modes before Round 1 anchors on the framing:
 1. **Bias anchoring** — framing reflects TL's pre-commitments → caught by cross-family peer review
