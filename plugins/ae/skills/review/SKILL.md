@@ -9,10 +9,14 @@ effort: high
 
 ## Argument Inference
 
-If `$ARGUMENTS` is empty:
-1. Check `output.plans` for the most recent plan with all steps completed (`- [x]`) and `status` not `done`
-2. Found → use that plan file path
-3. Not found → ask user which plan to review
+If `$ARGUMENTS` is empty, scan for the most recent plan with all steps completed (`- [x]`) and `status` not `done` across BOTH plan locations:
+1. **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
+2. **Legacy plans (fallback)**: `output.plans/*.md` (default `.ae/plans/`, configurable via `pipeline.yml`)
+3. Apply tiebreaker rules across the union of both locations (mirrors `/ae:work` argument-inference union scan).
+4. Found → use that plan file path.
+5. Not found → ask user which plan to review.
+
+Without this union scan, zero-arg `/ae:review` invocations against feature-dir plans cannot find their target.
 
 # /ae:review — Deep Review (Feature Completion Gate)
 
@@ -34,7 +38,12 @@ Deep review of all changes for **$ARGUMENTS**.
 - If fail → fix first, **refuse to execute**
 
 ### Check 4: Deferred Findings Audit
-Read `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`, already loaded at Check 2). If file doesn't exist or has no `DEFERRED` entries → skip: `✅ No deferred findings to audit`
+
+**Milestone path resolution** (mirrors `/ae:work` Milestone path resolution helper):
+- **Feature-dir plan** (path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`) → notes file = `.ae/features/<state>/F-NNN-<slug>/milestones/notes.md`. Path-derived; no plan frontmatter required.
+- **Legacy plan** (under `output.plans/`) → notes file = `<output.milestones>/<plan-id>/notes.md` where `plan-id` = plan frontmatter `id:`.
+
+Read the resolved notes.md path. If file doesn't exist or has no `DEFERRED` entries → skip: `✅ No deferred findings to audit`. Hardcoding the legacy path silently misses deferred-finding audit data for feature-dir plans.
 
 For each `DEFERRED [Step N]:` entry, classify by reading the `Disposition:` line appended by ae:work Check 4:
 - **FIXED** — entry has `Disposition: FIXED` line
@@ -296,11 +305,18 @@ Include this in the review report. This data accumulates naturally across featur
 
 ## Output
 
-Write the review report to `pipeline.yml` → `output.reviews`. Review file frontmatter must include:
+**Write target rule** (mirrors plan/SKILL.md Step 2 path-derive convention):
+
+- **Feature-dir plan** (target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`) → write `review.md` next to the plan at `.ae/features/<state>/F-NNN-<slug>/review.md`. Path-derived; no frontmatter required to make this decision.
+- **Legacy plan** (under `output.plans/`) → write to `pipeline.yml` → `output.reviews/NNN-...md` per the existing convention.
+
+**No surface-index pointer file is written.** Discoverability for `/ae:dashboard` and `/ae:next` is preserved via union scan over both `output.reviews/*.md` and `.ae/features/{active,done}/F-*/review.md` — see those skills' Reviews scanning rule. This eliminates dual-write debt; readers, not writers, bridge the two locations.
+
+Review file frontmatter must include:
 
 ```yaml
 ---
-id: "NNN"
+id: "NNN"                  # legacy fallback only; feature-dir reviews MAY omit (path is canonical)
 title: "Review: <feature>"
 type: review
 created: YYYY-MM-DD
@@ -347,24 +363,19 @@ After writing the review file with `verdict:`, update pipeline state:
 
 When `verdict: pass` AND the target plan's feature dir is in `.ae/features/active/F-NNN-slug/`, archive the feature.
 
-**Plan 050 window — linkage gap and manual fallback**: during Plan 050's transition (before Plan 051's path migration ships), `/ae:plan` does not yet write `feature: F-NNN` into plan frontmatter. Without that field, the trigger has no deterministic way to map plan → feature dir. Three things follow:
-
-- The locate-step below uses a fallback chain — frontmatter first, then a best-effort filesystem scan, then explicit "manual archive needed" output. The trigger does NOT silently skip.
-- If linkage cannot be resolved, the skill prints an explicit `📦 Manual archive required:` message naming the feature dir(s) the user likely wants to mv. This converts a silent failure into a visible action item.
-- Plan 051 will retire the fallback by adding `feature:` to plan frontmatter at plan-creation time, making the trigger deterministic.
+**Plan 051 path-derived archive trigger**: as of Plan 051, feature-dir plans live at `.ae/features/<state>/F-NNN-<slug>/plan.md`. The archive trigger derives the feature dir directly from the plan path — no frontmatter required, no scan, no ambiguous-match flow. Legacy plans (under `output.plans/`) retain a single explicit-fallback path emitting the manual-archive message.
 
 #### Phase 1 — Locate the feature dir
 
 Try in order. The first match resolves; on no match emit the manual-archive message and STOP (do not proceed to Phase 2).
 
-1. **Plan frontmatter `feature: F-NNN`** (Plan 051+) → resolves directly.
-2. **Inside-feature plan file**: any `<feature-dir>/plan.md` (Plan 051+) whose absolute path equals the target plan path → resolves directly.
-3. **Best-effort scan** (Plan 050 fallback): scan `.ae/features/active/*/analysis.md` AND `.ae/features/active/*/index.md` body for the plan's filename (e.g., `050-gtd-pm-model.md`). Single match → resolves.
-4. **No match** → list `ls .ae/features/active/` and embed the actual paths in the message (do NOT print the literal placeholder `F-NNN-<slug>` — substitute the candidate dirs):
+1. **Feature-dir plan path** (Plan 051+): if the target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`, the feature dir IS the plan's parent directory. Path-derived; resolves directly. No frontmatter or scan needed.
+2. **Legacy plan with `feature: F-NNN` frontmatter**: optional bridge for legacy plans that explicitly tag a feature dir → resolves directly via that field.
+3. **No match** (legacy plan with no `feature:` field; or path matching neither shape) → list `ls .ae/features/active/` and embed the actual paths in the message (do NOT print the literal placeholder `F-NNN-<slug>` — substitute the candidate dirs):
    ```
    📦 Manual archive required:
       Plan <plan-path> verdict pass, but no feature dir linkage found
-      (Plan 050 transition — /ae:plan does not yet write feature: frontmatter).
+      (legacy plan without feature: frontmatter).
 
       Candidates currently in .ae/features/active/:
         - .ae/features/active/F-027-some-slug/
@@ -382,7 +393,6 @@ Try in order. The first match resolves; on no match emit the manual-archive mess
    ```
    Log: `[ARCHIVE] Manual fallback: no feature linkage; user-action recommended (N candidates listed).`
    STOP — do not run Phase 2.
-5. **Multiple matches** (ambiguous scan): emit a similar "manual archive required" message listing the matching candidates only; the user decides which to mv. STOP — do not run Phase 2.
 
 #### Phase 2 — Execute archive (only when Phase 1 resolved a single feature dir)
 
@@ -401,23 +411,22 @@ Try in order. The first match resolves; on no match emit the manual-archive mess
 
 When `verdict: fail` → **do NOT mv**. The feature stays in `features/active/`. The user may, after fixup, re-run `/ae:work` and `/ae:review` for another verdict, OR manually `mv .ae/features/active/F-NNN-<slug>/ .ae/features/abandoned/F-NNN-<slug>/` if the feature is being dropped.
 
-### Partial archive — Plan 050 known limit
+### Legacy artifact preservation — Plan 050 / Plan 051 known limit
 
-During Plan 050's ship window, `discuss/plan/work/review` skill outputs still write to legacy paths (`.ae/discussions/`, `.ae/plans/`, `.ae/reviews/`). The feature dir at archive time contains only the new-model artifacts: `BL-NNN.md` (origin), `index.md` (frontmatter), `analysis.md` (research output from `/ae:analyze`). Plan/review files remain in their legacy paths.
+Plan 051's path migration moves NEW work into feature dirs but deliberately leaves the 175 pre-existing legacy artifacts in `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` untouched (Plan 050 known limit: "既有 175 legacy artifact 不迁 = 自然终态消亡"). The audit chain is therefore split based on each artifact's birth date:
 
-The archive trigger **does not** attempt to collect or symlink legacy plan/review files into the feature dir. The audit chain is intentionally split:
+- **Post-Plan-051 features**: `features/{active,done,abandoned}/F-NNN-<slug>/` contains origin-BL + feature frontmatter + analysis + plan.md + review.md + discussions/.
+- **Pre-Plan-051 features**: feature dir contains origin-BL + index + analysis only; plan + review files remain in legacy `.ae/plans/`, `.ae/reviews/` (linked via discussion id chain or optional `feature: F-NNN` frontmatter on legacy plans).
 
-- In `features/done/F-NNN-<slug>/`: origin-BL + feature frontmatter + analysis
-- In legacy `.ae/plans/`, `.ae/reviews/`: plan + review files (linked by frontmatter `feature: F-NNN` from Plan 051 onwards; before Plan 051, linked via the discussion id chain)
-
-This is documented as a Plan 050 known limit. Plan 051's path migration will collect legacy paths into feature dirs systematically. Until then, cross-references work via frontmatter `id:` (feature/plan/review IDs are stable across mv — directory location is not load-bearing for lookup). Run `/ae:roadmap` or `/ae:dashboard` to verify the feature shows up in `done/` and the linkage chain still resolves.
+The archive trigger **does not** attempt to collect or symlink legacy plan/review files into the feature dir for pre-Plan-051 features. Cross-references work via frontmatter `id:` (feature/plan/review IDs are stable across mv — directory location is not load-bearing for lookup). Run `/ae:roadmap` or `/ae:dashboard` to verify the feature shows up in `done/` and the linkage chain still resolves across both locations (dashboard/next union-scan both legacy and feature-dir reviews per Plan 051 Step 5).
 
 ### Cross-references survive the mv
 
 AE internal cross-references use frontmatter `id:` not path strings. `mv` of the feature dir does not break:
 
 - `BL-NNN.md` `promoted_to: F-NNN` → still resolves (grep for `id: F-NNN` across `features/{active,done,abandoned}/`).
-- Plan frontmatter `feature: F-NNN` (when Plan 051 ships) → resolves the same way.
+- Plan/review path-derived feature ID (Plan 051+): when plan.md / review.md live inside the feature dir, the dir IS the feature ID — no frontmatter required, no scan, archive trigger Phase 1 step 1 resolves directly.
+- Optional `feature: F-NNN` frontmatter (legacy bridge): readers validate against parent dir path and warn on mismatch; path always wins.
 - `ae:roadmap` section (a) `origin_bl:` dedup → already scans active+done+abandoned per Step 4 fix.
 - `ae:roadmap` section (d) archive prompt → recognizes a fully-done roadmap when all linked features are in `done/` (or `done/`+`abandoned/`).
 
