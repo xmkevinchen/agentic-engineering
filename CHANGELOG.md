@@ -1,5 +1,49 @@
 # Changelog
 
+## v0.9.0 — 2026-04-28
+
+GTD-aligned project management model. Plan 050 maps AE skills to GTD's 5+1 phases (Capture / Clarify / Organize / Reflect short-cycle / Reflect long-cycle / Engage / Archive — plus an AE-self-development sidebar for plugin delivery metrics). Supersedes Discussion 052's heavier proposal (kind: enum, ae:triage skill, threshold-based Task primitive, Liquibase schema.md, Tier 0/1/2/3 migration — all rejected as over-engineered for solo-dev self-use).
+
+### New skills (2)
+
+- **`/ae:backlog`** (GTD Capture) — frictionless one-line inbox drop. `/ae:backlog <description>` writes a stub `BL-NNN-slug.md` to `.ae/backlog/unscheduled/` with minimal frontmatter (`id` / `title` / `created` / `status: open`). No prompts, no classification — that's the Clarify phase's job. Slugification uses a deterministic 7-step sequence (lowercase → strip non-ASCII → non-alphanumeric runs → trim → 40-char right-cut → re-trim → empty fallback to bare `BL-NNN.md`); order is load-bearing so multiple LLM agents produce the same slug for the same input.
+- **`/ae:plugin-stats`** (AE plugin self-development outcome stats) — receives the old `ae:retrospect` parser + 23 historical review records. Reads `.ae/reviews/*` for rework rate / P1 escape / drift / fix-loop / auto-pass metrics. Backward-compat reads legacy `type: retrospect` reports as input. Independent of project-level GTD retrospect (delivery metrics ≠ product retrospective; matches OpenAI evals + Google DORA/Four Keys split).
+
+### Rewritten skills (3)
+
+- **`/ae:roadmap`** — full rewrite from sprint/version-grouped model to GTD Clarify (591 → ~210 lines after fixups). Surfaces 4 sections in one read-only pass: (a) **Promote candidates** — LLM-judged PROMOTE/WAIT verdicts on backlog BLs (default WAIT, deterministic sort, thin-BL fallback to "insufficient info; flesh out"); (b) **Dependency analysis** — 5-column table with `ready? = YES/NO/CYCLE`, plus deadlock/critical-path/orphan signals; (c) **Sizing aggregate** — T-shirt counts (XS/S/M/L/XL) + estimated effort range + unsized list; (d) **Archive prompt** — surfaces roadmaps with all linked features done (scans `features/{active,done,abandoned}/`) plus orphan-link warnings. Removed: sprint primitives (plan/close/move/add/remove subcommands, `v<X>.<Y>.<Z>/` schema), `--gaps` validator, R2 release-readiness flag, WIP overload warnings — all per Plan 050 Non-goals. Legacy `.ae/roadmaps/v*.md` files stay on disk; `--legacy` flag surfaces them informationally only (anti-poisoning rule prevents legacy `## Items` tables leaking into candidate reasoning).
+- **`/ae:retrospect`** — repositioned from AE-plugin outcome stats to **project-level long-cycle Reflect** (GTD Weekly Review style). Reads `.ae/features/done/` within `--since` window (default 4 weeks). 4 conversational sections: Recently shipped / Lessons learned (cite-evidence discipline; honest "no notable lessons" beats forced bullets) / Estimate vs actual (T-shirt vs elapsed-days, notes wall-clock-vs-active-time gap) / Next promote candidates. **Conversational output only — no file written** (Reflect is for reading; user decides what to capture).
+- **`/ae:analyze`** — extended with **promote BL → feature dir** behavior (Mode A) alongside existing free-text mode (Mode B). Mode A pre-check defends against double-promote (hard refuse on active/done; soft refuse on abandoned). Promote flow: F-NNN allocation independent of BL ID → mv BL into feature dir as bare `BL-NNN.md` → BL frontmatter writeback (`status: promoted` + `promoted: <date>` + `promoted_to: F-NNN`) → create feature `index.md` (frontmatter schema deferred to CLAUDE.md as single source of truth) → T-shirt `size:` + `depends_on:` advisory propose (existing values always win; re-propose only via `/ae:roadmap --resize`). Documented manual recovery flow for undoing a promote.
+
+### Updated skills (3)
+
+- **`/ae:dashboard`** — primary read source switches to `.ae/features/active/*/index.md`. Feature stage detection mapped to lifecycle (analyzing → discussing → awaiting plan → ready for work → work in progress → awaiting review → review failed → done). `--all` flag includes done + abandoned subdirs (each in its own table). `--legacy` flag surfaces `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` in a separate section below the feature table; default hides legacy artifacts (most are terminal-state, mixing creates permanent noise). Empty-state nudge guides first-run users: when `features/active/` is empty AND backlog has items → suggest `/ae:roadmap`; when both empty → suggest `/ae:backlog`.
+- **`/ae:next`** — new Step 0 (GTD primary path) checks `features/active/` for actionable plans first. Cold-start Step 2 now leads with GTD entry points (`/ae:backlog` / `/ae:roadmap` / `/ae:analyze`) before listing the legacy direct pipeline. Step 11 (all complete) updated to suggest `/ae:roadmap` / `/ae:backlog` / `/ae:retrospect` / `/ae:plugin-stats`. Steps 1–10 preserved verbatim as legacy/cold-start fallback (handle pre-Plan-050 projects).
+- **`/ae:review`** — Completion Invariant adds feature-level archive trigger: when `verdict: pass` AND target plan's feature dir is in `features/active/`, mv to `features/done/` + set `status: done` + `done: <date>` in `index.md` + best-effort roadmap row update. Two-phase split (Locate → Execute) with explicit STOP semantics on no-match. Plan 050 transition window (before Plan 051's `feature: F-NNN` plan frontmatter ships) → fallback chain ends with explicit "📦 Manual archive required:" message listing actual candidate dirs from `ls .ae/features/active/`. Documented manual recovery flow for undoing an archive.
+
+### CLAUDE.md additions
+
+- New `## Project Management (GTD)` section — single source of truth for the GTD phase mapping table, `.ae/features/F-NNN-slug/` directory layout, and the feature `index.md` frontmatter schema (required: `id` / `title` / `status` / `created`; optional GTD-related: `theme` / `roadmap` / `size` / `depends_on` / `origin_bl` / `done` / `abandoned` / `abandoned_reason`; user-defined fields tolerated as metadata-only).
+- **Reader contract**: 6 explicit rules covering unknown fields (silent ignore), unknown enum values on known fields (warn + skip from enum-dependent workflows, no silent coerce), missing optional fields (graceful default), missing required fields (log error + skip record + continue), list-or-scalar normalization (`origin_bl` / `depends_on`), and the `(unthemed)` bucket convention for missing `theme` (uniform across skills, never invented from title/body).
+- Schema evolution rule: update CLAUDE.md AND consuming SKILL.md files. No Liquibase versioning, no separate `schema.md` file (intentional simplification).
+- Legacy artifacts policy: 175 pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts stay where they are; new work goes through `.ae/features/`.
+
+### Test infrastructure
+
+- 5 `retrospect-*.md` test pairs migrated to `plugin-stats-*.md` (target + invocation refs updated). Preserves coverage of the inherited Outcome Statistics behavior on the new skill name.
+- New `retrospect-empty-features-done` test pair covers the GTD reflect's empty-window message + no-file-written invariant + `/ae:plugin-stats` redirect.
+
+### Known limits (by design)
+
+- **Partial archive** during the Plan 050 → Plan 051 window: `discuss/plan/work/review` skill outputs still write to legacy paths (`.ae/discussions/`, `.ae/plans/`, `.ae/reviews/`); only `BL-NNN.md` + `index.md` + `analysis.md` live in the feature dir at archive time. Cross-references resolve via frontmatter `id:` (path-independent). Plan 051 will systematically migrate path layouts.
+- **No mechanical schema enforcement.** Reader-tolerant contract avoids hard gates; silent skip on unknown enum values is the trade-off. Concrete reopen triggers are recorded in `.ae/milestones/050/notes.md` (BL-023/024-class misclassification incident, etc.).
+- **`mv` operations are not high-reversibility.** Promote (BL → feature dir) and archive (feature/active → feature/done) are documented with explicit manual recovery flows.
+
+### Process notes
+
+- Plan 050 is the AE-on-AE self-bootstrapping execution of Plan 050. 10 commits over 1 day. 5-track `/ae:review` (architecture-reviewer, code-reviewer, challenger, codex-proxy, gemini-proxy) → 8 P2 fixups applied → verdict pass. Gemini API quota exhausted during accumulated checkpoints; oMLX gemma-4 fallback succeeded (cross-family complete).
+- Discussion 052 conclusion explicitly marked SUPERSEDED in its frontmatter; the original 16 decisions are preserved as audit-trail / lessons-learned about over-engineering risk in self-use tool design.
+
 ## v0.8.3 — 2026-04-18
 
 Cache-refresh bump. In-flight content carried so local plugin reinstall picks up BL-005 Phase 1 (third-party agent integration) specs — not yet validated in dogfood. BL-036 tracks post-dogfood tuning revision.
