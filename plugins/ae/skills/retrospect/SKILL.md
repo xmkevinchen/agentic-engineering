@@ -1,203 +1,177 @@
 ---
 name: ae:retrospect
-description: Analyze pipeline execution history — read Outcome Statistics, generate trends and actionable insights
+description: Project-level long-cycle Reflect (GTD Weekly Review) over recently shipped features. Conversational output — no file written.
+argument-hint: "[--since <duration>]"
 user-invocable: true
 ---
 
-# /ae:retrospect — Pipeline Retrospective
+# /ae:retrospect — GTD Long-cycle Reflect
 
-Analyze historical Outcome Statistics from `/ae:review` output to identify trends and generate actionable insights.
+A periodic look back at what the project has shipped recently, surfaced as a 4-section conversational summary. This is the **project-level Reflect** in GTD's 5-phase model — the long-cycle counterpart to `/ae:dashboard`'s short-cycle orientation.
+
+Output is **conversational only — no file is written**. The user decides what's worth saving (a memory, a backlog item, a discussion); the skill should not pre-empt that judgment with an artifact dump.
+
+> **Looking for AE plugin self-development outcome stats** (rework rate / P1 escape / drift / fix loops / auto-pass)? Use `/ae:plugin-stats`. That skill consumes `.ae/reviews/*` Outcome Statistics; this one consumes `.ae/features/done/`.
 
 ## Input
 
-- `$ARGUMENTS`: optional filter — feature name, time range, or "all"
-- `--compare ID1 ID2`: comparison mode — compare two existing retrospect reports by their ID (e.g., `/ae:retrospect --compare 001 003`). IDs correspond to the `id` field in retrospect report frontmatter.
-- Default (no flags): analyze all available data in `docs/reviews/` and generate a snapshot report
+- Default: surface features done in the last 4 weeks.
+- `--since <duration>`: customize the window (`--since 2w`, `--since 3m`, `--since 90d`). Bare `--since 4w` is the default; explicit form is for non-standard periods.
 
 ## Pre-check
 
-1. Read `pipeline.yml` → `output.reviews` (default: `docs/reviews/`) and `output.analyses` (default: `docs/analyses/`)
-2. If `--compare ID1 ID2`:
-   - Scan `output.analyses` for retrospect reports matching both IDs (files with `type: retrospect` in frontmatter — exclude `type: retrospect-comparison`)
-   - If ID1 == ID2 → output: "Compare failed: both IDs are the same. Specify two different retrospect report IDs."
-   - If either ID matches a `type: retrospect-comparison` file → output: "Compare failed: comparing a comparison report is not supported. Specify reports with type: retrospect."
-   - If either ID not found → output: "Compare failed: no retrospect report with ID [ID] found. Confirm the ID exists in `docs/analyses/`."
-   - If both found → skip to Step 5 (Comparison Mode)
-3. Scan for review files containing Outcome Statistics. **Skip files with `type: test-report` in frontmatter** — only process `type: review` documents.
-4. If no data found → output: "Insufficient data: no Outcome Statistics found. Complete at least one `/ae:review` to generate data."
+1. Confirm `.claude/pipeline.yml` exists. Missing → `Run /ae:setup first.` Stop.
+2. Confirm `.ae/features/done/` exists. Missing → `Project hasn't bootstrapped GTD; run Plan 050 setup first.` Stop.
+3. Compute the cutoff date from `--since` (default 4 weeks ago). Today minus the duration.
 
-### 0.5. Prior Context (from Mengdie)
+## State Reading
 
-Run this step after Pre-check and before Step 1. Skip in `--compare` mode (comparison reads existing reports, not new context).
+Scan `.ae/features/done/*/index.md`. For each feature:
 
-1. Call `memory_search` MCP tool with "retrospective insights pipeline trends" or $ARGUMENTS filter as query
-2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 1
-3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
-4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
-5. Compare prior retrospective conclusions with current data in Step 2 (Analyze Trends) — note whether prior insights are confirmed or invalidated by new data
+- Frontmatter required: `id`, `title`, `status: done`, `created`, `done`.
+- Frontmatter optional (read if present): `theme`, `roadmap`, `size`, `origin_bl`, `depends_on`.
+- Reader-tolerant per CLAUDE.md → `## Project Management (GTD)` → Reader contract.
 
-## Step 1: Collect Outcome Statistics
+Filter to features with `done >= <cutoff date>`. Empty result:
 
-Read all review files in `output.reviews` directory. Extract these 5 metrics from each:
-
-| Metric | Source | What it measures |
-|--------|--------|-----------------|
-| Steps completed | `Steps completed: N/M` | Plan execution completeness |
-| Rework rate | `Rework rate: X steps needed fixup commits` | Implementation quality |
-| P1 escape rate | `P1 escape rate: Z P1 findings discovered` | Pre-commit check effectiveness |
-| Drift events | `Drift events: D contract violations` | Plan adherence |
-| Auto-pass rate | `Auto-pass rate: P steps auto-continued / N total` | Automation effectiveness |
-
-Parse each metric into structured data. Handle missing fields gracefully (some reviews may predate certain metrics).
-
-## Step 2: Analyze Trends
-
-If multiple data points exist:
-- **Trend direction**: improving / stable / degrading for each metric
-- **Outliers**: features with unusually high rework or P1 escape rates
-- **Correlations**: e.g., high drift events correlating with high rework rate
-
-If single data point:
-- **Baseline establishment**: record as first data point, note that trends require 2+ reviews
-
-## Step 3: Generate Actionable Insights
-
-For each metric that shows a pattern:
-
-- **Rework rate high** → "Gate conditions may be too loose — consider strengthening pre-commit checks for [specific area]"
-- **P1 escape rate > 0** → "Pre-commit review missed critical issues — review checklist coverage for [pattern]"
-- **Drift events frequent** → "Plan step granularity may be insufficient — consider more detailed Expected files in plans"
-- **Auto-pass rate low** → "Many steps require manual intervention — review gate conditions for false positives"
-- **Steps completion < 100%** → "Plans may be over-scoped — consider smaller step decomposition"
-
-## Step 4: Output
-
-Write report to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-retrospect-slug.md` (NNN = next available sequence number in `output.analyses` directory):
-
-```markdown
----
-id: "NNN"
-title: "Retrospect: [scope]"
-type: retrospect
-created: YYYY-MM-DD
-data_sources: N review files
----
-
-# Pipeline Retrospect: [scope]
-
-## Data Summary
-
-| Feature | Steps | Rework | P1 Escape | Drift | Auto-pass |
-|---------|-------|--------|-----------|-------|-----------|
-| [feature] | N/M | X% | Z | D | P% |
-
-## Trends
-[Trend analysis per metric]
-
-## Actionable Insights
-[Specific recommendations with evidence]
-
-## Recommendations
-[Prioritized list of pipeline improvements]
+```
+No features archived in the last <window>. ae:retrospect needs shipped features to surface
+patterns; for AE plugin self-development outcome stats, use /ae:plugin-stats.
 ```
 
-**Comparison report** (when `--compare` is used): write to same directory as `NNN-comparison-ID1-vs-ID2.md` (NNN = next available sequence number):
+Stop here. Do not synthesize a 4-section report from zero data.
 
-```markdown
----
-id: "NNN"
-title: "Comparison: [report A title] vs [report B title]"
-type: retrospect-comparison
-created: YYYY-MM-DD
-compared: ["ID1", "ID2"]
----
+For each in-window feature, also read `<feature-dir>/analysis.md` (if present) and any review file referenced from the feature's plan (look up via the legacy plan path inferred from the linkage chain in `ae:dashboard` "Plan linkage during Plan 050 transition" — best effort, missing chain is OK).
 
-# Pipeline Comparison: [report A] vs [report B]
+## Output — 4 conversational sections
 
-## Delta Summary
+The skill produces a single conversational message with 4 sections. No file is written.
 
-| Metric | [Report A] | [Report B] | Change |
-|--------|------------|------------|--------|
-| Steps completed | N1/M1 | N2/M2 | ↑ +X |
-| Rework rate | X1% | X2% | ↓ -Ypp |
-| P1 escape rate | Z1 | Z2 | ↓ -N |
-| Drift events | D1 | D2 | ↑ +N |
-| Auto-pass rate | P1% | P2% | ↑ +Xpp |
+### (1) Recently shipped
 
-## Analysis
-[Which metrics improved, which degraded, potential causes]
+A list of features done in the window, sorted by `done` date descending (most recent first):
 
-## Recommendations
-[Based on delta patterns]
+```
+## Recently shipped (last <window>)
+
+- F-NNN — <title> — done YYYY-MM-DD (theme: <tag>, size: <T-shirt> if both present)
+- F-MMM — <title> — done YYYY-MM-DD
+- ...
 ```
 
-**You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
+If a feature has `roadmap:` set, append ` [→ <roadmap-name>]`. If a feature was originally a captured BL (`origin_bl: BL-NNN` non-empty), append ` (from BL-NNN)`.
 
-Show summary to user.
+When the window has 1 feature → render as a single line, skip "Recently shipped" pluralization. When the window has > 10 features → render the 10 most recent, then `... and <K> more shipped earlier in the window` line.
 
-### 4.5. Knowledge Capture (to Mengdie)
+### (2) Lessons learned
 
-Run this step after the retrospect report is written (Step 4) and before presenting Next Steps. **Skip in `--compare` mode** (comparison reports don't generate new insights, only deltas).
+LLM-driven analysis. For each feature in the window, read `analysis.md` (if present) and any associated review file. Extract:
 
-Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
+- Decisions that turned out well (what to repeat).
+- Decisions that turned out poorly (what to avoid).
+- Surprises — things the original plan didn't anticipate.
 
-**Skill-specific extraction**:
-- One item per actionable trend conclusion from the Actionable Insights section
-- Skip raw statistics and data summaries
-- `source_type`: `retrospect`
-- `knowledge_type`: `experiential`
-- `entities`: derive from each specific insight, NOT from the broad report title. Use compound tags specific to the pattern (e.g., `challenger-highest-value-reviewer`, `per-commit-review-misses-cross-cutting`). Avoid single broad tags.
-- `source_file`: path to the generated retrospect report
+Synthesize into 3–7 bullets across all features (NOT per-feature):
 
-**Closing output** — report what was ingested and any conflicts:
-- `Knowledge capture: [N] items ingested, no conflicts`
-- Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
+```
+## Lessons learned
 
-## Step 5: Comparison Mode
+- <one-line lesson> — observed in F-NNN (<short evidence cite>) and F-MMM (<cite>).
+- <one-line lesson> — observed in F-XXX (<cite>).
+- ...
+```
 
-Triggered when `--compare ID1 ID2` is provided (Pre-check validates both IDs exist).
+Discipline:
 
-### 5.1 Read Reports
-Read both retrospect reports from `output.analyses`. Parse the `## Data Summary` table from each.
+- **Cite evidence.** Every bullet must reference at least one feature ID + a brief cite. Speculation without evidence is noise.
+- **Don't editorialize.** If `analysis.md` and the review say a decision worked, say it worked. Don't second-guess.
+- **No bullets without substance.** If the window has nothing surprising worth surfacing, say so: `No notable lessons in this window — work proceeded as planned.` Better one honest line than five forced bullets.
 
-### 5.2 Extract Metrics
-For each report, extract the 5 metrics from the Data Summary table row(s). If a metric is missing in one report, mark as `N/A` in comparison.
+### (3) Estimate vs actual
 
-### 5.3 Calculate Delta
+For each feature with a `size:` value (T-shirt) AND both `created:` and `done:` dates, compute:
 
-Compute delta for each metric and assign direction arrow based on improvement direction:
+- Estimated effort range from T-shirt (per CLAUDE.md mapping: XS < 1d, S 1d, M 2-3d, L ≈ 1w, XL > 1w).
+- Actual elapsed days (`done - created`).
+- **Note**: elapsed days is wall-clock, not active work time. A 1-week elapsed feature where the user worked only 2 days is `elapsed = 7d, active = 2d`. The skill cannot distinguish; surface elapsed and let the user interpret.
 
-| Metric | Improving direction | Arrow meaning |
-|--------|-------------------|---------------|
-| Steps completed | ↑ higher = better | ↑ = improving, ↓ = degrading |
-| Rework rate | ↓ lower = better | ↓ = improving, ↑ = degrading |
-| P1 escape rate | ↓ lower = better | ↓ = improving, ↑ = degrading |
-| Drift events | ↓ lower = better | ↓ = improving, ↑ = degrading |
-| Auto-pass rate | ↑ higher = better | ↑ = improving, ↓ = degrading |
+Render:
 
-Delta format: arrow + absolute value (e.g., `↓ -2`, `↑ +15pp`). No raw percentages; `pp` (percentage points) is used for rate metrics to express absolute difference between two rates.
+```
+## Estimate vs actual
 
-If delta is zero → `— 0` (no arrow).
+| Feature | Size | Estimated | Elapsed | Notes |
+|---|---|---|---|---|
+| F-NNN | M | 2-3d | 5d | wall-clock; user noted 2 days actual work |
+| F-MMM | L | 4-7d | 6d | within range |
+| F-XXX | S | 1d | 3d | wall-clock — pause periods are common |
 
-### 5.4 Generate Analysis
-Based on delta patterns, generate brief analysis:
-- Which metrics improved and potential causes
-- Which metrics degraded and recommended actions
-- If all metrics stable → note pipeline consistency
+Pattern: <one-line summary, e.g., "M-sized features consistently take 1-2 days longer
+in elapsed time than estimated effort suggests; consider that elapsed includes pauses">
+```
 
-### 5.5 Write Output
-Write comparison report using the comparison template from Step 4.
+Features without `size:` are listed below the table:
 
-### Edge Cases
-- **Report format mismatch**: If one report uses an older format without all 5 metrics → compare only shared metrics, note: "Metric [name] missing in report [ID], skipped."
-- **Same ID twice**: → "Compare failed: both IDs are the same. Specify different report IDs."
-- **Only one retrospect report exists**: → "Compare failed: only 1 retrospect report found; at least 2 are required."
+```
+Unsized in window: F-AAA, F-BBB (skip from estimate-vs-actual analysis)
+```
+
+If pattern is unclear (1-2 features, no clear bias) → `Pattern: insufficient data; need 5+ sized features in window for a reliable trend.`
+
+### (4) Next promote candidates
+
+Read `.ae/backlog/unscheduled/*.md` for BLs that are:
+- `status: open` or `unscheduled` (not yet promoted).
+- Not in any feature's `origin_bl:` (per `ae:roadmap` section (a) Filtering Constraints — same dedup rule).
+
+Cross-reference with the in-window features' `analysis.md` and review bodies. Surface BLs that:
+- Were cited in the discussions/analyses of recently-done features (LLM grep for the BL ID), but never promoted.
+- Have themes matching recently-shipped roadmaps (high-momentum theme; user may want to keep going).
+
+Render:
+
+```
+## Next promote candidates
+
+Based on this window's shipped work, these backlog items might be ready for /ae:analyze:
+
+- BL-NNN: <title> — cited 3x in analysis.md of recently-shipped features (theme: <tag>)
+- BL-MMM: <title> — same theme as F-NNN/F-MMM (Recently shipped)
+- ...
+
+(Run /ae:roadmap for the full Clarify pass.)
+```
+
+If nothing surfaces → `No backlog items strongly tied to this window's shipped work. Check /ae:roadmap for the broader Clarify view.`
+
+## Conversational delivery
+
+Render all 4 sections in a single message. The output is **prose with markdown formatting**, suitable for the user to scan in the terminal. Do NOT:
+
+- Write any file.
+- Suggest the user save the output (they'll save what they want).
+- Run `memory_ingest` automatically — Reflect is for reading, not capturing. The user may decide a lesson is worth a memory and save it manually.
+
+## Principles
+
+- **Conversational, not durable.** No file output. The skill's value is in the moment of reflection, not in the artifact.
+- **Evidence cited per bullet.** Every claim references a feature ID + brief evidence; no general "I think" prose.
+- **LLM-driven, not algorithmic.** Sections (2) and (4) are qualitative reads. Section (3) is mechanical. Section (1) is a sort.
+- **Short window, high signal.** Default 4 weeks because longer windows produce too many shallow patterns; shorter windows usually have too little data. The user can pass `--since` for unusual cases.
+- **Reader-tolerant** per CLAUDE.md schema contract.
+
+## Distinction from `/ae:plugin-stats`
+
+`/ae:retrospect` (this skill) reads `.ae/features/done/` — what the **project shipped** (its features). Output is conversational. Frequency: ad-hoc, when the user wants a Weekly Review or end-of-month look-back.
+
+`/ae:plugin-stats` reads `.ae/reviews/*` Outcome Statistics — how the **AE pipeline performed** (rework rate, P1 escape, drift, auto-pass). Output is a persistent file for trend tracking. Frequency: periodic, when the user wants to evaluate process health.
+
+Same project can use both. They answer different questions: *"what did we ship and what did we learn"* (retrospect) vs. *"how is our pipeline performing"* (plugin-stats). The split mirrors OpenAI evals + Google DORA/Four Keys: delivery metrics and product retrospective are intentionally separate.
 
 ## Next Steps
 
-Based on retrospect output, suggest:
-- If insights are actionable → "Consider `/ae:discuss` to decide on pipeline improvements, or `/ae:plan` to implement directly"
-- If data is insufficient → "Continue running pipeline (`/ae:work` → `/ae:review`) to accumulate more data points"
-- If all metrics healthy → "Pipeline is performing well. No immediate action needed"
-- If comparison shows degradation → "Consider `/ae:analyze` to investigate root cause of degraded metrics"
-- If 2+ retrospect reports exist and user ran snapshot mode → "Use `/ae:retrospect --compare ID1 ID2` to compare trends"
+The skill never tells the user what to do — it surfaces a snapshot for them to think about. If the conversation prompts a follow-up:
+
+- A lesson worth keeping → user decides to save a memory or open a discussion.
+- A promote candidate sticking out → user runs `/ae:analyze BL-NNN`.
+- A pattern in estimate-vs-actual → user adjusts their sizing heuristic, no skill call needed.
