@@ -1,5 +1,53 @@
 # Changelog
 
+## v0.9.2 — 2026-04-28
+
+Plan 051 (F-002): path migration for `discuss/plan/work/review` skill outputs into per-feature directories. The 4 process skills now write inside `.ae/features/<state>/F-NNN-<slug>/` when a feature context is resolvable; legacy `.ae/{discussions,plans,reviews}/` remain valid for free-text invocations and untouched 175 pre-existing artifacts (Plan 050 known limit).
+
+### Convention (single source of truth at `CLAUDE.md` → `## Project Management (GTD)` → `### Path-derived feature ID convention`)
+
+- **Path-derived feature ID**: feature-resident plan/review/discussion artifacts derive `F-NNN` from their parent dir name (`.ae/features/<state>/F-NNN-<slug>/`). Optional `feature: F-NNN` frontmatter is validation-only — readers warn on path/frontmatter mismatch, path always wins.
+- **Path classes distinction**: `.ae/features/{active,done,abandoned}/` is fixed AE internal state (not configurable); `output.{plans,reviews,discussions,milestones,backlog,analyses}` are configurable legacy/customization paths.
+- **Reader union scan**: `ae:dashboard`, `ae:next`, `ae:retrospect`, `ae:plugin-stats`, `ae:plan-review` scan BOTH legacy and feature-dir locations and union the results — no surface-index pointer files (eliminates dual-write debt; readers, not writers, bridge the two locations).
+
+### Writer skills (4)
+
+- `ae:plan` Step 2 defines the canonical **Feature context resolution** rule (4-form: promoted BL / discussion-dir path / free-text title-overlap / legacy fallback). Feature dir resolved → write `<feature-dir>/plan.md`; otherwise legacy `output.plans/NNN-slug.md`.
+- `ae:work` Argument Inference unions both plan locations. New **Milestone path resolution** helper section centralizes the feature-dir vs legacy `step-summaries.md` / `notes.md` path logic — referenced from 5 sites (Step-Summary Context, Deferred Items, Defer-write, Step Summary persistence, Doodlestein checkpoint).
+- `ae:review` Argument Inference unions both plan locations; Output writes `<feature-dir>/review.md` (no surface pointer); Check 4 milestone-notes path tracks the feature-dir vs legacy split; Completion Invariant Phase 1 simplified from 5 steps to 3 (path-derive → frontmatter bridge → manual fallback; deleted Plan 050 best-effort scan + ambiguous-match steps).
+- `ae:discuss` Step 1 Setup REFERENCES the Feature context resolution rule (does not restate). Optional `feature: F-NNN` on discussion `index.md` is path-derived; readers flag mismatch via staleness rule.
+
+### Reader skills (5)
+
+- `ae:dashboard`: Plan-linkage rule simplified (drops speculative scan-by-filename). Plans + Reviews now union-scan both locations; tiebreaker is most recent `created:`.
+- `ae:next`: Step 0 + Step 8 union both plan and review locations.
+- `ae:retrospect`: Review-file lookup unions feature-dir `<feature-dir>/review.md` and legacy `output.reviews/*.md`.
+- `ae:plugin-stats`: Outcome-stats scan unions both review locations.
+- `ae:plan-review`: Argument inference unions both plan locations.
+
+### Other updates
+
+- `CLAUDE.md`: new **Path classes** section + **Path-derived feature ID convention** section. `.gitignore` policy clarified (existing `.ae/` covers feature dirs; no per-subdir overrides).
+- `plugins/ae/templates/pipeline.template.yml`: 13-line header note for external projects explaining the two path classes.
+- `ae:code-review`: Track 4 staging stays at `<output.reviews>/per-commit/` (implementation detail); user-visible review files for feature-dir plans land at sibling `review.md`.
+- `ae:analyze`: documents that subsequent discuss/plan/review outputs land inside the feature dir.
+- 6 test fixtures updated for path-derive write target + union-scan argument inference.
+
+### Known limits (accepted)
+
+- **Argument-inference union scan cost**: ae:work and ae:review scan both locations. Under 100 file stats at typical scale; if perf becomes an issue, cache layer or single canonical location replaces the union.
+- **No legacy artifact migration**: 175 pre-existing `.ae/{discussions,plans,reviews}/` files stay where they are (Plan 050 explicit decision). Legacy artifacts age out naturally as the next 100-feature epoch goes through feature dirs.
+- **ae:work bootstrap**: Step 2 modified ae:work's own SKILL.md; the active /ae:work session used cached pre-edit version. New behavior takes effect after `/plugin install` or Claude Code restart.
+- **External-project bootstrap (deferred)**: this plan assumes `.ae/features/{active,done,abandoned}/` exists. Adding `/ae:setup` directory scaffolding is out of scope; tracked as follow-up backlog item.
+- **Discussion frontmatter `feature_completed:`**: out of scope for this plan; revisit in follow-up if needed.
+
+### Process
+
+- F-002 dogfooded end-to-end through the GTD model. Plan file at `.ae/features/active/F-002-path-migration/plan.md`; step-summaries at `.ae/features/active/F-002-path-migration/milestones/step-summaries.md` (in-feature-dir milestone path — first dogfood of Step 2's milestone resolution).
+- /ae:plan-review caught 6+ Must Fix items across 4 reviewers (architect + dependency-analyst + codex-proxy + gemini-via-oMLX-fallback). Notable findings: drop surface-pointer file (3-of-4 reviewer convergence — eliminates dual-write debt); path-derive feature ID instead of mandatory frontmatter (Codex MF-2 — drift-prone); ae:review Argument Inference + Check 4 milestone-path silently broken without explicit fixes (architect MF-3, MF-4); CLAUDE.md schema location wrong (Codex MF-3); ae:next scope mischaracterized (Codex MF-5).
+- User mid-execution flagged a missing scope: documentation migration. Step 6 expanded to cover 7 reader skills + CLAUDE.md path-class + pipeline template + 27 test fixtures (per-file triage).
+- Gemini MCP returned 503 (high demand) during plan-review; TL fell back to local oMLX `gemma-4-26b-a4b-it-4bit` to preserve Google-family lens per CLAUDE.md fallback protocol.
+
 ## v0.9.1 — 2026-04-28
 
 Plan 052 (F-001 / BL-051): skills proactively use Claude Code Task APIs (`TaskCreate` / `TaskUpdate`) for step progress tracking. The persistent task panel above the prompt now reflects which phase a multi-step skill is in, transitioning through `pending → in_progress → completed` per phase boundary. Convention complements (does not replace) the durable per-step `step-summaries.md` artifact (Plan 049) — tasks are conversation-scoped, step-summaries are cross-session.
