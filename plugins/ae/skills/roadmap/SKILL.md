@@ -142,11 +142,16 @@ If the user wants `ae:roadmap` to re-propose sizes (e.g., a feature has grown in
 
 For each `.ae/roadmaps/active/<name>.md`:
 
-1. Find features that link to this roadmap: `features/active/*/index.md` OR `features/done/*/index.md` with frontmatter `roadmap: <name>` (string match).
-2. If ALL linked features are in `features/done/` AND there is at least one such feature, surface:
+1. Find features that link to this roadmap: scan `features/{active,done,abandoned}/*/index.md` with frontmatter `roadmap: <name>` (string match). All three subdirs are inspected — abandoned features are still linked features, just terminal-state.
+2. **Archive-ready** condition (all must hold):
+   - At least one linked feature exists in `features/done/` (otherwise there's nothing actually shipped — don't archive a roadmap that produced no completed work).
+   - No linked feature is in `features/active/` (i.e., no still-active work).
+   - Linked features in `features/abandoned/` are tolerated (terminal state — they don't block archive). Their count is reported alongside done count for transparency.
+
+   When both hold, surface:
 
    ```
-   📦 Roadmap "<name>" — all <N> features done. Archive to roadmaps/done/?
+   📦 Roadmap "<name>" — <D> features done, <A> abandoned, 0 active. Archive to roadmaps/done/?
    ```
 
 3. On user confirmation: `mv .ae/roadmaps/active/<name>.md .ae/roadmaps/done/<name>.md`, prepend `archived: YYYY-MM-DD` to the file's frontmatter, leave body untouched.
