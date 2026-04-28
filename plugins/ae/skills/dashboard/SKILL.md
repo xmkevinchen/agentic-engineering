@@ -1,18 +1,19 @@
 ---
 name: ae:dashboard
-description: Real-time project pipeline status — feature-level progress view
+description: Real-time project pipeline status — GTD feature-level progress view
 user_invocable: true
 ---
 
 # /ae:dashboard — Project Dashboard
 
-Read-only pipeline status viewer. Shows all in-flight features, their current pipeline stage, and actionable next steps.
+Read-only pipeline status viewer. Default view shows in-flight **features** (`.ae/features/active/`) — each one a GTD Project — with their current stage and next action. Legacy artifacts (`.ae/discussions/`, `.ae/plans/`, `.ae/reviews/`) are hidden by default; pass `--legacy` to surface them.
 
 This skill produces no file output — it is a viewer, not a producer.
 
 ## Arguments
 
-- `--all` — Expand the Done section to show all completed features (by default, done features are always collapsed)
+- `--all` — Include `features/done/` and `features/abandoned/` in addition to the default `features/active/`. Without `--all`, done is summarized (count line) and abandoned is silent.
+- `--legacy` — Surface legacy artifacts (`.ae/discussions/`, `.ae/plans/`, `.ae/reviews/`) in a separate section below the features view. Default behavior is to hide them — most are terminal-state and would create permanent noise alongside live features.
 
 ## Pre-check
 
@@ -22,13 +23,42 @@ This skill produces no file output — it is a viewer, not a producer.
      No pipeline.yml found. Run /ae:setup to configure your project.
      ```
      Stop.
-2. Read `output.*` paths from pipeline.yml. Use defaults if not specified:
+2. Read `output.*` paths from pipeline.yml. The features path is fixed at `.ae/features/` (internal state, not configurable). Other paths used by `--legacy`:
    - `output.discussions` (default: `docs/discussions/`)
    - `output.plans` (default: `docs/plans/`)
    - `output.reviews` (default: `docs/reviews/`)
    - `output.backlog` (default: `docs/backlog/`)
 
-## State Reading
+## Primary read source — features/active/
+
+The default view is built from `.ae/features/active/*/index.md`. For each feature dir, read frontmatter (per CLAUDE.md → `## Project Management (GTD)` → Feature index.md frontmatter schema): `id`, `title`, `status`, `created`, optional `theme`, `roadmap`, `size`, `depends_on`, `origin_bl`. Reader-tolerant per the same schema contract.
+
+For each feature, determine the **current stage**:
+
+| Stage | Detection rule |
+|---|---|
+| `analyzing` | `analysis.md` is missing OR has empty body (research not yet done) |
+| `discussing` | a discussion artifact exists in the feature dir referencing this feature, OR discussions/ has an entry with frontmatter `feature: F-NNN` (when plan 051 ships) |
+| `awaiting plan` | analysis present, but no `plan.md` in feature dir AND no legacy plan with frontmatter `feature: F-NNN` (legacy linkage falls back to inference per "Plan linkage" below) |
+| `plan draft` | linked plan has frontmatter `status: draft` |
+| `ready for work` | linked plan has `status: reviewed` AND zero `- [x]` AND ≥ 1 `- [ ]` |
+| `work in progress` | linked plan has `status: reviewed` AND mixed `- [x]` / `- [ ]` |
+| `awaiting review` | linked plan has all `- [x]` AND no review with `verdict: pass` |
+| `review failed` | linked plan has all `- [x]` AND linked review with `verdict: fail` |
+| `done` | feature `index.md` frontmatter `status: done` (i.e., already in `features/done/`, only shown under `--all`) |
+
+### Plan linkage during Plan 050 transition
+
+Plan 050 ships the feature dir model but does NOT migrate `discuss/plan/work/review` outputs into the feature dir (that's Plan 051). During the transition, the dashboard infers plan linkage in priority order:
+
+1. `<feature-dir>/plan.md` exists → use it.
+2. Otherwise: legacy plan in `output.plans` with frontmatter `feature: F-NNN` → use it.
+3. Otherwise: legacy plan with frontmatter `discussion:` matching a discussion that linked this feature → use it (best-effort fallback).
+4. Otherwise: stage = `awaiting plan` (no linkage available).
+
+If multiple legacy plans match → tiebreaker is highest plan-id; secondary tiebreaker is most recent `created:`.
+
+## Legacy State Reading (only invoked under `--legacy`)
 
 Scan each output directory. Handle gracefully:
 - Directory does not exist → skip, note "directory not found"
@@ -105,40 +135,66 @@ Read `pipeline.yml` → `cross_family` config:
 
 ## Output Format
 
-### Feature Table
+### Feature Table (default view)
 
 ```
 📊 Project Dashboard
 
 | # | Feature | Stage | Progress | Next Action |
 |---|---------|-------|----------|-------------|
-| 028 | UX Shortcuts | work in progress | 1/4 steps | /ae:work .ae/plans/028-ux-shortcuts.md |
-| 027 | Agent Teams Audit | ready for work | 0/5 steps | /ae:work .ae/plans/027-agent-teams-audit-fixes.md |
-| 026 | P2 Experiments | awaiting plan | — | /ae:plan |
-| 025 | Test Coverage | discussing | 2/3 topics | /ae:discuss .ae/discussions/025-test-coverage-gaps/ |
+| F-028 | UX Shortcuts | work in progress | 1/4 steps | /ae:work .ae/plans/028-ux-shortcuts.md |
+| F-027 | Agent Teams Audit | ready for work | 0/5 steps | /ae:work .ae/plans/027-agent-teams-audit-fixes.md |
+| F-026 | P2 Experiments | awaiting plan | — | /ae:plan |
+| F-025 | Test Coverage | discussing | 2/3 topics | /ae:discuss .ae/discussions/025-test-coverage-gaps/ |
 ```
 
-Stage values: `analyzing` → `discussing` → `awaiting plan` → `plan draft` → `ready for work` → `work in progress` → `awaiting review` → `review failed` → `done`
+Stage values (in priority order, most-actionable first): `work in progress` > `ready for work` > `awaiting plan` > `discussing` > `analyzing` > `awaiting review` > `review failed` > `plan draft` > `done`
+
+Sort the active table by stage priority, then by `created:` ascending (oldest first — the longer something has been in-flight, the more it warrants attention).
 
 ### Summary Footer
 
 ```
-📋 Summary: N features (X active, Y done)
-📝 Backlog: M open items
+📋 Features: N active (use --all to include done + abandoned)
+📝 Backlog: M open items in .ae/backlog/unscheduled/
 🔗 Cross-family: Codex ✓ | Gemini ✓
-🗺️ Run /ae:roadmap for feature grouping and version suggestions
+🗺️ Run /ae:roadmap for promote candidates + dependency analysis
 ```
 
-### Done Feature Handling
+### `--all` expansion
 
-Always collapse done features regardless of total feature count:
-- Show active features (not "done") in the table, sorted by stage: most actionable first (work in progress > ready for work > awaiting plan > discussing)
-- Summarize done features as: "N features completed (use /ae:dashboard --all to show)"
-- When `--all` flag is passed: expand done features into a full table below the active features
+When `--all` is passed, append two additional tables:
+
+```
+✓ Done features (N)
+| F-XXX | Title | Done date | Origin BL |
+| ...
+
+⊘ Abandoned features (N)
+| F-XXX | Title | Abandoned date | Reason |
+| ...
+```
+
+Without `--all`, done features collapse to a single line: `N features completed (use /ae:dashboard --all to show).` Abandoned features are silent without `--all` (no count line — they are intentionally out-of-scope by default).
+
+### `--legacy` expansion
+
+When `--legacy` is passed, append a Legacy Artifacts section showing items from `.ae/discussions/`, `.ae/plans/`, and `.ae/reviews/` that are NOT linked to any feature in `features/{active,done,abandoned}/`. Use the existing State Reading + stage-derivation logic in the "Legacy State Reading" section above. This section is intentionally below the Feature Table — features are the live work; legacy artifacts are historical context.
+
+Without `--legacy`, the Legacy Artifacts section is omitted entirely (not even a count line). Most legacy items are terminal-state; mixing them with live features creates permanent noise. A user who wants to find them should grep or pass `--legacy`.
 
 ## Edge Cases
 
-- Discussion with `status: done` but `plan: ""`, no matching plan file, AND `pipeline.plan` is in `{pending, in_progress}` or missing → stage = "awaiting plan". When `pipeline.plan: skipped` or `done` (with empty `plan:`), classify as "done" (collapses into done bucket per Done Feature Handling) — see Discussions → Guard block above.
+### Feature-level edge cases (default view)
+
+- Feature `index.md` missing required field → log error, skip the feature (per CLAUDE.md Reader contract).
+- Feature with no plan linkage and no discussion → stage = `awaiting plan`, action = `/ae:discuss .ae/features/active/<F-NNN-slug>/` (decide before plan) or `/ae:plan` (if scope is clear).
+- Feature with `roadmap: <name>` pointing to non-existent roadmap file → silently ignore the field (reader-tolerant); flag is `/ae:roadmap` section (d)'s job to surface.
+- Multiple legacy plans match a feature via fallback inference — tiebreaker per "Plan linkage during Plan 050 transition" above (highest plan-id, then most recent `created:`).
+
+### Legacy edge cases (only under `--legacy`)
+
+- Discussion with `status: done` but `plan: ""`, no matching plan file, AND `pipeline.plan` is in `{pending, in_progress}` or missing → stage = "awaiting plan". When `pipeline.plan: skipped` or `done` (with empty `plan:`), classify as "done" (collapses into done bucket) — see Legacy State Reading → Guard block above.
 - Plan file with `discussion: ""` or missing → standalone plan (not linked to discussion), show as independent row
 - Plan with all steps done but no review file with matching `target` → stage = "awaiting review"
 - Review file with `target` pointing to non-existent plan → skip with note

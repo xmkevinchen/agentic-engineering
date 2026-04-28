@@ -12,6 +12,22 @@ Reads project state and suggests the single most important next action. Suggest-
 
 Execute these checks in order. Stop at the first match and output the suggestion.
 
+### Step 0: Active feature with actionable plan (GTD primary path)
+
+Check: `.ae/features/active/*/index.md` has at least one feature whose plan-linkage chain (per `ae:dashboard` "Plan linkage during Plan 050 transition" rule) yields a plan file with `status: reviewed` AND ≥ 1 `- [ ]` checkbox.
+
+For each match, the most-actionable feature has a plan with the highest pending-step ratio (most work remaining). Tiebreaker: highest `id:` (most recent feature first).
+
+```
+Active feature with pending work: [feature title] ([N/M] steps done)
+
+Run: /ae:work [linked-plan-path]
+```
+
+If multiple at same priority → apply tiebreaker. If still tied → go to Step 9.
+
+This step is the GTD primary path. When `.ae/features/active/` is empty (cold start, post-archive of last feature, or pre-Plan-050 project), this step has no match and the inference falls through to Steps 1-11 below — which retain the legacy/cold-start behavior.
+
 ### Step 1: No pipeline config
 
 Check: `.claude/pipeline.yml` does not exist.
@@ -178,14 +194,15 @@ Skip this step entirely if:
 
 ### Step 11: All work complete
 
-Check: no active discussions, no pending plans, no uncompleted work, no committed-but-unworked sprint items, all reviews have `verdict: pass` (or plan `status: done`).
+Check: `features/active/` is empty AND no active discussions, no pending plans, no uncompleted work, no committed-but-unworked sprint items, all reviews have `verdict: pass` (or plan `status: done`).
 
 ```
 All pipeline work is complete.
 
-  /ae:retrospect         — analyze execution trends and insights
-  /ae:discuss <topic>    — start a new design discussion
-  /ae:plan <feature>     — plan a new feature directly
+  /ae:roadmap            — see promote candidates from backlog
+  /ae:backlog <idea>     — capture a new idea (frictionless inbox drop)
+  /ae:retrospect         — project-level review of recently shipped features
+  /ae:plugin-stats       — AE plugin self-development outcome stats
 ```
 
 ## State Reading
