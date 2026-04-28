@@ -16,17 +16,17 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Phase | Subject | Created at | `in_progress` | `completed` |
 |---|---|---|---|---|
 | Pre-check | `ae:test-plugin: Pre-check` | Skill start | Before pre-check 1 | After pre-checks pass |
-| Phase 1 | `ae:test-plugin: Phase 1` | Skill start (batch) | When test-lead team spawned (1.1) | After Writers Shutdown (1.3) — generation outputs persisted |
-| Phase 2 | `ae:test-plugin: Phase 2` | Skill start (batch) | When Layer 1 static analysis starts | After Judge produces verdict (Class A or Class B path) |
-| Phase 3 | `ae:test-plugin: Phase 3` | Skill start (batch) | When report generation starts | After report file written |
+| Phase 1 | `ae:test-plugin: Phase 1 — Test Generation` | Skill start (batch) | When test-lead team spawned (1.1) | After Writers Shutdown (1.3) — generation outputs persisted |
+| Phase 2 | `ae:test-plugin: Phase 2 — Execution` | Skill start (batch) | When Layer 1 static analysis starts | After Judge produces verdict (Class A or Class B path) |
+| Phase 3 | `ae:test-plugin: Phase 3 — Report` | Skill start (batch) | When report generation starts | After report file written |
 
 At skill start, batch-create:
 
 ```
 TaskCreate(subject: "ae:test-plugin: Pre-check")
-TaskCreate(subject: "ae:test-plugin: Phase 1")
-TaskCreate(subject: "ae:test-plugin: Phase 2")
-TaskCreate(subject: "ae:test-plugin: Phase 3")
+TaskCreate(subject: "ae:test-plugin: Phase 1 — Test Generation")
+TaskCreate(subject: "ae:test-plugin: Phase 2 — Execution")
+TaskCreate(subject: "ae:test-plugin: Phase 3 — Report")
 ```
 
 Owner field: omit. On error: stay `in_progress`.

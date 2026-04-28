@@ -19,7 +19,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Phase | Subject | Created at | `in_progress` | `completed` |
 |---|---|---|---|---|
 | Pre-check | `ae:analyze: Pre-check` | Skill start | Before pre-check 1 | After pre-checks pass |
-| Mode A or Mode B | `ae:analyze: Mode A` OR `ae:analyze: Mode B` | After Mode selection (deferred until input is parsed) | At Mode entry | Mode A: BL moved + index.md written; Mode B: feature dir + index.md created |
+| Mode A or Mode B | `ae:analyze: Mode A — Promote BL` OR `ae:analyze: Mode B — Free-text Feature` | After Mode selection (deferred until input is parsed) | At Mode entry | Mode A: BL moved + index.md written; Mode B: feature dir + index.md created |
 | Research | `ae:analyze: Research` | Skill start (batch) | When agent-teams Research team spawned | When all reviewer findings received at TL |
 | Synthesize | `ae:analyze: Synthesize` | Skill start (batch) | When TL begins synthesis | When analysis.md persisted to disk |
 
@@ -34,9 +34,9 @@ TaskCreate(subject: "ae:analyze: Synthesize")
 After Mode selection (Mode A vs Mode B determined from $ARGUMENTS), create the mode-specific task:
 
 ```
-TaskCreate(subject: "ae:analyze: Mode A")    # if BL-NNN input
+TaskCreate(subject: "ae:analyze: Mode A — Promote BL")    # if BL-NNN input
 # OR
-TaskCreate(subject: "ae:analyze: Mode B")    # if free-text input
+TaskCreate(subject: "ae:analyze: Mode B — Free-text Feature")    # if free-text input
 ```
 
 Owner field: omit. On error: stay `in_progress`.

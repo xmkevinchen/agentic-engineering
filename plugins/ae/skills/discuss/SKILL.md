@@ -41,25 +41,25 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Phase | Subject | Created at | `in_progress` | `completed` |
 |---|---|---|---|---|
 | Pre-check | `ae:discuss: Pre-check` | Skill start | Before pre-check 1 | After pre-checks pass |
-| Step 1 Setup | `ae:discuss: Step 1 Setup` | Skill start (batch) | When discussion dir resolved | After framing.md + index.md written |
-| Step 1.5 Round 0 | `ae:discuss: Step 1.5 Round 0` | Skill start (batch) | When framing-review team spawned | After Round 0 verdicts aggregated + verdict files written + framing-review team deleted |
-| Step 2 Spawn | `ae:discuss: Step 2 Spawn` | Skill start (batch) | When discussion council team spawned | When all council members report ready for Round 1 |
-| Step 3 Discussion | `ae:discuss: Step 3 Discussion` | Skill start (batch) | When Round 1 starts | When all topics converged or deferred |
-| Step 7 Sweep | `ae:discuss: Step 7 Sweep` | Skill start (batch) | When Sweep starts | When zero deferred + zero revisit |
-| Step 8 Conclusion | `ae:discuss: Step 8 Conclusion` | Skill start (batch) | When conclusion synthesis starts | When conclusion.md written + entities extracted |
-| Step 9 Doodlestein | `ae:discuss: Step 9 Doodlestein` | Skill start (batch) | When 3 Doodlestein agents spawned | When all 3 replies received + actions taken |
+| Step 1 Setup | `ae:discuss: Step 1 — Setup` | Skill start (batch) | When discussion dir resolved | After framing.md + index.md written |
+| Step 1.5 Round 0 | `ae:discuss: Step 1.5 — Round 0 Framing` | Skill start (batch) | When framing-review team spawned | After Round 0 verdicts aggregated + verdict files written + framing-review team deleted |
+| Step 2 Spawn | `ae:discuss: Step 2 — Spawn Team` | Skill start (batch) | When discussion council team spawned | When all council members report ready for Round 1 |
+| Step 3 Discussion | `ae:discuss: Step 3 — Discussion Rounds` | Skill start (batch) | When Round 1 starts | When all topics converged or deferred |
+| Step 7 Sweep | `ae:discuss: Step 7 — Sweep Deferred` | Skill start (batch) | When Sweep starts | When zero deferred + zero revisit |
+| Step 8 Conclusion | `ae:discuss: Step 8 — Generate Conclusion` | Skill start (batch) | When conclusion synthesis starts | When conclusion.md written + entities extracted |
+| Step 9 Doodlestein | `ae:discuss: Step 9 — Doodlestein` | Skill start (batch) | When 3 Doodlestein agents spawned | When all 3 replies received + actions taken |
 
 At skill start, batch-create:
 
 ```
 TaskCreate(subject: "ae:discuss: Pre-check")
-TaskCreate(subject: "ae:discuss: Step 1 Setup")
-TaskCreate(subject: "ae:discuss: Step 1.5 Round 0")
-TaskCreate(subject: "ae:discuss: Step 2 Spawn")
-TaskCreate(subject: "ae:discuss: Step 3 Discussion")
-TaskCreate(subject: "ae:discuss: Step 7 Sweep")
-TaskCreate(subject: "ae:discuss: Step 8 Conclusion")
-TaskCreate(subject: "ae:discuss: Step 9 Doodlestein")
+TaskCreate(subject: "ae:discuss: Step 1 — Setup")
+TaskCreate(subject: "ae:discuss: Step 1.5 — Round 0 Framing")
+TaskCreate(subject: "ae:discuss: Step 2 — Spawn Team")
+TaskCreate(subject: "ae:discuss: Step 3 — Discussion Rounds")
+TaskCreate(subject: "ae:discuss: Step 7 — Sweep Deferred")
+TaskCreate(subject: "ae:discuss: Step 8 — Generate Conclusion")
+TaskCreate(subject: "ae:discuss: Step 9 — Doodlestein")
 ```
 
 Owner field: omit. On error: stay `in_progress`. Steps 4-6 and 10 are sub-actions of their containing phases — no separate tasks.

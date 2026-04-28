@@ -384,14 +384,24 @@ Multi-step skills proactively use the Claude Code Task APIs (`TaskCreate` / `Tas
 Each modified SKILL.md hard-lists its own phase IDs. Phase IDs are one of these forms (NO subtitles, NO reordering, NO parenthetical suffixes — except where an explicit exception is documented):
 
 - `Pre-check` — singular. ONE task for the whole pre-check section, even when there are multiple sub-checks (Check 1, Check 2, etc.). Sub-checks are sub-actions, not phases.
-- `Step N` — integer step number only (e.g., `Step 3`). NOT `Step 3: Locate Current Step`, NOT `Step 3 (Pre-check)`. **Generic rule** — applies to ae:work, ae:plan, ae:test-plugin (when test-plugin uses `Phase N` instead, see below).
-- `Phase N` — for skills using Phase numbering (ae:test-plugin only — see Exception below for ae:discuss).
+- `Step N — <title>` — integer step number + em-dash + human-readable title. Title source:
+  - **Fixed-phase skills** (ae:plan, ae:analyze, ae:discuss, ae:test-plugin): hardcoded in the SKILL.md task lifecycle table. Title text matches the SKILL.md `## Step N: <title>` / `## Phase N: <title>` heading.
+  - **ae:work** (plan-dependent): runtime-extracted from the plan body's `### Step N: <title>` heading at batch-create time (Pre-check Check 2 already reads the plan body to enumerate steps; pull the title from the same parse). Truncate to ~42 chars to keep the full subject under ~60 chars.
+- `Phase N — <title>` — same shape, used by ae:test-plugin.
 - `TDD Cycle` — ae:work specific, for the per-step TDD inner loop (when used as a tracked phase rather than as a sub-action).
-- Review track names verbatim (ae:review only): `Security review`, `Performance review`, `Architecture review`, `Cross-family challenge + synthesis`.
+- Review track names verbatim (ae:review only): `Security review`, `Performance review`, `Architecture review`, `Cross-family challenge + synthesis` — already self-describing, no title suffix needed.
 
-**Exception — ae:discuss uses titled Step IDs**: ae:discuss has 8 distinct phases that span very different work types (Setup vs Round 0 vs Sweep vs Doodlestein); a bare integer `Step N` would be unreadable in the panel. ae:discuss therefore uses titled forms `Step 1 Setup`, `Step 1.5 Round 0`, `Step 2 Spawn`, `Step 3 Discussion`, `Step 7 Sweep`, `Step 8 Conclusion`, `Step 9 Doodlestein` (matching the SKILL.md heading text verbatim, with the leading `### ` stripped). The fractional `Step 1.5` is allowed for this skill only. The generic "integer-only" rule does NOT apply to ae:discuss. This exception is the only one — all other multi-step skills follow the integer-only rule strictly.
+**Subject string format**: `"<skill-name>: <phase-id> — <title>"` — colon + space + phase-id + em-dash + title. Examples:
 
-**Subject string format**: `"<skill-name>: <phase-id>"` — colon + space separator. Examples: `"ae:work: Pre-check"`, `"ae:work: Step 3"`, `"ae:review: Security review"`.
+| ✅ Use | ❌ Don't use |
+|---|---|
+| `ae:work: Pre-check` (no title — Pre-check is self-describing) | `ae:work: Pre-check — checks` (redundant) |
+| `ae:work: Step 1 — ae:plan writes to feature dir` | `ae:work: Step 1` (opaque) |
+| `ae:plan: Step 3 — Plan Review` | `ae:plan: Step 3` (opaque) |
+| `ae:review: Security review` (track names self-describe) | `ae:review: Security review — security` (redundant) |
+| `ae:test-plugin: Phase 1 — Test Generation` | `ae:test-plugin: Phase 1` (opaque) |
+
+The em-dash separator (`—`, U+2014) — not hyphen, not double-hyphen — gives a visually clean break between phase-id and title in panel rendering. Use a literal em-dash character.
 
 Each modified SKILL.md MUST inline its full canonical phase list at the top of its execution flow section. The agent-teams reference (this section) is teaching documentation, NOT a runtime parser — agents executing a skill consult that skill's inline list, not this table.
 
@@ -399,12 +409,12 @@ Each modified SKILL.md MUST inline its full canonical phase list at the top of i
 
 | Skill | Tasks created | Total |
 |---|---|---|
-| `ae:work` | `Pre-check`, `Step N` (one per plan step, plan-dependent dispatch) | 1 + N |
-| `ae:plan` | `Pre-check`, `Step 1`, `Step 2`, `Step 3`, `Step 4`, `Step 5` | 6 |
+| `ae:work` | `Pre-check`, `Step N — <step title>` (one per plan step; title runtime-extracted from `### Step N: <title>` heading) | 1 + N |
+| `ae:plan` | `Pre-check`, `Step 1 — Research`, `Step 2 — Write Plan`, `Step 3 — Plan Review`, `Step 4 — Doodlestein Challenge`, `Step 5 — Confirm` | 6 |
 | `ae:review` | `Pre-check`, then the 4 review tracks (`Security review`, `Performance review`, `Architecture review`, `Cross-family challenge + synthesis`) | 5 |
-| `ae:analyze` | `Pre-check`, `Mode A` or `Mode B` (mutually exclusive), `Research`, `Synthesize` | 4 |
-| `ae:discuss` | `Pre-check`, `Step 1 Setup`, `Step 1.5 Round 0`, `Step 2 Spawn`, `Step 3 Discussion`, `Step 7 Sweep`, `Step 8 Conclusion`, `Step 9 Doodlestein` | 8 |
-| `ae:test-plugin` | `Pre-check`, `Phase 1`, `Phase 2`, `Phase 3` | 4 |
+| `ae:analyze` | `Pre-check`, `Mode A — Promote BL` or `Mode B — Free-text Feature` (mutually exclusive), `Research`, `Synthesize` | 4 |
+| `ae:discuss` | `Pre-check`, `Step 1 — Setup`, `Step 1.5 — Round 0 Framing`, `Step 2 — Spawn Team`, `Step 3 — Discussion Rounds`, `Step 7 — Sweep Deferred`, `Step 8 — Generate Conclusion`, `Step 9 — Doodlestein` | 8 |
+| `ae:test-plugin` | `Pre-check`, `Phase 1 — Test Generation`, `Phase 2 — Execution`, `Phase 3 — Report` | 4 |
 
 Sub-actions deliberately excluded (analysis flagged them as noise): TDD sub-cycles (write/red/implement/green/refactor), individual Pre-commit Checks A-G in ae:work, Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant in ae:review, Steps 4-6 (Consensus / TL Scores / Present) and Step 10 (Shutdown) in ae:discuss.
 
