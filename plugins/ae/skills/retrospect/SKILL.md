@@ -35,8 +35,13 @@ Scan `.ae/features/done/*/index.md`. For each feature:
 Filter to features with `done >= <cutoff date>`. Empty result:
 
 ```
-No features archived in the last <window>. ae:retrospect needs shipped features to surface
-patterns; for AE plugin self-development outcome stats, use /ae:plugin-stats.
+No features archived in the last <window>. ae:retrospect needs shipped features
+to surface patterns. To start the GTD loop on a fresh project:
+  /ae:backlog "<idea>"   — Capture an idea
+  /ae:roadmap            — see promote candidates from backlog
+  /ae:analyze BL-NNN     — Organize a captured BL into a feature
+For AE plugin self-development outcome stats (delivery metrics across the
+AE pipeline itself), use /ae:plugin-stats — that's a separate concern.
 ```
 
 Stop here. Do not synthesize a 4-section report from zero data.

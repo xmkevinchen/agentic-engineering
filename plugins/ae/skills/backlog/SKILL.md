@@ -20,12 +20,20 @@ If the user runs `/ae:backlog` without an argument, ask them once for the one-li
 
 1. **Read** `<output.backlog>` from `.claude/pipeline.yml` (default: `.ae/backlog/`).
 2. **Allocate next BL number**: scan **recursively** across all subdirs (`unscheduled/`, `closed/`, `done/`, and any sprint dirs) — `find <output.backlog> -type f -name 'BL-*.md'`. Parse the `NNN` digits from each filename, take `max(NNN) + 1`. Zero-pad to 3 digits (`042`, `100`). If no BL exists yet, start at `001`. The recursive scan is required — a non-recursive listing would miss closed/done BLs and reuse already-assigned numbers.
-3. **Slugify** the description deterministically:
-   - Lowercase, strip emoji and other non-ASCII, replace non-alphanumeric runs with `-`.
-   - Trim leading/trailing `-`.
-   - Truncate to **40 characters max** (hard cap, not word-based — words can be cut mid-word; this keeps the rule deterministic across LLM agents).
-   - If the result is empty (all-stop-word or all-non-ASCII input), the file is named `BL-NNN.md` with no slug suffix.
-   - Example: `"Test the GTD pipeline"` → `test-the-gtd-pipeline`. `"🚀 Ship it"` → `ship-it`. `"a the and"` → empty → `BL-NNN.md`.
+3. **Slugify** the description deterministically. Apply these steps **in this exact order** (not best-effort, not LLM-judged — same input always produces the same slug across agents):
+   1. **Lowercase** the entire string.
+   2. **Strip non-ASCII characters** (emoji, accents, full-width punctuation, etc.) — replace each with empty string. Do NOT transliterate (e.g., `ñ` becomes empty, not `n`).
+   3. **Replace any run of one or more non-alphanumeric characters with a single `-`**. Underscores count as non-alphanumeric and become `-`.
+   4. **Trim leading and trailing `-`**.
+   5. **Truncate to 40 characters max** by simple right-side cut. Words may be cut mid-word — this is intentional. Do NOT use word-boundary truncation (LLM agents differ on what counts as a word boundary; mid-word cut is the only deterministic choice).
+   6. **Trim trailing `-` again** after truncation (in case the cut landed on a `-`).
+   7. **If the result is empty** (all-stop-word, all-non-ASCII, or all-punctuation input), the file is named `BL-NNN.md` with no slug suffix.
+   - Examples:
+     - `"Test the GTD pipeline"` → `test-the-gtd-pipeline`
+     - `"🚀 Ship it!"` → `ship-it`
+     - `"a the and"` → `a-the-and` (NOT empty — these are alphanumeric; "stop-words" was an imprecise earlier description)
+     - `"!!!"` → empty → `BL-NNN.md`
+     - `"Implement test-coverage feature for the new pipeline-runner"` (53 chars after slug ops) → `implement-test-coverage-feature-for-the` (40-char cut, trailing `-` trimmed)
 4. **Write** `<output.backlog>/unscheduled/BL-NNN-<slug>.md` (or `BL-NNN.md` if slug empty) with frontmatter:
 
    ```yaml

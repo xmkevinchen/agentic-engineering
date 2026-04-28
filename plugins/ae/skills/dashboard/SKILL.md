@@ -161,6 +161,13 @@ Sort the active table by stage priority, then by `created:` ascending (oldest fi
 🗺️ Run /ae:roadmap for promote candidates + dependency analysis
 ```
 
+**Empty-state nudge**: when `.ae/features/active/` is empty, replace the footer with one of:
+
+- **Backlog has items** (`unscheduled/` non-empty): `📋 0 active features. You have N items in the inbox — run /ae:roadmap to see promote candidates, then /ae:analyze BL-NNN to Organize one into a feature.`
+- **Backlog also empty**: `📋 No features yet, no captured ideas yet. Run /ae:backlog "<one-line idea>" to start the GTD loop (frictionless inbox drop — classification happens later).`
+
+This is a positive guide rather than a dead end — the dashboard's job is orientation, including for first-run users.
+
 ### `--all` expansion
 
 When `--all` is passed, append two additional tables:

@@ -52,7 +52,7 @@ Execute in order; each step's success is required for the next.
 
 1. **Allocate next F-NNN.** Scan `.ae/features/{active,done,abandoned}/F-*/index.md` recursively, parse the `F-NNN` digits from each dir name, take `max(NNN) + 1`. Zero-pad to 3 digits. Empty state → start at `F-001`. Feature IDs are independent of BL IDs (do not reuse the BL's number).
 
-2. **Slugify the BL title** deterministically (same rule as `ae:backlog`): lowercase, strip emoji and other non-ASCII, replace non-alphanumeric runs with `-`, trim leading/trailing `-`, truncate to 40 chars hard cap. Empty result → use `F-NNN` with no slug suffix.
+2. **Slugify the BL title** deterministically. Apply the **same step-by-step rule as `/ae:backlog`** (lowercase → strip non-ASCII → non-alphanum runs → `-` → trim leading/trailing `-` → truncate to 40 chars by right-side cut → re-trim trailing `-` → empty fallback to bare `F-NNN`). See `plugins/ae/skills/backlog/SKILL.md` step 3 for the canonical sequence; the order is load-bearing — do not reorder steps.
 
 3. **Create the feature dir**: `mkdir -p .ae/features/active/F-NNN-<slug>/`.
 
@@ -263,6 +263,24 @@ User decides an abandoned feature should restart:
 2. Edit `index.md` frontmatter: `status: active`, remove `abandoned:` and `abandoned_reason:`.
 
 This is a manual mv on purpose. Re-running `/ae:analyze BL-NNN` is **refused** by the soft-refuse pre-check (Mode A above) — that path would create a second feature and split the audit trail. Manual mv preserves identity.
+
+### Recovery — undoing a promote
+
+A promote in Mode A is **not high-reversibility from the user's perspective**: the BL file physically moves out of `.ae/backlog/.../BL-NNN-*.md` into `.ae/features/active/F-NNN-<slug>/BL-NNN.md`, and any external tooling, scripts, or grep habits that pointed at the old path break.
+
+To undo a promote (e.g., the user ran `/ae:analyze BL-042` but later decides BL-042 wasn't ready):
+
+1. Locate the new feature dir: `ls .ae/features/active/` and find the `F-NNN-<slug>` corresponding to the BL.
+2. Move the BL file back to its original scope (typically `unscheduled/`):
+   ```
+   mv .ae/features/active/F-NNN-<slug>/BL-<NNN>.md .ae/backlog/unscheduled/BL-<NNN>-<original-slug>.md
+   ```
+   The original BL slug isn't preserved in the moved filename (Mode A drops it intentionally), so the user picks a slug consistent with the original capture or runs `/ae:backlog` syntax. Either is acceptable — readers grep on `BL-<NNN>` and frontmatter `id:`, not the slug.
+3. Edit the moved BL frontmatter: revert `status: promoted` → `status: open`, remove `promoted:` and `promoted_to:` fields.
+4. Remove the now-empty feature dir: `rm -rf .ae/features/active/F-NNN-<slug>/`.
+5. (Optional) The F-NNN counter does not roll back automatically — F-NNN is consumed. The next promote allocates F-(NNN+1). This is acceptable; feature IDs need not be contiguous.
+
+Recovery is documented as a manual flow because automating it would require persistent move-history and increase complexity for a rare case (estimated <1% of promotes per typical workflow).
 
 ## Principles
 

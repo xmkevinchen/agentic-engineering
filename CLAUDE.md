@@ -110,6 +110,7 @@ All skills that read feature `index.md` frontmatter (`ae:analyze`, `ae:roadmap`,
 - **Missing optional field** → graceful default (treat as absent, not invalid).
 - **Missing required field** (`id` / `title` / `status` / `created`) → log error, skip this feature record; continue scanning other records.
 - **List-or-scalar fields** (`origin_bl`, `depends_on`): readers MUST normalize to list internally — `origin_bl: BL-042` and `origin_bl: [BL-042, BL-051]` are semantically equivalent.
+- **Missing `theme`**: features without a `theme:` value group under a uniform bucket named `(unthemed)` — never invented from title or body. All grouping skills (`ae:roadmap` section (a) feature listing, `ae:retrospect` section (1) recently-shipped grouping) MUST use this exact bucket name to prevent silent divergence.
 
 ### Schema evolution
 

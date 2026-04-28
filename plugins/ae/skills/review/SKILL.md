@@ -329,40 +329,51 @@ When `verdict: pass` AND the target plan's feature dir is in `.ae/features/activ
 - If linkage cannot be resolved, the skill prints an explicit `📦 Manual archive required:` message naming the feature dir(s) the user likely wants to mv. This converts a silent failure into a visible action item.
 - Plan 051 will retire the fallback by adding `feature:` to plan frontmatter at plan-creation time, making the trigger deterministic.
 
-#### Locate the feature dir
+#### Phase 1 — Locate the feature dir
 
-Try in order:
+Try in order. The first match resolves; on no match emit the manual-archive message and STOP (do not proceed to Phase 2).
 
 1. **Plan frontmatter `feature: F-NNN`** (Plan 051+) → resolves directly.
 2. **Inside-feature plan file**: any `<feature-dir>/plan.md` (Plan 051+) whose absolute path equals the target plan path → resolves directly.
 3. **Best-effort scan** (Plan 050 fallback): scan `.ae/features/active/*/analysis.md` AND `.ae/features/active/*/index.md` body for the plan's filename (e.g., `050-gtd-pm-model.md`). Single match → resolves.
-4. **No match** → emit:
+4. **No match** → list `ls .ae/features/active/` and embed the actual paths in the message (do NOT print the literal placeholder `F-NNN-<slug>` — substitute the candidate dirs):
    ```
    📦 Manual archive required:
       Plan <plan-path> verdict pass, but no feature dir linkage found
       (Plan 050 transition — /ae:plan does not yet write feature: frontmatter).
 
-      If this plan corresponds to a feature in .ae/features/active/, run:
-        mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/
-      and edit index.md to set status: done + done: <today>.
+      Candidates currently in .ae/features/active/:
+        - .ae/features/active/F-027-some-slug/
+        - .ae/features/active/F-031-other-slug/
+        - .ae/features/active/F-042-third-slug/
+      (or "(none — features/active/ is empty)" if the dir is empty)
 
-      Skipping automatic archive.
+      If one of the above is the feature this plan completed, run:
+        mv .ae/features/active/<chosen-feature-dir>/ .ae/features/done/<same-feature-dir>/
+      and edit index.md inside that dir to set:
+        status: done
+        done: <today YYYY-MM-DD>
+
+      Skipping automatic archive (proceed manually using the list above).
    ```
-   Log: `[ARCHIVE] Manual fallback: no feature linkage; user-action recommended.`
-5. **Multiple matches** (ambiguous scan): emit a similar "manual archive required" message listing all candidates; the user decides which to mv.
+   Log: `[ARCHIVE] Manual fallback: no feature linkage; user-action recommended (N candidates listed).`
+   STOP — do not run Phase 2.
+5. **Multiple matches** (ambiguous scan): emit a similar "manual archive required" message listing the matching candidates only; the user decides which to mv. STOP — do not run Phase 2.
 
-2. **Move the feature dir**: `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/`. Plain `mv` — `.ae/` is gitignored. Atomic on the same filesystem.
+#### Phase 2 — Execute archive (only when Phase 1 resolved a single feature dir)
 
-3. **Update the feature `index.md` frontmatter** in place:
+1. **Move the feature dir**: `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/`. Plain `mv` — `.ae/` is gitignored. Atomic on the same filesystem.
+
+2. **Update the feature `index.md` frontmatter** in place:
    ```yaml
    status: done       # was: active
    done: YYYY-MM-DD   # today
    ```
    Preserve all other fields. Do NOT remove `origin_bl:` or any optional field — they remain part of the audit trail.
 
-4. **Update roadmap file (if linked).** If the feature's `index.md` has a non-empty `roadmap:` field, locate `.ae/roadmaps/active/<roadmap-name>.md`. If the roadmap file has a body table or list referencing this feature with a status column, update that row (best-effort; don't fail the archive on roadmap edit failure). Log either `[ARCHIVE] Updated roadmap <name>.md feature entry to done` or `[ARCHIVE] Roadmap <name>.md has no parsable feature row; skipped roadmap update`.
+3. **Update roadmap file (if linked).** If the feature's `index.md` has a non-empty `roadmap:` field, locate `.ae/roadmaps/active/<roadmap-name>.md`. If the roadmap file has a body table or list referencing this feature with a status column, update that row (best-effort; don't fail the archive on roadmap edit failure). Log either `[ARCHIVE] Updated roadmap <name>.md feature entry to done` or `[ARCHIVE] Roadmap <name>.md has no parsable feature row; skipped roadmap update`.
 
-5. **Log success**: `[ARCHIVE] Feature F-NNN-<slug> moved to features/done/.`
+4. **Log success**: `[ARCHIVE] Feature F-NNN-<slug> moved to features/done/.`
 
 When `verdict: fail` → **do NOT mv**. The feature stays in `features/active/`. The user may, after fixup, re-run `/ae:work` and `/ae:review` for another verdict, OR manually `mv .ae/features/active/F-NNN-<slug>/ .ae/features/abandoned/F-NNN-<slug>/` if the feature is being dropped.
 
@@ -385,6 +396,18 @@ AE internal cross-references use frontmatter `id:` not path strings. `mv` of the
 - Plan frontmatter `feature: F-NNN` (when Plan 051 ships) → resolves the same way.
 - `ae:roadmap` section (a) `origin_bl:` dedup → already scans active+done+abandoned per Step 4 fix.
 - `ae:roadmap` section (d) archive prompt → recognizes a fully-done roadmap when all linked features are in `done/` (or `done/`+`abandoned/`).
+
+### Recovery — undoing an archive
+
+Archive is `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/` plus an in-place `index.md` frontmatter edit. To undo (e.g., the user got a `verdict: pass` they later disagree with):
+
+1. `mv .ae/features/done/F-NNN-<slug>/ .ae/features/active/F-NNN-<slug>/`.
+2. Edit the moved `index.md` frontmatter: revert `status: done` → `status: active`, remove the `done:` field.
+3. (Optional) If the archive trigger updated a roadmap row to `done`, edit that row back to its prior state (or run `/ae:roadmap` to see the corrected state and re-match by hand).
+
+Plan/review files in legacy paths are unaffected by archive (they were never moved by the trigger). The review file's `verdict:` field stays as written; if the user wants to rebut, they edit the review file's frontmatter or write a new review pointing at the same plan.
+
+Recovery is a manual flow — automation would require persistent archive-history beyond Plan 050's scope.
 
 ## Next Steps
 

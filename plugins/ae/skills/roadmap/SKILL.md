@@ -79,7 +79,7 @@ Discipline:
 
 After the per-BL verdicts, group active features below by `theme:` tag — situational awareness ("here's what we already have running before you add more").
 
-When backlog is empty (or all candidates filter out): `(a) Promote candidates: inbox is empty.`
+When backlog is empty (or all candidates filter out): `(a) Promote candidates: inbox is empty. Run /ae:backlog "<one-line idea>" to capture something — frictionless inbox drop, classification later.`
 
 ### (b) Dependency analysis
 

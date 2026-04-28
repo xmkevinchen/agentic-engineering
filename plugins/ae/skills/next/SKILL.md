@@ -172,11 +172,13 @@ Tiebreaker for suggestion: most recent by ID (highest number), consistent with a
 
 Only use AskUserQuestion here — not for any other inference step.
 
-### Step 10: Committed sprint items without discussion/plan (v2 sprint awareness)
+### Step 10: Committed sprint items without discussion/plan (legacy sprint awareness)
 
 Check: the current version's sprint backlog (`.ae/backlog/<current-version>/`) contains BL items that have **no matching discussion or plan**.
 
-**Current version determination**: follow the rule defined in `plugins/ae/skills/roadmap/SKILL.md` State Reading → Roadmaps subsection. Summary: pick the single non-closed roadmap doc; tiebreaker on multiple = lowest semver version.
+**Legacy-only step**: the sprint/version-grouped model was retired by Plan 050's GTD rewrite of `ae:roadmap`. This step exists for projects that still have legacy `v<X>.<Y>.<Z>/` subdirectories under `.ae/backlog/` from before the GTD migration. New projects (post-Plan-050) skip this step entirely.
+
+**Current version determination** (legacy heuristic): pick the single non-closed roadmap doc among `.ae/roadmaps/v*.md` (top-level legacy version-grouped files, NOT `.ae/roadmaps/active/*.md` which is the new GTD layout); tiebreaker on multiple = lowest semver version. Skip if `.ae/roadmaps/v*.md` files don't exist or all have `closed:` frontmatter set.
 
 **Item-to-artifact lookup** for each BL in the sprint dir:
 - Has discussion: some `.ae/discussions/*/conclusion.md` entities list contains the BL-ID, OR some `.ae/discussions/*/index.md` body references the BL-ID
