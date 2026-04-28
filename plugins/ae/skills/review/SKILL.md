@@ -319,6 +319,47 @@ After writing the review file with `verdict:`, update pipeline state:
 - [ ] Update plan frontmatter: `status: done` (if not already set by self-healing)
 - [ ] Log: `[WRITEBACK] Review written, plan status confirmed done`
 
+### Feature-level archive trigger (GTD)
+
+When `verdict: pass` AND the target plan's feature dir is in `.ae/features/active/F-NNN-slug/`, archive the feature:
+
+1. **Locate the feature dir.** Read the plan's frontmatter `feature:` field if present; otherwise infer the feature from any `<feature-dir>/plan.md` symlink/copy that points at this plan, or scan `.ae/features/active/*/index.md` for one whose body or analysis references this plan path. If no feature dir can be located → skip the archive trigger silently (legacy plans without feature linkage are not archived). Log: `[ARCHIVE] No feature dir linkage for plan; skipping archive trigger.`
+
+2. **Move the feature dir**: `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/`. Plain `mv` — `.ae/` is gitignored. Atomic on the same filesystem.
+
+3. **Update the feature `index.md` frontmatter** in place:
+   ```yaml
+   status: done       # was: active
+   done: YYYY-MM-DD   # today
+   ```
+   Preserve all other fields. Do NOT remove `origin_bl:` or any optional field — they remain part of the audit trail.
+
+4. **Update roadmap file (if linked).** If the feature's `index.md` has a non-empty `roadmap:` field, locate `.ae/roadmaps/active/<roadmap-name>.md`. If the roadmap file has a body table or list referencing this feature with a status column, update that row (best-effort; don't fail the archive on roadmap edit failure). Log either `[ARCHIVE] Updated roadmap <name>.md feature entry to done` or `[ARCHIVE] Roadmap <name>.md has no parsable feature row; skipped roadmap update`.
+
+5. **Log success**: `[ARCHIVE] Feature F-NNN-<slug> moved to features/done/.`
+
+When `verdict: fail` → **do NOT mv**. The feature stays in `features/active/`. The user may, after fixup, re-run `/ae:work` and `/ae:review` for another verdict, OR manually `mv .ae/features/active/F-NNN-<slug>/ .ae/features/abandoned/F-NNN-<slug>/` if the feature is being dropped.
+
+### Partial archive — Plan 050 known limit
+
+During Plan 050's ship window, `discuss/plan/work/review` skill outputs still write to legacy paths (`.ae/discussions/`, `.ae/plans/`, `.ae/reviews/`). The feature dir at archive time contains only the new-model artifacts: `BL-NNN.md` (origin), `index.md` (frontmatter), `analysis.md` (research output from `/ae:analyze`). Plan/review files remain in their legacy paths.
+
+The archive trigger **does not** attempt to collect or symlink legacy plan/review files into the feature dir. The audit chain is intentionally split:
+
+- In `features/done/F-NNN-<slug>/`: origin-BL + feature frontmatter + analysis
+- In legacy `.ae/plans/`, `.ae/reviews/`: plan + review files (linked by frontmatter `feature: F-NNN` from Plan 051 onwards; before Plan 051, linked via the discussion id chain)
+
+This is documented as a Plan 050 known limit. Plan 051's path migration will collect legacy paths into feature dirs systematically. Until then, cross-references work via frontmatter `id:` (feature/plan/review IDs are stable across mv — directory location is not load-bearing for lookup). Run `/ae:roadmap` or `/ae:dashboard` to verify the feature shows up in `done/` and the linkage chain still resolves.
+
+### Cross-references survive the mv
+
+AE internal cross-references use frontmatter `id:` not path strings. `mv` of the feature dir does not break:
+
+- `BL-NNN.md` `promoted_to: F-NNN` → still resolves (grep for `id: F-NNN` across `features/{active,done,abandoned}/`).
+- Plan frontmatter `feature: F-NNN` (when Plan 051 ships) → resolves the same way.
+- `ae:roadmap` section (a) `origin_bl:` dedup → already scans active+done+abandoned per Step 4 fix.
+- `ae:roadmap` section (d) archive prompt → recognizes a fully-done roadmap when all linked features are in `done/` (or `done/`+`abandoned/`).
+
 ## Next Steps
 
 Based on review outcome, suggest with exact executable command:
