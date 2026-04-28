@@ -53,7 +53,7 @@ AE uses **GTD (Getting Things Done)** as its project management model. Skills ma
 
 | GTD Phase | AE Skill | Artifact Path |
 |---|---|---|
-| **Capture** | `ae:backlog` | `.ae/backlog/BL-NNN-slug.md` (flat inbox) |
+| **Capture** | `ae:backlog` | `.ae/backlog/unscheduled/BL-NNN-slug.md` (inbox; sibling subdirs `closed/` and `done/` hold terminal-state BLs) |
 | **Clarify** | `ae:roadmap` | scan backlog → promote candidates + feature dependency analysis + size aggregate + roadmap archive prompt |
 | **Organize** | `ae:analyze` | promote BL → `.ae/features/active/F-NNN-slug/` with initial size + depends_on |
 | **Reflect (short-cycle)** | `ae:dashboard` + `ae:next` | default reads `features/active/`; `--all` includes done + abandoned |
