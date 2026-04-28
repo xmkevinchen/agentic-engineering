@@ -8,13 +8,17 @@ effort: high
 
 ## Argument Inference
 
-If `$ARGUMENTS` is empty:
-1. Check `output.plans` for the most recent plan with `status: reviewed` and uncompleted steps (`- [ ]`)
-2. Found → use that plan file path
-3. Not found → check conversation context for a plan being discussed
-4. Still nothing → ask user which plan to execute
+If `$ARGUMENTS` is empty, scan for the most recent plan with `status: reviewed` and uncompleted steps (`- [ ]`) across BOTH locations:
+1. **Feature-dir plans (primary)**: `.ae/features/active/F-*/plan.md`
+2. **Legacy plans (fallback)**: `output.plans/*.md` (default `.ae/plans/`, configurable via `pipeline.yml`)
+3. Apply tiebreaker rules across the union of both locations.
+4. Found → use that plan file path.
+5. Not found → check conversation context for a plan being discussed.
+6. Still nothing → ask user which plan to execute.
 
-**Tiebreaker rule**: when multiple plans match, select the most recent plan with `status: reviewed` and uncompleted steps (by plan ID/creation order, not file mtime). `/ae:next` uses the same rule to ensure consistent suggestions.
+**Tiebreaker rule**: when multiple plans match, select the most recent plan with `status: reviewed` and uncompleted steps. Ordering across the union: feature-dir plans rank by parent dir creation date (or `created:` frontmatter); legacy plans rank by `id:` frontmatter (NNN). When both yield results, prefer the most recent absolute date. `/ae:next` uses the same rule.
+
+**Feature ID derivation for feature-dir plans**: when the resolved plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`, the plan's feature ID is **path-derived** from the parent dir's `F-NNN`. Optional `feature: F-NNN` plan frontmatter is validated against the path-derived ID and a mismatch logs a warning (`[WARNING] Plan frontmatter feature: <X> conflicts with parent dir <Y>; using path-derived <Y>`); path always wins. Legacy plans (under `output.plans/`) have no `feature:` frontmatter and no path-derived ID.
 
 # /ae:work — Execute Plan
 
@@ -48,6 +52,15 @@ Per the convention in `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill ste
 ## Pre-checks (all must pass)
 
 **Task lifecycle**: at skill start (BEFORE Check 1), `TaskCreate(subject: "ae:work: Pre-check")`; immediately `TaskUpdate(taskId, status: "in_progress")`. After Check 5 passes (control reaches Execution Mode Selection), `TaskUpdate(taskId, status: "completed")`.
+
+### Milestone path resolution (helper)
+
+This helper resolves the milestone directory used for `step-summaries.md` and `notes.md`. It is referenced by Check 4 (deferred items), Step-Summary Context (Check 2), Defer-write (Check E disposition), Step Summary persistence (Post-commit), and Accumulated Doodlestein checkpoint (Post-commit).
+
+- **Feature-dir plan** (plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`) → milestone dir = `.ae/features/<state>/F-NNN-<slug>/milestones/`. Files inside: `step-summaries.md`, `notes.md`. (Path-derived; no plan frontmatter required.)
+- **Legacy plan** (plan path under `output.plans/`) → milestone dir = `<output.milestones>/<plan-id>/` where `plan-id` = plan frontmatter `id:`. Files inside: `step-summaries.md`, `notes.md`.
+
+When the helper is referenced below as `<milestone-dir>` it expands per the rule above based on the resolved plan path.
 
 ### Check 1: Plan Exists & Reviewed
 - Read the plan file, confirm it contains `## Acceptance Criteria` or `## AC`
@@ -88,7 +101,7 @@ Per the convention in `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill ste
 
 #### Step-Summary Context
 
-Read `<output.milestones>/<milestone>/step-summaries.md` if it exists. Extract the last 3 complete step blocks (identified by `## Step N` headers), or all blocks if fewer than 3 exist. If the file doesn't exist → skip silently (no error, no warning — this is normal for step 1 or first-time execution).
+Read `<milestone-dir>/step-summaries.md` (resolved per **Milestone path resolution** helper above — feature-dir plan → `.ae/features/<state>/F-NNN-<slug>/milestones/step-summaries.md`; legacy plan → `<output.milestones>/<plan-id>/step-summaries.md`) if it exists. Extract the last 3 complete step blocks (identified by `## Step N` headers), or all blocks if fewer than 3 exist. If the file doesn't exist → skip silently (no error, no warning — this is normal for step 1 or first-time execution).
 
 TL reviews these blocks internally for planning context only — understanding what decisions were made, what was rejected, and what cross-step dependencies exist before planning the current step's execution. Do NOT inject these blocks into agent spawn prompts. Injection is handled separately by the overlap heuristic below.
 
@@ -111,7 +124,7 @@ Compare the **immediately preceding step's** `Actual files:` list (from the last
 3. Cache `AGENT_TEAMS_FULL` for this entire ae:work invocation (all steps). Do not repeat ToolSearch per step.
 
 ### Check 4: Deferred Items
-Read `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`). If file doesn't exist → skip: `✅ Deferred items: none`
+Read `<milestone-dir>/notes.md` (resolved per **Milestone path resolution** helper above — feature-dir plan → `.ae/features/<state>/F-NNN-<slug>/milestones/notes.md`; legacy plan → `<output.milestones>/<plan-id>/notes.md`). If file doesn't exist → skip: `✅ Deferred items: none`
 
 Parse lines matching `DEFERRED [Step N]:` where N = current step number. If matches found, display each and require TL to write a disposition before proceeding:
 
@@ -301,7 +314,7 @@ Read the code-review SKILL.md and follow its instructions within the current con
 - **P2 logic/security**: show, human disposition (fix / defer / backlog)
 - **P2 style/naming**: auto-skip
 - **P3 (minor)**: auto-skip
-- **Defer** — MUST write structured entry to `<output.milestones>/<plan-id>/notes.md` (plan-id = plan frontmatter `id:`; create directory and file if needed). Format:
+- **Defer** — MUST write structured entry to `<milestone-dir>/notes.md` (resolved per **Milestone path resolution** helper; create directory and file if needed). Format:
     ```
     DEFERRED [Step N]: <one-line finding description>
     Reason: <why deferred, what will resolve it>
@@ -326,7 +339,7 @@ Fix findings, re-run from Check D until clean pass.
 
 1. **Step Summary** — persist to disk AND echo in conversation.
 
-   Write a step-summary block to `<output.milestones>/<milestone>/step-summaries.md` (create directory and file if they don't exist). Append one block per completed step:
+   Write a step-summary block to `<milestone-dir>/step-summaries.md` (resolved per **Milestone path resolution** helper — feature-dir plan → `.ae/features/<state>/F-NNN-<slug>/milestones/step-summaries.md`; legacy plan → `<output.milestones>/<plan-id>/step-summaries.md`; create directory and file if they don't exist). Append one block per completed step:
 
    ```
    ## Step N — <step title> (commit: <hash from git rev-parse HEAD>)
@@ -393,7 +406,7 @@ Fix findings, re-run from Check D until clean pass.
                      SendMessage findings to team-lead.")
       ```
    2. Collect findings. Classify: P1 (critical blind spot) / P2 (concern) / P3 (minor)
-   3. Write findings to `<output.milestones>/<plan-id>/notes.md` using `CHECKPOINT:` prefix (not `DEFERRED` — avoids triggering Check 4 parsing)
+   3. Write findings to `<milestone-dir>/notes.md` (resolved per **Milestone path resolution** helper) using `CHECKPOINT:` prefix (not `DEFERRED` — avoids triggering Check 4 parsing)
    4. P1 findings set `no_accumulated_p1 = false`
 
    If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`.
