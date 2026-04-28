@@ -47,6 +47,78 @@ plugins/ae/             # The actual plugin
 - **Feature branch** — all work on feature branches, PR to main. Branch naming: `feature/<slug>` or `fix/<slug>`
 - Never push to remote unless explicitly approved by the user
 
+## Project Management (GTD)
+
+AE uses **GTD (Getting Things Done)** as its project management model. Skills map to GTD's 5+1 phases (plus an AE-self-development sidebar):
+
+| GTD Phase | AE Skill | Artifact Path |
+|---|---|---|
+| **Capture** | `ae:backlog` | `.ae/backlog/BL-NNN-slug.md` (flat inbox) |
+| **Clarify** | `ae:roadmap` | scan backlog → promote candidates + feature dependency analysis + size aggregate + roadmap archive prompt |
+| **Organize** | `ae:analyze` | promote BL → `.ae/features/active/F-NNN-slug/` with initial size + depends_on |
+| **Reflect (short-cycle)** | `ae:dashboard` + `ae:next` | default reads `features/active/`; `--all` includes done + abandoned |
+| **Reflect (long-cycle)** | `ae:retrospect` | project-level review of `features/done/` — what shipped + lessons learned |
+| AE plugin self-stats | `ae:plugin-stats` | independent of project retrospect; preserves the old `ae:retrospect` parser + 23 existing review records |
+| **Engage** | `ae:discuss` / `ae:plan` / `ae:work` / `ae:review` | execute inside feature dir; `ae:review` verdict pass triggers archive |
+| **Archive** *(GTD Reflect sub-phase)* | `ae:review` (feature-level) + `ae:roadmap` (roadmap-level) | feature: mv `active/` → `done/`; roadmap: all features done → mv `roadmaps/active/X.md` → `roadmaps/done/X.md` |
+
+`/ae:retrospect` = project-level long-cycle Reflect (GTD Weekly Review style). `/ae:plugin-stats` = AE plugin self-development outcome stats (delivery metrics, separated from product retrospective per OpenAI/Google patterns).
+
+### Feature directory layout
+
+```
+.ae/features/
+├── active/      # in-flight features (most lookups read this)
+├── done/        # archived after ae:review verdict pass
+└── abandoned/   # started then dropped (superseded / not doing)
+
+.ae/features/active/F-NNN-slug/
+├── index.md       # feature frontmatter + GTD state
+├── analysis.md    # ae:analyze research output (when applicable)
+├── BL-NNN.md      # original BL file (preserved name for grep / cite)
+└── ...            # discuss/plan/work/review outputs (path migration in plan 051)
+```
+
+### Feature index.md frontmatter schema
+
+```yaml
+# Required
+id: F-NNN
+title: "<feature title>"
+status: active        # active | done | abandoned
+created: YYYY-MM-DD
+
+# Optional (GTD-related)
+theme: <tag>          # grouping in ae:roadmap theme view
+roadmap: <name>       # link to .ae/roadmaps/active/<name>.md
+size: M               # T-shirt: XS (<1d) | S (1d) | M (2-3d) | L (≈1w) | XL (>1w)
+depends_on: [F-MMM]   # other features that must complete first
+origin_bl: BL-042     # or list: [BL-042, BL-051] for multi-BL consolidation
+done: YYYY-MM-DD      # set when status transitions to done
+abandoned: YYYY-MM-DD
+abandoned_reason: "<why>"
+
+# Optional (user-defined — no enum constraint)
+# priority, assignee, notes, or any user-added field
+```
+
+### Reader contract
+
+All skills that read feature `index.md` frontmatter (`ae:analyze`, `ae:roadmap`, `ae:dashboard`, `ae:next`, `ae:retrospect`, `ae:review`) MUST be **reader-tolerant**:
+- **Unknown fields** (not in this schema) → silently ignore. User-defined fields are metadata-only; any field that drives automated skill logic (sorting, filtering, routing, archive triggers) MUST be promoted into this schema first.
+- **Known field with unknown enum value** (e.g., `status: paused`) → log warning, preserve value as-is, skip the feature from enum-dependent workflows. Do NOT silently coerce to a default.
+- **Missing optional field** → graceful default (treat as absent, not invalid).
+- **Missing required field** (`id` / `title` / `status` / `created`) → log error, skip this feature record; continue scanning other records.
+- **List-or-scalar fields** (`origin_bl`, `depends_on`): readers MUST normalize to list internally — `origin_bl: BL-042` and `origin_bl: [BL-042, BL-051]` are semantically equivalent.
+
+### Schema evolution
+
+To add a new field: update this section AND the SKILL.md files that consume it. No Liquibase versioning, no separate `schema.md` file (intentional — supersedes discussion 052's heavier proposal).
+
+### Legacy artifacts
+
+The 175 pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts are **legacy** — they stay where they are; new work goes through `.ae/features/`. `ae:dashboard` and `ae:next` hide legacy by default; pass `--legacy` to surface them.
+
 ## Design Principles
 
 - **Self-bootstrapping** — AE develops AE. All changes to this plugin go through the AE pipeline (discuss→plan→work→review). This is the default working mode, not a special case.
