@@ -28,7 +28,26 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
                                                               └── fix & re-review ────┘
 ```
 
+## Task progress tracking
+
+Per the convention in `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:work creates these tasks:
+
+| Phase | When created | When `in_progress` | When `completed` |
+|---|---|---|---|
+| `ae:work: Pre-check` | At skill start | Before Check 1 begins | After Check 5 passes |
+| `ae:work: Step N` (one per `### Step N` in plan) | After Pre-check Check 2 reads the plan body (plan-dependent dispatch) | Before TDD cycle starts (or before direct Lead implementation if test.command empty) | After Post-commit `git rev-parse --verify HEAD` succeeds (i.e., commit landed) |
+
+**Mid-plan resume rule**: when entering on Step N because Steps 1..N-1 are `[x]`, batch-create tasks for ALL plan steps; immediately call `TaskUpdate(taskId, status: "completed")` for already-`[x]` steps; pending steps stay default.
+
+**No tasks for sub-actions**: do NOT create per-Pre-commit-Check task (Checks A-G are sub-actions of Step N's commit), do NOT create per-TDD-sub-cycle task (write/red/implement/green/refactor are sub-actions of Step N), do NOT create per-pre-check sub-check task (Check 1-5 are sub-actions of Pre-check).
+
+**Owner field**: omit entirely (per agent-teams §E — self-tracking tasks are not for claim).
+
+**On error**: if a phase exits by refusal/blocker/unhandled error/user pause before its completion criterion is satisfied, leave the task at `in_progress`. Allowed status enum: `pending | in_progress | completed | deleted` only.
+
 ## Pre-checks (all must pass)
+
+**Task lifecycle**: at skill start (BEFORE Check 1), `TaskCreate(subject: "ae:work: Pre-check")`; immediately `TaskUpdate(taskId, status: "in_progress")`. After Check 5 passes (control reaches Execution Mode Selection), `TaskUpdate(taskId, status: "completed")`.
 
 ### Check 1: Plan Exists & Reviewed
 - Read the plan file, confirm it contains `## Acceptance Criteria` or `## AC`
@@ -57,6 +76,8 @@ Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → C
 ### Check 2: Locate Current Step
 - `- [x]` = done, `- [ ]` = pending. Current step = first pending.
 - All done → suggest `/ae:review`, **refuse to execute**
+
+**Task dispatch (plan-dependent)**: After locating the current step but before reading step-summaries, batch-create per-step tasks via `TaskCreate(subject: "ae:work: Step N")` — one per `### Step N` heading in the plan body. For already-`[x]` steps: immediately `TaskUpdate(taskId, status: "completed")`. Pending steps stay default `pending`. Track the task IDs (one per step) for later TaskUpdate calls in TDD cycle and Post-commit.
 
 #### Step-Summary Context
 
@@ -180,6 +201,8 @@ The ~30KB-and-5-steps threshold is carried forward from Plan 046 Known Limits �
 
 The agent begins each step's TDD cycle with the Primary Context already loaded (see "Per-step Primary Context Load" above).
 
+**Task lifecycle**: immediately before the first action of TDD (write test, OR direct implementation if `test.command` is empty), call `TaskUpdate(stepTaskId, status: "in_progress")` for the current step's task. The completed transition fires later in Post-commit, NOT here. Do NOT create or update tasks for individual TDD sub-cycles (write/red/implement/green/refactor) — they are sub-actions, not phases.
+
 If `test.command` is empty → skip TDD, implement directly.
 
 If `test.command` is set:
@@ -285,6 +308,8 @@ Fix findings, re-run from Check D until clean pass.
 - After commit, update plan: `- [ ]` → `- [x]` with commit hash
 
 ## Post-commit
+
+**Task completion**: immediately after `git rev-parse --verify HEAD` succeeds (confirming the step's commit landed), call `TaskUpdate(stepTaskId, status: "completed")` for the current step's task. This is the completion criterion per agent-teams §D — the panel reflects step completion at commit-landing, not at any earlier checkpoint.
 
 1. **Step Summary** — persist to disk AND echo in conversation.
 
