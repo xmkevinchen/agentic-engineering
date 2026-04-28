@@ -8,7 +8,7 @@ source: manual
 ## Expected Behavior
 
 ### MUST
-- [file:exists] A plan file is created under `output.plans` directory
+- [file:exists] A plan file is created — either at `<feature-dir>/plan.md` (Plan 051+ when feature is resolvable) OR at `output.plans/NNN-slug.md` (legacy fallback for free-text or unpromoted-BL invocations).
 - [file:contains] Plan file contains `## Steps` section
 - [file:contains] Plan file contains `## Acceptance Criteria` section
 - [file:contains] Plan file frontmatter contains `status: draft` or `status: reviewed`

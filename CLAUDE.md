@@ -112,6 +112,17 @@ All skills that read feature `index.md` frontmatter (`ae:analyze`, `ae:roadmap`,
 - **List-or-scalar fields** (`origin_bl`, `depends_on`): readers MUST normalize to list internally — `origin_bl: BL-042` and `origin_bl: [BL-042, BL-051]` are semantically equivalent.
 - **Missing `theme`**: features without a `theme:` value group under a uniform bucket named `(unthemed)` — never invented from title or body. All grouping skills (`ae:roadmap` section (a) feature listing, `ae:retrospect` section (1) recently-shipped grouping) MUST use this exact bucket name to prevent silent divergence.
 
+### Path classes (Plan 051+)
+
+AE distinguishes two classes of paths in the project tree:
+
+- **`.ae/features/{active,done,abandoned}/`** — **fixed AE internal state** (not configurable). The directory layout is hardcoded into reader skills (`ae:dashboard`, `ae:next`, `ae:roadmap`, `ae:retrospect`, `ae:plugin-stats`). External projects DO NOT override these paths via `pipeline.yml` — they are AE convention.
+- **`output.{plans,reviews,discussions,milestones,backlog,analyses}`** — **configurable legacy/external-customization paths** in `pipeline.yml`. Existing projects with custom `output.discussions: docs/discussions/` etc. continue to work; these paths host pre-Plan-051 legacy artifacts AND host post-Plan-051 free-text/standalone artifacts that don't resolve to a feature dir.
+
+Without this distinction, external-project users won't know which paths they can override and which are AE internal convention.
+
+**`.gitignore` policy**: the existing `.ae/` blanket gitignore (top-level) covers `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` and all artifacts inside (plan.md, review.md, discussions/, milestones/, etc.). External projects don't need per-subdir overrides; the `.ae/` line is sufficient. AE internal state stays local to each working tree.
+
 ### Path-derived feature ID convention (Plan 051+)
 
 For feature-resident plan, review, and discussion artifacts inside `.ae/features/<state>/F-NNN-<slug>/`, the feature ID is **path-derived** from the parent directory name. Readers MUST extract `F-NNN` from the directory path; this is the canonical lookup.

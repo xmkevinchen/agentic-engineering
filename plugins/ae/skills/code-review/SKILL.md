@@ -118,6 +118,8 @@ At the END of Track 4 (after the Results merge below, before `/ae:code-review` r
 
 **Staging path**: `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md`
 
+**Plan 051 path-class note**: Track 4 staging stays under `<output.reviews>/per-commit/` regardless of whether the plan being reviewed lives at `.ae/features/<state>/F-NNN-<slug>/plan.md` or under `<output.plans>/NNN.md`. The staging cache is implementation detail (per-commit, short-lived, sub-SHA addressable); user-visible review files (sibling `.ae/features/<state>/F-NNN-<slug>/review.md` for feature-dir plans, `output.reviews/NNN.md` for legacy plans — see ae:review Output write target rule) are written by `/ae:review`, not by Track 4. Both plan locations use the same staging path; the eventual `<short-sha>.md` rename is to `<output.reviews>/per-commit/<short-sha>.md` in either case.
+
 **Plan-id presence contract** (shared between `/ae:code-review` and `/ae:work` Post-commit):
 - When `/ae:code-review` is invoked from `/ae:work` D-step, plan-id + step-number context is passed through. Track 4 writes at `.staging-<plan-id>-step-<N>.md`. `/ae:work` Post-commit reads from the same path.
 - When `/ae:code-review` is invoked manually (no plan context), Track 4 uses fallback `<plan-id>` = `manual`, `<N>` = `<iso-8601-timestamp>`. `/ae:work` Post-commit is not running in this case — no rename, no orphan.

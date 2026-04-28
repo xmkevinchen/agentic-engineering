@@ -8,7 +8,7 @@ source: manual
 ## Expected Behavior
 
 ### MUST
-- [file:exists] `.ae/discussions/<NNN>-<slug>/index.md` created after Setup step
+- [file:exists] Discussion `index.md` created after Setup step at one of: `<feature-dir>/discussions/<NNN>-<slug>/index.md` (Plan 051+ feature-internal) OR `output.discussions/<NNN>-<slug>/index.md` (legacy fallback for free-text invocations not tied to a feature).
 - [file:contains] index.md frontmatter has `status: active`
 - [file:contains] index.md frontmatter has `pipeline.discuss: in_progress`
 - [file:exists] At least one `topic-NN-slug/summary.md` created

@@ -8,7 +8,7 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [file:exists] analysis.md exists at `<output.discussions>/NNN-slug/analysis.md`
+- [file:exists] analysis.md exists at `.ae/features/active/F-NNN-<slug>/analysis.md` (Plan 050+ — analyze writes into the feature dir; the prior `output.discussions/NNN-slug/analysis.md` location was retired with Plan 050).
 - [file:contains] analysis.md frontmatter contains fields: `id`, `title`, `type: analysis`, `created`, `tags`
 - [file:exists] index.md exists in the same directory as analysis.md
 - [file:contains] index.md frontmatter contains `analyze: done` under `pipeline`

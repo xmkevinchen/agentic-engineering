@@ -8,10 +8,12 @@ effort: medium
 
 ## Argument Inference
 
-If `$ARGUMENTS` is empty:
-1. Check `output.plans` for the most recent plan with `status: draft` or `status: reviewed`
-2. Found → use that plan file path
-3. Not found → ask user which plan to review
+If `$ARGUMENTS` is empty, scan for the most recent plan with `status: draft` or `status: reviewed` across BOTH plan locations (Plan 051+):
+1. **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
+2. **Legacy plans (fallback)**: `output.plans/*.md` (default `.ae/plans/`, configurable via `pipeline.yml`)
+3. Apply tiebreaker rules across the union of both locations (mirrors `/ae:work` and `/ae:review` argument-inference union scan).
+4. Found → use that plan file path.
+5. Not found → ask user which plan to review.
 
 # /ae:plan-review — Plan Review
 

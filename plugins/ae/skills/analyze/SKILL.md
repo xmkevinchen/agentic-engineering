@@ -263,7 +263,7 @@ Send `shutdown_request` to all teammates. Show the user:
 2. Mode A only: `Moved BL-<NNN> → F-NNN-<slug>/BL-<NNN>.md (frontmatter: status=promoted, promoted_to=F-NNN).`
 3. Confirmed `size:` and `depends_on:` values, if any.
 4. Knowledge-capture summary: `[N] items ingested, no conflicts` or `conflicts detected with: [titles]`.
-5. **Next step**: `/ae:discuss .ae/features/active/F-NNN-<slug>/` if decisions remain, or `/ae:plan` if the path is clear.
+5. **Next step**: `/ae:discuss .ae/features/active/F-NNN-<slug>/` if decisions remain, or `/ae:plan` if the path is clear. Plan 051+ note: subsequent `/ae:discuss`, `/ae:plan`, `/ae:review` outputs will write inside this feature dir (`<feature-dir>/discussions/<NNN>-<slug>/`, `<feature-dir>/plan.md`, `<feature-dir>/review.md`) — feature ID is path-derived from `F-NNN`. The feature dir is now the canonical home for all per-feature artifacts.
 
 ## Edge cases — abandon and re-promote
 

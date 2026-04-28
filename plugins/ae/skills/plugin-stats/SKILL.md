@@ -14,7 +14,7 @@ This skill is **independent of project-level GTD retrospect** (`/ae:retrospect`)
 
 - `$ARGUMENTS`: optional filter — feature name, time range, or "all"
 - `--compare ID1 ID2`: comparison mode — compare two existing reports by their `id` field (e.g., `/ae:plugin-stats --compare 001 003`).
-- Default (no flags): analyze all available data in `output.reviews/` and generate a snapshot report.
+- Default (no flags): analyze all available review data and generate a snapshot report. Reviews are read from BOTH `output.reviews/*.md` (legacy `type: review`) AND `.ae/features/{active,done}/F-*/review.md` (Plan 051+ feature-dir reviews) — union scan, no surface-index pointer files.
 
 ## Pre-check
 
@@ -40,7 +40,11 @@ Run this step after Pre-check and before Step 1. Skip in `--compare` mode.
 
 ## Step 1: Collect Outcome Statistics
 
-Read all review files in `output.reviews/`. Extract these 5 metrics from each:
+Read all review files across BOTH locations (union scan — Plan 051+):
+- **Legacy reviews**: `output.reviews/*.md` with `type: review` in frontmatter (the 23 historical AE-self-development reviews).
+- **Feature-dir reviews**: `.ae/features/{active,done}/F-*/review.md` (Plan 051+ post-migration reviews).
+
+Extract these 5 metrics from each:
 
 | Metric | Source | What it measures |
 |---|---|---|

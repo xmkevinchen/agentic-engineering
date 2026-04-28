@@ -46,7 +46,11 @@ AE pipeline itself), use /ae:plugin-stats — that's a separate concern.
 
 Stop here. Do not synthesize a 4-section report from zero data.
 
-For each in-window feature, also read `<feature-dir>/analysis.md` (if present) and any review file referenced from the feature's plan (look up via the legacy plan path inferred from the linkage chain in `ae:dashboard` "Plan linkage during Plan 050 transition" — best effort, missing chain is OK).
+For each in-window feature, also read `<feature-dir>/analysis.md` (if present) and any review file. Review-file lookup unions BOTH locations (Plan 051+):
+- **Feature-dir (primary)**: `<feature-dir>/review.md` — sibling of `<feature-dir>/plan.md` for post-Plan-051 features.
+- **Legacy (fallback)**: `output.reviews/*.md` with `target:` matching the feature's plan path — for pre-Plan-051 features whose plan/review files remained in legacy paths.
+
+Best-effort: missing review file is OK (the lessons-learned synthesis tolerates absence).
 
 ## Output — 4 conversational sections
 

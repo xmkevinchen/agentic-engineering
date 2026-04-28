@@ -11,7 +11,7 @@ source: manual
 - [team:exists] TeamCreate call for review team (team name matching `<feature>-review` or similar)
 - [behavior] Review team includes challenger (pure opposition) per ae:review Step 3 mandate
 - [behavior] Cross-family proxy spawned for at least one enabled proxy (codex in this fixture; gemini only if reachable)
-- [file:exists] Review report file created under `output.reviews/` (e.g., `NNN-test-plan-review.md`)
+- [file:exists] Review report file created — either at `<feature-dir>/review.md` (Plan 051+ when target plan is feature-dir-resident) OR at `output.reviews/NNN-test-plan-review.md` (legacy when target plan lives under `output.plans/`).
 - [file:contains] Review report frontmatter has `verdict: pass` OR `verdict: fail` (required field per ae:review Output spec)
 - [file:contains] Review report frontmatter has `target:` field pointing to the plan path
 - [file:contains] Review report body has Outcome Statistics section with rework rate, P1 escape rate, drift events, fix loop triggers, auto-pass rate
