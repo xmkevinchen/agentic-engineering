@@ -385,11 +385,20 @@ Each modified SKILL.md hard-lists its own phase IDs. Phase IDs are one of these 
 
 - `Pre-check` — singular. ONE task for the whole pre-check section, even when there are multiple sub-checks (Check 1, Check 2, etc.). Sub-checks are sub-actions, not phases.
 - `Step N — <title>` — integer step number + em-dash + human-readable title. Title source:
-  - **Fixed-phase skills** (ae:plan, ae:analyze, ae:discuss, ae:test-plugin): hardcoded in the SKILL.md task lifecycle table. Title text matches the SKILL.md `## Step N: <title>` / `## Phase N: <title>` heading.
-  - **ae:work** (plan-dependent): runtime-extracted from the plan body's `### Step N: <title>` heading at batch-create time (Pre-check Check 2 already reads the plan body to enumerate steps; pull the title from the same parse). Truncate to ~42 chars to keep the full subject under ~60 chars.
+  - **Fixed-phase skills** (ae:plan, ae:analyze, ae:discuss, ae:test-plugin): the task lifecycle table in the corresponding SKILL.md is the **canonical source of truth** for the title text. The title is allowed to differ from the SKILL.md `## Step N:` / `## Phase N:` heading text — short panel-friendly titles are preferred (e.g., task title `Plan Review` vs heading `Agent Teams Plan Review`; task title `Test Generation` vs heading `Test Case Generation`; task title `Doodlestein Challenge` for heading `Doodlestein Challenge (optional)`). When the spec heading is already short and panel-friendly, match it verbatim.
+  - **ae:work** (plan-dependent): runtime-extracted from the plan body's `### Step N: <title>` heading at batch-create time (Pre-check Check 2 already reads the plan body to enumerate steps; pull the title from the same parse). **Normalization order** (apply in this exact order):
+    1. **Strip trailing commit marker**: remove `✅ <hash>` (the post-commit checkmark + short SHA pattern; regex `\s*✅\s*[a-f0-9]+\s*$`) if present.
+    2. **Strip trailing AC reference**: remove `(AC1)`, `(AC2, AC3)`, etc. (regex `\s*\(AC[0-9, ]+\)\s*$`) if present. Apply only at end-of-string — DO NOT strip mid-title parenthetical content.
+    3. **Trim whitespace** at both ends.
+    4. **Empty-title fallback**: if the resulting title is empty or whitespace-only (e.g., heading was `### Step 3:` with no title text), emit subject as `<skill>: Step N` with NO em-dash and NO title suffix (the no-title form is a legitimate fallback, not an error).
+    5. **Truncate** to 42 chars (right-side cut). After cut, trim trailing whitespace + trailing `-`/`—` if the cut landed on one. The full subject `<skill>: Step N — <title>` stays under ~60 chars.
+
+    Edge case — heading already contains an em-dash in the title (e.g., `### Step 5: Migration — final cutover (AC2)`): the title after stripping AC ref is `Migration — final cutover`. Do NOT split on the inner em-dash; the title is the whole post-`Step 5:` substring. Subject becomes `ae:work: Step 5 — Migration — final cutover` — readable and correct.
 - `Phase N — <title>` — same shape, used by ae:test-plugin.
 - `TDD Cycle` — ae:work specific, for the per-step TDD inner loop (when used as a tracked phase rather than as a sub-action).
 - Review track names verbatim (ae:review only): `Security review`, `Performance review`, `Architecture review`, `Cross-family challenge + synthesis` — already self-describing, no title suffix needed.
+
+**When is the title suffix required vs optional?** A title suffix is **required** for any phase ID that is a generic numeric or sequence identifier — `Step N`, `Phase N`, mode placeholders. A title suffix is **omitted** only when the phase ID itself is already a self-describing label: `Pre-check`, `Research`, `Synthesize`, ae:review's 4 track names. Future skill authors: do NOT introduce opaque numeric IDs without titles. If a new skill's phase is genuinely a numeric step, it MUST have a title; if it's a self-describing concept, prefer naming it directly without a number.
 
 **Subject string format**: `"<skill-name>: <phase-id> — <title>"` — colon + space + phase-id + em-dash + title. Examples:
 
