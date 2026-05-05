@@ -106,6 +106,22 @@ user-invocable: true
 
    This is the audit path for "did the prefer hint reach Claude, or was it filtered first?" — the trace shows every Layer 1 event with explicit outcome, so the user can verify AE enforced the governance contract before Claude's pick.
 
+   **Layer 2 trace format** (symmetric to Layer 1; permanent observability feature, not validation scaffolding): every Claude pick is recorded with its candidate pool and source. Format:
+
+   ```
+   [layer2] considered: [<agent-1>, <agent-2>, ...] from <pool: primary|library>
+   [layer2] selected: <agent-name> from <source: project|user|builtin|library>
+   [layer2] rationale: <one-line task-fit reason; names rejected candidates by name>
+   [layer2] library-fallback: <fired|not-fired>
+   ```
+
+   - `considered:` lists the agent names Claude evaluated (post Layer-1 filtering). The pool field disambiguates whether this was the primary pool or a library-fallback scan.
+   - `selected:` names the winning agent and its source pool. `source: project` = `.claude/agents/`; `source: user` = `~/.claude/agents/`; `source: builtin` = `plugins/ae/agents/`; `source: library` = enumerated from `agent_libraries[]`.
+   - `rationale:` explains the pick in one line. When primary candidates were rejected, it names them by name (so the audit shows what was considered, not just what won).
+   - `library-fallback:` records whether the library scan fired (`fired` = primary pool had no fit, library was scanned; `not-fired` = primary pool had a confident match).
+
+   Both surfaces (`--agent-debug` stdout AND Team-lead synthesis report) emit Layer 1 AND Layer 2 events. The synthesis report's `## Agent Selection Trace` section now includes both layers.
+
    - No numerical scores, no thresholds — Claude either has a confident match (primary or fallback) or returns no match.
    - Task fit → stack compatibility → role coverage → specialty specificity is the rubric priority order.
 
@@ -130,7 +146,7 @@ user-invocable: true
 
    ### Debug flag
 
-   `--agent-debug` on any skill shows the full 3-layer decision tree (rules checked, Layer 2 candidates considered + Claude's rationale, Layer 3 trigger reason or lack thereof).
+   `--agent-debug` on any skill shows the full 3-layer decision tree (rules checked, Layer 2 candidates considered + Claude's rationale via the Layer 2 trace format above, Layer 3 trigger reason or lack thereof). Both Layer 1 and Layer 2 events are emitted with the structured trace formats documented in their respective sections.
 5. **Show selected team** to user before launching. User can adjust.
 
 ## Cross-family Prompt Reference
