@@ -80,6 +80,8 @@ If `--refresh` flag is set, delete existing `source: generated` test files for t
 
 ### 1.1 Spawn Test Team
 
+**Before `TeamCreate`** (applies to BOTH this team here AND Phase 2 Class B test team) — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+
 ```
 TeamCreate(team_name: "test-<target>")
 

@@ -150,6 +150,8 @@ Once the feature dir exists and the BL is moved (Mode A) or the index.md is writ
 
 **Cross-family**: read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
+**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+
 ```
 TeamCreate(team_name: "F-NNN-analyze")
 

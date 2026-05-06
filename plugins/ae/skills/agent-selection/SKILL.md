@@ -93,16 +93,16 @@ user-invocable: true
 
    **Fallback cost discipline**: library scan only triggers on primary miss. For common role slots (reviewer, developer, domain-expert), the primary pool should almost always have a fit — library scan is reserved for genuinely novel task shapes where existing agents don't cover.
 
-   **Layer 1 trace format**: every rule firing and filter action is recorded in a structured trace. Two surfaces:
+   **Layer 1 trace format**: every rule firing and filter action is recorded in a structured trace. Two surfaces, **both default-emit** (no flag required — per `ae:agent-teams` Base Protocol § Selection Trace Emission, BL-058 ship 2026-05-05):
 
-   - **`--agent-debug` flag** (per-invocation): trace is printed to stdout before Claude is invoked, one line per event, format: `[layer1] <step>: <rule/filter> <agent-name> → <outcome> (<reason>)`. Example sequence for the prefer+stack-kill test case:
+   - **Console stdout** (default-ON): trace is printed before Claude is invoked, one line per event, format: `[layer1] <step>: <rule/filter> <agent-name> → <outcome> (<reason>)`. Example sequence for the prefer+stack-kill test case:
      ```
      [layer1] force-apply: no rules firing in context
      [layer1] hard-constraint: stack-mismatch filter REMOVED phpstan-expert (agent tech_stack [php, laravel] ⊄ project tech_stack [rust, mcp])
      [layer1] prefer-annotate: rule-4 FIRED for phpstan-expert on context [security, audit] → NO-OP (target already filtered)
      [layer1] claude-input: pool = [rust-mcp-expert, ...] (phpstan-expert absent)
      ```
-   - **Team-lead synthesis report** (end of skill run): a `## Agent Selection Trace` section in the report summarizes the Layer 1 events for this invocation. Same structured format as `--agent-debug` but embedded in the skill's final written output, so it persists beyond the console session.
+   - **Team-lead synthesis report** (default-ON, end of skill run): a `## Agent Selection Trace` section in the report summarizes the Layer 1 events for this invocation. Same structured format as the stdout surface but embedded in the skill's final written output, so it persists beyond the console session.
 
    This is the audit path for "did the prefer hint reach Claude, or was it filtered first?" — the trace shows every Layer 1 event with explicit outcome, so the user can verify AE enforced the governance contract before Claude's pick.
 
@@ -120,7 +120,7 @@ user-invocable: true
    - `rationale:` explains the pick in one line. When primary candidates were rejected, it names them by name (so the audit shows what was considered, not just what won).
    - `library-fallback:` records whether the library scan fired (`fired` = primary pool had no fit, library was scanned; `not-fired` = primary pool had a confident match).
 
-   Both surfaces (`--agent-debug` stdout AND Team-lead synthesis report) emit Layer 1 AND Layer 2 events. The synthesis report's `## Agent Selection Trace` section now includes both layers.
+   Both surfaces (stdout AND Team-lead synthesis report) are default-ON and emit Layer 1 AND Layer 2 events. The synthesis report's `## Agent Selection Trace` section includes both layers. Enforcement and mechanical verification rules live in `ae:agent-teams` Base Protocol § Selection Trace Emission.
 
    - No numerical scores, no thresholds — Claude either has a confident match (primary or fallback) or returns no match.
    - Task fit → stack compatibility → role coverage → specialty specificity is the rubric priority order.
@@ -144,9 +144,9 @@ user-invocable: true
 
    **Spawning**: use agent filename stem as `subagent_type` — CC resolves `.claude/agents/<stem>.md` automatically.
 
-   ### Debug flag
+   ### Debug flag (legacy)
 
-   `--agent-debug` on any skill shows the full 3-layer decision tree (rules checked, Layer 2 candidates considered + Claude's rationale via the Layer 2 trace format above, Layer 3 trigger reason or lack thereof). Both Layer 1 and Layer 2 events are emitted with the structured trace formats documented in their respective sections.
+   `--agent-debug` on any skill is documented in `ae:setup/agent-governance-format.md:177` as the historical entry point for surfacing the 3-layer decision tree. As of BL-058 (v0.9.4), the trace is **default-ON** at both stdout and synthesis-report surfaces — the flag is now a no-op alias preserved for backward compatibility. Future `--quiet` flag MAY suppress emission; not currently scoped.
 5. **Show selected team** to user before launching. User can adjust.
 
 ## Cross-family Prompt Reference

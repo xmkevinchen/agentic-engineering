@@ -41,6 +41,24 @@ Spawn → Rounds → [Add agents as needed] → Conclusion → Shutdown
 - **Non-responsive agents**: If an agent has not responded within 120s after a round prompt, TL marks it as unresponsive and proceeds without it. This is operational, not removal for dissent. (Extends Proxy Timeout Protocol from `ae:agent-selection` to all agents.)
 - **Shutdown only after conclusion is written.** If the skill has a Doodlestein step, team close MUST be after Doodlestein completes — original team members must be alive to respond to challenges.
 
+### Selection Trace Emission
+
+Before `TeamCreate`, TL emits a structured selection trace per `ae:agent-selection` Layer 1 + Layer 2 trace format (SKILL.md `## Layer 1 trace format` and `## Layer 2 trace format` sections). Default-ON for all modes (Debate / Discussion / Investigation). No flag required.
+
+Two surfaces, both default-emit:
+
+1. **Console stdout** — Layer 1 events (governance firings, filter outcomes) + Layer 2 events (per role slot: `considered:` / `selected:` / `rationale:` / `library-fallback:`) printed line-by-line before `TeamCreate`. Line format per `ae:agent-selection` SKILL.md.
+2. **Persisted output `## Agent Selection Trace` section** — when the skill writes a final report (conclusion.md, review.md, analysis.md, etc.), reproduce the trace lines verbatim under this section heading. Skills writing other persisted artifacts (e.g., `ae:team` writes to `output.analyses/`) embed the trace there.
+
+Mechanical verification (used by `/ae:test-plugin` and any automated audit):
+- `grep -E "^\[layer1\] " <stdout-or-output>` returns ≥ 1 line per team spawn
+- `grep -E "^\[layer2\] (considered|selected|rationale|library-fallback):" <stdout-or-output>` returns ≥ 4 lines per role slot
+- Skills writing reports: `grep -F "## Agent Selection Trace" <report>` returns ≥ 1 line
+
+`--agent-debug` flag (per `ae:setup/agent-governance-format.md:177`) remains documented but is now a no-op signal: trace fires by default. Future `--quiet` flag MAY suppress emission for batch automation; not in scope here.
+
+Rationale: F-003 closure review (2026-05-05) found that "emit-on-request" semantics (the v0.9.3 ship state) made the Layer 2 trace invisible by default. BL-058 closes the gap; observability is now the default behavior, not a hidden flag-gated feature.
+
 ### Communication Rules
 
 - **Round 1 isolation**: Agents communicate only via SendMessage to team-lead. Do not write intermediate findings to shared discussion directories. Do not read files other agents may have written during this round.

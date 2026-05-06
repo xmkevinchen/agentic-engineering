@@ -103,6 +103,8 @@ Applies to **new discussions** and any discussion where `framing.md` was changed
 
 #### 1.5.1. Spawn framing-review team
 
+**Before `TeamCreate`** (applies to BOTH framing-review team here AND Step 2 council team) — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+
 **Preflight — project agent presence check**: before `TeamCreate`, verify that `engineering-minimal-change-engineer` exists in one of these discovery locations:
 - `.claude/agents/engineering-minimal-change-engineer.md` (project-local)
 - `~/.claude/agents/engineering-minimal-change-engineer.md` (user)

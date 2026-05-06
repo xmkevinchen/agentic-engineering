@@ -60,6 +60,8 @@ All agents MUST use this output structure in Round 1:
 
 ### Team Creation
 
+**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+
 ```
 TeamCreate(team_name: "<topic>-consensus")
 

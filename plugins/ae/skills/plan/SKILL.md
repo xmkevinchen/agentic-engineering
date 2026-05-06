@@ -209,6 +209,8 @@ After the plan is written, create a Team for parallel review.
 
 **Cross-family**: Follow the cross-family rules in the **Agent Selection Reference** skill — different angles per proxy, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
 
+**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+
 ```
 TeamCreate(team_name: "<feature>-plan-review")
 
