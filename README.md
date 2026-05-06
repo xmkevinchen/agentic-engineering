@@ -42,6 +42,18 @@ Solo developers and small teams who want:
 
 See [Quickstart Guide](docs/quickstart.md) for a full walkthrough.
 
+## Cross-machine setup
+
+If you use `/ae:setup agents --library <path>` to wire an external agent library (e.g. `agency-agents`), the library path is captured as a relative path in your project's `pipeline.yml` `agent_libraries[].source`. On a fresh checkout to a different machine, the library directory may not exist at the same relative location.
+
+**What you'll see**: actionable error messages from `/ae:setup agents --list`, `--add`, and `--sync` pointing back to this section. (Note: `/ae:setup agents --remove` is unaffected — it operates on local `.claude/agents/` and `pipeline.yml` only and does NOT read library source.)
+
+**2-step recovery**:
+1. `cd <parent-dir> && git clone <library-url>` — clone the library at the relative path your `pipeline.yml` `agent_libraries[].source` references. Example: if `source: "../agency-agents"`, then `<parent-dir>` is the parent of your project root and `<library-url>` is whatever URL the library was originally cloned from.
+2. Re-run the AE command that failed; the library is now resolvable.
+
+**Why not auto-clone?** AE keeps a local-files-only architecture for solo-dev simplicity (no network at runtime). Future improvement is tracked as **BL-060** (`url:` field at `--library` time, trigger-gated on library count ≥3 OR multi-user OR >10min user-friction incident — see `.ae/backlog/unscheduled/BL-060-library-portability-url-field-upgrade.md`).
+
 ## The Pipeline
 
 ```

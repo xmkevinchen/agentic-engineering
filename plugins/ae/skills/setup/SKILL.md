@@ -127,7 +127,7 @@ Behavior:
 
 1. **Read `agent_libraries:` from pipeline.yml**. Absent → print `[ae:setup] No library configured. Run /ae:setup agents --library <path> first.` and exit.
 2. **Traverse each library**: for each library source, list `.md` files under configured categories (or all if flat). Read frontmatter `name`, `description`. Skip files with malformed YAML (warn once per library: `[ae:setup] <library>: M/N agents have malformed YAML, skipped`).
-3. **Library-path-missing tolerance**: if a library's `source:` path no longer exists → warn `[ae:setup] library '<name>' path missing: <source>. Skipping.` and continue with remaining libraries (do not abort).
+3. **Library-path-missing tolerance** (per F-005): if a library's `source:` path no longer exists → warn `[ae:setup] library '<name>' source path '<source>' does not exist on disk. Cross-machine fresh checkout? See README "Cross-machine setup". Skipping this library and continuing with remaining libraries.` and continue with remaining libraries (do not abort).
 4. **Filter by `--category <cat>`** (optional): show only agents whose category matches. Case-insensitive match on directory name. If no agents match → print `No agents in category '<cat>'`.
 5. **Output format**: pretty table with columns `library-qualified-id | category | role-hint | description`. `library-qualified-id` = `<library>:<filename-stem>`. Role hint is inferred per `./agent-contract.md` role-inference heuristic.
 
@@ -162,17 +162,18 @@ Optional `--reason "<text>"` captures the user's rationale for importing this ag
 Behavior (ordered protocol):
 
 1. **Resolve target**. Accept plain filename stem (e.g., `engineering-code-reviewer`) OR library-qualified form (`agency-agents:engineering-code-reviewer`). If plain form AND multiple libraries contain the same stem → refuse with `[ae:setup] name '<stem>' ambiguous — present in libraries: <A>, <B>. Use library-qualified form: <A>:<stem>`.
-2. **Read library file**. Open `<library.source>/<category>/<name>.md` (or flat path if library has no categories).
-3. **Parse YAML frontmatter**. If malformed → skip this agent with warning `[ae:setup] skip <name>: malformed YAML (line N)`. Do NOT abort. (Relevant in batch contexts — single `--add` refuses, `--suggest` batch-apply continues.)
-4. **Compute source SHA**.
+2. **Library-directory-missing guard** (per F-005, BL-059-style mechanical pre-check): run `test -d "<library.source>"` via Bash. If the library directory does not exist → refuse with `[ae:setup] library '<library-name>' source path '<source>' does not exist on disk. Cannot --add agent from missing library — --add modifies agent state, refusing prevents partial installs from an unavailable library. See README "Cross-machine setup".` Refuse the operation; do NOT proceed to step 3. This is dir-level missing (distinct from step 4 "file read error" which is agent-FILE-level when the directory exists).
+3. **Read library file**. Open `<library.source>/<category>/<name>.md` (or flat path if library has no categories).
+4. **Parse YAML frontmatter**. If malformed → skip this agent with warning `[ae:setup] skip <name>: malformed YAML (line N)`. Do NOT abort. (Relevant in batch contexts — single `--add` refuses, `--suggest` batch-apply continues.)
+5. **Compute source SHA**.
    - If library is a git repo: `git -C <library.source> hash-object <relative-file-path>` → record as `source_sha`.
    - Else: compute `sha256` of file content → record as `source_sha`.
    - If BOTH fail (e.g., file read error): skip this agent with warning `[ae:setup] skip <name>: cannot compute content hash`. Do NOT proceed with partial import.
-5. **Ensure `.claude/agents/` exists**. Equivalent to `mkdir -p .claude/agents/`. Safe if already exists.
-6. **Filename collision check**: if `.claude/agents/<name>.md` already exists → present options (see "Filename collision handling" below). Do NOT overwrite silently.
-7. **Built-in spawn-identifier shadowing check**: if `<name>` matches an AE built-in agent filename stem (see "Built-in shadowing" below), warn and prompt before proceeding.
-8. **Copy file as-is**. Write original library file bytes to `.claude/agents/<name>.md`. Do NOT modify `name:` field or any other frontmatter (conclusion 040 T1 — CC resolves by filename stem, `name:` is display-only).
-9. **Append project_agents entry**:
+6. **Ensure `.claude/agents/` exists**. Equivalent to `mkdir -p .claude/agents/`. Safe if already exists.
+7. **Filename collision check**: if `.claude/agents/<name>.md` already exists → present options (see "Filename collision handling" below). Do NOT overwrite silently.
+8. **Built-in spawn-identifier shadowing check**: if `<name>` matches an AE built-in agent filename stem (see "Built-in shadowing" below), warn and prompt before proceeding.
+9. **Copy file as-is**. Write original library file bytes to `.claude/agents/<name>.md`. Do NOT modify `name:` field or any other frontmatter (conclusion 040 T1 — CC resolves by filename stem, `name:` is display-only).
+10. **Append project_agents entry**:
    ```yaml
    project_agents:
      - name: <filename-stem>
@@ -269,8 +270,8 @@ Behavior:
 
 1. **Scan project_agents with `source:`**. Skip entries without `source:` (hand-written agents; `--detach`ed agents).
 2. **Per-agent sync check**:
-   - Re-locate library file by `source:` field. If library path missing → warn `[ae:setup] <name>: library '<library-name>' path missing. Skipping.` and continue.
-   - Compute current library-file SHA (git hash-object or sha256 per same protocol as `--add` step 4).
+   - Re-locate library file by `source:` field. If library path missing → warn `[ae:setup] <name>: library '<library-name>' source path missing on disk. Cross-machine fresh checkout? See README "Cross-machine setup". Cannot verify drift; skipping this agent.` and continue.
+   - Compute current library-file SHA (git hash-object or sha256 per same protocol as `--add` step 5).
    - Compute current `.claude/agents/<name>.md` SHA.
    - **Case 1**: library SHA == stored `source_sha` AND local SHA == stored `source_sha` → no drift. No action.
    - **Case 2**: library SHA != stored `source_sha` AND local SHA == stored `source_sha` → upstream update available. Mark agent `modified: false` (unchanged), emit `[ae:setup] <name>: upstream updated (from <old_sha> to <new_sha>). Run --sync --diff to preview, --add --force-update to apply.`
