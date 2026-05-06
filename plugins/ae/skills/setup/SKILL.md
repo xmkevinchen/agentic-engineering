@@ -162,7 +162,7 @@ Optional `--reason "<text>"` captures the user's rationale for importing this ag
 Behavior (ordered protocol):
 
 1. **Resolve target**. Accept plain filename stem (e.g., `engineering-code-reviewer`) OR library-qualified form (`agency-agents:engineering-code-reviewer`). If plain form AND multiple libraries contain the same stem → refuse with `[ae:setup] name '<stem>' ambiguous — present in libraries: <A>, <B>. Use library-qualified form: <A>:<stem>`.
-2. **Library-directory-missing guard** (per F-005, BL-059-style mechanical pre-check): run `test -d "<library.source>"` via Bash. If the library directory does not exist → refuse with `[ae:setup] library '<library-name>' source path '<source>' does not exist on disk. Cannot --add agent from missing library — --add modifies agent state, refusing prevents partial installs from an unavailable library. See README "Cross-machine setup".` Refuse the operation; do NOT proceed to step 3. This is dir-level missing (distinct from step 4 "file read error" which is agent-FILE-level when the directory exists).
+2. **Library-directory-missing guard** (per F-005, BL-059-style mechanical pre-check): run `test -d "<library.source>"` via Bash. If the library directory does not exist → refuse with `[ae:setup] library '<library-name>' source path '<source>' does not exist on disk. Cannot --add agent from missing library — --add modifies agent state, refusing prevents partial installs from an unavailable library. See README "Cross-machine setup".` Refuse the operation; do NOT proceed to step 3. This is dir-level missing — distinct from step 5's "cannot compute content hash" fallback which is agent-FILE-level (fires when the directory exists but the specific agent file fails to read or hash).
 3. **Read library file**. Open `<library.source>/<category>/<name>.md` (or flat path if library has no categories).
 4. **Parse YAML frontmatter**. If malformed → skip this agent with warning `[ae:setup] skip <name>: malformed YAML (line N)`. Do NOT abort. (Relevant in batch contexts — single `--add` refuses, `--suggest` batch-apply continues.)
 5. **Compute source SHA**.
@@ -189,7 +189,7 @@ Behavior (ordered protocol):
        priority: 50                    # Phase 1 default
        required: false
    ```
-10. **Summary output**: `[ae:setup] Imported <library>:<name> → .claude/agents/<name>.md (role: <role>, sha: <sha>)`.
+11. **Summary output**: `[ae:setup] Imported <library>:<name> → .claude/agents/<name>.md (role: <role>, sha: <sha>)`.
 
 ##### Filename collision handling
 
@@ -458,7 +458,7 @@ Automatic invocation: `/ae:setup agents --remove <name>` (Step 2 spec) calls thi
 
 After writing the governance-bootstrap subsection, read the full `plugins/ae/skills/setup/SKILL.md` top-to-bottom and verify cross-references are coherent:
 
-- `--add` Step 3 flow uses `--reason "<text>"` flag → captured here for pattern-detection Trigger A
+- `--add` Behavior section preamble + Step 1 flow capture `--reason "<text>"` flag (post F-005 step renumbering — was Step 3 pre-F-005; now lives in the Behavior section's prose paragraph above the numbered steps + Step 1's extended description) → captured here for pattern-detection Trigger A
 - `--remove` Step 2 spec references governance rule cleanup → implemented here via `--rule-cleanup` scoped invocation
 - `--suggest` Step 4 batch-apply never writes governance rules (proposal-only; user triggers rule writes separately)
 - No flag conflicts (e.g., `--phase` is scoped to `--suggest`, not a global flag)

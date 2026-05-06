@@ -52,7 +52,7 @@ If you use `/ae:setup agents --library <path>` to wire an external agent library
 1. `cd <parent-dir> && git clone <library-url>` — clone the library at the relative path your `pipeline.yml` `agent_libraries[].source` references. Example: if `source: "../agency-agents"`, then `<parent-dir>` is the parent of your project root and `<library-url>` is whatever URL the library was originally cloned from.
 2. Re-run the AE command that failed; the library is now resolvable.
 
-**Why not auto-clone?** AE keeps a local-files-only architecture for solo-dev simplicity (no network at runtime). Future improvement is tracked as **BL-060** (`url:` field at `--library` time, trigger-gated on library count ≥3 OR multi-user OR >10min user-friction incident — see `.ae/backlog/unscheduled/BL-060-library-portability-url-field-upgrade.md`).
+**Why not auto-clone?** AE keeps a local-files-only architecture for solo-dev simplicity (no network at runtime). A future enhancement to capture the library's URL at `--library` time (so error messages can include actionable git-clone hints) is on AE's internal roadmap, trigger-gated on library count growing past a threshold OR multi-user onboarding scenario OR concrete user-friction incident.
 
 ## The Pipeline
 
