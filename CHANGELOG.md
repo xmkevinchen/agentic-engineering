@@ -1,5 +1,44 @@
 # Changelog
 
+## v0.9.4 — 2026-05-06
+
+Two F-003 follow-ups ship together: F-004 (BL-055 dispatcher canonical-placeholder for /ae:plan + /ae:work) + F-005 (BL-057 library portability A0+ — actionable error messages on missing library + README cross-machine setup block).
+
+### F-004 — Dispatcher canonical-placeholder (BL-055, content commit `92d8c55`)
+
+- `plugins/ae/skills/agent-selection/SKILL.md`: canonical paragraph defining `<per agent-selection>` placeholder convention (BL-055-context section).
+- `plugins/ae/skills/plan/SKILL.md`: line 218 `subagent_type: "architect"` → `"<per agent-selection>"` + inline annotation comment.
+- `plugins/ae/skills/work/SKILL.md`: line 176 `subagent_type: "<dev-agent>"` → `"<per agent-selection>"` + dev-agent annotation; line 188 `subagent_type: "qa"` stays hardcoded (structural counterpart) with explicit annotation.
+- New regression fixture: `plugins/ae/tests/{prompts,assertions}/plan-work-dispatcher-canonical-placeholder.md` (5 MUST + 2 MUST_NOT covering canonical placeholder + qa preservation + BL-058 trace-gate text).
+
+**Behavioral change**: zero today (dispatcher resolves to architect/dev-agent under default conditions). **Capability change**: project_agents in pipeline.yml can now override the architect / dev-agent slots in /ae:plan + /ae:work; pre-F-004 the hardcoded values prevented override.
+
+### F-005 — Library portability A0+ (BL-057, content commit `3e47de5`)
+
+- `plugins/ae/skills/setup/SKILL.md`: 3 error-message edits at `--list` (line 130), `--add` (lines 165-166, new dir-level guard renumbers --add steps 9→10), `--sync` (line 273) — actionable hint ("See README \"Cross-machine setup\"") parallel to BL-059's `--suggest` actionable-exit pattern at line 317-321.
+- `--list` and `--sync` preserve skip-and-continue semantics; `--add` REFUSES on missing library directory with rationale `--add modifies agent state, refusing prevents partial installs from an unavailable library`.
+- `README.md`: new `## Cross-machine setup` section between `## Quick Start` and `## The Pipeline` — 2-step recovery flow (clone library at relative path; re-run AE command). Explicitly notes `--remove` is UNAFFECTED (does NOT propagate BL-057's factually-wrong claim).
+- New regression fixture: `plugins/ae/tests/{prompts,assertions}/setup-library-missing-actionable-errors.md` (6 MUST + 3 MUST_NOT covering all 3 actionable patterns + 3 wrong-pattern bans).
+
+**BC**: `--list`/`--sync` users see better error message text; `--add` users on missing library directory now get an explicit refuse with rationale (was vague "cannot compute content hash" at line 170).
+
+### Why bundled
+
+Both F-004 and F-005 are F-003 closure follow-ups (BL-055 + BL-057) — single coherent v0.9.4 release per CLAUDE.md "Versioning: intentional releases only" rule, mirroring F-003's own consolidated v0.9.3 release shape (which had its 3-version-bump rebase lesson earlier in the cycle).
+
+### Discussions and follow-ups
+
+- F-004 discussion: standalone plan (no /ae:discuss step) — direct /ae:analyze → /ae:plan → /ae:work → /ae:review path
+- F-005 discussion: `.ae/features/active/F-005-library-portability-across-machines-lock/discussions/001-ship-path-choice/` — 4-agent council + 3 Doodlestein over 3 rounds + 5 framing-review reruns
+- BL-060 filed (`.ae/backlog/unscheduled/`): `url:` field at `--library` time, trigger-gated (library count ≥3 OR multi-user OR >10min user-friction incident)
+- Outcome B (mechanism — lockfile / auto-clone / cache-dir) unanimously rejected by F-005 council; preserved as future-BL territory if BL-060's trigger fires
+
+### Closes
+
+- F-004 (BL-055; closure review verdict: PASS, 2026-05-05)
+- F-005 (BL-057; closure review verdict: pending /ae:review post-this-release)
+- 5 framing-review reruns + 3 council rounds + 3 Doodlestein post-conclusion reviews + 4-grep verification gate before /ae:plan body — extensive process for ~30 LoC of A0+ ship; defensible because plan/work/setup are AE's most-used skills
+
 ## v0.9.3 — 2026-05-05
 
 F-003 (BL-005 third-party agent integration) live validation + Layer 2 selection-trace observability — the full feature including its closure-review follow-ups (BL-058 emit-by-default wiring + BL-059 stub-path mechanical guard).
