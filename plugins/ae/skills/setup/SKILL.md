@@ -315,16 +315,20 @@ Inputs (read directly, no tokenization preprocessing):
 Behavior:
 
 1. **Prerequisites check**: require `agent_libraries:` configured. If absent → `[ae:setup] No library configured. Run /ae:setup agents --library <path> first.`
-2. **Governance hard rules applied first** (mechanical, not LLM): `action: force` → agent pre-selected; `action: exclude` → agent removed from candidate pool.
-3. **Claude reviews remaining candidates** against project context per `./agent-selection-rubric.md`. Targets 3-8 recommendations — prefers fewer-but-confident over padding the list.
-4. **Output**: ranked proposal with one-line rationale each. If nothing fits → `No library agents fit this project well. Consider writing a custom agent in .claude/agents/ or browsing --list manually.`
-5. **Present for batch apply**:
+2. **Source-path mechanical validation** (BL-059, v0.9.5): for each `agent_libraries[]` entry, run `test -d "<resolved-source-path>"` via Bash. Path resolution: `source: "../foo"` resolves relative to project root (per `--library` write-time rule, see this SKILL.md `--library` Behavior); absolute paths used as-is.
+   - **Missing path** → emit `[ae:setup] library '<name>' source path '<source>' does not exist on disk. Skipping this library from the candidate pool.` Continue with remaining libraries.
+   - **All libraries missing** → emit `[ae:setup] All configured agent_libraries[] sources are missing on disk. Cannot proceed with --suggest. Either restore the source directories or update agent_libraries[] in pipeline.yml.` and **exit before invoking Claude**.
+   - This is a mechanical pre-check, not LLM-judged. Closes the falsification gap F-003 closure shipped with (BL-059): a stubbed `source: "/nonexistent"` now fails loudly here, never reaching the rubric where hallucinated agent names could surface.
+3. **Governance hard rules applied first** (mechanical, not LLM): `action: force` → agent pre-selected; `action: exclude` → agent removed from candidate pool.
+4. **Claude reviews remaining candidates** against project context per `./agent-selection-rubric.md`. Targets 3-8 recommendations — prefers fewer-but-confident over padding the list.
+5. **Output**: ranked proposal with one-line rationale each. If nothing fits → `No library agents fit this project well. Consider writing a custom agent in .claude/agents/ or browsing --list manually.`
+6. **Present for batch apply**:
    ```
    Apply all? [Y / select subset (e.g., 1,3,5) / n]:
    ```
    On `Y`: invoke `--add` for each via batch flow. On `select`: parse indices, invoke `--add` for subset. On `n`: exit with no changes.
-6. **`--why` flag**: Claude's per-agent rationale is more detailed (2-3 sentences each, cites project evidence).
-7. **`--phase <enum>` flag**: passed to Claude as context hint ("this is an `early`-phase project — bias toward setup/scaffolding agents"). No mechanical weight adjustments.
+7. **`--why` flag**: Claude's per-agent rationale is more detailed (2-3 sentences each, cites project evidence).
+8. **`--phase <enum>` flag**: passed to Claude as context hint ("this is an `early`-phase project — bias toward setup/scaffolding agents"). No mechanical weight adjustments.
 
 **Never silently populates project_agents**. User action (Y / select / n) is required before any file is copied — proposal-only UX.
 
