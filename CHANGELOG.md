@@ -1,5 +1,49 @@
 # Changelog
 
+## v0.9.3 — 2026-05-05
+
+F-003 (BL-005 third-party agent integration) live validation + Layer 2 selection-trace observability — the full feature including its closure-review follow-ups (BL-058 emit-by-default wiring + BL-059 stub-path mechanical guard).
+
+### Added — Layer 2 selection-trace observability
+
+- `plugins/ae/skills/agent-selection/SKILL.md` Layer 2 trace format, symmetric to existing Layer 1, with 4 fields: `considered:` (candidate pool), `selected:` (winning agent + source enum: `project|user|builtin|library`), `rationale:` (one-line task-fit reason that names rejected candidates by name), `library-fallback:` (`fired|not-fired`).
+- Trace surfaces: console stdout AND Team-lead synthesis report's `## Agent Selection Trace` section. **Default-ON, no flag required** (`--agent-debug` preserved as documented no-op alias for backward compat).
+
+### Wiring — emit-by-default across all team-spawning skills (BL-058)
+
+- `plugins/ae/skills/agent-teams/SKILL.md` Base Protocol gains a new `### Selection Trace Emission` subsection. Default-ON for all modes (Debate / Discussion / Investigation). Documents both surfaces and provides 3 mechanical verification grep patterns for `/ae:test-plugin`.
+- 1-line forward-pointer added at each `TeamCreate` site in 8 consumer skills: `team`, `discuss`, `plan`, `work`, `review`, `analyze`, `consensus`, `test-plugin`. Skill-spec change only; 0 LOC change in test code.
+
+### Added — `/ae:setup agents --suggest` mechanical falsification guard (BL-059)
+
+- `plugins/ae/skills/setup/SKILL.md` `--suggest` Behavior section gains a new **Step 2: Source-path mechanical validation**. Before invoking Claude rubric, run `test -d "<resolved-source-path>"` via Bash for each `agent_libraries[]` entry:
+  - Missing path → skip that library from candidate pool with explicit warning
+  - All libraries missing → exit before Claude is called
+- Path resolution: `source: "../foo"` resolves relative to project root; absolute paths used as-is (matches `--library` write-time rule).
+- Mechanical pre-check, not LLM-judged. Closes the AC5/AC7 falsification debt F-003 validation report shipped with.
+
+### Why
+
+F-003 closed via `/ae:review` on 2026-05-05 with verdict PASS and 5 follow-up BLs (BL-055 thru BL-059). 4-of-4 reviewer convergence (architect, challenger, codex-proxy, gemini-proxy) flagged two P1 items that should ship with F-003 rather than as separate releases:
+
+1. **BL-058**: v0.9.3's initial Layer 2 trace contract was emit-on-request only — users had to know `--agent-debug` flag or pass an explicit prompt instruction. The contract existed as documentation in `agent-selection/SKILL.md` but no consumer skill auto-emitted it. BL-058 wires emit-by-default into the universal anchor (`agent-teams/SKILL.md`) plus 8 consumer skills.
+2. **BL-059**: AC5 ("no hallucinated agent names") and AC7 ("semantic stack-awareness") of the F-003 validation report were structurally LLM-self-graded — `/ae:setup agents --suggest` IS Claude, and the validation captured Claude's chat output. BL-059 adds a mechanical `test -d` guard that converts the gross "library doesn't exist" hallucination case from inferential to mechanical.
+
+### Verification
+
+- BL-058 wiring verified mechanically: `grep -rn "Selection Trace Emission" plugins/ae/skills/` returns 10 hits (anchor + 8 consumers + agent-selection clarification reference).
+- BL-059 stub-path falsification test executed in AE repo on 2026-05-05: backed up `.claude/pipeline.yml`, stubbed `agent_libraries:` to `/this/path/does/not/exist/bl059-test`, invoked `/ae:setup agents --suggest --why`. Step 2 guard fired: emitted "library 'stub-nonexistent' source path missing" + "All configured agent_libraries[] sources are missing... Cannot proceed", exited before Claude rubric invocation. Restored pipeline.yml from backup.
+
+### Known limit (residual)
+
+AC5/AC7's "library exists but rubric selects unfit agents" case remains LLM-judged by design (per F-003 Decision 8 + challenger C2 limitation acknowledgment). BL-059 closes the gross-hallucination case structurally; the semantic-fit judgment continues to live in Claude's rubric, with `--why` rationale providing audit trail. Mechanical scoring was attempted and abandoned (`agent-selection-rubric.md:115-116` — "0/179, 0/185, 0/169 recommendations").
+
+### Closes
+
+- F-003 (live validation + closure)
+- BL-058 (P1 elevated from P2 by F-003 closure review)
+- BL-059 (P1 elevated from P2 by F-003 closure review)
+
 ## v0.9.2 — 2026-04-28
 
 Plan 051 (F-002): path migration for `discuss/plan/work/review` skill outputs into per-feature directories. The 4 process skills now write inside `.ae/features/<state>/F-NNN-<slug>/` when a feature context is resolvable; legacy `.ae/{discussions,plans,reviews}/` remain valid for free-text invocations and untouched 175 pre-existing artifacts (Plan 050 known limit).
