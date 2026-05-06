@@ -122,6 +122,8 @@ user-invocable: true
 
    Both surfaces (stdout AND Team-lead synthesis report) are default-ON and emit Layer 1 AND Layer 2 events. The synthesis report's `## Agent Selection Trace` section includes both layers. Enforcement and mechanical verification rules live in `ae:agent-teams` Base Protocol § Selection Trace Emission.
 
+   **Canonical placeholder for `subagent_type:` fields**: consumer skills that delegate agent selection to this dispatcher MUST use the literal string `<per agent-selection>` as the `subagent_type:` value in their team-spawn templates (e.g., `Agent(subagent_type: "<per agent-selection>", name: "<role-name>", ...)`). When a consumer skill uses this placeholder, the team-lead resolves the actual agent via the Layer 1/2/3 chain at spawn time. Hardcoded values (e.g., `subagent_type: "qa"`) are reserved for **structurally fixed roles** that are not content-driven (qa as dev-counterpart, challenger as pure-opposition) — these MUST carry an inline annotation comment explaining the intentional hardcoding.
+
    - No numerical scores, no thresholds — Claude either has a confident match (primary or fallback) or returns no match.
    - Task fit → stack compatibility → role coverage → specialty specificity is the rubric priority order.
 

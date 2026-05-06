@@ -215,7 +215,8 @@ After the plan is written, create a Team for parallel review.
 TeamCreate(team_name: "<feature>-plan-review")
 
 # Architect reviews plan structure and dependencies:
-Agent(subagent_type: "architect", name: "architect",
+# architect: dispatcher-resolved default; project_agents override applies (per ae:agent-selection canonical placeholder convention)
+Agent(subagent_type: "<per agent-selection>", name: "architect",
       team_name: "<team>", run_in_background: true,
       prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
                Produce step dependency graph and parallel strategy.

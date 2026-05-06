@@ -173,7 +173,8 @@ Pre-checks:
 ```
 TeamCreate(team_name: "<feature>-work")
 
-Agent(subagent_type: "<dev-agent>", name: "<dev-agent>",
+# dev-agent: dispatcher-resolved per ae:agent-selection canonical placeholder convention; project_agents (e.g., backend-dev, ios-dev) override per role + tech_stack
+Agent(subagent_type: "<per agent-selection>", name: "<dev-agent>",
       team_name: "<team>", run_in_background: true,
       prompt: "<PRIMARY CONTEXT — assembled per 'Per-step Primary Context Load' section below:
                  1. Current step spec (full ### Step N block)
@@ -185,6 +186,7 @@ Agent(subagent_type: "<dev-agent>", name: "<dev-agent>",
                Teammates: [other devs], qa.
                SendMessage to qa when done.")
 
+# qa: structurally fixed role — always paired with <dev-agent> as a counterpart; hardcoded by design (NOT dispatcher-resolved)
 Agent(subagent_type: "qa", name: "qa",
       team_name: "<team>", run_in_background: true,
       prompt: "Wait for dev, then review per checklist + cross-family — <specialized focus based on context>.
