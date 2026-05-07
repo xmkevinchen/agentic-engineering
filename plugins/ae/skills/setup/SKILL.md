@@ -31,7 +31,7 @@ For Layer 2 automated test runs (and other non-interactive contexts), set the en
 |---|---|---|
 | test.command configuration | `test.command: ""` (empty) | Fail-safe — ae:work's auto-pass gate treats empty as UNVERIFIED → will pause per step, never silently assume tests pass |
 | init config confirmation | accept generated config as-is | The config was auto-detected from project files; non-interactive accepts that auto-detection verbatim |
-| update diff confirmation | apply all new default slots | Update only adds missing slots with defaults; existing user values are preserved by the earlier "preserve user-customized values" rule |
+| update diff confirmation | accept diff but skip adding `output.*` slots that match canonical `.ae/<slot>/` defaults; apply only genuinely missing non-output fields | Plan 050+ GTD-first behavior — canonical defaults are implicit (reader fallback), so re-adding them is noise. Existing user values are still preserved by the "preserve user-customized values" rule (Step 6). |
 | Agent Teams enable | do NOT auto-enable; emit `[WARN]`-prefixed log and skip | Fail-safe — auto-enabling would modify `~/.claude/settings.json` without user consent, violating the MUST_NOT in `setup-agent-teams-check-settings.md` |
 
 All skip events are emitted with a structured `[WARN]` or `[ae:setup]` prefix so Layer 2 test assertions can match them deterministically.
@@ -52,14 +52,12 @@ If `.claude/pipeline.yml` does not exist:
    - `Gemfile` → Ruby (rspec/minitest + rubocop)
    - `justfile` / `Makefile` → read existing test/lint commands
    - Multi-language → split backend/frontend config
-3. Fill in `output` block — keep all 6 slots with default values:
-   - `discussions: "docs/discussions/"`
-   - `plans: "docs/plans/"`
-   - `milestones: "docs/milestones/"`
-   - `backlog: "docs/backlog/"`
-   - `reviews: "docs/reviews/"`
-   - `analyses: "docs/analyses/"`
-4. Scan existing project directories — if project already has docs in non-default locations (e.g., `results/reviews/` instead of `docs/reviews/`), adjust slot values to match
+3. **Skip writing `output:` block on fresh init** (Plan 050+ GTD-first canonical). New projects rely on reader skills' default fallbacks (`.ae/<slot>/` per the Output Defaults table below). Only write a slot when Step 4's directory scan finds a non-default existing directory for that slot — see Step 4 below.
+4. **Slot-by-slot directory scan** — gate for whether to write each `output.*` slot. For each of the 6 slots (`discussions`, `plans`, `milestones`, `backlog`, `reviews`, `analyses`):
+   - Scan for legacy directory `docs/<slot>/` AND any other plausible non-default location (e.g., `results/<slot>/`, `<slot>/` at project root, etc.) that contains content (≥ 1 `.md` file).
+   - **Found content in a non-default dir** → write `output.<slot>: "<detected-path>"` to `pipeline.yml`. Do NOT write the slot if only `.ae/<slot>/` (the canonical default) exists with content — defaults handle that case.
+   - **No content anywhere** → skip writing this slot. Reader skills fall through to `.ae/<slot>/`.
+   - **Precedence (when both `docs/<slot>/` AND `.ae/<slot>/` exist with content)**: `docs/<slot>/` wins — this is the migration signal that the project brings a legacy layout. Write `output.<slot>: "docs/<slot>/"`. Do NOT write `.ae/<slot>/` as a slot value (it's already the implicit default).
 5. **Auto-discover project agents**: Scan `.claude/agents/*.md`, installed plugin agents, and `~/.claude/agents/*.md`. For each discovered agent, read `description` to infer role per [agent-contract.md](./agent-contract.md): reviewer (review/audit/security keywords), developer (implement/build keywords), or domain-expert (expert/specialist keywords). Show discovered agents with inferred roles to user for confirmation. Do NOT write agent lists to pipeline.yml — agents are discovered at runtime. The `project_agents:` section in pipeline.yml is for explicit role overrides only (agents outside `.claude/agents/` or when inference is wrong).
 6. **Guide test.command configuration**: If auto-detect found no test command:
    - **Non-interactive mode** (`AE_SETUP_NONINTERACTIVE=1`): skip prompt, set `test.command: ""` (empty — ae:work auto-pass gate will treat as UNVERIFIED on every step)
@@ -475,13 +473,16 @@ Inconsistencies found → fix within this step before committing. This is a one-
 
 Read current `.claude/pipeline.yml`, compare with template:
 
-1. Check for new fields in template (missing from config) — especially new `output` slots and `project_agents` section
+1. Check for new fields in template (missing from config) — especially new `project_agents` section
 2. Check for deprecated fields (e.g., old `output.review` → new `output.reviews`)
 3. **Discover new project agents**: scan `.claude/agents/*.md` for agent files not present when pipeline.yml was last generated. Show newly discovered agents with inferred roles. This is net-new behavior — not all agents may have existed at initial setup.
-4. Show diff, then confirm:
-   - **Non-interactive mode** (`AE_SETUP_NONINTERACTIVE=1`): skip AskUserQuestion, accept diff (apply all new slots with defaults)
+4. **Default-output-slot cleanup** (Plan 050+ GTD-first canonical): if existing `pipeline.yml` has `output.*` slots that all match the new canonical defaults (`.ae/<slot>/`), offer to remove them since they're now implicit. **Heuristic caveat**: this signal cannot distinguish "AE-generated boilerplate" from "user wrote canonical values explicitly for documentation/clarity" — both look identical. Phrase the prompt as a question, not a recommendation:
+   - **Interactive mode**: use AskUserQuestion: "Existing pipeline.yml has 6 `output.*` slots all matching canonical `.ae/<slot>/` defaults. Remove the (now-redundant) block? Note: if you wrote these values intentionally for explicitness, keep them — runtime semantics are identical either way; only difference is file noise."
+   - **Non-interactive mode** (`AE_SETUP_NONINTERACTIVE=1`): preserve as-is (no automatic cleanup — user's explicit values are kept; the heuristic-ambiguity above is exactly why non-interactive defaults to preserve).
+5. Show diff, then confirm:
+   - **Non-interactive mode**: skip AskUserQuestion, accept diff
    - **Interactive mode**: use AskUserQuestion to confirm
-5. Preserve user-customized values, only add missing slots with defaults
+6. Preserve user-customized values; do NOT add `output.*` slots that match canonical defaults (rely on reader fallback instead).
 
 ## Output Defaults
 

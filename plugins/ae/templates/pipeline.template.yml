@@ -24,16 +24,24 @@ test:
 lint:
   command: ""              # e.g., "just lint", "npm run lint"
 
-# --- Output Directories ---
-# Each slot has a default value. Omit or leave empty to use the default.
-# All paths are relative to project root.
-output:
-  discussions: "docs/discussions/"   # ae:analyze, ae:discuss (default: docs/discussions/)
-  plans: "docs/plans/"              # ae:plan (default: docs/plans/)
-  milestones: "docs/milestones/"    # ae:work (default: docs/milestones/)
-  backlog: "docs/backlog/"          # ae:work, ae:review, ae:code-review (default: docs/backlog/)
-  reviews: "docs/reviews/"          # ae:review (default: docs/reviews/)
-  analyses: "docs/analyses/"        # ae:think (default: docs/analyses/)
+# --- Output Directories (optional, legacy / external-customization) ---
+# New GTD-first projects don't need this block — main artifacts live in
+# .ae/features/F-NNN/ (see Path classes in CLAUDE.md). Defaults are applied
+# implicitly by reader skills:
+#   discussions → .ae/discussions/   plans      → .ae/plans/
+#   milestones  → .ae/milestones/    backlog    → .ae/backlog/
+#   reviews     → .ae/reviews/       analyses   → .ae/analyses/
+#
+# Add slots only if you customize legacy paths (e.g., docs/* layout) or host
+# free-text artifacts that don't tie to a specific feature.
+#
+# output:
+#   discussions: "docs/discussions/"   # ae:analyze, ae:discuss
+#   plans: "docs/plans/"              # ae:plan
+#   milestones: "docs/milestones/"    # ae:work
+#   backlog: "docs/backlog/"          # ae:work, ae:review, ae:code-review
+#   reviews: "docs/reviews/"          # ae:review
+#   analyses: "docs/analyses/"        # ae:think
 
 # --- Test Plugin ---
 test_plugin:
