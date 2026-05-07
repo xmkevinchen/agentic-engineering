@@ -18,12 +18,12 @@ This skill is **independent of project-level GTD retrospect** (`/ae:retrospect`)
 
 ## Pre-check
 
-1. Read `pipeline.yml` → `output.reviews` (default: `docs/reviews/`) and `output.analyses` (default: `docs/analyses/`).
+1. Read `pipeline.yml` → `output.reviews` (default: `.ae/reviews/`) and `output.analyses` (default: `.ae/analyses/`).
 2. If `--compare ID1 ID2`:
    - Scan `output.analyses` for reports matching both IDs (files with `type: plugin-stats` OR legacy `type: retrospect` in frontmatter — exclude `type: retrospect-comparison` and `type: plugin-stats-comparison`).
    - If ID1 == ID2 → output: "Compare failed: both IDs are the same. Specify two different report IDs."
    - If either ID matches a comparison-type file → output: "Compare failed: comparing a comparison report is not supported. Specify reports with type: plugin-stats (or legacy type: retrospect)."
-   - If either ID not found → output: "Compare failed: no plugin-stats report with ID [ID] found. Confirm the ID exists in `docs/analyses/`."
+   - If either ID not found → output: "Compare failed: no plugin-stats report with ID [ID] found. Confirm the ID exists in `<output.analyses>/` (default `.ae/analyses/`)."
    - If both found → skip to Step 5 (Comparison Mode).
 3. Scan for review files containing Outcome Statistics. **Skip files with `type: test-report` in frontmatter** — only process `type: review` documents.
 4. If no data found → output: "Insufficient data: no Outcome Statistics found. Complete at least one `/ae:review` to generate data."
@@ -78,7 +78,7 @@ For each metric showing a pattern:
 
 ## Step 4: Output
 
-Write report to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-plugin-stats-slug.md` (NNN = next available sequence number):
+Write report to `pipeline.yml` → `output.analyses` (default: `.ae/analyses/`) as `NNN-plugin-stats-slug.md` (NNN = next available sequence number):
 
 ```markdown
 ---

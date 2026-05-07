@@ -24,10 +24,10 @@ This skill produces no file output — it is a viewer, not a producer.
      ```
      Stop.
 2. Read `output.*` paths from pipeline.yml. The features path is fixed at `.ae/features/` (internal state, not configurable). Other paths used by `--legacy`:
-   - `output.discussions` (default: `docs/discussions/`)
-   - `output.plans` (default: `docs/plans/`)
-   - `output.reviews` (default: `docs/reviews/`)
-   - `output.backlog` (default: `docs/backlog/`)
+   - `output.discussions` (default: `.ae/discussions/`)
+   - `output.plans` (default: `.ae/plans/`)
+   - `output.reviews` (default: `.ae/reviews/`)
+   - `output.backlog` (default: `.ae/backlog/`)
 
 ## Primary read source — features/active/
 

@@ -72,7 +72,7 @@ Close the Team.
 
 ## Persist
 
-Write team results directly to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-team-slug.md`.
+Write team results directly to `pipeline.yml` → `output.analyses` (default: `.ae/analyses/`) as `NNN-team-slug.md`.
 
 **You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 

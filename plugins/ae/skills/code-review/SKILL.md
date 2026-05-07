@@ -116,7 +116,7 @@ Status mapping (derived from the three field values):
 
 At the END of Track 4 (after the Results merge below, before `/ae:code-review` returns), Track 4 writes its structured payload to a deterministic staging file so `/ae:work` Post-commit can rename it to `<short-sha>.md` after the commit succeeds. State flows through the filesystem — not through LLM context — so it survives context compaction between D-step and Post-commit.
 
-**Staging path**: `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md`
+**Staging path**: `<output.reviews>/per-commit/.staging-<plan-id>-step-<N>.md` (where `output.reviews` defaults to `.ae/reviews/` per pipeline.yml)
 
 **Plan 051 path-class note**: Track 4 staging stays under `<output.reviews>/per-commit/` regardless of whether the plan being reviewed lives at `.ae/features/<state>/F-NNN-<slug>/plan.md` or under `<output.plans>/NNN.md`. The staging cache is implementation detail (per-commit, short-lived, sub-SHA addressable); user-visible review files (sibling `.ae/features/<state>/F-NNN-<slug>/review.md` for feature-dir plans, `output.reviews/NNN.md` for legacy plans — see ae:review Output write target rule) are written by `/ae:review`, not by Track 4. Both plan locations use the same staging path; the eventual `<short-sha>.md` rename is to `<output.reviews>/per-commit/<short-sha>.md` in either case.
 

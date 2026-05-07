@@ -13,7 +13,7 @@ Steps: 1.Setup → 2.Spawn Team → 3.Discussion Rounds → 4.Consensus Verifica
 ## Argument Inference
 
 If `$ARGUMENTS` is empty:
-1. Check `output.discussions` for any discussion with `status: active` (has pending topics)
+1. Check `output.discussions` (default: `.ae/discussions/`) for any discussion with `status: active` (has pending topics)
 2. Found → continue that discussion
 3. Not found → check conversation context for a topic being discussed
 4. Still nothing → ask user what to discuss

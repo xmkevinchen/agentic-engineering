@@ -489,13 +489,15 @@ When `pipeline.yml` is absent or a slot is missing, skills use these defaults:
 
 | Slot | Default | Used by |
 |------|---------|---------|
-| `output.discussions` | `docs/discussions/` | ae:analyze, ae:discuss |
-| `output.plans` | `docs/plans/` | ae:plan |
-| `output.milestones` | `docs/milestones/` | ae:work |
-| `output.backlog` | `docs/backlog/` | ae:work, ae:review, ae:code-review (new BL items land in `unscheduled/` subdir; `/ae:roadmap plan` promotes to `v<X>/`) |
-| `output.reviews` | `docs/reviews/` | ae:review |
-| `output.analyses` | `docs/analyses/` | ae:think |
+| `output.discussions` | `.ae/discussions/` | ae:analyze, ae:discuss |
+| `output.plans` | `.ae/plans/` | ae:plan |
+| `output.milestones` | `.ae/milestones/` | ae:work |
+| `output.backlog` | `.ae/backlog/` | ae:work, ae:review, ae:code-review (new BL items land in `unscheduled/` subdir; `/ae:roadmap plan` promotes to `v<X>/`) |
+| `output.reviews` | `.ae/reviews/` | ae:review |
+| `output.analyses` | `.ae/analyses/` | ae:think |
 | `test_plugin.judge` | `codex` | ae:test-plugin |
+
+Defaults are GTD-first canonical (Plan 050+). External projects with `docs/*` legacy layouts override via `output.*` slots — `/ae:setup` auto-detects existing `docs/<slot>/` directories with content and writes only those slots, leaving the rest to fall through to these defaults.
 
 Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is missing or pipeline.yml doesn't exist, fall back to the default above. This ensures zero-config works for new projects.
 

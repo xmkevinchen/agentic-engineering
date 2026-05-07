@@ -93,7 +93,7 @@ Close the Team.
 
 ## Step 4: Persist
 
-Write analysis directly to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`).
+Write analysis directly to `pipeline.yml` → `output.analyses` (default: `.ae/analyses/`).
 
 **You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 

@@ -101,7 +101,7 @@ Close the Team.
 
 ## Step 5: Persist
 
-Write results directly to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-trace-slug.md`.
+Write results directly to `pipeline.yml` → `output.analyses` (default: `.ae/analyses/`) as `NNN-trace-slug.md`.
 
 **You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 

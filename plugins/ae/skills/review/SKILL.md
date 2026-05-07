@@ -333,7 +333,7 @@ Report contents:
 1. TL synthesis report (merged findings from all reviewers + challenger + cross-family, with Disagreement Value Assessment and severity classification)
 2. Outcome statistics (rework rate, P1 escape rate, drift events, fix loop triggers, auto-pass rate)
 3. Fixups squashed
-4. Deferred findings audit results (FIXED/WAIVED/UNRESOLVED classification from Check 4), backlog items to `pipeline.yml` → `output.backlog/unscheduled/` (default: `docs/backlog/unscheduled/`) — sprint assignment via `/ae:roadmap plan` later
+4. Deferred findings audit results (FIXED/WAIVED/UNRESOLVED classification from Check 4), backlog items to `pipeline.yml` → `output.backlog/unscheduled/` (default: `.ae/backlog/unscheduled/`) — sprint assignment via `/ae:roadmap plan` later
 5. Prompt user to create PR
 
 ### Knowledge Capture (to Mengdie)

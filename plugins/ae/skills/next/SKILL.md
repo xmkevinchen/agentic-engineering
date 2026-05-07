@@ -219,9 +219,9 @@ All pipeline work is complete.
 ## State Reading
 
 Read `pipeline.yml` → `output.*` paths (configurable, not hardcoded). Defaults:
-- `output.discussions` → `docs/discussions/`
-- `output.plans` → `docs/plans/`
-- `output.reviews` → `docs/reviews/`
+- `output.discussions` → `.ae/discussions/`
+- `output.plans` → `.ae/plans/`
+- `output.reviews` → `.ae/reviews/`
 
 For each directory, scan frontmatter of index/plan/review files. Handle missing or malformed files gracefully — skip and continue to next file.
 

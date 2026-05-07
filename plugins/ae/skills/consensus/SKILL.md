@@ -219,7 +219,7 @@ TL produces the final verdict:
 
 ## Step 4: Verdict & Persist
 
-Write verdict directly to `pipeline.yml` → `output.analyses` (default: `docs/analyses/`) as `NNN-consensus-slug.md`.
+Write verdict directly to `pipeline.yml` → `output.analyses` (default: `.ae/analyses/`) as `NNN-consensus-slug.md`.
 
 The verdict file includes:
 - Mode used (adaptive/quick/full)
