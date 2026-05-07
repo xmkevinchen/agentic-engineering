@@ -116,7 +116,40 @@ For each active feature, read frontmatter `size:`. Valid values are T-shirts: `X
 
 (Approximations only. NOT "Shape Up appetite" — that label was a misnomer in earlier drafts. T-shirt sizing is a generic agile relative-effort heuristic, not a fixed Shape Up commitment.)
 
-Output:
+#### Evaluation order (CRITICAL — applies before all other section (c) logic)
+
+For each active feature, FIRST check `index.md` `size:`:
+
+- **`size:` is non-empty** → feature is sized. Skip auto-eval entirely. ALSO: if `.ae/cache/auto-size.yml` has an entry for this feature, delete that entry (cleans up stale cache from manual `size:` set or interrupted `--resize`). The feature contributes to the sized count + total effort.
+- **`size:` is empty / absent** → feature is unsized. Continue to cache check below.
+
+This guard ensures stale cache entries can never display a `[cached]` line for a feature whose `size:` has been manually set in `index.md`.
+
+#### Auto-eval for unsized features
+
+For each unsized feature:
+
+1. Compute current basis hash: sha256(analysis.md body + index.md body), first **16 hex chars**. Missing analysis.md → use index.md body alone, mark feature `(low-confidence — no analysis.md)`.
+2. Read `.ae/cache/auto-size.yml`:
+   - **Cache HIT** (entry exists for this feature AND `basis_sha` matches current hash) → reuse stored `auto_size_value`, mark `[cached]`.
+   - **Cache MISS** (no entry, or hash mismatch) → invoke LLM-eval on (analysis.md + index.md body), produce T-shirt + one-line reason. Write/update cache entry with `auto_size_value`, `basis_sha`, `computed_at: <today>`. Mark `[evaluated]`.
+3. Cache file schema (`.ae/cache/auto-size.yml`):
+   ```yaml
+   # Auto-size cache for /ae:roadmap. Read+written by ae:roadmap only.
+   # Reader-tolerant: missing file = empty cache; corrupted file = log warn + treat as empty.
+   features:
+     F-NNN:
+       auto_size_value: M
+       auto_size_reason: "single-skill SKILL.md edit, no agent changes"  # required for cache HIT to compose [cached] output line
+       basis_sha: "a3f7b1e8c2d09b4f"  # 16 hex chars (sha256 prefix)
+       computed_at: 2026-05-07
+   ```
+   The `auto_size_reason` field is required: cache HIT must produce `F-NNN → <T-shirt> (~<range>) — <reason> [cached]` per the output format below, so the reason is part of the cacheable LLM output (not just the T-shirt classification).
+4. `.ae/cache/` is gitignored under the existing `.ae/` blanket per CLAUDE.md gitignore policy. No per-subdir override needed.
+5. Corrupted/malformed cache file → log warning, treat as empty (re-evaluate everything).
+6. **Iteration scope**: section (c)'s eval-order guard iterates ONLY `features/active/`. Cache entries for features that transitioned to `done/` or `abandoned/` since their last `/ae:roadmap` run are NOT visited and NOT cleaned by the eval-order guard. They accumulate in `.ae/cache/auto-size.yml` indefinitely. Acceptable for typical project scale (few-dozen features) — the cache file is gitignored and stale entries do no harm beyond a few KB of dead state. Cleanup is opportunistic only (if a previously-archived feature is restored to `active/`, the eval-order guard will visit it normally). Explicit cache-prune subcommand intentionally NOT added — re-file as backlog if the dead-state class becomes painful at scale.
+
+#### Output
 
 ```
 Active features by size:
@@ -125,18 +158,26 @@ Active features by size:
   M:  <count>
   L:  <count>
   XL: <count>
-  unsized: <count>
 
-Total estimated effort (sized only): <lower-sum>d – <upper-sum>d
+Auto-sized this run:
+  F-NNN → S  (~1d)  — <one-line LLM reason>           [cached]
+  F-MMM → M  (~2-3d) — <one-line LLM reason>           [evaluated]
 
-Unsized features: F-NNN, F-MMM
+Total estimated effort (sized + auto-sized): <lower-sum>d – <upper-sum>d
+
+To persist auto-sized values to frontmatter, run /ae:roadmap --resize.
 ```
+
+The `[cached]` vs `[evaluated]` annotation is REQUIRED — it's the deterministic signal that AC5 fixtures grep for. When all features are sized (no auto-eval needed), omit the `Auto-sized this run:` section entirely (no `unsized: 0` line either).
 
 #### Size reconciliation rule
 
-`ae:roadmap` does **NOT** propose new sizes during the default read. The values in feature `index.md` frontmatter are authoritative — they were set by `ae:analyze` at promote time and confirmed by the user.
+Two invariants:
 
-If the user wants `ae:roadmap` to re-propose sizes (e.g., a feature has grown in scope), pass `--resize`. That triggers an interactive re-propose flow per feature (read current size, propose new, ask user to accept/adjust). Existing values still win unless the user explicitly accepts the new proposal — overwrite is never silent.
+1. **Existing `size:` always wins.** `ae:roadmap` never overwrites `index.md` `size:` automatically. Auto-eval ONLY runs for features whose `size:` is empty/absent.
+2. **Auto-eval is display-only by default.** Section (c) computes + caches + displays auto-sized values, but does not write them to feature `index.md` frontmatter. The persist path is `--resize` (see Subcommands). When the user accepts an auto-sized value via `--resize`, the cache entry is deleted (its `auto_size_value` is copied to `index.md` `size:`).
+
+Authoritative values stay authoritative; `--resize` is the explicit accept path.
 
 ### (d) Archive prompt
 
@@ -171,11 +212,13 @@ When no active roadmap is fully done AND no orphan signals: `(d) Archive prompt:
 
 ## Subcommands
 
-The default invocation (no args) is read-only — covers the four sections above. Two flags modify the read; one subcommand performs an explicit write.
+The default invocation (no args) does not mutate user state — covers the four sections above. It writes only `.ae/cache/auto-size.yml` (gitignored, transient cache for section (c) auto-eval; never modifies feature `index.md`, plans, reviews, or roadmaps). Two flags modify the read; one subcommand performs an explicit write to user state.
 
 ### `/ae:roadmap --resize`
 
 Interactive re-sizing flow per active feature. For each feature, show the current size + propose a new one (LLM-judged based on `analysis.md` + plan complexity if a plan exists). User accepts, adjusts, or skips. Writes only on accept.
+
+**Cache integration**: when iterating over features, if `.ae/cache/auto-size.yml` already has an `auto_size_value` for an unsized feature, present that as the proposal (no fresh LLM call). When the user accepts (whether the cached value or an adjusted one), copy the accepted T-shirt to `index.md` `size:` AND delete the cache entry for that feature. For sized features, `--resize` proposes a fresh re-evaluation (cache is irrelevant — sized features never have cache entries per the evaluation-order guard).
 
 ### `/ae:roadmap --legacy`
 
@@ -200,9 +243,9 @@ Archive a roadmap by name without going through the prompt. Refuses if any linke
 
 - **No promote action.** Surfacing candidates is Clarify; the actual BL → feature promotion is `/ae:analyze BL-NNN` (Organize). `ae:roadmap` never moves files in the backlog or creates feature dirs.
 - **No sprint primitive.** No `plan` / `close` / `move` / `add` / `remove` subcommands, no `v<X>.<Y>.<Z>` directories. The legacy version-grouped model was superseded by GTD; legacy files stay in place but aren't read by default.
-- **No size proposal in default read.** Default invocation only aggregates and reports existing sizes. `--resize` is an explicit, interactive flow.
+- **Default-read auto-eval is display-only** (BL-062). Default invocation aggregates existing `size:` AND auto-evaluates unsized features for display, but never writes to feature `index.md` `size:` automatically. `--resize` is the explicit persist path. Cache state lives in `.ae/cache/auto-size.yml` (gitignored, transient) — not user state.
 - **No retrospective analysis.** That's `/ae:retrospect` (project-level long-cycle Reflect). `ae:roadmap` is short-cycle orientation.
-- **No deep code reading.** Reads frontmatter + directory layout only. For codebase-grounded research on a candidate, run `/ae:analyze`.
+- **Limited code reading.** Reads frontmatter for promote-candidate judgment + dependency analysis + archive prompt. Section (c) auto-eval reads `analysis.md` body for unsized features (input to LLM size proposal). For codebase-grounded research beyond size estimation, run `/ae:analyze`.
 
 ## Principles
 
