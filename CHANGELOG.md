@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.9.5 — 2026-05-08
+
+Two UX-friction-themed features ship together: F-006 (BL-061 + BL-062 — ae:setup new-project GTD-first defaults + ae:roadmap default auto-eval unsized features with cache) + F-007 (BL-063 — ae:roadmap batch-approve PROMOTE candidates → chains /ae:analyze with pre-approved values).
+
+### F-006 — Roadmap + Setup UX wave (BL-061 + BL-062, content commits `e4a2891` / `4320231` / `90fda45` / `e7db11b` / `9915334`)
+
+- **12 reader skills' default fallback paths normalized to `.ae/<slot>/`** (was: divergent — some skills said `.ae/<slot>/`, others said `docs/<slot>/`). Codex plan-review surfaced this as a "split-brain" risk that would have been triggered by F-006 Step 2 if not normalized first.
+- **`ae:setup` writes minimal pipeline.yml on fresh init** (Step 2): no uncommented `output:` block by default; only writes a slot when migration scenario detected (legacy `docs/<slot>/` directory has content). Precedence rule: when both `docs/<slot>/` and `.ae/<slot>/` exist with content, `docs/<slot>/` wins (legacy migration signal).
+- **`ae:roadmap` section (c) inline auto-eval for unsized features** (Step 3): replaces "unsized: N" listing with LLM-evaluated T-shirt sizes + cache to `.ae/cache/auto-size.yml` (16-hex sha256 prefix). Eval-order guard: `size:` check fires FIRST, then cache check — closes silent-failure mode where stale cache could display `[cached]` for a sized feature. `[cached]` vs `[evaluated]` annotation = deterministic L1-testable signal.
+- **7 new L1 fixtures** (Steps 4 + 5): 4 setup fixtures (defaults-canonical / no-output-block / migration-existing-docs / precedence-coexist) + 3 roadmap fixtures (auto-size-unsized / size-cache / size-cache-cleanup-on-sized). Replaced obsolete `setup-six-output-slots-default` fixture pair.
+- **Behavioral change**: external GTD-first projects no longer see 6 redundant `output.*` paths on fresh init (cleaner pipeline.yml). External projects with `docs/*` legacy layout: detection works as before. **BC**: existing projects with `output.*` set to canonical `.ae/<slot>/` defaults receive a one-time interactive cleanup offer in `update` mode (interactive only — non-interactive preserves user values).
+
+### F-007 — Batch-approve PROMOTE candidates (BL-063, content commits `5231f74` / `380ba06` / `5a91046`)
+
+- **`/ae:roadmap` section (a) batch-approval block** (Step 1): when ≥1 PROMOTE verdict, renders structured approval block with provenance-tagged size + depends_on per BL (`[frontmatter]` / `[inferred]` literals). 2-step `AskUserQuestion` flow: Step A 3-option (`Approve all` / `Remove some` / `Cancel (nothing will be promoted)`) + Step B `multiSelect: true` keep-list when Remove some chosen. Cancel = zero `/ae:analyze` invocations.
+- **`/ae:analyze` accepts `PRE_APPROVED_VALUES` sentinel block** (Step 2): when invoked from `/ae:roadmap` orchestration loop, spawn prompt contains `---PRE_APPROVED_VALUES---` ... `---END_PRE_APPROVED_VALUES---` block with size + depends_on; Step 7 + Step 8 skip `AskUserQuestion`, write directly. Standalone `/ae:analyze BL-NNN` invocations (no block) behave unchanged. Bilateral discipline: Step 1 in `roadmap/SKILL.md` owns canonical format spec; Step 2 in `analyze/SKILL.md` references it (does NOT redefine).
+- **Malformed-block fallback**: missing closing sentinel / invalid `size:` value / invalid `depends_on:` value → loud warning log + fall-through to interactive prompt for that field. Closes the 3-voice-convergent (gemma + challenger + codex) sentinel-parsing brittleness concern raised at ship review.
+- **3 new L1 fixtures** (Step 3): `roadmap-batch-approval-block-format` + `roadmap-batch-approval-askuserquestion` + `analyze-pre-approved-values-input` (incl. malformed-block fallback assertions added at ship review).
+- **BC**: zero behavior change for direct `/ae:roadmap` (when no PROMOTE candidates) and zero behavior change for direct `/ae:analyze BL-NNN` (when no `PRE_APPROVED_VALUES` block in spawn prompt). New behavior is opt-in via the orchestration loop.
+
+### Why bundled
+
+Both F-006 and F-007 are UX-friction-themed (theme: `ux-friction`) — one cohesive v0.9.5 release per CLAUDE.md "Versioning: intentional releases only" rule. F-006 lands the GTD-first canonical defaults that F-007's chained orchestration assumes; together they're the "AE 多干活, user 少填表" wave the session converged on.
+
+### Discussions and follow-ups
+
+- F-006 discussion: standalone plan (no `/ae:discuss` step) — direct `/ae:analyze` (multi-BL consolidation) → `/ae:plan` → `/ae:work` → `/ae:review` path
+- F-007 discussion: `.ae/features/done/F-007-chaining-roadmap-to-analyze/discussions/001-chaining-design/` — Round 0 framing review went 4 REVISE → 4→1 topic collapse → APPROVED on attempt 2 + 1-round 3-agent council in lite mode
+- BL-063 was originally bundled with BL-061+BL-062 in F-006 but split out at /ae:analyze stage — challenger + codex + gemini-via-oMLX 3-voice convergence said BL-063's orchestration surface was different blast radius from BL-061/062's text/logic edits
+- BL-064 filed (`.ae/backlog/unscheduled/`): F-007 chain-execution L2 (live) coverage — when L2 governance infra (BL-056 scope or successor) exists. Codex ship-review Q3 surfaced the "AC4 deferral instruction won't survive ship handoff without an actual BL" concern.
+
+### Closes
+
+- F-006 (BL-061 + BL-062; closure review verdict: PASS, 2026-05-07; review caught 1 P1 + 4 P2, all squashed)
+- F-007 (BL-063; closure review verdict: PASS, 2026-05-08; review caught 0 P1 + 4 P2, all squashed; 1 BL filed for L2 deferral)
+
 ## v0.9.4 — 2026-05-06
 
 Two F-003 follow-ups ship together: F-004 (BL-055 dispatcher canonical-placeholder for /ae:plan + /ae:work) + F-005 (BL-057 library portability A0+ — actionable error messages on missing library + README cross-machine setup block).
