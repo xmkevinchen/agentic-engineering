@@ -81,6 +81,70 @@ After the per-BL verdicts, group active features below by `theme:` tag — situa
 
 When backlog is empty (or all candidates filter out): `(a) Promote candidates: inbox is empty. Run /ae:backlog "<one-line idea>" to capture something — frictionless inbox drop, classification later.`
 
+#### Batch-approval block (when ≥ 1 PROMOTE verdict was emitted)
+
+When the verdict pass produced one or more PROMOTE verdicts, append a structured approval block after the verdicts and run a 2-step interactive approval flow before continuing to section (b). This bridges `/ae:roadmap` Clarify-output to `/ae:analyze` Organize-execution without the user having to manually copy BL-IDs.
+
+**Per-BL field collection** (mechanical pre-LLM step): for each PROMOTE BL, read its body. Pull `size:` if frontmatter has it (mark `[frontmatter]`); else prepare a placeholder for LLM inference (mark `[inferred]`). Pull explicit `depends_on:` if present (mark `[frontmatter]`). LLM-infer order + missing size + missing deps from BL bodies. *(Implementation note, not a spec constraint: typical small N — 2–5 PROMOTE candidates — fits comfortably in a single LLM pass; if N grows large or BL bodies are dense, fallback to per-BL inference is acceptable. The block format below is the contract; batching shape is not.)*
+
+**Approval block format** (deterministic — L1 fixtures grep for these literal anchors):
+
+```
+/ae:roadmap → PROMOTE candidates (N)
+─────────────────────────────────────────────────────────────────────
+Items will run in the order shown. To override: drop a BL from this batch and
+re-run /ae:roadmap with explicit depends_on: frontmatter on the affected BL/feature.
+─────────────────────────────────────────────────────────────────────
+ 1. BL-NNN  Title (truncated to ~55 chars)            Size: <T> [<provenance>]
+            Depends on: F-MMM [<provenance>]            ← only when non-empty
+            Order reason: <one line>                    ← only when LLM-inferred AND non-trivial
+ 2. ...
+─────────────────────────────────────────────────────────────────────
+```
+
+Title column truncated to ~55 chars (use `…` ellipsis if longer). Size on the title line; deps and order-reason on continuation lines, both elided when not applicable. Separator lines load-bearing — they signal "this is a gate, not a status message". Provenance tag is exactly `[frontmatter]` or `[inferred]` (no other variants; deterministic literal is the L1-testable signal). The visible-order-equals-execution-order escape-hatch line above the BL list is required: it documents the correction path for users who notice wrong inferred order.
+
+**Step A — initial approval prompt**: after rendering the block, call `AskUserQuestion` with three options (single-select):
+
+- `Approve all` — proceed to post-approval execution with the displayed BL list
+- `Remove some` — go to Step B
+- `Cancel (nothing will be promoted)` — exit the batch flow with zero `/ae:analyze` invocations. The full disambiguating label `Cancel (nothing will be promoted)` is required on first display so the user can't conflate batch-cancel with per-BL drop.
+
+**Step B (only if `Remove some` chosen)** — drop-some flow:
+
+1. `AskUserQuestion` with `multiSelect: true`. Options = list of displayed BLs, all pre-checked. The user unchecks BLs to drop from the batch.
+2. After the multi-select returns a (possibly reduced) list, render the revised list in the same approval-block format above and call `AskUserQuestion` with two options:
+   - `Approve [N kept]` — proceed with the kept subset
+   - `Cancel (nothing will be promoted)` — exit with zero `/ae:analyze` invocations
+
+**Post-approval execution** (the "loop" — produces no new TUI; just streams completion lines): for each accepted BL in displayed order, invoke `/ae:analyze BL-NNN` with the spawn-prompt augmented by a `PRE_APPROVED_VALUES` block. The block format defined here is canonical; `/ae:analyze` consumes it per its `analyze/SKILL.md` "Pre-approved values input" subsection (parser side, references this format, does not redefine it).
+
+**Canonical `PRE_APPROVED_VALUES` block format** (Step 1 owns this spec; Step 2 in `/ae:analyze` references it):
+
+```
+---PRE_APPROVED_VALUES---
+size: <XS | S | M | L | XL>
+depends_on: <F-NNN | F-NNN, F-MMM | none>
+---END_PRE_APPROVED_VALUES---
+```
+
+Both `size:` and `depends_on:` together are the typical case; only one of the two is also valid (the missing field falls through to `/ae:analyze`'s normal interactive prompt). Value `none` for `depends_on` means "explicitly no dependencies" and skips the prompt without writing the field. Sentinels `---PRE_APPROVED_VALUES---` / `---END_PRE_APPROVED_VALUES---` delimit the block to give `/ae:analyze`'s parser a deterministic anchor; the block must not appear elsewhere in the spawn prompt.
+
+For each invocation, log a per-BL completion line: a concise format showing index/total + BL-ID + status (TL chooses exact wording — recommend `[i/N] /ae:analyze BL-NNN — <running|done|failed>` style; exact string not contract).
+
+On Cancel-all → no `/ae:analyze` invocations, exit with a clear "no promotions executed (cancelled)" message (exact wording at TL's discretion).
+
+On Ctrl-C mid-loop → harness handles termination; partial state remains as already-promoted features have their `promoted_to:` / `origin_bl:` frontmatter set; user re-runs `/ae:roadmap` to continue (next run's PROMOTE filtering naturally skips already-promoted BLs).
+
+#### Out-of-scope edit operations (per F-007/001 conclusion)
+
+The batch-approval block intentionally does NOT support inline editing of: (a) execution order beyond `Remove`, (b) per-BL `size` override, (c) per-BL `depends_on` override. The escape hatches:
+
+- **Order is wrong**: drop the misplaced BL via `Remove some`, run `/ae:analyze` separately for it after the batch, or re-run `/ae:roadmap` with explicit `depends_on:` frontmatter on the affected BL/feature so the deterministic ordering changes.
+- **Inferred size or deps wrong**: let the batch run; edit `index.md` `size:` / `depends_on:` directly after `/ae:analyze` writes the feature dir. The post-analyze edit is one-line and trivially auditable.
+
+The batch UI is an approval gate, not a config editor. Inline override would convert the gate into a form (per F-007/001 codex-proxy + architect Round 1 convergence).
+
 ### (b) Dependency analysis
 
 Render a 5-column table over `.ae/features/active/`:
