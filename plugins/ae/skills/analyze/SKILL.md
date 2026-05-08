@@ -57,6 +57,29 @@ Inspect `$ARGUMENTS`:
 
 ## Mode A: Promote BL → Feature
 
+### Pre-approved values input (BL-063 / F-007)
+
+`/ae:analyze` may be invoked from `/ae:roadmap`'s batch-approval orchestration loop (per F-007). When invoked from that loop, the spawn prompt contains a `PRE_APPROVED_VALUES` block that pre-fills the Step 7 (size) and Step 8 (depends_on) interactive advisories so the user is not re-prompted per BL.
+
+**Format spec authority**: the canonical `PRE_APPROVED_VALUES` block format is defined in `plugins/ae/skills/roadmap/SKILL.md` section (a) "Batch-approval block" subsection (Step 1's "Canonical PRE_APPROVED_VALUES block format" sub-bullet). This skill RECOGNIZES and CONSUMES that format; it does NOT redefine it. Any change to the wire format MUST update `roadmap/SKILL.md` first; this skill references it.
+
+**Recognition**: at the start of Mode A — before the double-promote pre-check, before any agent spawn — grep the spawn prompt for the literal opening sentinel `---PRE_APPROVED_VALUES---`. The sentinel must appear as a free-standing line (not inside a fenced code block, not quoted in surrounding prose); SKILL.md text that documents the format is NOT a live block. If found, parse the block's `size:` and `depends_on:` field values and stash them for Steps 7 + 8 to consume. If absent, proceed with normal interactive flow (today's behavior — unchanged).
+
+**Malformed-block fallback** (per F-007 ship review — gemma + challenger + codex convergent finding on sentinel-parsing brittleness):
+
+- **Missing closing sentinel**: opening `---PRE_APPROVED_VALUES---` found but `---END_PRE_APPROVED_VALUES---` absent → log `[ANALYZE] PRE_APPROVED_VALUES block malformed (missing closing sentinel); falling through to interactive prompts for size + depends_on.` Discard any partially-parsed values; Step 7 + Step 8 run interactively as if the block were absent.
+- **Invalid `size:` value**: parsed value is not in `{XS, S, M, L, XL}` → log `[ANALYZE] PRE_APPROVED_VALUES.size invalid: <value>; falling through to interactive size prompt.` Skip the pre-approved-size guard for this invocation; Step 7 runs interactively. (Other fields, if valid, still apply — partial fallback.)
+- **Invalid `depends_on:` value**: parsed value is not the literal `none` AND does not match the comma-separated F-NNN format (e.g., contains non-`F-NNN` tokens, malformed list syntax) → log `[ANALYZE] PRE_APPROVED_VALUES.depends_on invalid: <value>; falling through to interactive depends_on prompt.` Skip the pre-approved-depends_on guard; Step 8 runs interactively.
+- **Empty `depends_on:` value** (line present, no text after the colon): treat as the literal `none` — skip frontmatter write, no Step 8 prompt. Producer (`/ae:roadmap`) is specified to elide the line entirely when there are no deps, so this case shouldn't arise in practice; the parser tolerates it for forward-compatibility with future producer changes.
+
+These fallbacks are intentionally LOUD (warning logs) so a malformed-block silent-failure becomes visible to the user. The fallback semantics is "behave as if the block were absent for the affected field" — never block execution, never invent values.
+
+**Standalone-invocation invariant**: when `/ae:analyze BL-NNN` is invoked directly by the user (not via `/ae:roadmap` orchestration), the `PRE_APPROVED_VALUES` block is absent from the spawn prompt and Steps 7 + 8 retain their full interactive `AskUserQuestion` flow. The pre-approved path is opt-in via the explicit block's presence; no behavior change for direct invocations.
+
+**Partial fields**: the block may contain only `size:`, only `depends_on:`, or both. A missing field falls through to the normal interactive prompt for that field (e.g., block has `size: M` but no `depends_on:` line → Step 7 skips its prompt, Step 8 runs normally). Value `none` for `depends_on` means "explicitly no dependencies" and skips Step 8's write without inserting the field into frontmatter.
+
+**Reconciliation invariant unchanged**: if the new feature's `index.md` already has `size:` / `depends_on:` set (e.g., user edited mid-run, or this is a re-run), the existing value WINS regardless of pre-approved input. Pre-approved values only apply when the corresponding frontmatter slot is empty.
+
 ### Pre-check — defend against double-promote
 
 1. **Locate the BL file.** Search recursively under `<output.backlog>` (default `.ae/backlog/`) for `BL-<NNN>-*.md`. Files may live in `unscheduled/`, `closed/`, `done/`, or any sprint subdir. Not found → **refuse**: `BL-<NNN> not found in any backlog scope.`
@@ -114,11 +137,14 @@ Execute in order; each step's success is required for the next.
 
 7. **T-shirt size — advisory propose.** After the codebase research (step 9 below) completes — but BEFORE writing `size:` — present the user with a proposed size based on archaeology + LLM judgment of complexity:
    - Valid values: `XS / S / M / L / XL` (mapped to approximate effort in CLAUDE.md, NOT to "Shape Up appetite" — that label was a misnomer in earlier drafts).
-   - Phrasing: `Proposed size: M (~2-3 days) — based on <one-line reason>. Accept / adjust to <X> / skip?`
-   - **Reconciliation rule**: if `index.md` already has a `size:` value (e.g., user edited it during the analyze run, or this is a re-run), the existing value WINS. `ae:analyze` does NOT overwrite. To re-propose, the user must run `/ae:roadmap --resize` per Step 4 spec — that's the explicit re-proposal flow.
+   - **Pre-approved-values guard** (BL-063 / F-007): if the spawn prompt contained a `PRE_APPROVED_VALUES` block with a `size:` value (parsed at Pre-approved values input step at top of Mode A), skip the `AskUserQuestion` and write `size: <pre-approved T-shirt>` directly to frontmatter. Log: `[ANALYZE] Using pre-approved size: <T-shirt> (from /ae:roadmap batch).` This guard fires before the propose-and-confirm flow below.
+   - Phrasing (when no pre-approved value): `Proposed size: M (~2-3 days) — based on <one-line reason>. Accept / adjust to <X> / skip?`
+   - **Reconciliation rule**: if `index.md` already has a `size:` value (e.g., user edited it during the analyze run, or this is a re-run), the existing value WINS regardless of pre-approved input. `ae:analyze` does NOT overwrite. To re-propose, the user must run `/ae:roadmap --resize` per Step 4 spec — that's the explicit re-proposal flow.
    - User accepts → write `size: <T-shirt>` to frontmatter. Skip / silence → leave field absent.
 
-8. **`depends_on:` — advisory propose.** Same pattern as size: if the BL or research surfaces phrases like "blocked by", "after Y is done", "needs Z first", and one of those targets is itself an active feature (`F-MMM`), propose `depends_on: [F-MMM]`. User accepts → write to frontmatter. Existing `depends_on:` value wins (no overwrite). Multi-target proposals are presented as a list; user accepts/adjusts/skips per item.
+8. **`depends_on:` — advisory propose.** Same pattern as size: if the BL or research surfaces phrases like "blocked by", "after Y is done", "needs Z first", and one of those targets is itself an active feature (`F-MMM`), propose `depends_on: [F-MMM]`.
+   - **Pre-approved-values guard** (BL-063 / F-007): if the spawn prompt contained a `PRE_APPROVED_VALUES` block with a `depends_on:` value, skip the `AskUserQuestion` and apply it directly. If the value is the literal `none`, do NOT write `depends_on:` to frontmatter (skip the write entirely — same as today's "no proposal" outcome). Otherwise parse the value as a list (`F-NNN` or `F-NNN, F-MMM`) and write `depends_on: [F-NNN, ...]` to frontmatter. Log: `[ANALYZE] Using pre-approved depends_on: <value> (from /ae:roadmap batch).` This guard fires before the propose-and-confirm flow.
+   - User accepts → write to frontmatter. Existing `depends_on:` value wins (no overwrite). Multi-target proposals are presented as a list; user accepts/adjusts/skips per item.
 
 9. **Run the codebase research flow** (see "Agent Teams Research" below) and write the synthesized output to `.ae/features/active/F-NNN-<slug>/analysis.md`.
 
