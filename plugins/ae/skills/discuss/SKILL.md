@@ -86,6 +86,19 @@ Owner field: omit. On error: stay `in_progress`. Steps 4-6 and 10 are sub-action
    - All converged + no deferred → go to Sweep (step 7) / Conclusion (step 8) / Doodlestein (step 9)
    - Has revisit or pending → Step 1.5 (new discussion or framing changed) or Step 2 (resume)
 
+### 1.4. Writing the `## User Question (Frozen)` section
+
+When creating `framing.md` (per Step 1 item 2), TL fills the `## User Question (Frozen)` section (defined in the Appendix `framing.md` template) with the user's invocation message **verbatim**. Verbatim = byte-exact copy including original whitespace, line breaks, and formatting markers (e.g., bullet markers, code fences). TL MUST NOT:
+
+- Summarize, condense, or extract "the key points" — even if invocation is long
+- Translate the user's language into a different language
+- Normalize formatting (e.g., wrapping prose, removing typos, "cleaning up" markdown)
+- Add explanatory wrapping ("The user is asking...") in lieu of direct quote
+
+If the invocation message is too long to copy in full and exceeds practical context budget, TL **stops and asks the user** which subset to freeze (typical scope: the actual question, not the surrounding chat). User explicitly chooses the frozen content; TL never silently truncates.
+
+This constraint exists because every downstream guard (§1.5.1 Frozen-field rule, §1.5.3 Rule 1.5 byte-diff check) compares against this section's text. If the section is already a TL paraphrase, the guards compare two copies of the paraphrase — false sense of security.
+
 ### 1.5. Round 0 — Framing Review (new discussions only)
 
 **Framing quality review is its own task**, with its own TeamCreate/TeamDelete lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two teams is consistent with ae:agent-teams "one team per task"; it is not a pre-flight hack.
@@ -114,6 +127,15 @@ If not found, emit `[layer1] preflight: engineering-minimal-change-engineer NOT 
 
 **Note**: the framing_context convention below is a **prompt-embedded key**, not an `Agent(...)` parameter. All 5 (or 4) spawn prompts must include the line `framing_context: <discussion-dir>/framing.md` at the top of their prompt string so the agent reliably locates the review target.
 
+**Frozen-field rule** (applies to all 5 reviewer prompts):
+Reviewers may critique TL-authored framing, but the `## User Question (Frozen)` section is immutable.
+- Sacred portion = exact contents of `## User Question (Frozen)` (byte-exact, including whitespace and line breaks)
+- Mutable scope = TL-authored `Problem Statement`, `Scope`, `Reference Material`
+- A legal `REVISE` finding's `suggested edit:` must target only mutable sections
+- Wording-only changes to the Frozen section are still invalid; semantic equivalence is irrelevant — do not paraphrase, normalize, translate, narrow, or broaden the Frozen section under any circumstance
+
+Each spawn prompt below echoes this rule by including the line `Honor the Frozen-field rule defined in §1.5.1 above.` immediately under its `framing_context:` line, so the agent's prompt context carries the constraint without re-stating the full rule.
+
 ```
 TeamCreate(team_name: "<discussion-id>-framing-review")
 ```
@@ -124,10 +146,11 @@ Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), 
 Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
       prompt: "framing_context: <discussion-dir>/framing.md
+               Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: bias anchoring. Read ONLY the framing file.
                Does this framing embed TL's pre-commitments (specific mechanisms,
                ruled-out alternatives, loaded language)? Report verdict: APPROVED
-               / REVISE: <specific issue> | suggested edit: <concrete revision>.
+               / REVISE: <specific issue> | target: <Problem Statement | Scope | Reference Material> | suggested edit: <concrete revision for mutable target only>.
                If MCP connection fails / times out / rate-limited / quota exhausted,
                SendMessage 'unavailable: <reason>' to team-lead and exit.
                Do not retry. SendMessage verdict to team-lead.")
@@ -135,6 +158,7 @@ Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
 Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
       prompt: "framing_context: <discussion-dir>/framing.md
+               Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: bias anchoring (Google-family lens; if Gemini API
                unavailable, fall back to local gemma4:26b per CLAUDE.md).
                Read ONLY the framing file. Report verdict per the 3-state format.
@@ -146,6 +170,7 @@ Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
 Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
       prompt: "framing_context: <discussion-dir>/framing.md
+               Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: scope narrowing. Read ONLY the framing file.
                What is the single smartest improvement to this framing — especially
                any alternative framing that was foreclosed by the current wording?
@@ -155,6 +180,7 @@ Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-str
 Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-adversarial",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
       prompt: "framing_context: <discussion-dir>/framing.md
+               Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: Round 1 scope narrowing. Read ONLY the framing file.
                If Round 1 agents researched independently under this framing, what is
                the first solution class they would hit a wall on? Report APPROVED
@@ -164,6 +190,7 @@ Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-a
 Agent(subagent_type: "engineering-minimal-change-engineer", name: "minimal-change-engineer",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
       prompt: "framing_context: <discussion-dir>/framing.md
+               Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: problem over-complication / scope creep. Read ONLY the framing file.
                Is this framing bigger than the problem requires? Is there a simpler
                framing that covers the same problem with less machinery?
@@ -183,14 +210,25 @@ TL waits for **all 5 verdicts** before aggregating. **No early-exit on first REV
 
 Each verdict is one of three states:
 - `APPROVED: <one-line reason>`
-- `REVISE: <specific issue> | suggested edit: <concrete revision>`
+- `REVISE: <specific issue> | target: <Problem Statement | Scope | Reference Material> | suggested edit: <concrete revision for mutable target only>`
 - `unavailable: <reason>` (proxy or Claude-native, from timeout or MCP failure)
+
+The `target:` field is required on REVISE verdicts and MUST be one of the 3 mutable section names. `target: User Question (Frozen)` is invalid (sacred section is immutable; see §1.5.1 Frozen-field rule). Rule 1.5 below validates this field and the `suggested edit:` content before consolidation.
 
 **Aggregation rules** — apply in this exact order; first match wins:
 
 1. **Quorum check** (precondition): a majority of **spawned** agents must return `APPROVED` or `REVISE` (non-`unavailable`). Thresholds: ≥3 of 5 (standard spawn), or ≥3 of 4 (preflight dropped minimal-change-engineer). Below the threshold → halt, report to user "framing-review quorum not reached; cannot assess. Retry or skip Round 0?" Stop; no further rules apply.
-2. **Any REVISE** → halt. Set `round_0: revise_requested` in `framing.md` frontmatter, populate `round_0_notes` with consolidated REVISE feedback across all responding agents. Present consolidated list to user with options:
-   - **Revise**: TL rewrites `framing.md` per feedback, re-runs Round 0 (will transition `round_0` to `approved` or back to `revise_requested`)
+
+   1.5. **Frozen-section integrity check** (precondition: Rule 1 quorum met): for each REVISE verdict, validate sequentially:
+   1. `target:` field is present AND value is one of `Problem Statement | Scope | Reference Material`. Missing field, malformed value, or `target: User Question (Frozen)` → mark verdict invalid; log: `[FRAMING-REVIEW] invalid REVISE from <agent>: target missing or = Frozen section.`
+   2. `suggested edit:` content does not propose changes to text inside the `## User Question (Frozen)` section. TL byte-for-byte compares the current frozen-section text against any post-suggestion preview. **Do not judge semantic equivalence; wording-only changes are still invalid.** Mismatch → mark verdict invalid; log: `[FRAMING-REVIEW] frozen-section check: mismatch from <agent>` (else log `unchanged` for audit trail).
+
+   Invalid verdicts are **dropped entirely** — no rephrase / recovery. If the user later picks Revise option in Rule 2, the next Round 0 spawns fresh agents who can resubmit findings in correct format.
+
+   If after this filter all REVISE verdicts are invalidated, treat as zero REVISE; proceed to Rules 3-4 (cross-family degraded check / unanimous APPROVED).
+
+2. **Any REVISE** (after Rule 1.5 filtering) → halt. Set `round_0: revise_requested` in `framing.md` frontmatter, populate `round_0_notes` with consolidated REVISE feedback across all responding agents (only valid REVISE verdicts that survived Rule 1.5). Present consolidated list to user with options:
+   - **Revise**: TL rewrites `framing.md` per feedback, re-runs Round 0 (will transition `round_0` to `approved` or back to `revise_requested`). TL rewrite — scope, terminology, and structure only. **MUST NOT alter `## User Question (Frozen)` section: byte-for-byte preserved across re-runs.**
    - **Override**: skip Round 0 outcome for this discussion. Log `round_0: overridden` with user-supplied reason. Proceed to Step 1.6.
    - **Cancel**: abort discussion
 3. **Cross-family degraded** (precondition: rules 1–2 passed, i.e. quorum met and zero REVISE; at this point all available verdicts are APPROVED) — BOTH `codex-proxy` and `gemini-proxy` returned `unavailable`:
@@ -205,7 +243,7 @@ Each verdict is one of three states:
 
 **Rerun limit** (separate from aggregation — applies to the outer loop driven by Rule 2's Revise option): if the user selects **Revise + rerun** 3 consecutive times without the framing converging to APPROVED, escalate to the user rather than looping further. This is not an aggregation rule (single-run aggregation has no loop; all verdicts arrive in one batch).
 
-Rationale for rule order (addresses review-043 P1s): rule 2 fires before rule 3/4 so any REVISE halts cleanly. Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
+Rationale for rule order (addresses review-043 P1s): rule 1.5 fires before rule 2 because the mechanical guard (target validation + frozen-section byte-diff) must filter invalid REVISE verdicts before the user-facing halt — otherwise the user sees consolidated feedback derived from invalid REVISE proposals. Rule 2 fires before rule 3/4 so any REVISE halts cleanly. Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
 
 #### 1.5.4. Per-agent verdict files + team teardown
 
@@ -614,6 +652,14 @@ round_0_notes: ""            # human-readable rationale for override, or aggrega
 ---
 
 # Framing — [title]
+
+## User Question (Frozen)
+[User's original request / question, copied verbatim. This section is sacred:
+do NOT rewrite, paraphrase, normalize, translate, narrow, broaden, or "clarify" it.
+Reviewers may critique surrounding sections; this section is immutable.
+
+See §1.4 "Writing the User Question (Frozen) section" for TL's write-time constraints
+and §1.5.1 / §1.5.3 for review-time guards (Frozen-field rule + Rule 1.5 byte-diff check).]
 
 ## Problem Statement
 [What needs to be solved. Describe the problem; do NOT pre-commit to solution mechanisms, list A/B/C options, or embed specific tools.]
