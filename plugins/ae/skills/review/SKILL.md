@@ -9,7 +9,31 @@ effort: high
 
 ## Argument Inference
 
-Resolve `$ARGUMENTS` into target type. Three forms (priority order — file-existence wins over pattern match):
+### Pre-step: $ARGUMENTS tokenization (HARD requirement, MUST run first)
+
+Before form classification, TL MUST split `$ARGUMENTS` into a `<target>` slot and a list of `--reviewer <name>` flag pairs:
+
+1. Scan `$ARGUMENTS` left-to-right; collect every `--reviewer <name>` token pair into a flag list (each `--reviewer` MUST be immediately followed by exactly one whitespace-separated value; no `=` form supported).
+2. The remaining tokens (everything that is NOT `--reviewer` or its value) form the **target string**. Concatenate by whitespace if multiple non-flag tokens (rare; surface as a parse error if more than one — see grammar below).
+3. **Grammar (positional)**: `<target>` MUST appear as a single whitespace-delimited token; flag pairs MUST appear AFTER `<target>` (not interleaved before, not split mid-target). Order rule: `target ?--reviewer name (--reviewer name)*` only.
+4. **Reject** if grammar violated:
+   - Multiple non-flag tokens (e.g., `/ae:review foo.md bar.md --reviewer X` — surplus target token `bar.md`)
+   - Flag before target (e.g., `/ae:review --reviewer X .ae/foo.md`)
+   - `--reviewer` with no value (trailing flag) OR with value starting with `--` (likely missed value)
+   
+   Refusal text:
+   ```
+   Argument grammar: /ae:review [<target>] [--reviewer <name>]*
+     <target> must be the FIRST positional token; --reviewer flags follow.
+     One <target> only (or empty for auto-resolve).
+   Got: '<raw $ARGUMENTS>'
+   ```
+
+5. **All subsequent steps** in this section operate on the resolved **`<target>`** string, NOT the raw `$ARGUMENTS`. The Form 1/2/3 classification, the file-existence test (`test -f '<target>' || test -d '<target>'`), and observability trace all use `<target>` post-tokenization.
+
+This pre-step is mandatory because raw `$ARGUMENTS` may contain interleaved flag tokens (`<plan-path> --reviewer challenger`) that would cause `test -f` against the full string to fail trivially and misroute to Form 3.
+
+Resolve `<target>` (post-tokenization) into target type. Three forms (priority order — file-existence wins over pattern match):
 
 ### Form 1 — Local file or directory path
 
@@ -17,12 +41,12 @@ If `$ARGUMENTS` is a path that exists in the working tree (file or directory), t
 
 ### Form 2 — Commit reference / range
 
-If `$ARGUMENTS` matches:
+If `<target>` matches:
 - Contains `..` → commit range (e.g., `HEAD~3..HEAD`, `main..HEAD`, `<sha>..<sha>`)
-- `^[a-f0-9]{7,40}$` → single commit SHA
-- `^HEAD~?[0-9]*$` → relative commit reference
+- `^[a-f0-9]{7,40}$` → single commit SHA → resolves to single-commit range `<sha>~1..<sha>`
+- `^HEAD~?[0-9]*$` → relative commit reference → single-commit range `<ref>~1..<ref>`
 
-Treat as commit-range review target.
+Treat as commit-range review target. **Diff scope binding**: when reviewer agents need a diff, TL passes `git diff <target>` as the diff command (where `<target>` is the post-resolution range string). For single SHA / relative ref, TL resolves to the explicit range form first (`<sha>~1..<sha>`) before substituting into the diff command. This is the ad-hoc analogue to pipeline mode's "Review scope" base-commit derivation; the ad-hoc target string IS the range.
 
 ### Form 3 — Empty OR non-matching free-text (pipeline mode default)
 
@@ -49,22 +73,27 @@ Without this union scan, zero-arg `/ae:review` invocations against feature-dir p
 
 ### Form ambiguity resolution
 
-**TL execution discipline (HARD requirement, not soft hint)**: when resolving `$ARGUMENTS`, TL MUST first run `test -f '$ARGUMENTS' || test -d '$ARGUMENTS'` via Bash to verify local file/dir existence before falling through to Form 2 pattern matching.
+**TL execution discipline (HARD requirement, not soft hint)**: when resolving `<target>` (post-tokenization), TL MUST first run `test -f '<target>' || test -d '<target>'` via Bash to verify local file/dir existence before falling through to Form 2 pattern matching.
 
 This is **structurally enforced**, not advisory:
 
 - SKILL.md instruction is imperative (`MUST first run`), not suggestive
-- "MUST" in LLM prompts is soft constraint — TL might skip Bash and pure-string pattern match. Mitigation: TL MUST emit a one-line **observability trace** at Argument Inference start:
+- "MUST" in LLM prompts is soft constraint — TL might skip Bash and pure-string pattern match. Mitigation: TL MUST emit a one-line **observability trace** after tokenization, before form classification:
   ```
-  [AE-REVIEW] Argument inference: target=<arg>, file_check=<true|false>, form=<1|2|3>
+  [AE-REVIEW] Argument inference: target=<target>, reviewers=[<flag-list>], file_check=<true|false>, form=<1|2|3>
   ```
   If trace absent in audit log → TL skipped Bash. This makes the failure mode visible.
 - Pure string-pattern dispatch in LLM context is non-deterministic — could mismatch e.g., a file named `abc1234` (valid hex SHA pattern) as commit ref instead of file → silent wrong-target review.
 
 **Resolution order**:
-1. File-existence check FIRST (Form 1) — local files take precedence over commit SHA matching.
-2. If `$ARGUMENTS` is plan path (Form 1 file exists AND path matches `.ae/features/<state>/F-NNN-<slug>/plan.md` OR `output.plans/NNN-*.md`) → enter pipeline mode (existing behavior); pipeline pre-checks apply.
-3. Otherwise (file but not plan / dir / commit ref / empty / non-matching free-text) → ad-hoc OR pipeline per type.
+1. **Tokenization first** — split raw `$ARGUMENTS` per Pre-step above; obtain `<target>` + flag list. Reject on grammar violation.
+2. File-existence check on `<target>` (Form 1) — local files take precedence over commit SHA matching.
+3. If `<target>` is plan path (Form 1 file exists AND path matches `.ae/features/<state>/F-NNN-<slug>/plan.md` OR `output.plans/NNN-*.md`) → enter pipeline mode (existing behavior); pipeline pre-checks apply UNLESS `--reviewer` flag was set, in which case Pre-checks router treats as pipeline (full 5 checks fire) but Output rule applies case (c) — see Output section.
+4. Otherwise (file but not plan / dir / commit ref / empty / non-matching free-text) → ad-hoc OR pipeline per type.
+
+### Filename timestamp normalization (filesystem-safe)
+
+When generating `<ISO8601-date>` for ad-hoc review filenames (`output.reviews/adhoc/<id>-<ISO8601>.md`), use the format `YYYY-MM-DDTHH-MM-SS` — colons in the time portion replaced with dashes (`:` → `-`) for filesystem safety on POSIX and Windows shells. This is NOT strict ISO8601 but matches the worked examples in the Output section. The `created:` frontmatter field MAY use either form; choose `YYYY-MM-DDTHH-MM-SS` for consistency.
 
 # /ae:review — Deep Review (Feature Completion Gate)
 
@@ -402,11 +431,11 @@ Include this in the review report. This data accumulates naturally across featur
 
 - **(a) Feature-dir plan** (target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`, AND no prior `review.md` at same dir, AND no `--reviewer` flag) → write `review.md` next to the plan at `.ae/features/<state>/F-NNN-<slug>/review.md`. Path-derived; no frontmatter required to make this decision.
 - **(b) Legacy plan** (target under `output.plans/`, AND no prior matching review at `output.reviews/`, AND no `--reviewer` flag) → write to `pipeline.yml` → `output.reviews/NNN-...md` per the existing convention.
-- **(c) Ad-hoc target OR re-review OR `--reviewer` flag present** → write to `pipeline.yml` → `output.reviews/adhoc/<id>-<ISO8601-date>.md`. `<id>` derivation:
-  - Ad-hoc commit range/file/dir: slug from target string with non-alphanumerics replaced by `-` (e.g., `HEAD~3..HEAD` → `HEAD-3-HEAD`; `src/foo.py` → `src-foo-py`).
-  - Re-review on plan: feature ID + `-rerun` suffix (e.g., `F-012-rerun-2026-05-09T14-22-00`).
-  - `--reviewer` flag with pipeline target: feature ID + `-rerun-<reviewer-name>` (e.g., `F-012-rerun-challenger-2026-05-09T14-22-00`).
-  - Fall-back: `adhoc-<ISO8601>.md` if no derivable id.
+- **(c) Ad-hoc target OR re-review OR `--reviewer` flag present** → write to `pipeline.yml` → `output.reviews/adhoc/<id>-<ISO8601-date>.md`. ISO8601 timestamp uses filesystem-safe form `YYYY-MM-DDTHH-MM-SS` (colons → dashes; see Argument Inference filename normalization rule). `<id>` derivation (rules apply in order; **first match wins** — more specific rules listed first):
+  1. **`--reviewer` flag with pipeline target**: feature ID + `-rerun-<reviewer-name>` (multi-flag → join names with `-` e.g., `F-012-rerun-challenger-codex-proxy`). This rule wins over rule 2 even if `review.md` already exists, because the flag context preserves which reviewer angle the re-review carried.
+  2. **Re-review on plan (no `--reviewer` flag, prior `review.md` exists)**: feature ID + `-rerun` suffix (e.g., `F-012-rerun-2026-05-09T14-22-00`).
+  3. **Ad-hoc commit range/file/dir** (no plan, no flag context): slug from target string with non-alphanumerics replaced by `-` (e.g., `HEAD~3..HEAD` → `HEAD-3-HEAD`; `src/foo.py` → `src-foo-py`).
+  4. **Fall-back**: `adhoc-<ISO8601>.md` if no derivable id.
 
 **No surface-index pointer file is written.** Discoverability for `/ae:dashboard` and `/ae:next` is preserved via non-recursive glob scan over `output.reviews/*.md` (excluding `adhoc/` subdir naturally — non-recursive glob does not descend) and `.ae/features/{active,done}/F-*/review.md` — see those skills' Reviews scanning rule. This eliminates dual-write debt; readers, not writers, bridge the two locations. Ad-hoc reviews under `output.reviews/adhoc/` are NOT scanned by dashboard/next/plugin-stats/retrospect (cross-skill contract; verified across all 4 review-reading skills as of F-012).
 
@@ -433,12 +462,14 @@ The `verdict` field is required in pipeline mode — it enables `/ae:dashboard` 
 ---
 title: "Review: <target-derived-name>"
 type: review
-created: YYYY-MM-DDTHH:MM:SS    # ISO8601 with time (multiple re-reviews same day)
+created: YYYY-MM-DDTHH-MM-SS    # filesystem-safe ISO8601 (colons → dashes); multiple re-reviews same day distinguished by HH-MM-SS
 target: "<commit-range | file-path | dir-path | plan-path-with-rerun>"
 mode: adhoc                      # explicit marker to disambiguate from pipeline
-reviewers: [challenger, ...]     # explicit list when --reviewer flag used
+reviewers: [<list of agent names spawned>]   # ALWAYS written in ad-hoc mode (with or without --reviewer flag); records actual spawn for audit
 ---
 ```
+
+The `reviewers:` field is **always required in ad-hoc mode** regardless of whether `--reviewer` flag was used. When `--reviewer` flag was used, the list reflects the explicit override. When the default selection table was used (plain ad-hoc, no flag), the list reflects the actual default-selection result. This makes ad-hoc reviews fully self-describing without depending on the invocation transcript.
 
 **Why `verdict` is omitted in ad-hoc mode**: dashboard/next infer pipeline progress from `verdict: pass`. An ad-hoc review of `HEAD~3..HEAD` or a re-review with override reviewers does not represent a pipeline gate transition; emitting `verdict:` would either (a) corrupt pipeline state if scanned, or (b) confuse dashboard if it ever scans `adhoc/` (current contract: it does not scan, but defense-in-depth wins). The `mode: adhoc` field is an explicit second guard.
 

@@ -9,6 +9,15 @@ source: regression
 
 ### MUST
 
+#### Argument Inference Pre-step tokenization (AC1, dogfood Layer A WARN fix)
+
+- [text:contains] `### Pre-step: $ARGUMENTS tokenization` heading present
+- [text:contains] Pre-step states grammar: `<target>` MUST appear FIRST + `--reviewer` flags AFTER
+- [text:contains] Pre-step lists at least 3 reject conditions (multiple non-flag tokens / flag before target / `--reviewer` with no value)
+- [text:contains] Refusal text contains `Argument grammar:` line
+- [text:contains] Pre-step states "All subsequent steps" operate on `<target>` post-tokenization (not raw `$ARGUMENTS`)
+- [structure:order] `### Pre-step` heading appears BEFORE `### Form 1 — Local file or directory path`
+
 #### Argument Inference 3-form ladder (AC1)
 
 - [text:contains] `## Argument Inference` section exists
@@ -19,6 +28,8 @@ source: regression
 - [text:contains] Form 2 lists `\.\.` (double dot for range)
 - [text:contains] Form 2 lists regex `^[a-f0-9]{7,40}$`
 - [text:contains] Form 2 lists `^HEAD~?[0-9]*$`
+- [text:contains] Form 2 single SHA / relative ref resolves to range form `<sha>~1..<sha>` OR `<ref>~1..<ref>`
+- [text:contains] Form 2 Diff scope binding states `git diff <target>` OR equivalent (target string IS the range)
 - [text:contains] Form 3 mentions both `Empty` and `Non-matching free-text`
 - [text:contains] Form 3 non-matching free-text path includes `Unrecognized argument format` refusal text
 
@@ -62,6 +73,10 @@ source: regression
 - [text:contains] Ad-hoc mode frontmatter shows `mode: adhoc` field
 - [text:contains] Ad-hoc mode frontmatter shows `reviewers:` list field
 - [text:contains] Ad-hoc mode states verdict `MUST be omitted` OR `omitted in ad-hoc mode`
+- [text:contains] `reviewers:` field is `always required in ad-hoc mode` (regardless of `--reviewer` flag presence)
+- [text:contains] Filesystem-safe timestamp `YYYY-MM-DDTHH-MM-SS` (colons → dashes) specified
+- [text:contains] `<id>` derivation rules state `first match wins` OR `more specific rules listed first` (precedence rule)
+- [text:contains] Rule 1 (`--reviewer` flag with pipeline target) wins over rule 2 (re-review on plan) — explicit precedence note
 
 ### MUST_NOT
 
