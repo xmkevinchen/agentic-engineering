@@ -189,6 +189,8 @@ test:
 lint:
   command: "npm run lint"          # auto-detected
 
+ceremony: full                     # full (default) | light | minimal — see "Ceremony level" below
+
 output:
   discussions: "docs/discussions/"
   plans: "docs/plans/"
@@ -201,6 +203,25 @@ cross_family:
   codex: true
   gemini: true
 ```
+
+### Ceremony level
+
+Reduce ceremony per-project for lighter iteration:
+
+```yaml
+# pipeline.yml
+ceremony: light  # full (default) | light | minimal
+```
+
+- `full` (default) — all 5 stages enabled (current behavior)
+- `light` — skips accumulated Doodlestein + plan Doodlestein + sets `work.review_mode: light`
+- `minimal` — `light` plus skips plan review
+
+**Per-stage asymmetry note**: `light` reduces only background-execution stages (Doodlestein checkpoints + code-review tracks) — it does NOT skip the upfront plan review. Use `minimal` if you also want to bypass plan review. `discuss` and `review` skills are not currently controlled by ceremony preset (deferred to future Phase 2 BLs on demand).
+
+Controls 5 stages with existing solo paths: `work.agent_teams`, `work.review_mode`, `work.accumulated_doodlestein`, `plan.plan_review`, `plan.doodlestein`. Three additional stages (`discuss.framing_review`, `discuss.doodlestein`, `review.cross_family`) are deferred to future Phase 2 BLs on demand. See [`plugins/ae/templates/pipeline.template.yml`](plugins/ae/templates/pipeline.template.yml) for the canonical bundling rules.
+
+**Precedence**: env var `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=0` (global solo mode, see [Cross-machine setup](#cross-machine-setup)) overrides the ceremony preset. Use the env var for CI/CD or per-machine override; use `ceremony:` for per-project default.
 
 ## Architecture
 
