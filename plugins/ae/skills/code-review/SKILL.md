@@ -1,14 +1,57 @@
 ---
 name: ae:code-review
 description: Quick code review before each commit (Claude + cross-family)
-argument-hint: "[files or directory]"
+argument-hint: "[<target> | files or directory]"
 user-invocable: true
 effort: medium
 ---
 
+## Argument Inference
+
+Resolve `$ARGUMENTS` into a target before invoking tracks. Three forms (priority order — file-existence wins over pattern match):
+
+### Form 1 — Local file or directory path
+
+If `$ARGUMENTS` is a path that exists in the working tree (file or directory), the diff scope is limited to that path's current working-tree state (staged + unstaged) — equivalent to `git diff -- <path>` + `git diff --cached -- <path>`. Wins over Form 2 even if string also matches commit SHA pattern (avoids hex-filename collision).
+
+### Form 2 — Commit reference / range
+
+If `$ARGUMENTS` matches:
+- Contains `..` → commit range (e.g., `HEAD~3..HEAD`, `main..HEAD`, `<sha>..<sha>`)
+- `^[a-f0-9]{7,40}$` → single commit SHA → diff is `<sha>~1..<sha>`
+- `^HEAD~?[0-9]*$` → relative commit reference → single-commit interpretation
+
+Treat as commit-range review target. Diff scope is `git diff <range>` (no `--cached`).
+
+### Form 3 — Empty (existing pre-commit behavior)
+
+`$ARGUMENTS` empty → existing behavior: review current uncommitted diff = `git diff` + `git diff --cached`. This is the default ae:work D-step path.
+
+### TL execution discipline (substitution marker)
+
+The Track 1 + Track 4 spawn prompts use the placeholder `{{ TARGET_DIFF_CMD }}` for the diff command and `{{ TARGET_DIFF_OUTPUT }}` for the inline diff text (Track 4 only). TL MUST replace these markers with the resolved form before spawning agents:
+
+| Form | `{{ TARGET_DIFF_CMD }}` substitution | Note |
+|---|---|---|
+| 1 (file/dir path `<P>`) | `git diff -- <P>; git diff --cached -- <P>` | both staged and unstaged for that path |
+| 2 commit range `<R>` | `git diff <R>` | no `--cached` |
+| 2 single SHA `<S>` | `git diff <S>~1..<S>` | resolved to range |
+| 3 empty | `git diff; git diff --cached` | existing behavior |
+
+`{{ TARGET_DIFF_OUTPUT }}` is the captured stdout of the resolved command — TL runs Bash to capture, then substitutes inline into Track 4 prompt.
+
+**Observability trace** (single-line, before Track 1 spawn):
+```
+[AE-CODE-REVIEW] Argument inference: target=<arg-or-empty>, form=<1|2|3>, diff_cmd=<resolved>
+```
+
+If trace absent in audit log → TL skipped resolution. This makes the failure mode visible.
+
+**MUST not leave raw `{{ TARGET_DIFF_CMD }}` token in spawned prompts** — agents reading the literal token would treat it as quoted string and fail silently. Substitution is mandatory.
+
 # /ae:code-review — Pre-commit Quick Review
 
-Quick code review on current uncommitted changes.
+Quick code review on current uncommitted changes (default) or a specified target (Forms 1-2 above).
 
 ## Trigger
 
@@ -35,13 +78,13 @@ Mode is set by caller (ae:work reads `work.review_mode` from pipeline.yml, or `-
 
 ### Track 1: Claude Review
 
-Check `git diff --stat` to determine change scope. Then:
+Check `git diff --stat` (or target-scoped equivalent if `$ARGUMENTS` non-empty) to determine change scope. Then:
 
 - Discover reviewer agents per agent-selection Rule 4: scan `.claude/agents/*.md`, installed plugins, `~/.claude/agents/*.md`. Also check `project_agents` in pipeline.yml for entries with `role: reviewer`. Infer role from `description` keywords per the [Agent Contract Specification](../../../docs/decisions/037-agent-contract.md).
 - If project reviewers found: launch matching agents based on changed file types (project agents preferred over built-in)
 - If none found: use the plugin's built-in `code-reviewer` agent
 
-Review `git diff` + `git diff --cached`.
+Review the diff produced by `{{ TARGET_DIFF_CMD }}` (resolved per Argument Inference table above). Default (Form 3) = `git diff` + `git diff --cached`.
 
 ### Tracks 2-3: Cross-family Review (for each enabled proxy in pipeline.yml cross_family)
 
@@ -51,7 +94,7 @@ Launch each enabled proxy agent to review the diff with an `<assigned angle>`. T
 
 **Purpose**: proactive adversarial challenge on the current diff — "what did the other tracks miss?"
 
-Launch 1 combined Doodlestein agent (sonnet model, independent subagent — no team_name) with the current diff scope (`git diff + git diff --cached`). The agent answers 3 questions in a single pass and MUST structure its reply per the **Track 4 output contract** below:
+Launch 1 combined Doodlestein agent (sonnet model, independent subagent — no team_name) with the resolved target diff scope (per Argument Inference; default Form 3 = `git diff + git diff --cached`). The agent answers 3 questions in a single pass and MUST structure its reply per the **Track 4 output contract** below:
 
 ```
 Agent(subagent_type: "general-purpose", model: "sonnet",
@@ -59,7 +102,7 @@ Agent(subagent_type: "general-purpose", model: "sonnet",
       prompt: "You are a Doodlestein adversarial reviewer. Review ONLY the following diff
                (do NOT run git diff yourself, do NOT look at accumulated/feature-level changes):
 
-               <current diff>
+               {{ TARGET_DIFF_OUTPUT }}
 
                Answer these 3 questions concisely (1-3 sentences each). Structure your
                SendMessage reply per the Track 4 output contract: three named fields
@@ -77,7 +120,9 @@ Agent(subagent_type: "general-purpose", model: "sonnet",
                SendMessage the structured reply (3 named fields) to team-lead.")
 ```
 
-**Scope binding**: the diff is passed inline in the prompt. The agent MUST NOT independently query `git diff main...HEAD` or any accumulated diff. This keeps per-commit Doodlestein focused on the current step only.
+**Substitution discipline**: TL replaces `{{ TARGET_DIFF_OUTPUT }}` with captured stdout of the resolved diff command BEFORE spawning the Agent. The literal token must NOT appear in the spawned prompt — agent would treat it as quoted string and fail silently. Capture via Bash: `eval "{{ TARGET_DIFF_CMD }}"` (TL substitutes the cmd token first, then runs).
+
+**Scope binding**: the diff is passed inline in the prompt. The agent MUST NOT independently query `git diff main...HEAD` or any accumulated diff. This keeps per-commit Doodlestein focused on the current step only (or the explicit target if Form 1/2).
 
 **Results**: Track 4 findings are merged into the overall Results output:
 - Substantive concern → **Warning**
