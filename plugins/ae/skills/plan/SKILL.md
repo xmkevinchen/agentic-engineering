@@ -201,6 +201,8 @@ If any check fails → fix the plan before proceeding to review. These checks ar
 
 **Skip with `--skip-review`**: If the user passed `--skip-review` flag, skip this entire step and proceed to Step 4 (Doodlestein) or Step 5 (Confirm). Use when: simple changes where full 5-agent review is overhead.
 
+**Ceremony preset interaction (F-013)**: Read pipeline.yml → ceremony (default: full). If ceremony is `minimal` (light does NOT skip plan review) → treat as `--skip-review` (same skip path, same task transitions). `--skip-review` flag wins on conflict if passed. Non-conflict path: `ceremony: minimal` enables skip-review as project-level baseline; explicit `--skip-review` flag at call time is always honored regardless of ceremony value.
+
 > Note: Plan stays `status: draft`. Use `/ae:plan-review` before `/ae:work`.
 
 After the plan is written, create a Team for parallel review.
@@ -247,6 +249,8 @@ TL collects findings from all reviewers + cross-family, synthesizes:
 Modify plan based on results. Update plan frontmatter `status: reviewed`.
 
 ## Step 4: Doodlestein Challenge (optional)
+
+**Ceremony preset interaction (F-013)**: Read pipeline.yml → ceremony (default: full). If ceremony in {light, minimal} → skip Doodlestein challenge entirely (log: `[Doodlestein challenge skipped: ceremony preset=<value>]`). Existing cross-family unavailable check wins on conflict (skip if either condition holds).
 
 Before confirming with the user, check cross-family availability (`cross_family` in pipeline.yml):
 
