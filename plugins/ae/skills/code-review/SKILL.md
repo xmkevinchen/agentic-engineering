@@ -29,25 +29,31 @@ Treat as commit-range review target. Diff scope is `git diff <range>` (no `--cac
 
 ### TL execution discipline (substitution marker)
 
-The Track 1 + Track 4 spawn prompts use the placeholder `{{ TARGET_DIFF_CMD }}` for the diff command and `{{ TARGET_DIFF_OUTPUT }}` for the inline diff text (Track 4 only). TL MUST replace these markers with the resolved form before spawning agents:
+The Track 1 + Track 4 spawn prompts use the placeholder `{{ TARGET_DIFF_OUTPUT }}` for the inline diff text (Track 4) and reference `{{ TARGET_DIFF_CMD }}` only as a **display label** in audit logs. TL MUST replace `{{ TARGET_DIFF_OUTPUT }}` with captured stdout BEFORE spawning agents.
 
-| Form | `{{ TARGET_DIFF_CMD }}` substitution | Note |
+**Diff capture — argv-array execution (NOT shell string eval)**:
+
+| Form | argv arrays to execute | Note |
 |---|---|---|
-| 1 (file/dir path `<P>`) | `git diff -- <P>; git diff --cached -- <P>` | both staged and unstaged for that path |
-| 2 commit range `<R>` | `git diff <R>` | no `--cached` |
-| 2 single SHA `<S>` | `git diff <S>~1..<S>` | resolved to range |
-| 3 empty | `git diff; git diff --cached` | existing behavior |
+| 1 (file/dir path `<P>`) | `[["git","diff","--",P], ["git","diff","--cached","--",P]]` | both staged and unstaged for that path; concat outputs |
+| 2 commit range `<R>` | `[["git","diff",R]]` | no `--cached`; `R` is the resolved range string |
+| 2 single SHA `<S>` | `[["git","diff",f"{S}~1..{S}"]]` | TL resolves to range form first |
+| 3 empty | `[["git","diff"], ["git","diff","--cached"]]` | existing behavior; concat outputs |
 
-`{{ TARGET_DIFF_OUTPUT }}` is the captured stdout of the resolved command — TL runs Bash to capture, then substitutes inline into Track 4 prompt.
+**Why argv arrays (not shell string substitution)**: passing `<P>` / `<R>` directly into a shell string template (e.g., `eval "git diff -- $P"`) is shell injection territory — a path with `;`, backticks, or `$(...)` would execute arbitrary code. argv arrays bypass shell parsing entirely; each element is a literal argument. This is defense-in-depth against malformed paths or hostile `$ARGUMENTS`.
 
-**Observability trace** (single-line, before Track 1 spawn):
+**Bash invocation pattern** (TL): use `git diff -- <P>` form with positional args via the Bash tool — pass each argv element as a separate token. Do NOT construct a shell string from the table by interpolation.
+
+Display-label `{{ TARGET_DIFF_CMD }}` in observability trace (line below) is the human-readable rendering of the argv array (e.g., `git diff -- src/foo.py`) — for log readability only, NEVER fed back into shell.
+
+**Observability trace** (single-line, after argv resolution, before Track 1 spawn):
 ```
-[AE-CODE-REVIEW] Argument inference: target=<arg-or-empty>, form=<1|2|3>, diff_cmd=<resolved>
+[AE-CODE-REVIEW] Argument inference: target=<target>, form=<1|2|3>, diff_argv=<JSON-array>
 ```
 
 If trace absent in audit log → TL skipped resolution. This makes the failure mode visible.
 
-**MUST not leave raw `{{ TARGET_DIFF_CMD }}` token in spawned prompts** — agents reading the literal token would treat it as quoted string and fail silently. Substitution is mandatory.
+**MUST not leave raw `{{ TARGET_DIFF_OUTPUT }}` token in spawned prompts** — agents reading the literal token would treat it as quoted string and fail silently. Substitution is mandatory at spawn time.
 
 # /ae:code-review — Pre-commit Quick Review
 
@@ -120,7 +126,7 @@ Agent(subagent_type: "general-purpose", model: "sonnet",
                SendMessage the structured reply (3 named fields) to team-lead.")
 ```
 
-**Substitution discipline**: TL replaces `{{ TARGET_DIFF_OUTPUT }}` with captured stdout of the resolved diff command BEFORE spawning the Agent. The literal token must NOT appear in the spawned prompt — agent would treat it as quoted string and fail silently. Capture via Bash: `eval "{{ TARGET_DIFF_CMD }}"` (TL substitutes the cmd token first, then runs).
+**Substitution discipline**: TL replaces `{{ TARGET_DIFF_OUTPUT }}` with captured stdout of the resolved diff argv arrays (per substitution table above) BEFORE spawning the Agent. The literal token must NOT appear in the spawned prompt — agent would treat it as quoted string and fail silently. Capture via Bash with argv-form invocations (NOT shell string eval — see "argv-array execution" rationale above): run each argv array via the Bash tool as separate token list, concatenate stdout, then substitute inline.
 
 **Scope binding**: the diff is passed inline in the prompt. The agent MUST NOT independently query `git diff main...HEAD` or any accumulated diff. This keeps per-commit Doodlestein focused on the current step only (or the explicit target if Form 1/2).
 

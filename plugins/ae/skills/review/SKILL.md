@@ -15,11 +15,15 @@ Before form classification, TL MUST split `$ARGUMENTS` into a `<target>` slot an
 
 1. Scan `$ARGUMENTS` left-to-right; collect every `--reviewer <name>` token pair into a flag list (each `--reviewer` MUST be immediately followed by exactly one whitespace-separated value; no `=` form supported).
 2. The remaining tokens (everything that is NOT `--reviewer` or its value) form the **target string**. Concatenate by whitespace if multiple non-flag tokens (rare; surface as a parse error if more than one — see grammar below).
-3. **Grammar (positional)**: `<target>` MUST appear as a single whitespace-delimited token; flag pairs MUST appear AFTER `<target>` (not interleaved before, not split mid-target). Order rule: `target ?--reviewer name (--reviewer name)*` only.
-4. **Reject** if grammar violated:
+3. **Grammar (positional)**: when `<target>` is provided, it MUST appear as a single whitespace-delimited token before any `--reviewer` flag pairs. Order rule (regex form): `(<target>)? (--reviewer <name>)*` — target optional, flags zero-or-more, target FIRST when present.
+4. **Empty-target with flags is VALID**: `/ae:review --reviewer challenger` (no positional target, flag-only) is supported — resolves `<target>` = empty (Form 3 plan auto-scan), flag list = [challenger]. This is the natural "quick re-review with single reviewer angle" path. **Reject** rule "flag before target" applies ONLY when at least one positional non-flag token exists AFTER a flag (e.g., `--reviewer X foo.md` is rejected; `--reviewer X` alone is accepted).
+5. **`--reviewer` value validation**: each `--reviewer` MUST be followed by exactly one value; duplicate `--reviewer X --reviewer X` rejected with hint to dedupe.
+6. **Reject** if grammar violated:
    - Multiple non-flag tokens (e.g., `/ae:review foo.md bar.md --reviewer X` — surplus target token `bar.md`)
-   - Flag before target (e.g., `/ae:review --reviewer X .ae/foo.md`)
+   - Flag before target with target present (e.g., `/ae:review --reviewer X .ae/foo.md`) — note flag-only with no target is VALID (rule 4 above)
    - `--reviewer` with no value (trailing flag) OR with value starting with `--` (likely missed value)
+   - `--reviewer=name` (= form not supported)
+   - Duplicate `--reviewer` value (same agent name twice)
    
    Refusal text:
    ```
@@ -78,11 +82,16 @@ Without this union scan, zero-arg `/ae:review` invocations against feature-dir p
 This is **structurally enforced**, not advisory:
 
 - SKILL.md instruction is imperative (`MUST first run`), not suggestive
-- "MUST" in LLM prompts is soft constraint — TL might skip Bash and pure-string pattern match. Mitigation: TL MUST emit a one-line **observability trace** after tokenization, before form classification:
-  ```
-  [AE-REVIEW] Argument inference: target=<target>, reviewers=[<flag-list>], file_check=<true|false>, form=<1|2|3>
-  ```
-  If trace absent in audit log → TL skipped Bash. This makes the failure mode visible.
+- "MUST" in LLM prompts is soft constraint — TL might skip Bash and pure-string pattern match. Mitigation: TL MUST emit TWO observability trace lines:
+  - **Pre-trace** (after tokenization, before file-existence Bash test):
+    ```
+    [AE-REVIEW] Args tokenized: target=<target>, reviewers=[<flag-list>]
+    ```
+  - **Post-trace** (after Bash test + form classification, before Pre-checks router):
+    ```
+    [AE-REVIEW] Argument inference: target=<target>, file_check=<true|false>, form=<1|2|3>
+    ```
+  If post-trace absent in audit log → TL skipped Bash. This makes the failure mode visible. The two-trace split avoids the contradiction of "emit before classification but include classification result" — pre-trace shows tokenization landed; post-trace shows classification completed.
 - Pure string-pattern dispatch in LLM context is non-deterministic — could mismatch e.g., a file named `abc1234` (valid hex SHA pattern) as commit ref instead of file → silent wrong-target review.
 
 **Resolution order**:
@@ -91,9 +100,11 @@ This is **structurally enforced**, not advisory:
 3. If `<target>` is plan path (Form 1 file exists AND path matches `.ae/features/<state>/F-NNN-<slug>/plan.md` OR `output.plans/NNN-*.md`) → enter pipeline mode (existing behavior); pipeline pre-checks apply UNLESS `--reviewer` flag was set, in which case Pre-checks router treats as pipeline (full 5 checks fire) but Output rule applies case (c) — see Output section.
 4. Otherwise (file but not plan / dir / commit ref / empty / non-matching free-text) → ad-hoc OR pipeline per type.
 
-### Filename timestamp normalization (filesystem-safe)
+### Filename timestamp normalization (filesystem-safe + collision-free)
 
-When generating `<ISO8601-date>` for ad-hoc review filenames (`output.reviews/adhoc/<id>-<ISO8601>.md`), use the format `YYYY-MM-DDTHH-MM-SS` — colons in the time portion replaced with dashes (`:` → `-`) for filesystem safety on POSIX and Windows shells. This is NOT strict ISO8601 but matches the worked examples in the Output section. The `created:` frontmatter field MAY use either form; choose `YYYY-MM-DDTHH-MM-SS` for consistency.
+For ad-hoc review filenames (`output.reviews/adhoc/<id>-<timestamp>.md`), use **`YYYYMMDDTHHMMSSsssZ`** (UTC, millisecond precision, no colons, no dashes inside the time portion — fully filesystem-safe across POSIX + Windows). This matches Track 4 staging file convention (`<output.reviews>/per-commit/.staging-<plan>-step-<N>.md` uses same format on manual-mode). Millisecond precision prevents sub-second filename collisions on rapid back-to-back invocations.
+
+**`created:` frontmatter field** MUST use the same format (`YYYYMMDDTHHMMSSsssZ`) — single canonical timestamp form across both filename and frontmatter. This eliminates the dashboard-tiebreaker ordering bug that mixed-form timestamps would produce.
 
 # /ae:review — Deep Review (Feature Completion Gate)
 
@@ -103,10 +114,18 @@ Deep review of all changes for **$ARGUMENTS**.
 
 **Target-mode router** (applies before Check 1):
 
-- Argument Inference resolved Form 3 (empty / non-matching) OR Form 1 (plan path matching pipeline shape) → all 5 pre-checks below apply (existing behavior, **pipeline mode**).
-- Argument Inference resolved Form 1 (non-plan file/dir) OR Form 2 (commit ref/range) → **ad-hoc mode**: skip Check 2 (Plan All Done), Check 3 (Tests Green), Check 4 (Deferred Findings Audit), Check 5 (Plan's Discussion Source Valid). Check 1 (Agent Teams) still applies.
+The router has **two orthogonal axes**: target form (1/2/3) AND `--reviewer` flag presence. Resulting matrix:
 
-Ad-hoc mode reasoning: target is not a pipeline plan; pipeline-state validations don't apply. Agent Teams gate still required (review needs agent infrastructure).
+| Form | `--reviewer` flag | Pre-check mode | Output mode |
+|---|---|---|---|
+| 3 (empty) OR 1 (plan path) | absent | **Full pipeline** (all 5 checks) | Case (a) feature-dir / Case (b) legacy |
+| 3 (empty) OR 1 (plan path) | present | **Reduced pipeline** (Check 1 only — see below) | Case (c) ad-hoc/<id>-rerun-<reviewers>.md |
+| 1 (non-plan file/dir) OR 2 (commit ref/range) | absent | **Ad-hoc** (Check 1 only) | Case (c) ad-hoc/<id>.md |
+| 1 (non-plan file/dir) OR 2 (commit ref/range) | present | **Ad-hoc** (Check 1 only) | Case (c) ad-hoc/<id>-rerun-<reviewers>.md |
+
+**`--reviewer` flag with plan target — Reduced pipeline rationale**: when user passes `--reviewer challenger` against a plan path (re-review with override angle), they want a focused single-angle pass on existing work. Re-running Check 2 (Plan All Done — already verified by prior review), Check 3 (Tests Green), Check 4 (Deferred audit — already done), Check 5 (Discussion source) would block re-review on plans where state has shifted (e.g., new commits added). The flag presence is an explicit "I know what I'm doing, just run the override reviewers" signal. Reduce pipeline pre-checks to Check 1 (Agent Teams gate — always required) only.
+
+Ad-hoc mode reasoning: target is not a pipeline plan OR user signaled re-review intent; pipeline-state validations don't apply. Agent Teams gate still required (review needs agent infrastructure).
 
 ## Pre-checks (all must pass before starting; pipeline mode only — see router above)
 
@@ -431,11 +450,14 @@ Include this in the review report. This data accumulates naturally across featur
 
 - **(a) Feature-dir plan** (target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`, AND no prior `review.md` at same dir, AND no `--reviewer` flag) → write `review.md` next to the plan at `.ae/features/<state>/F-NNN-<slug>/review.md`. Path-derived; no frontmatter required to make this decision.
 - **(b) Legacy plan** (target under `output.plans/`, AND no prior matching review at `output.reviews/`, AND no `--reviewer` flag) → write to `pipeline.yml` → `output.reviews/NNN-...md` per the existing convention.
-- **(c) Ad-hoc target OR re-review OR `--reviewer` flag present** → write to `pipeline.yml` → `output.reviews/adhoc/<id>-<ISO8601-date>.md`. ISO8601 timestamp uses filesystem-safe form `YYYY-MM-DDTHH-MM-SS` (colons → dashes; see Argument Inference filename normalization rule). `<id>` derivation (rules apply in order; **first match wins** — more specific rules listed first):
-  1. **`--reviewer` flag with pipeline target**: feature ID + `-rerun-<reviewer-name>` (multi-flag → join names with `-` e.g., `F-012-rerun-challenger-codex-proxy`). This rule wins over rule 2 even if `review.md` already exists, because the flag context preserves which reviewer angle the re-review carried.
-  2. **Re-review on plan (no `--reviewer` flag, prior `review.md` exists)**: feature ID + `-rerun` suffix (e.g., `F-012-rerun-2026-05-09T14-22-00`).
-  3. **Ad-hoc commit range/file/dir** (no plan, no flag context): slug from target string with non-alphanumerics replaced by `-` (e.g., `HEAD~3..HEAD` → `HEAD-3-HEAD`; `src/foo.py` → `src-foo-py`).
-  4. **Fall-back**: `adhoc-<ISO8601>.md` if no derivable id.
+- **(c) Ad-hoc target OR re-review OR `--reviewer` flag present** → write to `pipeline.yml` → `output.reviews/adhoc/<id>-<timestamp>.md`. Timestamp uses millisecond precision UTC: `YYYYMMDDTHHMMSSsssZ` (no colons, no dashes inside time portion — matches Track 4 staging file convention; prevents sub-second collisions on rapid back-to-back invocations). `<id>` derivation (rules apply in order; **first match wins** — more specific rules listed first):
+  1. **`--reviewer` flag with plan target** (plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md` OR `output.plans/NNN-*.md`): feature ID (or legacy plan ID) + `-rerun-<reviewer-name-list>` (multi-flag → join names with `-` after dedup; e.g., `F-012-rerun-challenger-codex-proxy`).
+  2. **`--reviewer` flag with non-plan target** (file/dir/commit ref/range — feature-id is undefined): target slug from rule 3 + `-rerun-<reviewer-name-list>` (e.g., `src-foo-py-rerun-challenger`; `HEAD-3-HEAD-rerun-security-reviewer`). Rule 2 covers the gap where flag is set but target has no derivable feature-id.
+  3. **Re-review on plan (no `--reviewer` flag, prior `review.md` exists)**: feature ID (or legacy plan ID) + `-rerun` suffix (e.g., `F-012-rerun`).
+  4. **Ad-hoc commit range/file/dir** (no plan, no flag context): slug from target string with non-alphanumerics replaced by `-` (e.g., `HEAD~3..HEAD` → `HEAD-3-HEAD`; `src/foo.py` → `src-foo-py`).
+  5. **Fall-back**: `adhoc` if no derivable id.
+
+  **`<id>` normalization** (applied to all rules above): lowercase; collapse repeated `-`; trim leading/trailing `-`; max length 80 chars; if longer, truncate to 72 chars + `-<8-char-hash>` derived from the canonical pre-truncation string + reviewer list. Final filename: `<id>-<YYYYMMDDTHHMMSSsssZ>.md`.
 
 **No surface-index pointer file is written.** Discoverability for `/ae:dashboard` and `/ae:next` is preserved via non-recursive glob scan over `output.reviews/*.md` (excluding `adhoc/` subdir naturally — non-recursive glob does not descend) and `.ae/features/{active,done}/F-*/review.md` — see those skills' Reviews scanning rule. This eliminates dual-write debt; readers, not writers, bridge the two locations. Ad-hoc reviews under `output.reviews/adhoc/` are NOT scanned by dashboard/next/plugin-stats/retrospect (cross-skill contract; verified across all 4 review-reading skills as of F-012).
 
@@ -462,7 +484,7 @@ The `verdict` field is required in pipeline mode — it enables `/ae:dashboard` 
 ---
 title: "Review: <target-derived-name>"
 type: review
-created: YYYY-MM-DDTHH-MM-SS    # filesystem-safe ISO8601 (colons → dashes); multiple re-reviews same day distinguished by HH-MM-SS
+created: YYYYMMDDTHHMMSSsssZ    # filesystem-safe + millisecond precision; same form as filename timestamp; collision-free across rapid invocations
 target: "<commit-range | file-path | dir-path | plan-path-with-rerun>"
 mode: adhoc                      # explicit marker to disambiguate from pipeline
 reviewers: [<list of agent names spawned>]   # ALWAYS written in ad-hoc mode (with or without --reviewer flag); records actual spawn for audit
