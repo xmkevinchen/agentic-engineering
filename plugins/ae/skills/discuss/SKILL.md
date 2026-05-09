@@ -118,12 +118,12 @@ Applies to **new discussions** and any discussion where `framing.md` was changed
 
 **Before `TeamCreate`** (applies to BOTH framing-review team here AND Step 2 council team) — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
-**Preflight — project agent presence check**: before `TeamCreate`, verify that `engineering-minimal-change-engineer` exists in one of these discovery locations:
-- `.claude/agents/engineering-minimal-change-engineer.md` (project-local)
-- `~/.claude/agents/engineering-minimal-change-engineer.md` (user)
-- installed plugin agents
+**Preflight — project agent presence check**: before `TeamCreate`, verify that the minimal-change-engineer agent exists. Discovery order (first match wins):
+- `plugins/ae/agents/engineering/minimal-change-engineer.md` (plugin built-in — default location since F-011)
+- `.claude/agents/engineering-minimal-change-engineer.md` (project-local override, optional)
+- `~/.claude/agents/engineering-minimal-change-engineer.md` (user override, optional)
 
-If not found, emit `[layer1] preflight: engineering-minimal-change-engineer NOT FOUND. Round 0 will run with 4 agents (2 cross-family + 2 Doodlestein). Quorum threshold reduces to 3 of 4. Over-complication detection coverage is LOST for this discussion — consider importing the agent via /ae:setup agents --add or accepting the coverage gap.` and continue with 4 agents.
+If not found in any location, emit `[layer1] preflight: minimal-change-engineer agent NOT FOUND (fires only in incomplete plugin installs). Round 0 will run with 4 agents (2 cross-family + 2 Doodlestein). Quorum threshold reduces to 3 of 4. Over-complication detection coverage is LOST for this discussion — verify plugin install or accept the coverage gap.` and continue with 4 agents.
 
 **Note**: the framing_context convention below is a **prompt-embedded key**, not an `Agent(...)` parameter. All 5 (or 4) spawn prompts must include the line `framing_context: <discussion-dir>/framing.md` at the top of their prompt string so the agent reliably locates the review target.
 
@@ -187,7 +187,7 @@ Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-a
                if no obvious wall; REVISE with the blocked solution class if one exists.
                SendMessage verdict to team-lead.")
 
-Agent(subagent_type: "engineering-minimal-change-engineer", name: "minimal-change-engineer",
+Agent(subagent_type: "ae:engineering:minimal-change-engineer", name: "minimal-change-engineer",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
       prompt: "framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
@@ -204,7 +204,7 @@ TL waits for **all 5 verdicts** before aggregating. **No early-exit on first REV
 
 **Timeout rules**:
 - Proxy agents (`codex-proxy`, `gemini-proxy`): 120s per agent, per `plugins/ae/skills/agent-selection/SKILL.md` Proxy Timeout Protocol. On timeout the proxy must SendMessage `unavailable: timeout` and exit.
-- Claude-native agents (`doodlestein-strategic`, `doodlestein-adversarial`, `engineering-minimal-change-engineer`): 180s wall-clock each. If a Claude-native agent does not respond within 180s, TL treats it as `unavailable: timeout`. **Missing verdict is NEVER implicit APPROVED.**
+- Claude-native agents (`doodlestein-strategic`, `doodlestein-adversarial`, `ae:engineering:minimal-change-engineer`): 180s wall-clock each. If a Claude-native agent does not respond within 180s, TL treats it as `unavailable: timeout`. **Missing verdict is NEVER implicit APPROVED.**
 
 #### 1.5.3. Verdict aggregation
 
