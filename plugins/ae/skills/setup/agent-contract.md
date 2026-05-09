@@ -4,17 +4,49 @@ Canonical specification for AE-compatible agent files. This document supersedes 
 
 ## Discovery & Spawn Identifier
 
-Claude Code resolves `subagent_type` by **filename stem** from `.claude/agents/<stem>.md`. This is a hard platform constraint (CC changelog 0.2.107, verified by live `@file` include behavior). AE inherits it:
+CC resolves `subagent_type` by **two different mechanisms** depending on where the agent file lives. This is a hard platform constraint, observed empirically (F-011 dogfood gate, 2026-05-08).
 
-- **Spawn identifier** = filename stem (no extension).
-- **`name:` frontmatter field** = display label shown in the CC agent panel. Not used for resolution.
+### Case A — Project-local & global agents (filename-stem mechanism)
+
+For agents in `.claude/agents/<stem>.md` (project) or `~/.claude/agents/<stem>.md` (global):
+
+- **Spawn identifier** = filename stem (no extension). Example: `code-reviewer.md` → `subagent_type: "code-reviewer"`.
+- **`name:` frontmatter field** = display label shown in the CC agent panel. **Not used for resolution.**
 - **AE never normalizes `name:` on import**. Third-party library agents commonly have mismatched pairs (filename `engineering-code-reviewer.md`, `name: Code Reviewer`). This mismatch is functionally harmless for spawning — only cosmetic for display.
 
-Discovery order (first match wins per Rule 4):
+### Case B — Plugin built-in agents (frontmatter-name mechanism, namespaced)
 
-1. **Project agents**: `.claude/agents/*.md` in the project root.
-2. **Plugin agents**: installed plugin agent directories.
-3. **Global agents**: `~/.claude/agents/*.md`.
+For agents bundled into a plugin at `plugins/<plugin>/agents/<subdir>/<file>.md`:
+
+- **Spawn identifier** = `<plugin>:<subdir>:<frontmatter-name-value>` namespace string. Example: file `plugins/ae/agents/engineering/minimal-change-engineer.md` with `name: minimal-change-engineer` → `subagent_type: "ae:engineering:minimal-change-engineer"`.
+- **`name:` frontmatter field IS used for resolution** in this case (the third namespace component). The filename stem is NOT consulted.
+- **Convention**: keep `name:` field in **kebab-case matching the filename stem** so the namespace identifier reads consistently with other plugin agents (e.g., `ae:workflow:codex-proxy`, `ae:research:archaeologist`). Vendoring third-party agents (which often have Title-Case `name:` like `Minimal Change Engineer`) requires adapting the `name:` field to kebab-case during vendor — this is the single permitted modification under VERBATIM vendor policy (see `plugins/ae/NOTICE.md` for an example).
+- **CC plugin loader behavior**: agents in new subdirs (e.g., creating `plugins/ae/agents/engineering/` for the first time) require `/reload-plugins` for CC to pick up the new namespace. Cache is built at session start; not dynamically re-scanned.
+
+### Discovery order (first match wins per Rule 4)
+
+1. **Project agents** (Case A): `.claude/agents/*.md` in the project root.
+2. **Plugin agents** (Case B): installed plugin agent directories at `plugins/<plugin>/agents/<subdir>/`.
+3. **Global agents** (Case A): `~/.claude/agents/*.md`.
+
+### Two-format coexistence (Case B vs Case A within plugin SKILL.md)
+
+Plugin SKILL.md files reference both formats depending on context:
+
+- **Bare-stem format** (e.g., `subagent_type: "doodlestein-strategic"` in `plan/SKILL.md`): used when spawning a plugin's own built-in agent **from within the same plugin** — TL implicitly resolves within the plugin's namespace context.
+- **Fully-qualified format** (e.g., `subagent_type: "ae:engineering:minimal-change-engineer"` in `discuss/SKILL.md`): used when the spawn site needs explicit namespace disambiguation, OR when the agent lives in a non-default subdir requiring the namespace prefix to be matched against CC's plugin-loader index.
+
+In practice, AE prefers fully-qualified Case B format for all plugin built-in spawns — it makes the spawn site self-documenting (reader knows exactly which agent is invoked without needing to know the surrounding plugin context).
+
+### Vendor verification step (mandatory for new vendor work)
+
+When vendoring a third-party agent into a plugin (e.g., `plugins/ae/agents/<new-subdir>/<file>.md`), include a **dogfood gate** between fixture creation and project-local cleanup:
+
+1. Reload the plugin (`/reload-plugins` slash command, or restart CC session).
+2. Spawn the new agent with a minimal echo prompt (`Agent(subagent_type: "<plugin>:<subdir>:<name>", ...)`) and verify success.
+3. Only after dogfood pass: proceed with cleanup of any pre-vendor project-local agent file (otherwise removing the project-local strands the discuss/work skill if the namespace fails to resolve).
+
+This gate caught a real bug in F-011 implementation: the original plan assumed CC plugin loader would resolve via filename stem (Case A logic incorrectly applied to Case B). Dogfood revealed the frontmatter-`name:` mechanism, requiring a fixup of the `name:` field. Without the gate, Step 4 cleanup would have removed the project-local fallback before discovering the namespace bug.
 
 ## Frontmatter Tiers
 

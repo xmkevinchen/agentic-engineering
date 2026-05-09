@@ -30,6 +30,10 @@ licenses. Listed below.
     ```
   - All other frontmatter fields and body content are byte-identical to upstream.
 
+- **Maintenance rule for this section**: any future modification to a vendored file
+  (frontmatter, body, or new metadata) MUST update the `Modifications from upstream`
+  list above to keep attribution complete. Do not silently fork.
+
 Original copyright and permission notice (MIT):
 
 ```
