@@ -19,8 +19,16 @@ licenses. Listed below.
   - Frontmatter `name:` field changed from `Minimal Change Engineer` (Title Case with
     spaces) to `minimal-change-engineer` (kebab-case) so the resulting CC namespace
     identifier `ae:engineering:minimal-change-engineer` matches AE plugin agent
-    naming convention. All other frontmatter fields and body content are
-    byte-identical to upstream.
+    naming convention.
+  - Added HTML comment block between frontmatter and body (maintainer reference for
+    future upstream merges). Block content:
+    ```
+    <!-- F-011 vendor: agency-agents/engineering/engineering-minimal-change-engineer.md
+         Upstream SHA: fd35c99ecc4b881d92bb9a3bf0be2d70eb06c2df
+         Bundled: 2026-05-08
+         Modifications: (a) name: kebab-case, (b) this comment block -->
+    ```
+  - All other frontmatter fields and body content are byte-identical to upstream.
 
 Original copyright and permission notice (MIT):
 
