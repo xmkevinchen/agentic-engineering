@@ -9,20 +9,77 @@ effort: high
 
 ## Argument Inference
 
-If `$ARGUMENTS` is empty, scan for the most recent plan with all steps completed (`- [x]`) and `status` not `done` across BOTH plan locations:
-1. **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
-2. **Legacy plans (fallback)**: `output.plans/*.md` (default `.ae/plans/`, configurable via `pipeline.yml`)
-3. Apply tiebreaker rules across the union of both locations (mirrors `/ae:work` argument-inference union scan).
-4. Found → use that plan file path.
-5. Not found → ask user which plan to review.
+Resolve `$ARGUMENTS` into target type. Three forms (priority order — file-existence wins over pattern match):
+
+### Form 1 — Local file or directory path
+
+If `$ARGUMENTS` is a path that exists in the working tree (file or directory), treat as file/dir snapshot review target. Wins over Form 2 even if string also matches commit SHA pattern (avoids hex-filename collision).
+
+### Form 2 — Commit reference / range
+
+If `$ARGUMENTS` matches:
+- Contains `..` → commit range (e.g., `HEAD~3..HEAD`, `main..HEAD`, `<sha>..<sha>`)
+- `^[a-f0-9]{7,40}$` → single commit SHA
+- `^HEAD~?[0-9]*$` → relative commit reference
+
+Treat as commit-range review target.
+
+### Form 3 — Empty OR non-matching free-text (pipeline mode default)
+
+`$ARGUMENTS` is empty OR is free-text that matches none of Form 1/2 (not a valid path, not a commit ref pattern):
+
+- **Empty** → existing behavior: scan for the most recent plan with all steps completed (`- [x]`) and `status` not `done` across BOTH plan locations:
+  1. **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
+  2. **Legacy plans (fallback)**: `output.plans/*.md` (default `.ae/plans/`, configurable via `pipeline.yml`)
+  3. Apply tiebreaker rules across the union of both locations (mirrors `/ae:work` argument-inference union scan).
+  4. Found → use that plan file path.
+  5. Not found → ask user which plan to review.
+- **Non-matching free-text** → also fall to pipeline mode; if free-text doesn't resolve to a plan via inference, refuse with usage hint:
+  ```
+  Unrecognized argument format: '<arg>'.
+  Valid forms:
+    - file/dir path (existing in working tree)
+    - commit ref/range (HEAD~N, sha..sha, single SHA)
+    - empty (auto-resolve plan via scan)
+    - plan path (feature-dir or legacy)
+  See SKILL.md Argument Inference for examples.
+  ```
 
 Without this union scan, zero-arg `/ae:review` invocations against feature-dir plans cannot find their target.
+
+### Form ambiguity resolution
+
+**TL execution discipline (HARD requirement, not soft hint)**: when resolving `$ARGUMENTS`, TL MUST first run `test -f '$ARGUMENTS' || test -d '$ARGUMENTS'` via Bash to verify local file/dir existence before falling through to Form 2 pattern matching.
+
+This is **structurally enforced**, not advisory:
+
+- SKILL.md instruction is imperative (`MUST first run`), not suggestive
+- "MUST" in LLM prompts is soft constraint — TL might skip Bash and pure-string pattern match. Mitigation: TL MUST emit a one-line **observability trace** at Argument Inference start:
+  ```
+  [AE-REVIEW] Argument inference: target=<arg>, file_check=<true|false>, form=<1|2|3>
+  ```
+  If trace absent in audit log → TL skipped Bash. This makes the failure mode visible.
+- Pure string-pattern dispatch in LLM context is non-deterministic — could mismatch e.g., a file named `abc1234` (valid hex SHA pattern) as commit ref instead of file → silent wrong-target review.
+
+**Resolution order**:
+1. File-existence check FIRST (Form 1) — local files take precedence over commit SHA matching.
+2. If `$ARGUMENTS` is plan path (Form 1 file exists AND path matches `.ae/features/<state>/F-NNN-<slug>/plan.md` OR `output.plans/NNN-*.md`) → enter pipeline mode (existing behavior); pipeline pre-checks apply.
+3. Otherwise (file but not plan / dir / commit ref / empty / non-matching free-text) → ad-hoc OR pipeline per type.
 
 # /ae:review — Deep Review (Feature Completion Gate)
 
 Deep review of all changes for **$ARGUMENTS**.
 
-## Pre-checks (all must pass before starting)
+## Pre-checks
+
+**Target-mode router** (applies before Check 1):
+
+- Argument Inference resolved Form 3 (empty / non-matching) OR Form 1 (plan path matching pipeline shape) → all 5 pre-checks below apply (existing behavior, **pipeline mode**).
+- Argument Inference resolved Form 1 (non-plan file/dir) OR Form 2 (commit ref/range) → **ad-hoc mode**: skip Check 2 (Plan All Done), Check 3 (Tests Green), Check 4 (Deferred Findings Audit), Check 5 (Plan's Discussion Source Valid). Check 1 (Agent Teams) still applies.
+
+Ad-hoc mode reasoning: target is not a pipeline plan; pipeline-state validations don't apply. Agent Teams gate still required (review needs agent infrastructure).
+
+## Pre-checks (all must pass before starting; pipeline mode only — see router above)
 
 ### Check 1: Agent Teams
 - Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
@@ -161,6 +218,40 @@ Track the 4 task IDs alongside the team handle. Do NOT create additional tasks b
 Every reviewer spawn prompt below embeds the primary-context bundle verbatim (see "## Per-review Primary Context Bundle" above). Cross-family proxies receive the bundle text in their spawn prompt — NOT a path reference.
 
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** (pure opposition).
+
+### `--reviewer <name>` flag (override default selection)
+
+`$ARGUMENTS` may include one or more `--reviewer <name>` flags. Each flag occurrence specifies one reviewer to spawn. Examples:
+
+- `/ae:review HEAD~3..HEAD --reviewer challenger` → spawn ONLY challenger
+- `/ae:review HEAD~3..HEAD --reviewer codex-proxy --reviewer gemini-proxy` → spawn ONLY both proxies
+- `/ae:review HEAD~3..HEAD` (no flag) → existing default selection table (current behavior)
+
+**Override semantics (NOT additive)**: when one or more `--reviewer` flags present, **skip the default Agent Selection Reference table entirely**. Spawn ONLY the listed agents. This is intentional override — the use case is "I want exactly these reviewers, not the default mix" (D3 re-review with specific angle).
+
+Concrete examples to prevent ambiguity:
+
+- **WRONG behavior** (additive interpretation): `/ae:review HEAD --reviewer security-reviewer --reviewer challenger` → runs security + challenger PLUS default selection table reviewers (architecture / cross-family / etc).
+- **CORRECT behavior** (override per F-012): `/ae:review HEAD --reviewer security-reviewer --reviewer challenger` → runs ONLY security + challenger; default selection table SKIPPED entirely.
+
+**Multi-flag is additive AMONG flags, but collectively override default**: `--reviewer X --reviewer Y` spawns both X and Y (additive to each other), but skips the default selection table entirely (collective override). Listing 5 `--reviewer` flags spawns 5 reviewers, all together, no defaults added.
+
+**Scale anchor — what "skip default table" actually means** (silent quality degradation risk if user thinks adding to default):
+
+Default selection table per `ae:agent-selection` SKILL.md typically spawns **4-5 reviewers** (e.g., 1-2 core reviewers + challenger + 2 cross-family proxies). Using `--reviewer challenger` alone means:
+
+- Spawned: 1 (just challenger)
+- **Skipped**: 3-4 reviewers (architecture-reviewer / security-reviewer / codex-proxy / gemini-proxy depending on diff signals)
+
+Using `--reviewer` is a **deliberate scope reduction**, not an addition. If user wants challenger PLUS the default mix, they need to either (a) not pass `--reviewer` flag (default mix runs), or (b) explicitly list every reviewer they want in `--reviewer` flags.
+
+**Future additive variant** (forward-reference): if `--reviewer` override proves insufficient (likely 60%+ within 6 months per regret analysis), v0.11.x may add `--add-reviewer <name>` flag (additive to default table, POSIX-style two-flag split — keep `--reviewer` as override, `--add-reviewer` as additive). F-012 deliberately defers this to keep scope minimal.
+
+**Invalid name handling**: each `--reviewer <name>` value MUST be a valid agent name (e.g., `challenger`, `codex-proxy`, `architecture-reviewer`, `ae:engineering:minimal-change-engineer`). Unknown name → **hard fail** with full list of valid names. Do NOT silently skip unknown names (would silently shrink review coverage).
+
+**Combined with target**: `--reviewer` flag is fully orthogonal to `<target>` argument; both can be specified. Example: `/ae:review src/foo.py --reviewer security-reviewer` → review file with only security-reviewer.
+
+**Not on ae:code-review**: this flag is ae:review only. ae:code-review's 4-track structure is fundamentally multi-reviewer; single-reviewer use cases route through ae:review with `--reviewer`.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — different angles per proxy. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
 
@@ -307,14 +398,21 @@ Include this in the review report. This data accumulates naturally across featur
 
 ## Output
 
-**Write target rule** (mirrors plan/SKILL.md Step 2 path-derive convention):
+**Write target rule** (mirrors plan/SKILL.md Step 2 path-derive convention; 3 cases — pipeline + ad-hoc):
 
-- **Feature-dir plan** (target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`) → write `review.md` next to the plan at `.ae/features/<state>/F-NNN-<slug>/review.md`. Path-derived; no frontmatter required to make this decision.
-- **Legacy plan** (under `output.plans/`) → write to `pipeline.yml` → `output.reviews/NNN-...md` per the existing convention.
+- **(a) Feature-dir plan** (target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`, AND no prior `review.md` at same dir, AND no `--reviewer` flag) → write `review.md` next to the plan at `.ae/features/<state>/F-NNN-<slug>/review.md`. Path-derived; no frontmatter required to make this decision.
+- **(b) Legacy plan** (target under `output.plans/`, AND no prior matching review at `output.reviews/`, AND no `--reviewer` flag) → write to `pipeline.yml` → `output.reviews/NNN-...md` per the existing convention.
+- **(c) Ad-hoc target OR re-review OR `--reviewer` flag present** → write to `pipeline.yml` → `output.reviews/adhoc/<id>-<ISO8601-date>.md`. `<id>` derivation:
+  - Ad-hoc commit range/file/dir: slug from target string with non-alphanumerics replaced by `-` (e.g., `HEAD~3..HEAD` → `HEAD-3-HEAD`; `src/foo.py` → `src-foo-py`).
+  - Re-review on plan: feature ID + `-rerun` suffix (e.g., `F-012-rerun-2026-05-09T14-22-00`).
+  - `--reviewer` flag with pipeline target: feature ID + `-rerun-<reviewer-name>` (e.g., `F-012-rerun-challenger-2026-05-09T14-22-00`).
+  - Fall-back: `adhoc-<ISO8601>.md` if no derivable id.
 
-**No surface-index pointer file is written.** Discoverability for `/ae:dashboard` and `/ae:next` is preserved via union scan over both `output.reviews/*.md` and `.ae/features/{active,done}/F-*/review.md` — see those skills' Reviews scanning rule. This eliminates dual-write debt; readers, not writers, bridge the two locations.
+**No surface-index pointer file is written.** Discoverability for `/ae:dashboard` and `/ae:next` is preserved via non-recursive glob scan over `output.reviews/*.md` (excluding `adhoc/` subdir naturally — non-recursive glob does not descend) and `.ae/features/{active,done}/F-*/review.md` — see those skills' Reviews scanning rule. This eliminates dual-write debt; readers, not writers, bridge the two locations. Ad-hoc reviews under `output.reviews/adhoc/` are NOT scanned by dashboard/next/plugin-stats/retrospect (cross-skill contract; verified across all 4 review-reading skills as of F-012).
 
-Review file frontmatter must include:
+Review file frontmatter:
+
+**Pipeline mode (case (a) and (b))** — `verdict` required:
 
 ```yaml
 ---
@@ -327,7 +425,24 @@ verdict: pass    # or: fail
 ---
 ```
 
-The `verdict` field is required — it enables `/ae:dashboard` and `/ae:next` to determine review completion without reading file content.
+The `verdict` field is required in pipeline mode — it enables `/ae:dashboard` and `/ae:next` to determine review completion without reading file content.
+
+**Ad-hoc mode (case (c))** — `verdict` MUST be omitted:
+
+```yaml
+---
+title: "Review: <target-derived-name>"
+type: review
+created: YYYY-MM-DDTHH:MM:SS    # ISO8601 with time (multiple re-reviews same day)
+target: "<commit-range | file-path | dir-path | plan-path-with-rerun>"
+mode: adhoc                      # explicit marker to disambiguate from pipeline
+reviewers: [challenger, ...]     # explicit list when --reviewer flag used
+---
+```
+
+**Why `verdict` is omitted in ad-hoc mode**: dashboard/next infer pipeline progress from `verdict: pass`. An ad-hoc review of `HEAD~3..HEAD` or a re-review with override reviewers does not represent a pipeline gate transition; emitting `verdict:` would either (a) corrupt pipeline state if scanned, or (b) confuse dashboard if it ever scans `adhoc/` (current contract: it does not scan, but defense-in-depth wins). The `mode: adhoc` field is an explicit second guard.
+
+**Cross-skill contract** (verified F-012 dogfood Layer A): the 4 review-reading skills (`ae:dashboard`, `ae:next`, `ae:plugin-stats`, `ae:retrospect`) all use non-recursive glob `output.reviews/*.md` which naturally excludes `output.reviews/adhoc/*.md`. Future modifications to these skills MUST preserve non-recursive scan behavior; recursive scan would silently surface ad-hoc reviews into pipeline state.
 
 Report contents:
 1. TL synthesis report (merged findings from all reviewers + challenger + cross-family, with Disagreement Value Assessment and severity classification)
