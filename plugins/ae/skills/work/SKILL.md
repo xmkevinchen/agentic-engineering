@@ -122,6 +122,7 @@ Compare the **immediately preceding step's** `Actual files:` list (from the last
    - No results returned (Agent already loaded as first-class tool) → `AGENT_TEAMS_FULL = true`
    - ToolSearch call fails/times out → `AGENT_TEAMS_FULL = true` (fail-open), log: `[WARNING] ToolSearch unavailable, assuming full Agent Teams support`
 3. Cache `AGENT_TEAMS_FULL` for this entire ae:work invocation (all steps). Do not repeat ToolSearch per step.
+4. **Ceremony preset interaction (F-013)**: Read pipeline.yml → ceremony (default: full). If ceremony in {light, minimal} → AGENT_TEAMS_FULL stays per existing env-var rule (preset does NOT disable agent_teams). Env var `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` (global solo) wins on conflict if set; ceremony preset = per-project ceremony level, not a global agent-teams toggle. See `pipeline.template.yml` ceremony comment for canonical bundling rules.
 
 ### Check 4: Deferred Items
 Read `<milestone-dir>/notes.md` (resolved per **Milestone path resolution** helper above — feature-dir plan → `.ae/features/<state>/F-NNN-<slug>/milestones/notes.md`; legacy plan → `<output.milestones>/<plan-id>/notes.md`). If file doesn't exist → skip: `✅ Deferred items: none`
@@ -302,6 +303,9 @@ If no plugin files in diff → skip with "No plugin skill/agent files changed, s
 
 ### D. Code Review
 Read `work.review_mode` from pipeline.yml (default: `full`). Override with `--light` or `--full` flag if passed.
+
+**Ceremony preset interaction (F-013)**: Read pipeline.yml → ceremony (default: full). If ceremony in {light, minimal} → set work.review_mode = light if not explicitly set. Explicit `work.review_mode` wins on conflict if set. `--light` / `--full` per-invocation flag wins over both.
+
 - **full**: Lead executes `/ae:code-review` inline with all 4 tracks (Claude + Codex + Gemini + Doodlestein)
 - **light**: Lead executes `/ae:code-review` inline with Track 1 only (Claude review, skip cross-family and Doodlestein)
 
@@ -387,6 +391,8 @@ Fix findings, re-run from Check D until clean pass.
 3. **Accumulated Doodlestein Checkpoint** (before gate)
 
    **Skip if** `pipeline.yml → work.accumulated_doodlestein: false` OR `AGENT_TEAMS_FULL = false` (run_in_background unavailable — log: `[Doodlestein checkpoint skipped: run_in_background unavailable]`). Initialize `no_accumulated_p1 = true`.
+
+   **Ceremony preset interaction (F-013)**: Read pipeline.yml → ceremony (default: full). If ceremony in {light, minimal} → skip accumulated Doodlestein entirely (log: `[Doodlestein checkpoint skipped: ceremony preset=<value>]`). Existing `work.accumulated_doodlestein: false` guard wins on conflict if set (skip if either condition holds).
 
    After commit, compute from plan file:
    - `total_steps` = count all `### Step N` headings
