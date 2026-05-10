@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.9.6 — 2026-05-10
+
+### F-015 — Output Standards Landing to Plugin (Plan 015, review verdict PASS 2026-05-10)
+
+- **`plugins/ae/output-standards.md` (107 lines, new)**: single source of truth for AE output standards (5 standards: session-process Line 1, phase-summary `---` segmentation, document pyramid tip ≤5 lines, closed-loop 90%+ readability, self-verify protocol). Template form (fill-slot) + 8-doc pyramid-tip guide + anti-pattern examples + scope definition. English prose, git-tracked.
+- **Inline reference in 4 high-traffic skills**:
+  - `plugins/ae/skills/work/SKILL.md` + `plugins/ae/skills/review/SKILL.md`: 8-line inline block (standards summary + link to canonical)
+  - `plugins/ae/skills/plan/SKILL.md` + `plugins/ae/skills/discuss/SKILL.md`: 1-line pointer
+  - Path resolution: `../../output-standards.md` (relative, 2 levels up from `plugins/ae/skills/<x>/SKILL.md`)
+  - `plugins/ae/skills/analyze/SKILL.md` already contains inline reference (pre-existing, line 236)
+- **Standards drift detection**: `plugins/ae/tests/fixtures/standards-drift-detection.md` (manual verification fixture, detects byte/semantic drift between canonical + inline blocks)
+- **Cleanup**: removed misplaced `## Output Standards` section from project-level CLAUDE.md (moved to plugin canonical)
+- **Phase 2 dogfood-driven expansion**: 4-skill minimum carrier (work/review/plan/discuss) + analyze = 5-skill coverage ≈90%+ of session output. Other 18 skills follow Phase 2 observation; decision on full coverage deferred to empirical feedback.
+- **Rationale**: LLM cannot guarantee 100% standard adherence; short path preferred (template in agent context → agent/TL re-read → fix or ship) over external shell-script fixtures (brittle) or third-party LLM judge (adds noise). Standard 5 (self-verify) is primary enforcement mechanism.
+- **External-project readiness**: projects consuming ae plugin receive standards guidance inline on `/ae:work` and `/ae:review` day 1; no external fixture or judge dependency.
+
+### Closes
+
+- F-015 (BL-070 root-cause; closure review verdict: PASS, 2026-05-10; 7/7 ACs verified; feature archived to `done/`)
+
 ## v0.9.5 — 2026-05-08
 
 Two UX-friction-themed features ship together: F-006 (BL-061 + BL-062 — ae:setup new-project GTD-first defaults + ae:roadmap default auto-eval unsized features with cache) + F-007 (BL-063 — ae:roadmap batch-approve PROMOTE candidates → chains /ae:analyze with pre-approved values).
