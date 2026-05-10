@@ -7,6 +7,16 @@ model: opus
 effort: high
 ---
 
+<!-- ae-output-standards-v1 -->
+**AE Output Standards (Summary)**:
+- First line = core point (clear at a glance)
+- Phase summary segmented by `---`, self-contained 90%+
+- Docs: pyramid tip ≤ 5 lines, details archived
+- Closed loop: user can judge 90%+ without opening docs
+
+See [AE Output Standards](../../output-standards.md) for full reference.
+<!-- /ae-output-standards-v1 -->
+
 ## Argument Inference
 
 ### Pre-step: $ARGUMENTS tokenization (HARD requirement, MUST run first)

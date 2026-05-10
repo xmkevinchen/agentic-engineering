@@ -7,6 +7,10 @@ model: opus
 effort: high
 ---
 
+<!-- ae-output-standards-pointer-v1 -->
+Adhere to [AE Output Standards](../../output-standards.md) in plan formatting and TL session responses.
+<!-- /ae-output-standards-pointer-v1 -->
+
 ## Argument Inference
 
 Resolve `$ARGUMENTS` into an optional **source discussion directory** before running Pre-check. Three argument forms (in priority order):

@@ -7,6 +7,10 @@ model: opus
 effort: high
 ---
 
+<!-- ae-output-standards-pointer-v1 -->
+Adhere to [AE Output Standards](../../output-standards.md) in discussion formatting and TL session responses.
+<!-- /ae-output-standards-pointer-v1 -->
+
 **Protocol Map** — if detail for any step is missing below, read this SKILL.md file directly before proceeding.
 Steps: 1.Setup → 2.Spawn Team → 3.Discussion Rounds → 4.Consensus Verification → 5.TL Scores → 6.Present & Record → 7.Sweep → 8.Conclusion → 9.Doodlestein (post-conclusion) → 10.Shutdown
 
