@@ -19,6 +19,28 @@ If `$ARGUMENTS` is empty, scan for the most recent plan with `status: draft` or 
 
 Review the plan at **$ARGUMENTS** using Agent Teams.
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:plan-review creates 4 tasks per invocation.
+
+| Phase | Subject | Created at | `in_progress` | `completed` |
+|---|---|---|---|---|
+| Pre-check | `ae:plan-review: Pre-check` | Skill start | Before pre-check 1 | After pre-check 5 passes |
+| Step 1 Review | `ae:plan-review: Architect review` | Skill start (batch) | When architect agent spawned | When architect findings arrive at TL |
+| Step 1 Analyst | `ae:plan-review: Dependency analysis` | Skill start (batch) | When dependency-analyst spawned | When analyst findings arrive at TL |
+| Step 1 Cross-family | `ae:plan-review: Cross-family review` | Skill start (batch) | When first cross-family proxy spawned | When all cross-family findings collected |
+
+At skill start, batch-create:
+
+```
+TaskCreate(subject: "ae:plan-review: Pre-check")
+TaskCreate(subject: "ae:plan-review: Architect review")
+TaskCreate(subject: "ae:plan-review: Dependency analysis")
+TaskCreate(subject: "ae:plan-review: Cross-family review")
+```
+
+Owner field: omit. On error: stay `in_progress`. Step 2 (Merge Results) and Step 3 (Apply and Confirm) are sub-actions — no separate tasks.
+
 ## Pre-check
 
 1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing directly (no team spawn).
