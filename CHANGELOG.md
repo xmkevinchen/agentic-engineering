@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.9.7 — 2026-05-10
+
+### F-015 review fixup (commit `befd107`)
+
+Patch release fixing 2 P1 findings from `/ae:review` 3-reviewer pass missed in v0.9.6:
+
+- **Inline block in `ae:work` + `ae:review` SKILL.md**: was 4-bullet (missing Standard 5 self-verify); rewritten to 5-bullet per plan AC3 spec (`## AE Output Standards` heading + 5 bullets including Self-verify + relative link). Standard 5 is the core behavioral innovation — it must reach agent context, not just live in the canonical doc.
+- **Drift fixture removed**: `plugins/ae/tests/fixtures/standards-drift-detection.md` deleted. Plan v3 explicitly dropped the fixture in "What we did NOT do" section ("shell script byte-compare 有限码判无限输出, brittle"); v0.9.6 ship erroneously included it. Standard 5 self-verify is the primary enforcement mechanism, not external fixture.
+
+### Why patch release
+
+v0.9.6 (commit `fbc79f8`) shipped before `/ae:review`'s 3-reviewer pass surfaced the 2 P1. Original review (in v0.9.6) treated 4-bullet inline as PASS and treated drift fixture as deliverable. Multi-reviewer review (architecture + challenger + codex-proxy) caught both — challenger uniquely caught Standard 5 missing.
+
+Audit trail: `.ae/features/done/F-015-session-readout-ae-status-dashboard-curr/review.md` includes both original review (cfd8c5e snapshot) and supplementary review (befd107 corrected state).
+
+### No API / breaking changes
+
+Pure inline-block content fix + fixture removal. No skill behavior changes, no schema migrations, no deprecations.
+
+---
+
 ## v0.9.6 — 2026-05-10
 
 ### F-015 — Output Standards Landing to Plugin (Plan 015, review verdict PASS 2026-05-10)
