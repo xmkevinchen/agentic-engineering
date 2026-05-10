@@ -8,13 +8,16 @@ effort: high
 ---
 
 <!-- ae-output-standards-v1 -->
-**AE Output Standards (Summary)**:
-- First line = core point (clear at a glance)
-- Phase summary segmented by `---`, self-contained 90%+
-- Docs: pyramid tip ≤ 5 lines, details archived
-- Closed loop: user can judge 90%+ without opening docs
+## AE Output Standards
 
-See [AE Output Standards](../../output-standards.md) for full reference.
+All deliverables (SendMessage to TL, git-tracked docs, TL replies) MUST follow:
+- Line 1: conclusion / judgment / action (one sentence)
+- Phase summary: `---` + heading separator + bullets
+- Documents: pyramid (top ≤ 5 lines TL;DR + 留档 below)
+- Closed loop: reader makes 90%+ judgments without opening lower layers
+- Self-verify: re-read your output before sending; misaligned → fix first
+
+Full reference: [AE Output Standards](../../output-standards.md)
 <!-- /ae-output-standards-v1 -->
 
 ## Argument Inference
