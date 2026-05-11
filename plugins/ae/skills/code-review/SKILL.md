@@ -87,8 +87,12 @@ Mode is set by caller (ae:work reads `work.review_mode` from pipeline.yml, or `-
 Check `git diff --stat` (or target-scoped equivalent if `$ARGUMENTS` non-empty) to determine change scope. Then:
 
 - Discover reviewer agents per agent-selection Rule 4: scan `.claude/agents/*.md`, installed plugins, `~/.claude/agents/*.md`. Also check `project_agents` in pipeline.yml for entries with `role: reviewer`. Infer role from `description` keywords per the [Agent Contract Specification](../../../docs/decisions/037-agent-contract.md).
-- If project reviewers found: launch matching agents based on changed file types (project agents preferred over built-in)
-- If none found: use the plugin's built-in `code-reviewer` agent
+- **Specialist match first** by changed file domain:
+  - auth / crypto / entitlements / secrets → `security-reviewer`
+  - hot paths / DB queries / N+1 patterns / large allocations → `performance-reviewer`
+  - module boundaries / dependency direction / API contracts → `architecture-reviewer`
+  - `project_agents` specialists (per `role: reviewer` + `tech_stack` match) override built-in specialists
+- **Code-reviewer as generic fallback** when no domain specialist matches changed files (e.g., README typo, config bump, generic refactor) — per F-016 Step 6 reposition. Never invoke code-reviewer when a specialist's domain is matched; surface the handoff instead.
 
 Review the diff produced by `{{ TARGET_DIFF_CMD }}` (resolved per Argument Inference table above). Default (Form 3) = `git diff` + `git diff --cached`.
 
