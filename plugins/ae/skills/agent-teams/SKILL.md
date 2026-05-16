@@ -41,6 +41,72 @@ Spawn → Rounds → [Add agents as needed] → Conclusion → Shutdown
 - **Non-responsive agents**: If an agent has not responded within 120s after a round prompt, TL marks it as unresponsive and proceeds without it. This is operational, not removal for dissent. (Extends Proxy Timeout Protocol from `ae:agent-selection` to all agents.)
 - **Shutdown only after conclusion is written.** If the skill has a Doodlestein step, team close MUST be after Doodlestein completes — original team members must be alive to respond to challenges.
 
+### Cast Block Syntax
+
+Before any `Agent(...)` spawn within a `TeamCreate` batch, TL emits a structured **cast block** describing each agent's role + angle + rationale. The cast block is **dual-write**: appears in session stdout (user-visible) AND embedded in the spawn prompt's `prompt:` field (agent-receivable).
+
+#### Canonical 4-field structure (MANDATORY)
+
+All 4 fields — `Agent` / `Role` / `Angle` / `Why` — are **mandatory**. Omitting any field fails AC1 mechanical verification (`grep -E "^(Agent|Role|Angle|Why):"` returns < 4 hits in a cast block context).
+
+```
+📋 Cast — <team-name>
+  Agent: <agent-name>
+    Role: <one-line role assignment, e.g., "cross-family-reviewer (OpenAI angle)">
+    Angle: <one-line focus, e.g., "prompt-engineering quality">
+    Why: <one-line rationale, e.g., "Swarm/Assistants precedent applies">
+```
+
+Multi-agent batches list one indented block per agent. Header line `📋 Cast — <team-name>` is per spawn batch (not per agent).
+
+#### Cost target (not hard cap)
+
+≤ 200-300 tokens per cast block typical. ≤ 8 lines per agent **target** — exceed if clarity demands (OpenAI "give model room to think" principle); line count is target, not hard limit. Reviewers should flag cast blocks exceeding 12 lines as a signal that scope may be too broad for a single spawn.
+
+#### Emit timing + Spawn prompt position
+
+Cast block timing relative to existing Selection Trace + TeamCreate:
+
+```
+1. Layer 1 + Layer 2 selection trace (existing — Selection Trace Emission below)
+2. 📋 Cast block emit (stdout) — NEW per F-019
+3. TeamCreate
+4. Agent() calls — each with cast block embedded in prompt: field at position 2 (below)
+```
+
+When a spawn prompt has a PRIMARY CONTEXT BUNDLE (per F-016 Plan 050 convention — assembled context files / verbatim discussion bodies), the cast block MUST appear at **position 2** of the prompt:
+
+```
+Agent(prompt: """
+  <PRIMARY CONTEXT BUNDLE — position 1: files / discussion context / verbatim per Plan 050>
+
+  📋 Cast — <team-name>
+    Agent: <name>
+      Role: <role>
+      Angle: <angle>
+      Why: <why>                                              ← position 2
+
+  <Task-specific instructions: domain, scope, checks>          ← position 3
+""")
+```
+
+When no PRIMARY CONTEXT BUNDLE is present (simpler skills with no per-invocation context bundle), cast block is at position 1 (first content of prompt body).
+
+#### Dynamic / ad-hoc spawn note
+
+- For `<per agent-selection>` placeholder spawns, the cast block template uses `<runtime-selected>` placeholder for `Agent:` field; TL fills at execution time
+- For `/ae:team` ad-hoc spawns (TL chooses agents per task context, not from SKILL.md template), TL computes the full cast block at spawn-decision time per the skill prompt rules in `team/SKILL.md`
+
+#### Mechanical verification
+
+- `grep -c "📋 Cast" <skill-file>` returns ≥ total `Agent()` spawn site count for that file
+- `grep -E "^(Agent|Role|Angle|Why):" <skill-file-or-agent-teams-spec>` returns ≥ 4 hits (per AC1 4-field lock gate)
+- Cross-skill consistency: cast block `Role:` syntax uniform across all 13 spawn-using SKILL.md files (e.g., parenthetical mode syntax `Role: opposition (review mode)` uniform across analyze / review / consensus / think)
+
+#### Rationale (positive pattern for Anti-Pattern "Routing lateral")
+
+The "Routing lateral" anti-pattern at the end of this file forbids agent `.md` files from containing conditional routing logic ("in /ae:review send to X, in /ae:plan send to Y"). The positive pattern is: agents stay generic; routing/role is delivered via cast block in spawn prompt at spawn time. F-019 formalizes this positive pattern; `challenger.md` is the migration reference example (mode-conditional behavior delivered via cast block `Role:` field rather than agent-internal mode sections).
+
 ### Selection Trace Emission
 
 Before `TeamCreate`, TL emits a structured selection trace per `ae:agent-selection` Layer 1 + Layer 2 trace format (SKILL.md `## Layer 1 trace format` and `## Layer 2 trace format` sections). Default-ON for all modes (Debate / Discussion / Investigation). No flag required.
@@ -53,7 +119,10 @@ Two surfaces, both default-emit:
 Mechanical verification (used by `/ae:test-plugin` and any automated audit):
 - `grep -E "^\[layer1\] " <stdout-or-output>` returns ≥ 1 line per team spawn
 - `grep -E "^\[layer2\] (considered|selected|rationale|library-fallback):" <stdout-or-output>` returns ≥ 4 lines per role slot
+- `grep -E "^\[cast\] " <stdout-or-output>` returns ≥ 1 line per `Agent()` spawn in the batch (NEW per F-019 — see Cast Block Syntax above)
 - Skills writing reports: `grep -F "## Agent Selection Trace" <report>` returns ≥ 1 line
+
+**[cast] line format**: `[cast] <agent> — role=<role>, angle=<angle>, why=<one-line>` — one line per Agent() spawn, complementary to the `[layer2] selected:` line (selection picks the agent; cast emits the role/angle/why for the chosen agent).
 
 `--agent-debug` flag (per `ae:setup/agent-governance-format.md:177`) remains documented but is now a no-op signal: trace fires by default. Future `--quiet` flag MAY suppress emission for batch automation; not in scope here.
 
