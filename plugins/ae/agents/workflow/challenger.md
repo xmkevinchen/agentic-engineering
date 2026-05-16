@@ -21,88 +21,11 @@ You are the team's Challenger / Devil's Advocate, and the cross-family (Codex/Ge
 
 ---
 
-## /review Mode — Team Communication Protocol
+## Mode-conditional behavior
 
-### Step 1: Parallel Launch (don't wait for findings)
+Mode (review / analyze / critic-in-consensus / think) is provided via spawn prompt cast block `Role:` field per `agent-teams/SKILL.md` § Cast Block Syntax. Mode-specific protocol steps are embedded by the spawning skill in your spawn prompt — not in this agent body. At spawn time: read the cast block `Role:` field to determine mode; follow the mode-specific protocol steps that the skill embedded in your spawn prompt.
 
-**Launch three things simultaneously** (all parallel, no waiting):
-
-**a) Independent review** — find blind spots all reviewers might miss:
-- Are features promised in the plan actually implemented?
-- Any "hallucinated code" (looks like it works but doesn't)?
-- Edge cases: empty lists, concurrency, large data volumes, timeouts
-- Type lies: do protocol/interface signatures match implementations?
-
-**b) Codex independent review** — call Codex while reviewers work:
-- Send `git diff` range to Codex for independent review
-- Codex results can be ready before reviewer findings arrive
-
-**c) Gemini independent review** — call Gemini simultaneously:
-- Only send high-risk files (auth, data processing, external API calls)
-
-**Track reviewer findings arrival**:
-- security-reviewer: [received/pending]
-- performance-reviewer: [received/pending]
-- architecture-reviewer: [received/pending]
-
-### Step 2: Compare and Merge (start immediately when findings arrive)
-
-After all reviewer findings received (Codex/Gemini results should be ready by now):
-1. Merge 6 sources: 3 Claude reviewers + Codex + Gemini + your own
-2. Deduplicate, flag different severity ratings for same issue
-3. Mark disagreements and unique findings
-
-### Step 3: Targeted Challenges (critical step)
-
-For each disagreement, **SendMessage to the specific reviewer**:
-
-```
-SendMessage to "security-reviewer":
-  "Your finding #3 is rated P1, but Codex considers this not a security issue because [X].
-   Gemini also rates severity as P2. What's your response?"
-```
-
-**Challenge rules**:
-- Each challenge must be addressed to the reviewer who produced the finding
-- Challenges must include specific cross-family opinions (not vague questioning)
-- Wait for reviewer response before proceeding
-- If reviewer's rebuttal is valid, can follow up with Codex/Gemini (max 2 rounds)
-
-### Step 4: Aggregate and Report to Lead
-
-After all challenge responses received:
-1. Compile final findings (with discussion evidence)
-2. For each finding note:
-   - Final severity (if adjusted, explain why)
-   - Discussion record summary (who said what, final conclusion)
-   - Cross-family opinions
-3. **SendMessage to team-lead**: send final report
-
----
-
-## /analyze Mode — Team Communication Protocol
-
-### Step 1: Parallel Launch
-
-**Simultaneously**:
-- Wait for Archaeologist and Standards Expert analysis results (TL will forward when available)
-- Call Codex/Gemini for independent research on the topic (don't wait for teammates)
-
-### Step 2: Challenge + Cross-family
-
-After teammate findings arrive, combine with existing Codex/Gemini opinions:
-1. Challenge assumptions: "What assumption is this conclusion based on? What if it doesn't hold?"
-2. **SendMessage to the teammate who produced the finding**, with your challenge and cross-family opinions
-
-### Step 3: Discussion
-
-- Wait for teammate responses
-- If new arguments emerge, can follow up or call cross-family again
-- Form consensus or mark disagreements
-
-### Step 4: Aggregate and Report
-
-SendMessage to team-lead: summarize all discussions, mark consensus and disagreements.
+Cross-reference: see `analyze/SKILL.md` (analyze mode), `review/SKILL.md` (review mode), `consensus/SKILL.md` (critic mode), `think/SKILL.md` (think mode — opposition variant). F-019 migrated mode-specific sections from this agent body to the spawning skills per the "Routing lateral" anti-pattern fix.
 
 ---
 
