@@ -127,7 +127,17 @@ Applies to **new discussions** and any discussion where `framing.md` was changed
 - `.claude/agents/engineering-minimal-change-engineer.md` (project-local override, optional)
 - `~/.claude/agents/engineering-minimal-change-engineer.md` (user override, optional)
 
-If not found in any location, emit `[layer1] preflight: minimal-change-engineer agent NOT FOUND (fires only in incomplete plugin installs). Round 0 will run with 4 agents (2 cross-family + 2 Doodlestein). Quorum threshold reduces to 3 of 4. Over-complication detection coverage is LOST for this discussion — verify plugin install or accept the coverage gap.` and continue with 4 agents.
+If not found in any location, **do NOT silently degrade quorum** (F-009 Step 1: previous behavior auto-dropped over-complication detection coverage without user awareness — incompatible with F-008 "drift" failure-mode containment). Instead, surface the choice via `AskUserQuestion` with exactly two options (no "install agent now" option — AE has no in-skill auto-install capability; offering it would misrepresent what the skill can do):
+
+1. **Continue with reduced 4-agent quorum (3-of-4 threshold)** — accept the loss of over-complication detection coverage for this discussion; Round 0 runs with 2 cross-family + 2 Doodlestein.
+2. **Abort discussion** — TL output includes the install command string `/ae:setup agents --add engineering-minimal-change-engineer` (or instructs user to drop the agent file under `.claude/agents/`), then refuses to proceed.
+
+Emit one of the following trace lines based on the user's choice (replaces the previous unconditional emit):
+
+- User chose continue: `[layer1] preflight: minimal-change-engineer agent NOT FOUND; user disposition: continue. Round 0 will run with 4 agents (2 cross-family + 2 Doodlestein). Quorum threshold reduces to 3 of 4. Over-complication detection coverage is LOST for this discussion.`
+- User chose abort: `[layer1] preflight: minimal-change-engineer agent NOT FOUND; user disposition: abort. Discussion aborted; install command emitted to user.`
+
+When user chooses continue, proceed with the 4-agent path (2 cross-family + 2 Doodlestein) and the 3-of-4 quorum threshold — the existing escape hatch is preserved; only the silent-default behavior is removed.
 
 **Note**: the framing_context convention below is a **prompt-embedded key**, not an `Agent(...)` parameter. All 5 (or 4) spawn prompts must include the line `framing_context: <discussion-dir>/framing.md` at the top of their prompt string so the agent reliably locates the review target.
 
