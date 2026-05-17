@@ -224,19 +224,34 @@ TeamCreate(team_name: "<feature>-plan-review")
 # architect: dispatcher-resolved default; project_agents override applies (per ae:agent-selection canonical placeholder convention)
 Agent(subagent_type: "<per agent-selection>", name: "architect",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
+      prompt: "📋 Cast: <runtime-selected>
+                  Role: architect (plan review)
+                  Angle: step decomposition + dependency graph + parallel strategy
+                  Why: mandatory baseline per plan review selection table
+
+               Review this plan's step decomposition and dependencies: <plan full text>.
                Produce step dependency graph and parallel strategy.
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "<reviewer-2>", name: "<reviewer-2>",
       team_name: "<team>", run_in_background: true,
-      prompt: "<review focus>. SendMessage findings to team-lead when done.")
+      prompt: "📋 Cast: <reviewer-2>
+                  Role: <plan review secondary>
+                  Angle: <review focus per plan content>
+                  Why: <slot rationale based on plan domain — DB migration → perf, etc.>
+
+               <review focus>. SendMessage findings to team-lead when done.")
 
 # Cross-family — for each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "<assigned angle>: <plan full text>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family plan reviewer (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; complements core review
+
+               <assigned angle>: <plan full text>.
                SendMessage findings to team-lead when done.")
 ```
 
@@ -264,17 +279,32 @@ Before confirming with the user, check cross-family availability (`cross_family`
     ```
     Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
           team_name: "<existing team>", run_in_background: true,
-          prompt: "<compiled plan summary + file paths to read>
+          prompt: "📋 Cast: doodlestein-strategic
+                      Role: plan reviewer (strategic)
+                      Angle: single smartest improvement to the plan
+                      Why: catch missed alternatives before /ae:work commitment
+
+                   <compiled plan summary + file paths to read>
                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
     Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
           team_name: "<existing team>", run_in_background: true,
-          prompt: "<compiled plan summary + file paths to read>
+          prompt: "📋 Cast: doodlestein-adversarial
+                      Role: plan reviewer (adversarial)
+                      Angle: blind spot / first cliff in plan execution
+                      Why: predict downstream Step N failures before plan freeze
+
+                   <compiled plan summary + file paths to read>
                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
     Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
           team_name: "<existing team>", run_in_background: true,
-          prompt: "<compiled plan summary + file paths to read>
+          prompt: "📋 Cast: doodlestein-regret
+                      Role: plan reviewer (regret prediction)
+                      Angle: highest-regret plan decision likely reversed within 30d ship
+                      Why: surface reversal cost before lock-in to step sequence
+
+                   <compiled plan summary + file paths to read>
                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
     ```
   - TL routes challenges to original review team members for response (per ae:agent-teams Doodlestein Protocol)

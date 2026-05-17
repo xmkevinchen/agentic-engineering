@@ -149,7 +149,12 @@ Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), 
 ```
 Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
-      prompt: "framing_context: <discussion-dir>/framing.md
+      prompt: "📋 Cast: codex-proxy
+                  Role: framing reviewer (OpenAI angle)
+                  Angle: bias anchoring
+                  Why: cross-family check for TL pre-commitments before Round 1 begins
+
+               framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: bias anchoring. Read ONLY the framing file.
                Does this framing embed TL's pre-commitments (specific mechanisms,
@@ -161,7 +166,12 @@ Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
 
 Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
-      prompt: "framing_context: <discussion-dir>/framing.md
+      prompt: "📋 Cast: gemini-proxy
+                  Role: framing reviewer (Google angle)
+                  Angle: bias anchoring (system-level lens)
+                  Why: cross-family check complements OpenAI angle; gemma4 fallback per CLAUDE.md
+
+               framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: bias anchoring (Google-family lens; if Gemini API
                unavailable, fall back to local gemma4:26b per CLAUDE.md).
@@ -173,7 +183,12 @@ Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
 
 Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
-      prompt: "framing_context: <discussion-dir>/framing.md
+      prompt: "📋 Cast: doodlestein-strategic
+                  Role: framing reviewer (strategic)
+                  Angle: scope narrowing — alternative framings foreclosed
+                  Why: catch TL framing biases before they propagate to Round 1
+
+               framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: scope narrowing. Read ONLY the framing file.
                What is the single smartest improvement to this framing — especially
@@ -183,7 +198,12 @@ Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-str
 
 Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-adversarial",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
-      prompt: "framing_context: <discussion-dir>/framing.md
+      prompt: "📋 Cast: doodlestein-adversarial
+                  Role: framing reviewer (adversarial)
+                  Angle: Round 1 walls — first blocked solution class
+                  Why: predict downstream Round 1 friction before commitment
+
+               framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: Round 1 scope narrowing. Read ONLY the framing file.
                If Round 1 agents researched independently under this framing, what is
@@ -193,7 +213,12 @@ Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-a
 
 Agent(subagent_type: "ae:engineering:minimal-change-engineer", name: "minimal-change-engineer",
       team_name: "<discussion-id>-framing-review", run_in_background: true,
-      prompt: "framing_context: <discussion-dir>/framing.md
+      prompt: "📋 Cast: minimal-change-engineer
+                  Role: framing reviewer (over-complication detection)
+                  Angle: simpler framing covering same problem with less machinery
+                  Why: anti-over-engineering check before TL commits to mechanism
+
+               framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
                Review angle: problem over-complication / scope creep. Read ONLY the framing file.
                Is this framing bigger than the problem requires? Is there a simpler
@@ -299,7 +324,12 @@ TeamCreate(team_name: "<discussion>-council")
 Agent(subagent_type: "<per agent-selection>",
       name: "<role-name>",  # e.g., "architect", "code-researcher", "security-expert"
       team_name: "<team>", run_in_background: true,
-      prompt: "You are <ROLE> in a design discussion: <discussion title>.
+      prompt: "📋 Cast: <runtime-selected>
+                  Role: <role-name> (council participant in <discussion title>)
+                  Angle: <role-specific focus per Agent Selection Reference>
+                  Why: <slot rationale at TL spawn-decision time>
+
+               You are <ROLE> in a design discussion: <discussion title>.
                Your expertise: <role-specific focus>.
                Topics: <topic brief>
 
@@ -559,19 +589,34 @@ Per `ae:agent-teams` Doodlestein Protocol. Three fresh agents, each answering ON
 ```
 Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
       team_name: "<existing team>", run_in_background: true,
-      prompt: "<path to conclusion.md> — single smartest improvement?
+      prompt: "📋 Cast: doodlestein-strategic
+                  Role: post-conclusion reviewer (strategic)
+                  Angle: single smartest improvement to the conclusion
+                  Why: catch alternatives that could have improved the decision
+
+               <path to conclusion.md> — single smartest improvement?
                Your answer is post-conclusion review, not a reopen signal.
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
 Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
       team_name: "<existing team>", run_in_background: true,
-      prompt: "<path to conclusion.md> — where does this first fail in real use?
+      prompt: "📋 Cast: doodlestein-adversarial
+                  Role: post-conclusion reviewer (adversarial)
+                  Angle: first real-use failure of the conclusion
+                  Why: catch implementation cliffs before commitment
+
+               <path to conclusion.md> — where does this first fail in real use?
                Your answer is post-conclusion review, not a reopen signal.
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
 Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
       team_name: "<existing team>", run_in_background: true,
-      prompt: "<path to conclusion.md> — which decision most likely reversed in 6mo?
+      prompt: "📋 Cast: doodlestein-regret
+                  Role: post-conclusion reviewer (regret prediction)
+                  Angle: highest-regret decision likely reversed within 6 months
+                  Why: surface reversibility cost before lock-in
+
+               <path to conclusion.md> — which decision most likely reversed in 6mo?
                Your answer is post-conclusion review, not a reopen signal.
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 ```

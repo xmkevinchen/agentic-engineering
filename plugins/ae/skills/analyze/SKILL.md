@@ -183,14 +183,24 @@ TeamCreate(team_name: "F-NNN-analyze")
 
 Agent(subagent_type: "archaeologist", name: "archaeologist",
       team_name: "<team>", run_in_background: true,
-      prompt: "Investigate existing code for: <feature title>.
+      prompt: "📋 Cast: archaeologist
+                  Role: research lead (code archaeology)
+                  Angle: existing code structure + dependency chains
+                  Why: TL needs factual baseline before standards-expert compares to industry
+
+               Investigate existing code for: <feature title>.
                Follow Team Communication Protocol.
                Teammates: standards-expert, challenger.
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
       team_name: "<team>", run_in_background: true,
-      prompt: "Research industry best practices for: <feature title>.
+      prompt: "📋 Cast: standards-expert
+                  Role: research support (industry comparison)
+                  Angle: framework + version specific best practices
+                  Why: bridges archaeology evidence to industry patterns; informs architect decisions
+
+               Research industry best practices for: <feature title>.
                Follow Team Communication Protocol.
                Teammates: archaeologist, challenger.
                Wait for archaeologist's code analysis before comparing.
@@ -198,7 +208,18 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
 
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
-      prompt: "Challenge findings from archaeologist + standards-expert for: <feature title>.
+      prompt: "📋 Cast: challenger
+                  Role: opposition (analyze mode)
+                  Angle: blind spots in archaeologist + standards-expert findings
+                  Why: pure adversarial pass before TL synthesizes (F-019 challenger.md migration: mode behavior embedded here, not in agent body)
+
+               Analyze mode protocol steps (embedded per F-019 mode migration):
+               1. Parallel Launch: Wait for Archaeologist + Standards Expert (TL forwards); call Codex/Gemini independently for research on the topic.
+               2. Challenge + Cross-family: After teammate findings arrive, combine with cross-family opinions. SendMessage to the teammate who produced the finding with your challenge.
+               3. Discussion: Wait for teammate responses; follow up with cross-family if new arguments emerge; form consensus or mark disagreements.
+               4. Aggregate and Report: SendMessage to team-lead with all discussions, marking consensus and disagreements.
+
+               Challenge findings from archaeologist + standards-expert for: <feature title>.
                Follow Team Communication Protocol.
                Step 1: independent blind-spot review.
                Step 2: wait for teammate findings, then challenge.
@@ -208,7 +229,12 @@ Agent(subagent_type: "challenger", name: "challenger",
 # For each enabled proxy in pipeline.yml cross_family:
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Research <feature title> via <proxy> MCP — <assigned angle>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family research (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; independent family perspective complements core team
+
+               Research <feature title> via <proxy> MCP — <assigned angle>.
                Teammates: archaeologist, standards-expert, challenger.
                SendMessage findings to team-lead when done.")
 ```
@@ -233,43 +259,48 @@ After all teammates have SendMessage'd findings to TL, before synthesis:
 
 TL collects findings, resolves disagreements, writes to `.ae/features/active/F-NNN-<slug>/analysis.md`:
 
+**Per CLAUDE.md `Output Standards`** — 金字塔顶 ≤ 5 行（必填），下层留档（按需，省略空段落）。TL 必须先理解 + 提炼，不要直接拼贴 agent finding。
+
 ```markdown
 ---
 id: "F-NNN"
 title: "Analysis: <feature title>"
 type: analysis
 created: YYYY-MM-DD
-tags: [relevant, tags]
 ---
 
 # Analysis: <feature title>
 
-## Question
-<original BL body / user description, verbatim>
+## TL;DR
 
-## Findings
+- **问题**: <一句话 — 复述 BL 核心，不是全文照搬>
+- **当前判断**: <一句话 — TL 综合 agent 调研后的 stance，不是 raw aggregation>
+- **关键开放问题**: <0-2 个 — 必须 user 拍板的 / 仍有分歧的；没有就写「无」>
+- **下一步**: <具体: /ae:discuss / /ae:plan / 关掉 / 等 trigger 等>
 
-### Prior Art from Project Knowledge Base
-<from Mengdie if available; "Prior context: unavailable" otherwise>
+---
 
-### Relevant Code
-<key files + line refs from archaeologist>
+## 调研留档
 
-### Architecture & Patterns
-<how the codebase handles similar scenarios>
+只在金字塔尖承载 user 判断不够时才写下面段落。每段独立按需出现，**省略空段落**——不要写"未做 X 因 overkill"。
 
-### Industry Practice Comparison
-<from standards-expert>
+### 关键证据（按需）
+<archaeologist + agent 调研 finding，cite file:line。删冗余/低信号 finding；不要每个 agent 各占一节平铺。>
 
-### Challenges & Disagreements
-<from challenger + cross-family>
+### 反对意见处理（按需）
+<challenger / cross-family 提的关键挑战 + 怎么处理（接受 / 拒绝 + 一句话理由 / defer 到 BL）。不全文 enumerate。>
 
-## Summary
-<concise answer; key takeaways>
+### Industry comparison（按需）
+<standards-expert，仅当对当前判断有 actionable 影响时。否则省。>
 
-## Possible Next Steps
-<suggest /ae:discuss inside this feature dir if decisions remain, or /ae:plan if path is clear>
+### Mengdie prior art（按需）
+<仅当有相关 result 时。无 result 不写"unavailable"占位。>
 ```
+
+**反例**（违反 Output Standards 的旧形态）：
+- 9 个 sub-section 平铺（`Question` / `Findings` / `Prior Art` / `Relevant Code` / `Architecture` / `Industry Practice` / `Challenges` / `Summary` / `Next Steps`）—— 每个 section 留着就要填，填不出实质就填"未做"
+- 没有 TL;DR，user 必须读完整篇才能判断
+- 每个 agent 各占一段平铺，60%+ 内容跨 section 重叠
 
 ### Knowledge capture (Mengdie)
 
