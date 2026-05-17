@@ -10,6 +10,8 @@ Read-only pipeline status viewer. Default view shows in-flight **features** (`.a
 
 This skill produces no file output — it is a viewer, not a producer.
 
+> For mid-skill session state (git context + in-flight teams + recent verdicts + BLs captured today), use [`/ae:status`](../status/SKILL.md) — mid-skill-safe pure-read, no team spawn, completes in <2s.
+
 ## Arguments
 
 - `--all` — Include `features/done/` and `features/abandoned/` in addition to the default `features/active/`. Without `--all`, done is summarized (count line) and abandoned is silent.
