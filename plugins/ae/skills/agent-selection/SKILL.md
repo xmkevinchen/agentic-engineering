@@ -47,7 +47,7 @@ user-invocable: true
 
    `architect`/`qa` remain name-spawned built-ins in Phase 1 — project agents needing architect focus use `role: domain-expert` + `specialty: architecture`.
 
-   **Precedence (Rule 4 core)**: project agent preferred over built-in when role matches. Pipeline.yml explicit `role:` overrides frontmatter-inferred role. Full precedence ladder is under "Phase 1 precedence semantics" below.
+   **Precedence (Rule 4 core)**: pipeline.yml explicit `role:` overrides frontmatter-inferred role for role-slot mapping. Project agents do NOT auto-prioritize over built-ins by virtue of source — see [Project-agent precedence](#project-agent-precedence) for the single canonical rule. Full precedence ladder is under "Phase 1 precedence semantics" below.
 
    ### Layer 1 — CLAUDE.md governance rules
 
@@ -80,6 +80,18 @@ user-invocable: true
 
    Unknown `schema_version:` value (anything outside `{1, 2}`) → warn + treat as `1` for safety (preserve legacy behavior rather than apply unknown semantics).
 
+   <a name="project-agent-precedence"></a>
+
+   ### Project-agent precedence — single canonical rule (F-009 Step 3)
+
+   `project_agents[]` does NOT receive a priority bonus over built-ins. The only paths by which `project_agents[]` entries reach a slot ahead of an equally-fitting built-in are:
+
+   - (a) `required: true` — always-spawn override (deterministic; bypasses Layer 2 selection for that slot).
+   - (b) `priority: <int>` — Layer 2 **context hint** for Claude's pick (NOT a mechanical weighting bonus; Claude weighs it alongside task fit).
+   - (c) `role` / `specialty` metadata — helps Claude judge fit during Layer 2; ties are NOT broken in `project_agents[]`'s favor by virtue of source.
+
+   "Project agents are preferred over built-ins" is an **incorrect framing**. The Layer 2 rubric (task fit → stack compatibility → role coverage → specialty specificity) treats project, user, plugin built-in, and library sources as a single pool once they reach Claude — source is metadata, not priority. All other passages in this document that mention `project_agents` precedence cross-reference back to this section.
+
    ### Layer 2 — LLM-based selection (two-tier)
 
    Layer 2 uses a **two-tier pool** to balance signal quality vs context budget. Claude picks per slot, starting from the primary pool; only falls back to the library when the primary pool has no fit.
@@ -88,7 +100,7 @@ user-invocable: true
    - Project agents (`.claude/agents/*.md`) — hand-written or imported via `--add`
    - User agents (`~/.claude/agents/*.md`)
    - AE built-in agents (`plugins/ae/agents/{workflow,review,research}/*.md`)
-   - `pipeline.yml project_agents[]` provides metadata overlay (role/priority/specialty/required) on the files in `.claude/agents/` — these hints help Claude judge fit, but do NOT auto-prioritize these agents over equally-fitting built-ins.
+   - `pipeline.yml project_agents[]` provides metadata overlay (role/priority/specialty/required) on the files in `.claude/agents/` — these hints help Claude judge fit, but do NOT auto-prioritize these agents over equally-fitting built-ins. See [Project-agent precedence](#project-agent-precedence) for the single canonical rule.
 
    **Library fallback** (scanned only on primary-pool miss):
    - Each entry in `pipeline.yml` `agent_libraries[]` → enumerate `<source>/**/*.md`
@@ -171,11 +183,11 @@ user-invocable: true
 
    ### Phase 1 precedence semantics (best-N + priority)
 
-   For role-slot filling:
+   For role-slot filling (see [Project-agent precedence](#project-agent-precedence) for the canonical rule that frames this ladder — items 1 and 3 here are precisely the (a) and (b) clauses there):
 
-   1. `project_agents[].required: true` agents (always spawn)
+   1. `project_agents[].required: true` agents (always spawn) — clause (a) of the canonical rule
    2. Layer 1 `force` matches (always spawn)
-   3. Remaining candidates picked by Claude per Layer 2 rubric, with Layer 1 `prefer` rules and `project_agents[].priority: <int>` as context hints
+   3. Remaining candidates picked by Claude per Layer 2 rubric, with Layer 1 `prefer` rules and `project_agents[].priority: <int>` as context hints (NOT mechanical weighting) — clause (b) of the canonical rule
    4. Cap at N=3 per role slot (Phase 1 hardcoded default)
 
    **Spawning**: use agent filename stem as `subagent_type` — CC resolves `.claude/agents/<stem>.md` automatically.
