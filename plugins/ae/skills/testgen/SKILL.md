@@ -37,7 +37,12 @@ TeamCreate(team_name: "<target>-testgen")
 
 Agent(subagent_type: "qa", name: "qa",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this test plan for completeness: <target code summary + proposed test cases>.
+      prompt: "📋 Cast: qa
+                  Role: test plan completeness reviewer
+                  Angle: code path coverage + edge cases + error handling
+                  Why: primary completeness check for test design
+
+               Review this test plan for completeness: <target code summary + proposed test cases>.
                Follow Team Communication Protocol.
                Teammates: security-reviewer, <enabled proxies>.
                Check: all code paths covered? Edge cases? Error handling?
@@ -46,7 +51,12 @@ Agent(subagent_type: "qa", name: "qa",
 
 Agent(subagent_type: "security-reviewer", name: "security-reviewer",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review test plan for security-relevant test cases: <target code + test cases>.
+      prompt: "📋 Cast: security-reviewer
+                  Role: security test coverage reviewer
+                  Angle: injection / auth bypass / data leak test cases
+                  Why: security paths often missed by general coverage check
+
+               Review test plan for security-relevant test cases: <target code + test cases>.
                Follow Team Communication Protocol.
                Teammates: qa, <enabled proxies>.
                Check: injection, auth bypass, data leaks tested?
@@ -57,7 +67,12 @@ Agent(subagent_type: "security-reviewer", name: "security-reviewer",
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review test coverage via <proxy> MCP — <assigned angle>: <target code + test cases>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family test reviewer (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; independent family perspective on test design
+
+               Review test coverage via <proxy> MCP — <assigned angle>: <target code + test cases>.
                Teammates: qa, security-reviewer.
                SendMessage findings to team-lead when done.")
 ```

@@ -109,7 +109,12 @@ Launch 1 combined Doodlestein agent (sonnet model, independent subagent — no t
 ```
 Agent(subagent_type: "general-purpose", model: "sonnet",
       run_in_background: true,
-      prompt: "You are a Doodlestein adversarial reviewer. Review ONLY the following diff
+      prompt: "📋 Cast: general-purpose (Track 4 Doodlestein)
+                  Role: per-commit Doodlestein reviewer (combined strategic + adversarial + regret)
+                  Angle: proactive adversarial challenge on current diff
+                  Why: catch what Tracks 1-3 missed before commit lands
+
+               You are a Doodlestein adversarial reviewer. Review ONLY the following diff
                (do NOT run git diff yourself, do NOT look at accumulated/feature-level changes):
 
                {{ TARGET_DIFF_OUTPUT }}

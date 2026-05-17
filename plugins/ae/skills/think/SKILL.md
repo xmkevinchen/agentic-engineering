@@ -45,7 +45,12 @@ TeamCreate(team_name: "<topic>-deep-think")
 
 Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
-      prompt: "Analyze this problem from a structural/design perspective: <problem + hypothesis + relevant files>.
+      prompt: "📋 Cast: architect
+                  Role: deep-think lead (structural/design)
+                  Angle: problem decomposition + design trade-offs
+                  Why: primary structural perspective for deep investigation
+
+               Analyze this problem from a structural/design perspective: <problem + hypothesis + relevant files>.
                Follow Team Communication Protocol.
                Teammates: standards-expert, challenger, <enabled proxies>.
                Produce analysis with evidence from code.
@@ -53,7 +58,12 @@ Agent(subagent_type: "architect", name: "architect",
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
       team_name: "<team>", run_in_background: true,
-      prompt: "Evaluate against industry best practices and known patterns: <problem>.
+      prompt: "📋 Cast: standards-expert
+                  Role: deep-think support (industry comparison)
+                  Angle: framework + version specific best practices for this problem
+                  Why: ground architect's analysis in mainstream patterns
+
+               Evaluate against industry best practices and known patterns: <problem>.
                Follow Team Communication Protocol.
                Teammates: architect, challenger.
                Wait for architect's analysis before evaluating.
@@ -61,7 +71,18 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
 
 Agent(subagent_type: "challenger", name: "challenger",
       team_name: "<team>", run_in_background: true,
-      prompt: "Challenge the architect's analysis. Find blind spots, untested assumptions, alternative explanations: <problem>.
+      prompt: "📋 Cast: challenger
+                  Role: opposition (think mode)
+                  Angle: blind spots in architect's analysis + alternative explanations
+                  Why: deep-investigation needs adversarial check before TL synthesizes (F-019 challenger.md migration: mode behavior embedded here)
+
+               Think mode protocol steps (embedded per F-019 mode migration):
+               1. Wait for architect's analysis (TL forwards).
+               2. Independent challenge: find blind spots, untested assumptions, alternative explanations specific to this single deep-investigation question.
+               3. Cross-family check: call Codex/Gemini if needed for independent perspective on the question.
+               4. Aggregate: SendMessage challenges to team-lead with structured format (Claim/Evidence/Objection/Confidence).
+
+               Challenge the architect's analysis. Find blind spots, untested assumptions, alternative explanations: <problem>.
                Follow Team Communication Protocol.
                Teammates: architect, standards-expert.
                Wait for architect's analysis before challenging.
@@ -71,7 +92,12 @@ Agent(subagent_type: "challenger", name: "challenger",
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent analysis of this problem via <proxy> MCP — <assigned angle>: <problem + relevant files>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family deep-think (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; independent family perspective on deep question
+
+               Independent analysis of this problem via <proxy> MCP — <assigned angle>: <problem + relevant files>.
                Teammates: architect, standards-expert, challenger.
                SendMessage findings to team-lead when done.")
 ```

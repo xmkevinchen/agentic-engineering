@@ -40,7 +40,12 @@ TeamCreate(team_name: "<target>-trace")
 
 Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
-      prompt: "Validate this trace for completeness and accuracy: <trace results>.
+      prompt: "📋 Cast: architect
+                  Role: trace validator (structural)
+                  Angle: trace completeness + accuracy + missing hops
+                  Why: primary structural validator for execution flow
+
+               Validate this trace for completeness and accuracy: <trace results>.
                Follow Team Communication Protocol.
                Teammates: dependency-analyst, performance-reviewer, <enabled proxies>.
                Check: missing hops? Incorrect call order? Hidden async paths?
@@ -49,7 +54,12 @@ Agent(subagent_type: "architect", name: "architect",
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
       team_name: "<team>", run_in_background: true,
-      prompt: "Analyze dependencies in this trace: <trace results>.
+      prompt: "📋 Cast: dependency-analyst
+                  Role: trace dependency analyzer
+                  Angle: circular deps + tight coupling + fragile chains
+                  Why: complements architect by surfacing dep-graph weaknesses
+
+               Analyze dependencies in this trace: <trace results>.
                Follow Team Communication Protocol.
                Teammates: architect, performance-reviewer.
                Find: circular deps, tight coupling, fragile chains.
@@ -57,7 +67,12 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
 
 Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
       team_name: "<team>", run_in_background: true,
-      prompt: "Identify performance concerns in this trace: <trace results>.
+      prompt: "📋 Cast: performance-reviewer
+                  Role: trace performance reviewer
+                  Angle: N+1 queries + blocking calls + memory hotspots in execution path
+                  Why: hot-path identification per trace target
+
+               Identify performance concerns in this trace: <trace results>.
                Follow Team Communication Protocol.
                Teammates: architect, dependency-analyst.
                Check: N+1 queries, unnecessary hops, blocking calls, memory issues.
@@ -67,7 +82,12 @@ Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent trace validation via <proxy> MCP — <assigned angle>: <target + trace results>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family trace validator (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; independent family perspective
+
+               Independent trace validation via <proxy> MCP — <assigned angle>: <target + trace results>.
                Teammates: architect, dependency-analyst, performance-reviewer.
                SendMessage findings to team-lead when done.")
 ```
