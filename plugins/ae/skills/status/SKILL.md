@@ -43,6 +43,8 @@ This section is read-only — does NOT re-run the `/ae:dashboard` stage-detectio
 
 Scan `~/.claude/teams/<name>/config.json` directly. **Do NOT use `TaskList`** — `TaskList` is conversation-scoped and cannot see tasks from other sessions (per F-008 plan-review dep-analyst Finding 2). Team dirs are filesystem-persistent and authoritative across sessions.
 
+**Performance critical**: filesystem traversal only — no team spawn, no file writes, no expensive parses. If a future edit introduces a per-team expensive operation (e.g., reading every member's full output), the <2s aggregate /ae:status contract will silently break. See integration-test.md baseline (155ms for full skill).
+
 **Staleness filter**: skip team dirs whose `config.json` mtime is older than 4 hours (heuristic — TeamDelete should clean up active teams; old surviving dirs are likely orphans from a crash). Compute via `find ~/.claude/teams -maxdepth 2 -name config.json -mmin -240`.
 
 For each surviving team:
@@ -57,7 +59,31 @@ Scan BOTH locations (union):
 - `.ae/features/done/F-*/review.md` (feature-resident reviews, Plan 051+)
 - `.ae/reviews/*.md` (legacy reviews; non-recursive — naturally excludes `adhoc/`)
 
-For each, read frontmatter `verdict` + the feature/plan title from `target`. Sort by `created:` descending. Output the most recent 5 verdicts: `<verdict-icon> F-NNN — <title> (<created date>)`. Verdict icons: `✓` for pass, `✗` for fail.
+For each file, read frontmatter `verdict` + `created` + the feature/plan title from `target`. **Sort by `created:` descending — NOT by filesystem mtime.** Filesystem mtime is unreliable (archive `mv` operations + later edits change mtime independently of the review's original creation date); `created:` is the canonical ordering field.
+
+Implementation outline (the actual sort step that section 4 must perform):
+
+```bash
+# Pseudo: for each candidate file, extract `created:` value, sort numerically/lexically descending, take top 5
+{
+  for f in .ae/features/done/F-*/review.md .ae/reviews/*.md; do
+    [ -f "$f" ] || continue
+    case "$f" in *adhoc*) continue ;; esac   # defense-in-depth against future glob change
+    created=$(grep -E '^created:' "$f" | head -1 | sed 's/^created: *//; s/"//g')
+    [ -n "$created" ] || continue            # skip files lacking frontmatter `created:`
+    echo "$created|$f"
+  done
+} | sort -r | head -5 | while IFS='|' read created path; do
+  verdict=$(grep -E '^verdict:' "$path" | head -1 | sed 's/^verdict: *//; s/"//g')
+  title=$(grep -E '^title:' "$path" | head -1 | sed 's/^title: *//; s/"//g')
+  icon="?"; [ "$verdict" = "pass" ] && icon="✓"; [ "$verdict" = "fail" ] && icon="✗"
+  echo "  $icon $title ($created)"
+done
+```
+
+Sort key uses ISO-8601-style dates (`YYYY-MM-DD` or `YYYYMMDDTHHMMSSsssZ`) which are lexically sortable; `sort -r` produces descending order. Files with missing `created:` are skipped (logged as warning if any are encountered).
+
+**Performance critical**: this section reads frontmatter from N review files where N is small (≤50 typical). No team spawn, no file writes. See integration-test.md baseline (155ms for full /ae:status); section 4 alone should stay well under 100ms.
 
 If no review files found: `(no reviews yet)`.
 

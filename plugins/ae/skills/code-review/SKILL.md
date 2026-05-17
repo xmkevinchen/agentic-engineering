@@ -85,7 +85,7 @@ In light mode (cross-family disabled): Tracks 2/3/4 transition `pending → comp
 
 **Task lifecycle**: at skill start, immediately after the TaskCreate for `ae:code-review: Pre-check`, call `TaskUpdate(taskId, status: "in_progress")`.
 After the Pre-check completion criterion fires (per the table above), call `TaskUpdate(taskId, status: "completed")`.
-The same lifecycle applies to each track task — `TaskUpdate(taskId, status: "in_progress")` when the track's agent is spawned, `TaskUpdate(taskId, status: "completed")` when that track's findings arrive at TL.
+The same lifecycle applies to each track task — `TaskUpdate(taskId, status: "in_progress")` when the track's agent is spawned, `TaskUpdate(taskId, status: "completed")` when that track's findings arrive at TL. (Track-specific completion criterion = findings-arrival at TL; more precise than the generic "phase begins / completion criterion is met" wording used in the other 5 skills with this section, because each track's completion is a discrete agent-message-arrival event, not a step boundary.)
 
 **Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
 
