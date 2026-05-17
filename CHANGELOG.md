@@ -4,7 +4,7 @@
 
 ### F-009 — Agent invocation consistency fixes (4 commits + 1 fixup)
 
-**Commits**: `ad58564` (Step 1), `6df259e` (Step 2), `0f3226e` (Step 3), `a3a09c2` (Step 4), `<fixup>` (post-review fixup applying 5 P1 + 7 P2 findings).
+**Commits**: `ad58564` (Step 1), `6df259e` (Step 2), `0f3226e` (Step 3), `a3a09c2` (Step 4), `5da112b` (post-review fixup applying 5 P1 + 7 P2 findings).
 
 #### Step 1 — `/ae:discuss` preflight no longer silently degrades quorum (`ad58564`)
 
@@ -60,7 +60,7 @@ Codex P1-a in F-009 plan-review rejected the original plan's approach of adding 
 
 **Files**: `plugins/ae/skills/plan-review/SKILL.md`, `plugins/ae/skills/setup/agent-contract.md`
 
-#### Post-review fixup (`<fixup>`)
+#### Post-review fixup (`5da112b`)
 
 `/ae:review` 4-reviewer pass (architecture + challenger + codex + gemini) surfaced 5 P1 + 7 P2 findings post-ship. Fixup commit applies all of them: cross-spec drift in `agent-governance-format.md`, `schema_version:` placement ambiguity, AC1 rollback procedure broken as written, `qa` first-class declaration vs absent override table, `agent-contract.md` L99/L105 contradiction, trace example conflated 2 scenarios, "one-time warning" implementation gap (rewritten to "per-invocation"), omitted-field default not shown, unknown-version not routed, "do nothing" migration option missing, CHANGELOG missing Step 1+4 entries. See `.ae/features/active/F-009-agent-invocation-audit/review.md` for the full review record.
 
