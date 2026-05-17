@@ -68,17 +68,29 @@ user-invocable: true
 
    ### Governance file schema versioning (F-009 Step 2)
 
-   The governance file (`.claude/agent-governance.md`) carries a top-level `schema_version:` field in its YAML frontmatter. Missing field defaults to `1` (legacy). Recognized values:
+   **Placement — top-level YAML field inside the governance YAML code block** (NOT markdown `---` frontmatter): the governance file (`.claude/agent-governance.md`) is a markdown file with a YAML code block (\`\`\`yaml ... \`\`\`); `schema_version:` is a top-level field inside that YAML block, sibling to `rules:`. It is NOT inside an individual rule entry, and NOT a markdown `---` frontmatter field at the head of the file.
 
-   - **`schema_version: 1` (legacy)** — preserves the pre-F-009 behavior: `action: force` rules short-circuit Layers 2+3 AND bypass the stack-mismatch filter unconditionally (the user is presumed to have explicitly overridden fit judgment by writing the force rule). On first load of a schema_version=1 (or missing) file, emit one-time trace warning:
+   Concrete placement:
+
+   ```yaml
+   schema_version: 2     # ← top-level, sibling to `rules:`
+   rules:
+     - action: force
+       agent: php-test-reviewer
+       stack_check: enforce   # ← per-rule field, only valid under schema_version: 2
+   ```
+
+   Missing top-level `schema_version:` defaults to `1` (legacy). Recognized values:
+
+   - **`schema_version: 1` (legacy)** — preserves the pre-F-009 behavior: `action: force` rules short-circuit Layers 2+3 AND bypass the stack-mismatch filter unconditionally (the user is presumed to have explicitly overridden fit judgment by writing the force rule). On every invocation of a skill that loads a `schema_version=1` (or missing) governance file, emit trace warning (no across-invocation persistence — LLM prompt has no session-level memory; the warning is per-invocation, not literally once-per-file-lifetime):
      ```
      [layer1] governance schema_version=1 (legacy); add `schema_version: 2` to opt into safer force-vs-stack handling. See CHANGELOG entry for F-009 Step 2 migration.
      ```
    - **`schema_version: 2` (current)** — the force agent goes through the stack-mismatch filter by default. To preserve the legacy bypass on a specific rule, declare it explicitly with a new per-rule field:
-     - `stack_check: enforce` (default when omitted) — stack-mismatch on this force agent triggers `AskUserQuestion` (accept incompatible force / drop this force / abort skill). User disposition is recorded in trace.
+     - `stack_check: enforce` (default when omitted from a rule under `schema_version: 2`) — stack-mismatch on this force agent triggers `AskUserQuestion` (accept incompatible force / drop this force / abort skill). User disposition is recorded in trace.
      - `stack_check: skip` — silently bypass the stack-mismatch filter for this rule, matching legacy schema_version=1 behavior; trace records the bypass for audit.
 
-   Unknown `schema_version:` value (anything outside `{1, 2}`) → warn + treat as `1` for safety (preserve legacy behavior rather than apply unknown semantics).
+   Unknown top-level `schema_version:` value (anything outside `{1, 2}`) → emit trace warning `[layer1] governance unknown schema_version=<value>; treating as schema_version=1` and follow the v1 legacy branch (preserve current behavior rather than apply unknown semantics).
 
    <a name="project-agent-precedence"></a>
 
@@ -109,11 +121,12 @@ user-invocable: true
 
    **Flow per slot** (strict order; Claude only sees what survives Layer 1):
    1. **Force apply**: `action: force` governance rules pre-select the named agent into the team for this slot. **Stack-mismatch interaction is gated by the governance file `schema_version:` field** (see "Governance file schema versioning" above):
-      - **schema_version=1 (or missing)**: `force` agents bypass the stack-mismatch filter unconditionally (legacy behavior — preserved for backward compatibility).
-      - **schema_version=2** with rule `stack_check: enforce` (default when omitted): if the force agent's `tech_stack` is disjoint from the project's, AE emits `[layer1] force-apply: <agent> stack-mismatch detected; user disposition required` and surfaces `AskUserQuestion` (accept incompatible force / drop this force / abort skill). User disposition is recorded in trace.
+      - **schema_version=1 (or missing)**: `force` agents bypass the stack-mismatch filter unconditionally (legacy behavior — preserved for backward compatibility). No per-invocation bypass-event trace line is emitted (only the schema_version=1 deprecation warning fires).
+      - **schema_version=unknown** (any value outside `{1, 2}`): emit trace warning `[layer1] governance unknown schema_version=<value>; treating as schema_version=1` and fall through to the v1 branch above.
+      - **schema_version=2** with rule `stack_check: enforce` (default when omitted from a rule under v2): if the force agent's `tech_stack` is disjoint from the project's, AE emits `[layer1] force-apply: <agent> stack-mismatch detected; user disposition required` and surfaces `AskUserQuestion` (accept incompatible force / drop this force / abort skill). User disposition is recorded in trace.
       - **schema_version=2** with rule `stack_check: skip`: silently bypass the stack-mismatch filter for this rule, mirroring schema_version=1 behavior; AE emits `[layer1] force-apply: <agent> stack-mismatch SKIPPED via stack_check: skip` for audit.
       - Either way, an `action: exclude` rule on the same agent wins (exclude is the hardest signal).
-      - **Trace event supersession** (F-009 Step 2): when a force agent triggers the stack-mismatch path (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event from step 2 below is **suppressed for that agent** — the new force-apply line is the single authoritative record. Hard-constraint stack-mismatch events continue to fire for non-force agents in the normal flow.
+      - **Trace event supersession** (F-009 Step 2): when a force agent triggers the stack-mismatch path under `schema_version=2` (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event from step 2 below is **suppressed for that agent** — the new force-apply line is the single authoritative record. Under `schema_version=1` legacy bypass, neither line fires for the force agent (silent bypass is the documented v1 behavior). Hard-constraint stack-mismatch events continue to fire for non-force agents in the normal flow regardless of schema_version.
    2. **Hard-constraint filter** (mechanical, BEFORE Claude):
       - `action: exclude` governance rules remove the named agent from the candidate pool.
       - Stack-mismatch: agent declares `tech_stack: [X, Y, ...]` in its frontmatter or `pipeline.yml project_agents[]` entry; project declares `tech_stack` at the top level of `pipeline.yml` (source of truth — no file-extension auto-detection). Disjoint sets → filtered out. (For force agents, see step 1 — the supersession rule routes the event through force-apply instead.)
@@ -134,18 +147,37 @@ user-invocable: true
      [layer1] claude-input: pool = [rust-mcp-expert, ...] (phpstan-expert absent)
      ```
 
-     Example sequence when the mismatched agent IS the target of a `force` rule (governance `schema_version: 2`, `stack_check: enforce`):
+     Example sequence — `schema_version: 2`, force-rule on stack-mismatched agent, `stack_check: enforce` explicit:
      ```
      [layer1] force-apply: phpstan-expert stack-mismatch detected; user disposition required (agent tech_stack [php, laravel] ⊄ project tech_stack [rust, mcp])
      [layer1] force-apply: phpstan-expert user disposition: accept (or: drop / abort)
      [layer1] claude-input: pool = [phpstan-expert, ...] (force-accepted) | [...] (force-dropped) | <skill aborts>
      ```
-     Note the absence of the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED phpstan-expert` line — the force-apply event supersedes it for force agents (see Flow per slot, step 1).
+     Note the absence of the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED phpstan-expert` line — the force-apply event supersedes it for force agents under v2 (see Flow per slot, step 1).
 
-     Example sequence with `schema_version: 1` (legacy) or `schema_version: 2 + stack_check: skip` — silent bypass preserved:
+     Example sequence — `schema_version: 2`, force-rule on stack-mismatched agent, `stack_check` field **omitted** (default-enforce path):
+     ```
+     [layer1] force-apply: phpstan-expert stack-mismatch detected; user disposition required (agent tech_stack [php, laravel] ⊄ project tech_stack [rust, mcp]); stack_check field omitted, defaulted to enforce
+     [layer1] force-apply: phpstan-expert user disposition: accept (or: drop / abort)
+     ```
+     The default-enforce path is functionally identical to explicit `stack_check: enforce`; the trace appends `; stack_check field omitted, defaulted to enforce` so audit can distinguish explicit-enforce from default-enforce when investigating a governance file.
+
+     Example sequence — `schema_version: 2`, force-rule on stack-mismatched agent, `stack_check: skip` (explicit opt-out preserving legacy bypass):
+     ```
+     [layer1] force-apply: phpstan-expert stack-mismatch SKIPPED via stack_check: skip
+     [layer1] claude-input: pool = [phpstan-expert, ...]
+     ```
+
+     Example sequence — `schema_version: 1` (legacy, or missing field) — silent unconditional bypass; only the deprecation warning fires:
      ```
      [layer1] governance schema_version=1 (legacy); add `schema_version: 2` to opt into safer force-vs-stack handling. See CHANGELOG entry for F-009 Step 2 migration.
-     [layer1] force-apply: phpstan-expert stack-mismatch SKIPPED via stack_check: skip (or: schema_version=1 legacy bypass)
+     [layer1] claude-input: pool = [phpstan-expert, ...]
+     ```
+     Note: NO `[layer1] force-apply: ... stack-mismatch ...` event in this path — v1 legacy bypass is unconditional and silent on the force-rule side. The deprecation warning is the only schema_version=1-specific trace line.
+
+     Example sequence — `schema_version: 99` (unknown value) — falls through to v1:
+     ```
+     [layer1] governance unknown schema_version=99; treating as schema_version=1
      [layer1] claude-input: pool = [phpstan-expert, ...]
      ```
    - **Team-lead synthesis report** (default-ON, end of skill run): a `## Agent Selection Trace` section in the report summarizes the Layer 1 events for this invocation. Same structured format as the stdout surface but embedded in the skill's final written output, so it persists beyond the console session.

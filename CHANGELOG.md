@@ -2,23 +2,67 @@
 
 ## Unreleased
 
-### F-009 Step 2 — BREAKING: `action: force` no longer silently bypasses stack-mismatch (commit pending)
+### F-009 — Agent invocation consistency fixes (4 commits + 1 fixup)
 
-`.claude/agent-governance.md` now carries a top-level `schema_version:` field. Behavior split:
+**Commits**: `ad58564` (Step 1), `6df259e` (Step 2), `0f3226e` (Step 3), `a3a09c2` (Step 4), `<fixup>` (post-review fixup applying 5 P1 + 7 P2 findings).
 
-- **`schema_version: 1`** (default when field is absent) — legacy behavior preserved verbatim: `action: force` rules short-circuit Layers 2+3 AND bypass the stack-mismatch filter. AE emits a one-time trace warning recommending upgrade.
+#### Step 1 — `/ae:discuss` preflight no longer silently degrades quorum (`ad58564`)
+
+When the `engineering-minimal-change-engineer` agent is missing from all 3 discovery locations (`plugins/ae/agents/engineering/`, `.claude/agents/`, `~/.claude/agents/`), `/ae:discuss` previously logged a warning and silently proceeded with a 4-agent quorum (over-complication detection coverage lost without user awareness). New behavior surfaces an `AskUserQuestion` with 2 options:
+
+1. Continue with reduced 4-agent quorum (3-of-4 threshold) — preserves existing escape hatch
+2. Abort discussion — TL emits install command and refuses to proceed
+
+No "install agent now" option — AE has no in-skill auto-install. Trace format now includes explicit user disposition (`continue|abort`).
+
+**Migration**: no action required for users with the agent present (vast majority — bundled plugin built-in). Users with custom plugin installs that omit the agent will see the new prompt instead of silent degradation.
+
+**Files**: `plugins/ae/skills/discuss/SKILL.md`
+
+#### Step 2 — BREAKING: `action: force` no longer silently bypasses stack-mismatch (`6df259e` + fixup)
+
+`.claude/agent-governance.md` now carries a top-level `schema_version:` field (sibling to `rules:` inside the YAML code block — NOT markdown `---` frontmatter). Behavior split:
+
+- **`schema_version: 1`** (default when field is absent) — legacy behavior preserved verbatim: `action: force` rules short-circuit Layers 2+3 AND bypass the stack-mismatch filter unconditionally. AE emits a per-invocation deprecation warning recommending upgrade (no across-invocation persistence — LLM prompt has no session memory).
 - **`schema_version: 2`** — `force` agents go through the stack-mismatch filter by default. Per-rule field `stack_check: enforce|skip` controls mismatch handling:
-  - `stack_check: enforce` (default when omitted) — stack-mismatch triggers `AskUserQuestion` (accept / drop / abort)
+  - `stack_check: enforce` (default when omitted from a v2 rule) — stack-mismatch triggers `AskUserQuestion` (accept / drop / abort)
   - `stack_check: skip` — preserve legacy silent-bypass on a per-rule basis (trace records the bypass for audit)
+- **Unknown `schema_version:` value** — emit trace warning `[layer1] governance unknown schema_version=<value>; treating as schema_version=1` and fall through to v1.
 
-**Trace event supersession**: when a force agent triggers the stack-mismatch path (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event is suppressed for that agent — the new `[layer1] force-apply: <agent> stack-mismatch ...` line is the single authoritative record. Hard-constraint stack-mismatch events continue to fire normally for non-force agents.
+**Trace event supersession**: when a force agent triggers the stack-mismatch path under `schema_version: 2` (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event is suppressed for that agent — the new `[layer1] force-apply: <agent> stack-mismatch ...` line is the single authoritative record. Under `schema_version: 1` legacy bypass, neither line fires (silent bypass is the documented v1 behavior). Hard-constraint stack-mismatch events continue to fire normally for non-force agents regardless of schema_version.
 
 **Migration steps**:
-1. Audit existing `.claude/agent-governance.md` files for `action: force` rules whose target agent has a `tech_stack:` disjoint from the project's.
-2. To preserve current silent-bypass behavior, either leave the file at `schema_version: 1` (legacy auto-applied) or set `schema_version: 2` AND add `stack_check: skip` to each affected rule.
-3. To adopt the safer prompt-on-mismatch behavior, set `schema_version: 2` and leave `stack_check` unset (defaults to `enforce`).
+1. **Do nothing** — if you have no `.claude/agent-governance.md` file OR your file has no `action: force` rules with stack-mismatched targets, you require no action. You receive legacy v1 behavior plus a per-invocation trace warning recommending upgrade.
+2. **Preserve legacy behavior explicitly** — set `schema_version: 1` at the top of your governance YAML block to silence the deprecation warning while keeping current bypass behavior.
+3. **Per-rule legacy preservation under v2** — set `schema_version: 2` AND add `stack_check: skip` to each rule whose force-bypass behavior you want to keep silent.
+4. **Adopt safer prompt-on-mismatch** — set `schema_version: 2` and leave `stack_check` unset on the rules where you want the new `AskUserQuestion` path (default `enforce` behavior).
 
-**Files**: `plugins/ae/skills/agent-selection/SKILL.md` (governance schema versioning section + Flow per slot step 1 + trace examples)
+**Files**: `plugins/ae/skills/agent-selection/SKILL.md` (governance schema versioning section + Flow per slot step 1 + 5 trace examples covering v1 / v2-enforce-explicit / v2-enforce-default / v2-skip / unknown-version); `plugins/ae/skills/setup/agent-governance-format.md` (Precedence section item 3 rewritten to reference the versioned spec + `schema_version:` field placement subsection).
+
+#### Step 3 — `project_agents[]` precedence: single canonical rule (`0f3226e`)
+
+Pre-F-009 `agent-selection/SKILL.md` had two contradictory statements: L50 said "project agent preferred over built-in when role matches" while L91 said "do NOT auto-prioritize these agents over equally-fitting built-ins" — Codex flagged this as P1-c. Now a single canonical "Project-agent precedence" paragraph (with HTML anchor `<a name="project-agent-precedence">`) is placed before the Layer 2 section and declares the 3 actual paths by which `project_agents[]` can reach a slot ahead of an equally-fitting built-in: `required: true` (always-spawn), `priority: <int>` (Layer 2 context hint, NOT mechanical weighting), and `role`/`specialty` metadata for fit judgment. "Project agents are preferred over built-ins" is explicitly refuted as incorrect framing. L50, L103, L186, L190 all cross-reference back to the canonical paragraph.
+
+**Migration**: no behavior change — the contradiction was in documentation only, not in selection logic. This entry is documented for users who read the spec.
+
+**Files**: `plugins/ae/skills/agent-selection/SKILL.md`
+
+#### Step 4 — Plugin built-in first-class reviewer slots: explicit override-table contract (`a3a09c2` + fixup)
+
+Codex P1-a in F-009 plan-review rejected the original plan's approach of adding `role: reviewer` frontmatter to `plugins/ae/agents/workflow/architect.md` and `qa.md` — `role:` is a 3-element closed routing enum (reviewer/developer/domain-expert), and adding it to plugin built-ins would muddle routing-vs-descriptor semantics. New approach:
+
+- `plugins/ae/skills/plan-review/SKILL.md` declares an explicit override table inside Step 1: `architect` and `dependency-analyst` are built-in defaults; `project_agents[]` entries override only via the table's explicit `role: reviewer + specialty matches X` conditions.
+- `plugins/ae/skills/setup/agent-contract.md` Role Enum section extended with a "Plugin built-in first-class reviewer slots" paragraph (with anchor) that documents the design rationale: routing by explicit skill hardcode, NEVER by inferred `role:` lookup. Bridging text added to the pre-existing "NOT first-class roles in Phase 1" sentence to clarify it scopes itself to the `role:` routing enum.
+- `qa` is documented as a "hardcoded transitional slot" — hard-spawned by `work/SKILL.md` but without an override table; intentional asymmetry noted in agent-contract.md, not papered over.
+- Plugin built-in agent frontmatter (`architect.md`, `qa.md`) deliberately unchanged — `grep "^role:"` returns 0 lines (regression guard).
+
+**Migration**: no action required. The contract is documentation-only and matches existing skill behavior.
+
+**Files**: `plugins/ae/skills/plan-review/SKILL.md`, `plugins/ae/skills/setup/agent-contract.md`
+
+#### Post-review fixup (`<fixup>`)
+
+`/ae:review` 4-reviewer pass (architecture + challenger + codex + gemini) surfaced 5 P1 + 7 P2 findings post-ship. Fixup commit applies all of them: cross-spec drift in `agent-governance-format.md`, `schema_version:` placement ambiguity, AC1 rollback procedure broken as written, `qa` first-class declaration vs absent override table, `agent-contract.md` L99/L105 contradiction, trace example conflated 2 scenarios, "one-time warning" implementation gap (rewritten to "per-invocation"), omitted-field default not shown, unknown-version not routed, "do nothing" migration option missing, CHANGELOG missing Step 1+4 entries. See `.ae/features/active/F-009-agent-invocation-audit/review.md` for the full review record.
 
 ---
 

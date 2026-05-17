@@ -90,10 +90,26 @@ When multiple rules fire for the same agent in the same context+scope, precedenc
 
 1. **`exclude` wins over `force`**. If governance has both `force` and `exclude` for agent X, X is removed. Rationale: hard negative constraint takes precedence over intent; no agent can be force-included if governance has explicitly banned it.
 2. **`exclude` wins over stack-mismatch** (trivially — both remove the agent).
-3. **`force` bypasses stack-mismatch filter**. A `force`d agent is included even if its declared `tech_stack` doesn't match the project's. Rationale: user has explicitly overridden fit judgment for this context. The Layer 1 trace records this bypass for audit.
-4. **`prefer` never overrides** hard constraints (`exclude`, stack-mismatch). If a prefer-matched agent is filtered by either, the prefer rule is a no-op (Layer 1 trace records the no-op).
+3. **`force` and stack-mismatch interaction is governed by `schema_version:`** (F-009 Step 2 introduced this versioning — see [Governance file schema versioning](../agent-selection/SKILL.md#governance-file-schema-versioning-f-009-step-2) in `agent-selection/SKILL.md` for the canonical spec):
+   - **`schema_version: 1`** (default when the top-level `schema_version:` field is absent): `force` bypasses stack-mismatch unconditionally and silently. Legacy behavior, preserved for backward compatibility.
+   - **`schema_version: 2`** with rule `stack_check: enforce` (the per-rule default when omitted under v2): stack-mismatch on a `force` agent triggers `AskUserQuestion` (accept / drop / abort) — the silent bypass is replaced with an explicit user disposition.
+   - **`schema_version: 2`** with rule `stack_check: skip`: explicit per-rule preservation of the v1 silent-bypass behavior; trace records the bypass for audit.
+   - The Layer 1 trace records the event for v2 (`[layer1] force-apply: <agent> stack-mismatch detected|SKIPPED ...`); v1 emits only a deprecation warning, not a per-event line.
+4. **`prefer` never overrides** hard constraints (`exclude`, stack-mismatch on non-force agents). If a prefer-matched agent is filtered by either, the prefer rule is a no-op (Layer 1 trace records the no-op).
 
-For implementation in trace output, see the Layer 1 Trace Format section in `plugins/ae/skills/agent-selection/SKILL.md`.
+For implementation in trace output and the per-version trace examples, see the Layer 1 Trace Format and Governance file schema versioning sections in `plugins/ae/skills/agent-selection/SKILL.md`.
+
+### `schema_version:` field placement
+
+Top-level field inside the governance YAML code block (sibling to `rules:`), NOT inside an individual rule entry, NOT a markdown `---` frontmatter field at the head of the file:
+
+```yaml
+schema_version: 2
+rules:
+  - action: force
+    agent: php-test-reviewer
+    stack_check: enforce
+```
 
 ## Scope values
 
