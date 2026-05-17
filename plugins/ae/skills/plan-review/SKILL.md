@@ -63,7 +63,12 @@ TeamCreate(team_name: "<feature>-plan-review")
 # Architect reviews plan structure and dependencies:
 Agent(subagent_type: "architect", name: "architect",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan's step decomposition and dependencies: <plan full text>.
+      prompt: "📋 Cast: architect
+                  Role: plan reviewer (decomposition + dependencies)
+                  Angle: step dependency graph + parallel strategy
+                  Why: mandatory baseline per plan-review selection table
+
+               Review this plan's step decomposition and dependencies: <plan full text>.
                Follow Team Communication Protocol.
                Teammates: dependency-analyst, <enabled proxies>.
                Produce step dependency graph and parallel strategy.
@@ -71,7 +76,12 @@ Agent(subagent_type: "architect", name: "architect",
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
       team_name: "<team>", run_in_background: true,
-      prompt: "Validate the architect's parallel assumptions in the step decomposition.
+      prompt: "📋 Cast: dependency-analyst
+                  Role: parallel feasibility validator
+                  Angle: file domain overlap + hidden runtime deps + shared types
+                  Why: stress-test architect's parallel claims via grep evidence (not assumption)
+
+               Validate the architect's parallel assumptions in the step decomposition.
                Follow Team Communication Protocol.
                Teammates: architect.
                Wait for architect's proposal before analyzing.
@@ -81,7 +91,12 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Review this plan via <proxy> MCP — <assigned angle>: <plan full text>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family plan reviewer (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; complements architect + dep-analyst
+
+               Review this plan via <proxy> MCP — <assigned angle>: <plan full text>.
                Teammates: architect, dependency-analyst.
                SendMessage findings to team-lead when done.")
 ```

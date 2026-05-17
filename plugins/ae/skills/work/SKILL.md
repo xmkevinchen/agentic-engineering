@@ -195,6 +195,12 @@ Agent(subagent_type: "<per agent-selection>", name: "<dev-agent>",
                  2. Full plan AC list (entire ## Acceptance Criteria section)
                  3. Conclusion body (verbatim <discussion-dir>/conclusion.md, when plan is discussion-referenced per Check 5)
                  4. Framing body (verbatim <discussion-dir>/framing.md, load-if-exists)>
+
+               📋 Cast: <runtime-selected>
+                  Role: dev-agent (Step N executor)
+                  Angle: <step-specific implementation focus>
+                  Why: <project_agents tech_stack match OR built-in fallback at TL spawn-decision time>
+
                [If overlap heuristic triggered] Prior step context: <previous step summary block>
                Execute Step N. Strict TDD: write test → red → implement → green.
                Teammates: [other devs], qa.
@@ -203,7 +209,12 @@ Agent(subagent_type: "<per agent-selection>", name: "<dev-agent>",
 # qa: structurally fixed role — always paired with <dev-agent> as a counterpart; hardcoded by design (NOT dispatcher-resolved)
 Agent(subagent_type: "qa", name: "qa",
       team_name: "<team>", run_in_background: true,
-      prompt: "Wait for dev, then review per checklist + cross-family — <specialized focus based on context>.
+      prompt: "📋 Cast: qa
+                  Role: checker (Step N per-step quality gate)
+                  Angle: <specialized focus based on context — verify tests, build, cross-family>
+                  Why: structurally fixed counterpart to dev-agent (fresh-eyes evaluation per F-019 / AE convention)
+
+               Wait for dev, then review per checklist + cross-family — <specialized focus based on context>.
                Send findings to dev, wait for fixes, re-review.
                Pass → SendMessage to dev confirming.")
 ```
@@ -419,7 +430,12 @@ Fix findings, re-run from Check D until clean pass.
    1. For each enabled proxy (check pipeline.yml cross_family), spawn with Doodlestein prompt on `git diff main...HEAD` (accumulated feature diff):
       ```
       Agent(subagent_type: "<proxy>", run_in_background: true,
-            prompt: "You are a Doodlestein adversarial reviewer performing an accumulated review.
+            prompt: "📋 Cast: <proxy>
+                        Role: accumulated Doodlestein reviewer (<family> angle)
+                        Angle: cross-commit strategic + adversarial + regret check on accumulated diff
+                        Why: midpoint/final checkpoint catches drift across multi-step plans
+
+                     You are a Doodlestein adversarial reviewer performing an accumulated review.
                      Analyze the full feature diff (git diff main...HEAD).
                      Answer 3 questions concisely (1-3 sentences each, cite file:line evidence):
                      1. STRATEGIC: What is the single smartest improvement across all these changes?

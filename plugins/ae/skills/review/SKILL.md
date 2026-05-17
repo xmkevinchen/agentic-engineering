@@ -329,6 +329,12 @@ Agent(subagent_type: "<reviewer>", name: "<reviewer>",
                  2. Conclusion body (verbatim, when discussion-referenced per Check 5)
                  3. Framing body (verbatim, if exists)
                  4. Commit range descriptor>
+
+               📋 Cast: <reviewer>
+                  Role: <reviewer-domain> reviewer
+                  Angle: <your-domain-specific-focus>
+                  Why: <domain match for changed file signal per Layer 2 selection>
+
                Review <diff-range> for <your domain>. Follow Team Communication Protocol.
                Teammates: [other selected reviewers], challenger.
                SendMessage findings to team-lead when done.")
@@ -341,6 +347,18 @@ Agent(subagent_type: "challenger", name: "challenger",
                  2. Conclusion body (verbatim, when discussion-referenced per Check 5)
                  3. Framing body (verbatim, if exists)
                  4. Commit range descriptor>
+
+               📋 Cast: challenger
+                  Role: opposition (review mode)
+                  Angle: blind spots in reviewer + cross-family findings
+                  Why: mandatory adversarial pass before TL synthesizes (F-019 challenger.md migration: mode behavior embedded here, not in agent body)
+
+               Review mode protocol steps (embedded per F-019 mode migration):
+               1. Parallel Launch: independent review (blind spots reviewers might miss — hallucinated code, edge cases, type lies) + call Codex independently + call Gemini on high-risk files. Track reviewer findings arrival.
+               2. Compare and Merge: after all reviewer findings arrive, merge 6 sources (3 Claude reviewers + Codex + Gemini + your own). Deduplicate, flag severity disagreements, mark unique findings.
+               3. Targeted Challenges: for each disagreement, SendMessage to the specific reviewer with cross-family opinions; wait for response; max 2 follow-up rounds with Codex/Gemini.
+               4. Aggregate and Report: compile final findings with discussion evidence (final severity, who said what, cross-family opinions). SendMessage to team-lead.
+
                Operate in /review mode per Team Communication Protocol.
                Review scope: <diff-range>.
                Teammates: [selected reviewers], <enabled proxies>.
@@ -360,6 +378,12 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
                  2. Conclusion body (verbatim, when discussion-referenced per Check 5)
                  3. Framing body (verbatim, if exists)
                  4. Commit range descriptor>
+
+               📋 Cast: <proxy>
+                  Role: cross-family reviewer (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; complements core review
+
                Review <diff-range> via <proxy> MCP. <assigned angle>.
                SendMessage findings to team-lead when done.")
 ```
