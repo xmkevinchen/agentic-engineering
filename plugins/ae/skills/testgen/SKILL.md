@@ -10,6 +10,32 @@ effort: medium
 
 Generate tests for: **$ARGUMENTS**
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:testgen creates exactly **4 tasks** per invocation (1 Pre-check + Analyze + Review + Generate-and-Verify).
+
+| Phase | When created | When `in_progress` | When `completed` |
+|---|---|---|---|
+| `ae:testgen: Pre-check` | At skill start | Immediately before pre-check 1 | After pre-checks pass (control reaches Step 1 Analyze) |
+| `ae:testgen: Analyze (Step 1)` | At skill start (batch) | When TL begins analyzing target for test gaps | When analysis output ready for Review |
+| `ae:testgen: Review (qa + security-reviewer + proxy)` | At skill start (batch) | When the first reviewer agent (qa / security-reviewer / cross-family proxy) is spawned in Step 2 | When all spawned reviewers have returned findings at TL |
+| `ae:testgen: Generate + Verify (Steps 3+4)` | At skill start (batch) | When TL begins synthesizing test code | When generated tests are verified (or marked failing per Verify outcome) |
+
+At skill start, batch-create:
+
+```
+TaskCreate(subject: "ae:testgen: Pre-check")
+TaskCreate(subject: "ae:testgen: Analyze (Step 1)")
+TaskCreate(subject: "ae:testgen: Review (qa + security-reviewer + proxy)")
+TaskCreate(subject: "ae:testgen: Generate + Verify (Steps 3+4)")
+```
+
+**Task lifecycle**: at skill start, immediately after the TaskCreate for `ae:testgen: Pre-check`, call `TaskUpdate(taskId, status: "in_progress")`.
+After pre-checks pass, call `TaskUpdate(taskId, status: "completed")`.
+Same lifecycle applies to Analyze, Review, and Generate+Verify phase tasks — `TaskUpdate(taskId, status: "in_progress")` when the phase begins, `TaskUpdate(taskId, status: "completed")` when the phase's completion criterion is met.
+
+**Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
+
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue.

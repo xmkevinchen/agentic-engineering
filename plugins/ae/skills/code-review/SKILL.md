@@ -59,6 +59,36 @@ If trace absent in audit log → TL skipped resolution. This makes the failure m
 
 Quick code review on current uncommitted changes (default) or a specified target (Forms 1-2 above).
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:code-review creates exactly **5 tasks** per invocation (1 Pre-check + 4 review tracks). NO additional per-finding / per-fixup task — those are sub-actions of the review.
+
+| Phase | When created | When `in_progress` | When `completed` |
+|---|---|---|---|
+| `ae:code-review: Pre-check` | At skill start (before any check) | Immediately at skill start | After mode/argument routing settles (control reaches "Execution") |
+| `ae:code-review: Track 1 (Claude)` | At skill start (batch) | When Track 1 begins | When Track 1 findings synthesized at TL |
+| `ae:code-review: Track 2 (Codex)` | (same) | When Codex proxy spawned | When Codex findings arrive at TL via SendMessage |
+| `ae:code-review: Track 3 (Gemini)` | (same) | When Gemini proxy spawned | When Gemini findings arrive at TL via SendMessage |
+| `ae:code-review: Track 4 (Doodlestein)` | (same) | When Doodlestein general-purpose agent spawned | When Doodlestein findings arrive at TL |
+
+At skill start (before any track execution), batch-create:
+
+```
+TaskCreate(subject: "ae:code-review: Pre-check")
+TaskCreate(subject: "ae:code-review: Track 1 (Claude)")
+TaskCreate(subject: "ae:code-review: Track 2 (Codex)")
+TaskCreate(subject: "ae:code-review: Track 3 (Gemini)")
+TaskCreate(subject: "ae:code-review: Track 4 (Doodlestein)")
+```
+
+In light mode (cross-family disabled): Tracks 2/3/4 transition `pending → completed` directly (no `in_progress`, no work done — skipped by mode).
+
+**Task lifecycle**: at skill start, immediately after the TaskCreate for `ae:code-review: Pre-check`, call `TaskUpdate(taskId, status: "in_progress")`.
+After the Pre-check completion criterion fires (per the table above), call `TaskUpdate(taskId, status: "completed")`.
+The same lifecycle applies to each track task — `TaskUpdate(taskId, status: "in_progress")` when the track's agent is spawned, `TaskUpdate(taskId, status: "completed")` when that track's findings arrive at TL.
+
+**Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
+
 ## Trigger
 
 1. **Auto** — `/ae:work` calls this before each commit

@@ -10,6 +10,32 @@ effort: medium
 
 Build multi-perspective consensus on: **$ARGUMENTS**
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:consensus creates exactly **3 tasks** per invocation (1 Pre-check + Debate + Synthesis). Frame / Decision Record / Output are sub-actions of synthesis — no separate tasks.
+
+| Phase | When created | When `in_progress` | When `completed` |
+|---|---|---|---|
+| `ae:consensus: Pre-check` | At skill start | Immediately before pre-check 1 | After pre-checks pass (control reaches Step 1 Frame) |
+| `ae:consensus: Debate (Rounds 1+2)` | At skill start (batch) | When the first debate agent (architect/challenger/proxy) is spawned | When all spawned debate agents have returned findings at TL (Round 2 cross-examination optional — task closes when no further debate rounds are scheduled) |
+| `ae:consensus: Synthesis` | At skill start (batch) | When TL begins merging positions + writing verdict | When verdict + Decision Record persisted |
+
+At skill start, batch-create:
+
+```
+TaskCreate(subject: "ae:consensus: Pre-check")
+TaskCreate(subject: "ae:consensus: Debate (Rounds 1+2)")
+TaskCreate(subject: "ae:consensus: Synthesis")
+```
+
+In `--quick` mode (cross-family proxy skipped): Debate task still fires for the 2 Claude-native agents (architect + challenger); Synthesis unchanged.
+
+**Task lifecycle**: at skill start, immediately after the TaskCreate for `ae:consensus: Pre-check`, call `TaskUpdate(taskId, status: "in_progress")`.
+After pre-checks pass, call `TaskUpdate(taskId, status: "completed")`.
+Same lifecycle applies to Debate and Synthesis phase tasks — `TaskUpdate(taskId, status: "in_progress")` when the phase begins, `TaskUpdate(taskId, status: "completed")` when the phase's completion criterion is met.
+
+**Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
+
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family config)

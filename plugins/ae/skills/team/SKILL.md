@@ -17,6 +17,32 @@ If `$ARGUMENTS` is empty:
 2. Provide examples: "e.g., 'investigate why auth tests are flaky', 'research migration options for the DB layer', 'review the API design for v2 endpoints'"
 3. Do NOT proceed until a task description is provided
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:team creates exactly **3 tasks** per invocation (1 Pre-check + Team execution + Synthesis). The ad-hoc agent count is task-dependent (2-5 core agents per Rules section); all of them share the single "Team execution" task because the spawn count is content-driven, not skill-structural.
+
+| Phase | When created | When `in_progress` | When `completed` |
+|---|---|---|---|
+| `ae:team: Pre-check` | At skill start | Immediately before pre-check 1 | After pre-checks pass (control reaches Step 1 Analyze) |
+| `ae:team: Team execution (N agents)` | At skill start (batch) | When the first spawned agent enters the team | When the last spawned agent's findings have arrived at TL (or shutdown_request acknowledged for non-responsive agents) |
+| `ae:team: Synthesis` | At skill start (batch) | When TL begins merging findings into the final report | When the final report is persisted to `output.analyses` |
+
+At skill start, batch-create:
+
+```
+TaskCreate(subject: "ae:team: Pre-check")
+TaskCreate(subject: "ae:team: Team execution (N agents)")
+TaskCreate(subject: "ae:team: Synthesis")
+```
+
+The N in "Team execution (N agents)" is a placeholder; substitute the actual count once Step 1 (Analyze Task) selects the agent roster. Updating the subject mid-flight via TaskUpdate is permitted to reflect the resolved count.
+
+**Task lifecycle**: at skill start, immediately after the TaskCreate for `ae:team: Pre-check`, call `TaskUpdate(taskId, status: "in_progress")`.
+After pre-checks pass, call `TaskUpdate(taskId, status: "completed")`.
+Same lifecycle applies to Team execution and Synthesis phase tasks — `TaskUpdate(taskId, status: "in_progress")` when the phase begins, `TaskUpdate(taskId, status: "completed")` when the phase's completion criterion is met.
+
+**Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
+
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists (needed for cross-family + agent config)

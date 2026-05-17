@@ -10,6 +10,30 @@ effort: high
 
 Perform systematic deep analysis on: **$ARGUMENTS**
 
+## Task progress tracking
+
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:think creates exactly **3 tasks** per invocation (1 Pre-check + Investigation + Synthesis). Frame (Step 1) and Persist (Step 4) are sub-actions — no separate tasks.
+
+| Phase | When created | When `in_progress` | When `completed` |
+|---|---|---|---|
+| `ae:think: Pre-check` | At skill start | Immediately before pre-check 1 | After pre-checks pass (control reaches Step 1 Frame) |
+| `ae:think: Investigation (architect + standards-expert + challenger + proxy)` | At skill start (batch) | When the first investigation agent is spawned in Step 2 | When all spawned investigation agents have returned findings at TL |
+| `ae:think: Synthesis` | At skill start (batch) | When TL begins merging investigation findings into the final analysis | When analysis output is persisted to `output.analyses` |
+
+At skill start, batch-create:
+
+```
+TaskCreate(subject: "ae:think: Pre-check")
+TaskCreate(subject: "ae:think: Investigation (architect + standards-expert + challenger + proxy)")
+TaskCreate(subject: "ae:think: Synthesis")
+```
+
+**Task lifecycle**: at skill start, immediately after the TaskCreate for `ae:think: Pre-check`, call `TaskUpdate(taskId, status: "in_progress")`.
+After pre-checks pass, call `TaskUpdate(taskId, status: "completed")`.
+Same lifecycle applies to Investigation and Synthesis phase tasks — `TaskUpdate(taskId, status: "in_progress")` when the phase begins, `TaskUpdate(taskId, status: "completed")` when the phase's completion criterion is met.
+
+**Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
+
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue.
