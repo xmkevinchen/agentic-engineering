@@ -98,6 +98,18 @@ Three canonical roles; a closed enum in Phase 1.
 
 **`architect` and `qa` are NOT first-class roles in Phase 1.** They remain name-spawned built-in agents (`ae:plan` hard-spawns `architect`; `ae:work` hard-spawns `qa`). Project agents that would logically be architects should use `role: domain-expert` with `specialty: architecture` — this preserves role-gap detection in smart selection without requiring the `ae:plan`/`ae:work` spawn-path refactor (tracked as Phase 4 work, post-v1.0).
 
+<a name="plugin-built-in-first-class-reviewer-slots"></a>
+
+### Plugin built-in first-class reviewer slots (F-009 Step 4)
+
+`plugins/ae/agents/workflow/architect.md`, `plugins/ae/agents/workflow/qa.md`, and `plugins/ae/agents/research/dependency-analyst.md` are AE plugin first-class reviewer slots — **not** generic reviewer roles routed via the `role: reviewer` enum above. They are deliberately omitted from the Role Enum table and from frontmatter `role:` declarations:
+
+- Routing is done by **explicit hardcode in the consuming skill** (e.g., `plan-review/SKILL.md` Step 1 spawns `architect` by name; `work/SKILL.md` spawns `qa` by name) — never by an inferred `role:` lookup.
+- A `project_agents[]` entry takes one of these slots only through an **explicit override table** declared in the consuming skill (see `plan-review/SKILL.md` § "Reviewer slots — built-in default + project-agent override" as the canonical example). Adding `role: reviewer` to a project agent does NOT make it eligible for these built-in slots by itself; the consuming skill's override table is authoritative.
+- This separation keeps `role` as a pure metadata-routing key (the 3-element closed enum above) and prevents it from being overloaded with built-in-slot semantics — and leaves room for future dispatcher-resolved forms of `architect`/`qa` without retroactively reinterpreting `role:` values in existing agent frontmatter.
+
+For agent authors: do NOT add `role: reviewer` to `plugins/ae/agents/workflow/architect.md` or similar plugin built-ins; the contract above is enforced by their absence.
+
 ### Role Inference Fallback
 
 When `role:` is absent, AE falls back in order:

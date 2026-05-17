@@ -55,6 +55,17 @@ Read the full plan text, then create a Team for parallel review.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
+### Reviewer slots — built-in default + project-agent override (F-009 Step 4)
+
+`plan-review` hardcodes two built-in reviewer slots. `project_agents[]` entries override only when both `role` and `specialty` match:
+
+| Slot | Built-in default | `project_agents[]` override condition |
+|---|---|---|
+| plan structure reviewer | `architect` (plugin built-in: `plugins/ae/agents/workflow/architect.md`) | `role: reviewer` + `specialty` matches one of `plan-structure`, `architecture`, `design` → use the project agent instead |
+| parallel / dependency reviewer | `dependency-analyst` (plugin built-in: `plugins/ae/agents/research/dependency-analyst.md`) | `role: reviewer` + `specialty` matches one of `dependencies`, `parallel-analysis` → use the project agent instead |
+
+Built-in `architect` / `dependency-analyst` / `qa` are plugin first-class reviewer slots, NOT ad-hoc roles routed by frontmatter `role:` (see [Agent Contract — Plugin built-in first-class reviewer slots](../setup/agent-contract.md#plugin-built-in-first-class-reviewer-slots)). They are hardcoded by name in this skill. The override table above is the **only** mechanism by which a `project_agents[]` entry can take a slot from a built-in; no implicit override by mere `role: reviewer` presence.
+
 **Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
 ```
