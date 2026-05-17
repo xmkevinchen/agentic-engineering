@@ -41,25 +41,42 @@ TeamCreate(team_name: "<task-summary>")
 
 Agent(subagent_type: "<agent1>", name: "<agent1>",
       team_name: "<team>", run_in_background: true,
-      prompt: "<task context>.
+      prompt: "📋 Cast: <agent1>
+                  Role: <ad-hoc role per task context — computed at TL spawn-decision time>
+                  Angle: <ad-hoc focus>
+                  Why: <ad-hoc rationale>
+
+               <task context>.
                Follow Team Communication Protocol.
                Teammates: <list>.
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "<agent2>", name: "<agent2>",
       team_name: "<team>", run_in_background: true,
-      prompt: "<task from agent2's perspective>.
+      prompt: "📋 Cast: <agent2>
+                  Role: <ad-hoc role per task context>
+                  Angle: <ad-hoc focus from agent2's perspective>
+                  Why: <ad-hoc rationale>
+
+               <task from agent2's perspective>.
                Follow Team Communication Protocol.
                Teammates: <list>.
                SendMessage findings to team-lead when done.")
 
-# ... additional agents as needed
+# ... additional agents as needed (each spawn includes its own cast block per agent-teams/SKILL.md § Cast Block Syntax)
+# Ad-hoc spawning pattern: TL computes cast block fields at spawn-decision time based on task context,
+# unlike fixed-template skills where cast block fields are tied to known agent roles.
 
 # Cross-family — for each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "<task> via <proxy> MCP — <assigned angle>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family ad-hoc reviewer (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled
+
+               <task> via <proxy> MCP — <assigned angle>.
                Teammates: <list>.
                SendMessage findings to team-lead when done.")
 ```

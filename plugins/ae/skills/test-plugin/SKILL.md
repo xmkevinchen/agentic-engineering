@@ -87,7 +87,12 @@ TeamCreate(team_name: "test-<target>")
 
 Agent(subagent_type: "test-lead", name: "test-lead",
       team_name: "<team>", run_in_background: true,
-      prompt: "Read <target files>. Generate adversarial test case outlines.
+      prompt: "📋 Cast: test-lead
+                  Role: adversarial test suite lead (Phase 1 generation + Phase 2 judgment)
+                  Angle: test case outlines + writer review + verdict judgment by assertion text
+                  Why: hardcoded structural role for ae:test-plugin (NOT dispatcher-resolved)
+
+               Read <target files>. Generate adversarial test case outlines.
                Prioritize: refusal/boundary → tool calls → output format.
                All generated cases MUST have `source: generated` in frontmatter.
                Teammates: prompts-writer, answer-writer.
@@ -96,7 +101,12 @@ Agent(subagent_type: "test-lead", name: "test-lead",
 
 Agent(subagent_type: "general-purpose", name: "prompts-writer",
       team_name: "<team>", run_in_background: true,
-      prompt: "You are the Prompts Writer. Wait for test case outline from test-lead.
+      prompt: "📋 Cast: general-purpose (as prompts-writer)
+                  Role: test prompts writer (Phase 1)
+                  Angle: 2-3 prompt variants per test case, blind protocol isolation from answer-writer
+                  Why: blind separation prevents prompt/assertion mutual contamination
+
+               You are the Prompts Writer. Wait for test case outline from test-lead.
                For each test case, write a Markdown file to plugins/ae/tests/prompts/<id>.md:
                - frontmatter (id, target, layer, source: generated)
                - ## Context (pre-conditions)
@@ -106,7 +116,12 @@ Agent(subagent_type: "general-purpose", name: "prompts-writer",
 
 Agent(subagent_type: "general-purpose", name: "answer-writer",
       team_name: "<team>", run_in_background: true,
-      prompt: "You are the Answer Writer. Wait for test case outline from test-lead.
+      prompt: "📋 Cast: general-purpose (as answer-writer)
+                  Role: test assertions writer (Phase 1)
+                  Angle: MUST / MUST_NOT / SHOULD assertions mechanically verifiable, blind from prompts-writer
+                  Why: blind separation prevents prompt/assertion mutual contamination
+
+               You are the Answer Writer. Wait for test case outline from test-lead.
                For each test case, independently write a Markdown file to plugins/ae/tests/assertions/<id>.md:
                - frontmatter (id, target, layer, source: generated)
                - ## Expected Behavior section with MUST / MUST_NOT / SHOULD assertions

@@ -67,7 +67,12 @@ TeamCreate(team_name: "<topic>-consensus")
 
 Agent(subagent_type: "architect", name: "advocate",
       team_name: "<team>", run_in_background: true,
-      prompt: "STANCE: FOR. Argue in favor of this proposal: <proposal + context>.
+      prompt: "📋 Cast: architect
+                  Role: advocate (for/against debate, FOR position)
+                  Angle: strongest arguments + codebase evidence supporting the proposal
+                  Why: structured debate requires committed advocate position
+
+               STANCE: FOR. Argue in favor of this proposal: <proposal + context>.
                Follow Team Communication Protocol.
                Teammates: critic[, <enabled proxies>].
                YOU MUST use the structured output schema:
@@ -82,7 +87,18 @@ Agent(subagent_type: "architect", name: "advocate",
 
 Agent(subagent_type: "challenger", name: "critic",
       team_name: "<team>", run_in_background: true,
-      prompt: "STANCE: AGAINST. Argue against this proposal: <proposal + context>.
+      prompt: "📋 Cast: challenger
+                  Role: opposition (critic in for/against debate, AGAINST position)
+                  Angle: risks + hidden costs + better alternatives
+                  Why: structured debate requires committed critic position (F-019 challenger.md migration: critic-mode behavior embedded here, not in agent body)
+
+               Critic-in-consensus mode protocol steps (embedded per F-019 mode migration):
+               1. Find risks, hidden costs, and better alternatives to the proposal.
+               2. Use structured output schema (Position: AGAINST + Claims with file:line + Conceded Points + Unaddressed).
+               3. Acknowledge opponent strengths honestly in Conceded Points (not a refusal protocol — concessions are signal).
+               4. Stay in team for cross-examination rounds with advocate; respond to advocate's claims with evidence.
+
+               STANCE: AGAINST. Argue against this proposal: <proposal + context>.
                Follow Team Communication Protocol.
                Teammates: advocate[, <enabled proxies>].
                YOU MUST use the structured output schema:
@@ -102,7 +118,12 @@ Agent(subagent_type: "challenger", name: "critic",
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
       team_name: "<team>", run_in_background: true,
-      prompt: "Independent evaluation of this proposal from <assigned angle>: <proposal + context>.
+      prompt: "📋 Cast: <proxy>
+                  Role: cross-family independent evaluator (<family> angle)
+                  Angle: <assigned-angle-at-spawn-time>
+                  Why: pipeline.yml cross_family enabled; breaks for/against deadlock with independent perspective
+
+               Independent evaluation of this proposal from <assigned angle>: <proposal + context>.
                Teammates: advocate, critic.
                YOU MUST use the structured output schema:
                ## Position: INDEPENDENT
