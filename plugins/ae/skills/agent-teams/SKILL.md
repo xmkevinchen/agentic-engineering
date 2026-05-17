@@ -47,17 +47,27 @@ Before any `Agent(...)` spawn within a `TeamCreate` batch, TL emits a structured
 
 #### Canonical 4-field structure (MANDATORY)
 
-All 4 fields — `Agent` / `Role` / `Angle` / `Why` — are **mandatory**. Omitting any field fails AC1 mechanical verification (`grep -E "^(Agent|Role|Angle|Why):"` returns < 4 hits in a cast block context).
+All 4 fields — `Agent` / `Role` / `Angle` / `Why` — are **mandatory**. The `Agent` field appears in the header line `📋 Cast: <agent-name>`; the other 3 fields appear as indented lines below. Omitting any field fails AC1/AC5 mechanical verification.
+
+**Per-spawn form** (canonical — used in all 13 spawning SKILL.md files, one cast block per `Agent()` call):
+
+```
+📋 Cast: <agent-name>
+  Role: <one-line role assignment, e.g., "cross-family-reviewer (OpenAI angle)">
+  Angle: <one-line focus, e.g., "prompt-engineering quality">
+  Why: <one-line rationale, e.g., "Swarm/Assistants precedent applies">
+```
+
+**Multi-agent batch form** (optional summary header — TL may emit this to stdout before batch spawning):
 
 ```
 📋 Cast — <team-name>
-  Agent: <agent-name>
-    Role: <one-line role assignment, e.g., "cross-family-reviewer (OpenAI angle)">
-    Angle: <one-line focus, e.g., "prompt-engineering quality">
-    Why: <one-line rationale, e.g., "Swarm/Assistants precedent applies">
+  - <agent-name-1>: <role-1> | <angle-1>
+  - <agent-name-2>: <role-2> | <angle-2>
+  ...
 ```
 
-Multi-agent batches list one indented block per agent. Header line `📋 Cast — <team-name>` is per spawn batch (not per agent).
+The per-spawn form is the embedded form (one cast block per `Agent()` prompt: field). The batch form is stdout-only summary.
 
 #### Cost target (not hard cap)
 
@@ -99,8 +109,8 @@ When no PRIMARY CONTEXT BUNDLE is present (simpler skills with no per-invocation
 
 #### Mechanical verification
 
-- `grep -c "📋 Cast" <skill-file>` returns ≥ total `Agent()` spawn site count for that file
-- `grep -E "^(Agent|Role|Angle|Why):" <skill-file-or-agent-teams-spec>` returns ≥ 4 hits (per AC1 4-field lock gate)
+- `grep -c "📋 Cast:" <skill-file>` returns ≥ total `Agent()` spawn site count for that file (each spawn has a cast block whose header is `📋 Cast: <agent-name>`)
+- `grep -cE "^\s*(Role|Angle|Why):" <skill-file>` returns ≥ 3 × cast count for that file (each cast block has 3 indented field lines; Agent identifier is in header `📋 Cast:` line)
 - Cross-skill consistency: cast block `Role:` syntax uniform across all 13 spawn-using SKILL.md files (e.g., parenthetical mode syntax `Role: opposition (review mode)` uniform across analyze / review / consensus / think)
 
 #### Rationale (positive pattern for Anti-Pattern "Routing lateral")
