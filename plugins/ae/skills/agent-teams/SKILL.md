@@ -90,11 +90,10 @@ When a spawn prompt has a PRIMARY CONTEXT BUNDLE (per F-016 Plan 050 convention 
 Agent(prompt: """
   <PRIMARY CONTEXT BUNDLE — position 1: files / discussion context / verbatim per Plan 050>
 
-  📋 Cast — <team-name>
-    Agent: <name>
-      Role: <role>
-      Angle: <angle>
-      Why: <why>                                              ← position 2
+  📋 Cast: <agent-name>
+    Role: <role>
+    Angle: <angle>
+    Why: <why>                                                 ← position 2
 
   <Task-specific instructions: domain, scope, checks>          ← position 3
 """)
@@ -111,7 +110,7 @@ When no PRIMARY CONTEXT BUNDLE is present (simpler skills with no per-invocation
 
 - `grep -c "📋 Cast:" <skill-file>` returns ≥ total `Agent()` spawn site count for that file (each spawn has a cast block whose header is `📋 Cast: <agent-name>`)
 - `grep -cE "^\s*(Role|Angle|Why):" <skill-file>` returns ≥ 3 × cast count for that file (each cast block has 3 indented field lines; Agent identifier is in header `📋 Cast:` line)
-- Cross-skill consistency: cast block `Role:` syntax uniform across all 13 spawn-using SKILL.md files (e.g., parenthetical mode syntax `Role: opposition (review mode)` uniform across analyze / review / consensus / think)
+- Cross-skill consistency: cast block `Role:` syntax follows uniform pattern across the 13 spawn-using SKILL.md files. **Two legitimate forms**: (a) short modal — `Role: opposition (review mode)` for analyze/review/think; (b) descriptive — `Role: opposition (critic in for/against debate, AGAINST position)` for consensus where stance is integral to the role. Future readers running cross-skill grep should accept both forms; the constraint is "parenthetical context after role noun-phrase," not literal `(<mode> mode)` text.
 
 #### Rationale (positive pattern for Anti-Pattern "Routing lateral")
 
