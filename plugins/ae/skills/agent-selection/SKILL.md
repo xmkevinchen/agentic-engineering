@@ -55,7 +55,7 @@ user-invocable: true
 
    Parse YAML `rules:` block. For each rule whose `scope` matches the active skill AND whose `context:` keywords match current skill context:
 
-   - `action: force` → include the agent in the team; short-circuit Layers 2+3 for that slot.
+   - `action: force` → include the agent in the team; short-circuit Layers 2+3 for that slot. **Stack-mismatch interaction depends on governance file `schema_version`** — see "Governance file schema versioning" below; in `schema_version: 2` the rule may set `stack_check: enforce|skip` to control mismatch handling.
    - `action: exclude` → remove the agent from the candidate pool before Claude sees it (hard negative constraint).
    - `action: prefer` → surface the preferred agent as context hint to Claude's Layer 2 judgment (not a mechanical bonus); Claude weighs it alongside task fit.
 
@@ -65,6 +65,20 @@ user-invocable: true
    - `force` → ESCALATE via AskUserQuestion (continue with Layer 2 fallback vs. cancel vs. remove rule).
 
    Malformed YAML → warn + skip all rules for this run (fall-through to Layer 2 for every slot).
+
+   ### Governance file schema versioning (F-009 Step 2)
+
+   The governance file (`.claude/agent-governance.md`) carries a top-level `schema_version:` field in its YAML frontmatter. Missing field defaults to `1` (legacy). Recognized values:
+
+   - **`schema_version: 1` (legacy)** — preserves the pre-F-009 behavior: `action: force` rules short-circuit Layers 2+3 AND bypass the stack-mismatch filter unconditionally (the user is presumed to have explicitly overridden fit judgment by writing the force rule). On first load of a schema_version=1 (or missing) file, emit one-time trace warning:
+     ```
+     [layer1] governance schema_version=1 (legacy); add `schema_version: 2` to opt into safer force-vs-stack handling. See CHANGELOG entry for F-009 Step 2 migration.
+     ```
+   - **`schema_version: 2` (current)** — the force agent goes through the stack-mismatch filter by default. To preserve the legacy bypass on a specific rule, declare it explicitly with a new per-rule field:
+     - `stack_check: enforce` (default when omitted) — stack-mismatch on this force agent triggers `AskUserQuestion` (accept incompatible force / drop this force / abort skill). User disposition is recorded in trace.
+     - `stack_check: skip` — silently bypass the stack-mismatch filter for this rule, matching legacy schema_version=1 behavior; trace records the bypass for audit.
+
+   Unknown `schema_version:` value (anything outside `{1, 2}`) → warn + treat as `1` for safety (preserve legacy behavior rather than apply unknown semantics).
 
    ### Layer 2 — LLM-based selection (two-tier)
 
@@ -82,10 +96,15 @@ user-invocable: true
    - Claude picks an ad-hoc candidate or returns "no fit in library either"
 
    **Flow per slot** (strict order; Claude only sees what survives Layer 1):
-   1. **Force apply**: `action: force` governance rules pre-select the named agent into the team for this slot. `force` agents are NOT subject to the stack-mismatch filter (the user has explicitly overridden fit judgment for this context); an `action: exclude` rule on the same agent wins (exclude is the hardest signal).
+   1. **Force apply**: `action: force` governance rules pre-select the named agent into the team for this slot. **Stack-mismatch interaction is gated by the governance file `schema_version:` field** (see "Governance file schema versioning" above):
+      - **schema_version=1 (or missing)**: `force` agents bypass the stack-mismatch filter unconditionally (legacy behavior — preserved for backward compatibility).
+      - **schema_version=2** with rule `stack_check: enforce` (default when omitted): if the force agent's `tech_stack` is disjoint from the project's, AE emits `[layer1] force-apply: <agent> stack-mismatch detected; user disposition required` and surfaces `AskUserQuestion` (accept incompatible force / drop this force / abort skill). User disposition is recorded in trace.
+      - **schema_version=2** with rule `stack_check: skip`: silently bypass the stack-mismatch filter for this rule, mirroring schema_version=1 behavior; AE emits `[layer1] force-apply: <agent> stack-mismatch SKIPPED via stack_check: skip` for audit.
+      - Either way, an `action: exclude` rule on the same agent wins (exclude is the hardest signal).
+      - **Trace event supersession** (F-009 Step 2): when a force agent triggers the stack-mismatch path (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event from step 2 below is **suppressed for that agent** — the new force-apply line is the single authoritative record. Hard-constraint stack-mismatch events continue to fire for non-force agents in the normal flow.
    2. **Hard-constraint filter** (mechanical, BEFORE Claude):
       - `action: exclude` governance rules remove the named agent from the candidate pool.
-      - Stack-mismatch: agent declares `tech_stack: [X, Y, ...]` in its frontmatter or `pipeline.yml project_agents[]` entry; project declares `tech_stack` at the top level of `pipeline.yml` (source of truth — no file-extension auto-detection). Disjoint sets → filtered out.
+      - Stack-mismatch: agent declares `tech_stack: [X, Y, ...]` in its frontmatter or `pipeline.yml project_agents[]` entry; project declares `tech_stack` at the top level of `pipeline.yml` (source of truth — no file-extension auto-detection). Disjoint sets → filtered out. (For force agents, see step 1 — the supersession rule routes the event through force-apply instead.)
    3. **Prefer annotate**: `action: prefer` rules that fire on this context annotate matching **surviving** agents with the rule's `added_reason` as a context hint. (If a prefer-matched agent was already filtered in step 2, the prefer rule has nothing to annotate — AE records this in the Layer 1 trace as "prefer fired on X but X was filtered".)
    4. **Claude picks**: Claude reads the filtered-and-annotated primary pool + current task context + project CLAUDE.md → picks best fit per [Agent Selection Rubric](../setup/agent-selection-rubric.md).
    5. **Library fallback**: if primary pool has no confident match, Claude scans library fallback (enumerated from `pipeline.yml agent_libraries[]` sources) — same hard-constraint filter applied before Claude sees candidates.
@@ -95,12 +114,27 @@ user-invocable: true
 
    **Layer 1 trace format**: every rule firing and filter action is recorded in a structured trace. Two surfaces, **both default-emit** (no flag required — per `ae:agent-teams` Base Protocol § Selection Trace Emission, BL-058 ship 2026-05-05):
 
-   - **Console stdout** (default-ON): trace is printed before Claude is invoked, one line per event, format: `[layer1] <step>: <rule/filter> <agent-name> → <outcome> (<reason>)`. Example sequence for the prefer+stack-kill test case:
+   - **Console stdout** (default-ON): trace is printed before Claude is invoked, one line per event, format: `[layer1] <step>: <rule/filter> <agent-name> → <outcome> (<reason>)`. Example sequence for the prefer+stack-kill test case (no force rule firing on the mismatched agent):
      ```
      [layer1] force-apply: no rules firing in context
      [layer1] hard-constraint: stack-mismatch filter REMOVED phpstan-expert (agent tech_stack [php, laravel] ⊄ project tech_stack [rust, mcp])
      [layer1] prefer-annotate: rule-4 FIRED for phpstan-expert on context [security, audit] → NO-OP (target already filtered)
      [layer1] claude-input: pool = [rust-mcp-expert, ...] (phpstan-expert absent)
+     ```
+
+     Example sequence when the mismatched agent IS the target of a `force` rule (governance `schema_version: 2`, `stack_check: enforce`):
+     ```
+     [layer1] force-apply: phpstan-expert stack-mismatch detected; user disposition required (agent tech_stack [php, laravel] ⊄ project tech_stack [rust, mcp])
+     [layer1] force-apply: phpstan-expert user disposition: accept (or: drop / abort)
+     [layer1] claude-input: pool = [phpstan-expert, ...] (force-accepted) | [...] (force-dropped) | <skill aborts>
+     ```
+     Note the absence of the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED phpstan-expert` line — the force-apply event supersedes it for force agents (see Flow per slot, step 1).
+
+     Example sequence with `schema_version: 1` (legacy) or `schema_version: 2 + stack_check: skip` — silent bypass preserved:
+     ```
+     [layer1] governance schema_version=1 (legacy); add `schema_version: 2` to opt into safer force-vs-stack handling. See CHANGELOG entry for F-009 Step 2 migration.
+     [layer1] force-apply: phpstan-expert stack-mismatch SKIPPED via stack_check: skip (or: schema_version=1 legacy bypass)
+     [layer1] claude-input: pool = [phpstan-expert, ...]
      ```
    - **Team-lead synthesis report** (default-ON, end of skill run): a `## Agent Selection Trace` section in the report summarizes the Layer 1 events for this invocation. Same structured format as the stdout surface but embedded in the skill's final written output, so it persists beyond the console session.
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### F-009 Step 2 — BREAKING: `action: force` no longer silently bypasses stack-mismatch (commit pending)
+
+`.claude/agent-governance.md` now carries a top-level `schema_version:` field. Behavior split:
+
+- **`schema_version: 1`** (default when field is absent) — legacy behavior preserved verbatim: `action: force` rules short-circuit Layers 2+3 AND bypass the stack-mismatch filter. AE emits a one-time trace warning recommending upgrade.
+- **`schema_version: 2`** — `force` agents go through the stack-mismatch filter by default. Per-rule field `stack_check: enforce|skip` controls mismatch handling:
+  - `stack_check: enforce` (default when omitted) — stack-mismatch triggers `AskUserQuestion` (accept / drop / abort)
+  - `stack_check: skip` — preserve legacy silent-bypass on a per-rule basis (trace records the bypass for audit)
+
+**Trace event supersession**: when a force agent triggers the stack-mismatch path (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event is suppressed for that agent — the new `[layer1] force-apply: <agent> stack-mismatch ...` line is the single authoritative record. Hard-constraint stack-mismatch events continue to fire normally for non-force agents.
+
+**Migration steps**:
+1. Audit existing `.claude/agent-governance.md` files for `action: force` rules whose target agent has a `tech_stack:` disjoint from the project's.
+2. To preserve current silent-bypass behavior, either leave the file at `schema_version: 1` (legacy auto-applied) or set `schema_version: 2` AND add `stack_check: skip` to each affected rule.
+3. To adopt the safer prompt-on-mismatch behavior, set `schema_version: 2` and leave `stack_check` unset (defaults to `enforce`).
+
+**Files**: `plugins/ae/skills/agent-selection/SKILL.md` (governance schema versioning section + Flow per slot step 1 + trace examples)
+
+---
+
 ## v0.9.7 — 2026-05-10
 
 ### F-015 review fixup (commit `befd107`)
