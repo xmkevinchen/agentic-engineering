@@ -11,7 +11,7 @@ Canonical prompt-writing patterns for AE builtin agents — extracted from agenc
 This reference exists in dual form: the canonical patterns described here AND embedded copies in 13 agent prompts. **Drift risk is real**: when an agent prompt updates a pattern's structure (e.g., changes Identity block from 4 anchors to 5), this reference may not be updated synchronously. Audit checklist before publishing pattern changes:
 
 1. Update this reference first (single source for cross-agent consistency).
-2. Update each agent prompt that embeds the pattern (currently 13 agents — see F-016 改造矩阵 in `.ae/features/active/F-016-strengthen-builtin-agents/plan.md`).
+2. Update each agent prompt that embeds the pattern (the 13 affected agents are enumerated row-by-row in the Quick Reference table at the end of this doc — Research × 3, Reviewer × 5, Architect × 1, Cross-family proxy × 2, Workflow × 2 minus already-have).
 3. Note any deviation in agent's own prompt (e.g., "Identity block uses 5 anchors instead of 4 because [reason]").
 
 This reference is **not runtime-loaded**. Agent prompts must remain self-contained for spawn-time use. Treat divergence between this doc and agent prompts as tech debt to track, not as a runtime correctness issue.
@@ -310,7 +310,7 @@ Use `ai/system/premium-style-guide.md` for luxury patterns
 
 Long inline code examples for specific frameworks / domains that bloat agent prompt past 200 lines.
 
-**别抄理由**: gemini-proxy's overload threshold is 500 lines / 1000 tokens — past this, agent reliability degrades and context budget is wasted. AE convention: agents stay under 200 lines; domain-specific examples go in 1-2 worked examples per domain (per Worked Examples pattern). For deep domain coverage, add a separate domain-specific agent (e.g., a future `ios-expert.md`), don't bloat existing generic agents.
+**别抄理由**: AE convention caps agent prompts at ~200 lines — past this, reviewer reliability degrades and spawn-time context budget is wasted. The 200-line cap is the actionable threshold; specific token thresholds are tool-dependent and not worth pinning to a single number. Domain-specific examples go in 1-2 worked examples per domain (per Worked Examples pattern). For deep domain coverage, add a separate domain-specific agent (e.g., a future `ios-expert.md`), don't bloat existing generic agents.
 
 ---
 
@@ -327,6 +327,8 @@ You have access to: gh CLI, git, npm, yarn, pnpm, brew, asdf, nvm, docker, kubec
 ---
 
 ## Quick Reference: Which patterns for which agent type
+
+> **"extend existing"** in the cells below = build on the agent's pre-existing section rather than overwriting; preserve domain-specific entries at higher priority than the generic patterns documented in this reference. For agents not yet carrying that section, add the generic pattern as the baseline.
 
 | Agent type | Identity | Vibe | Critical Rules | Decision matrix | ADR template | Worked examples | Severity+Rationale+nit cap |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
