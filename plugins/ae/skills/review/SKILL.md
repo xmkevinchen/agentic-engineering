@@ -400,6 +400,7 @@ TL collects all findings from reviewers + challenger + cross-family proxies, the
 - Merge overlapping findings, resolve contradictions
 - Produce Disagreement Value Assessment where reviewers disagreed
 - Classify by severity (P1/P2/P3)
+- **KL #1 substitution check** (F-022): for each plan step whose checkbox claims `/ae:code-review` ran, locate the matching artifact — either (a) a `milestones/code-review-*.md` file in the feature dir, OR (b) a commit message containing `/ae:code-review` output reference (e.g., explicit `[KL#1] /ae:code-review` disclosure). If neither exists, OR if the artifact's body is inline TL prose without multi-reviewer Track structure → emit `KL #1 substitution` finding. Default severity **P2**; escalate to **P1** if the same step shipped a defect this review separately caught. Documented substitution (commit message explicitly states `[KL#1] ... SUBSTITUTED` with rationale) still emits the finding — visibility is the goal, not absence of substitution.
 
 If any agent idle > 5 minutes without sending findings, SendMessage to prompt.
 
