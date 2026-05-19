@@ -6,6 +6,29 @@
 
 ---
 
+## v0.9.9 — 2026-05-19
+
+**Release theme**: Cross-repo Mengdie knowledge-capture wiring at `/ae:work` plan-completion granularity. Single-feature patch bump (mengdie's F-012 cross-repo counterpart). Strict semver would have classified this as patch — same track as v0.9.8.
+
+### F-012 — Per-skill Mengdie ingest at plan-completion granularity (XS, mengdie F-012 cross-repo, done 2026-05-19)
+
+Adds a "### Knowledge capture (Mengdie)" section to `plugins/ae/skills/work/SKILL.md` immediately after Pre-commit and before the Completion Invariant. When `/ae:work` completes all plan checkboxes, the executing model now ingests a single durable knowledge entry per shipped feature into the project's Mengdie store (1-item cap per shipped feature; deliberately coarser-grain than the protocol-default "max 3" since plan-completion is a coarser grain than the per-call grain other skills use). `scope: trivial` skip path documented as an /ae:work-specific extension of the protocol's graceful-degradation list.
+
+`source_type: review` (NOT `plan`) — experiential outcome from executing a plan is review-class per `docs/references/knowledge-capture-protocol.md` table semantics; mixes-with-plan-content was a type confusion (caught at review).
+
+**Cross-family review value**: first /ae:review in mengdie v0.0.2 cycle where codex-proxy and challenger disagreed on the same evidence. Codex: `source_type: plan` acceptable. Challenger: BLOCK. TL synthesis followed challenger ("lean adversarial when cost asymmetry favors fix"). Pattern recorded for future cross-family interpretation.
+
+**Commits**: `6223b71` (Step 1 — original SKILL.md addition), `192e743` (merge into main), `00f1148` (review fixup — 2 blocks + 2 minor: sequencing contradiction; `source_type: plan` → `review`; "1 item" cap deviation rationale; `scope: trivial` skip path annotated).
+
+**Files**: `plugins/ae/skills/work/SKILL.md`.
+
+**Deferred** (filed for AE-plugin-side follow-up if multiple skills adopt the same pattern):
+
+- Add `ae:work | plan completion | <type> | experiential` row to `docs/references/knowledge-capture-protocol.md` Skill-Specific Extraction Heuristics table.
+- Document `scope: trivial` as a protocol-level optional skip reason.
+
+---
+
 ## v0.9.8 — 2026-05-19
 
 **Release theme**: AE quality regression closure + cast-and-spawn protocol + agent reinforcement. 11 features shipped between v0.9.7 (2026-05-10) and v0.9.8 (2026-05-19) — heavy investment in the multi-agent review surface (F-016 + F-019), TL substitution visibility (F-022), and dog-food validation of cast block emission (F-020). (Strict semver would have warranted minor `v0.10.0` since F-008's `/ae:status` skill and F-011's vendored `minimal-change-engineer` agent are new components; user decision to keep on patch track per `0.x.y.z` cadence.)
