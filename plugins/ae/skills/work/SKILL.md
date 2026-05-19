@@ -473,6 +473,27 @@ Fix findings, re-run from Check D until clean pass.
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
 5. All steps done → run Completion Invariant, then `All steps complete. Next: /ae:review <plan-file-path>`
 
+### Knowledge capture (Mengdie)
+
+**Fires only when all plan steps are `[x]`** — per-step ingest is too noisy (TDD micro-commits aren't durable knowledge). Plan-completion is the right granularity: the operator now has a coherent unit of work to remember.
+
+Run this step after the final step's commit lands and before Completion Invariant. Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules.
+
+**Skill-specific extraction**:
+- 1 item per shipped feature reflecting *what was decided / changed at the plan level* — NOT per-commit summaries (those are git log's job).
+- Skip if the work was a trivial mechanical refactor with no decisions worth remembering.
+- `source_type`: `plan` (the plan completion is the durable artifact; commits are the diff)
+- `knowledge_type`: `experiential` (rework rate, drift events, what surprised the implementation)
+- `entities`: derive from plan file path (e.g., `f-007`, `entity-materialization`) + key technical surfaces touched
+- `source_file`: path to the plan file
+
+**Failure / conflict mode**: per [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) — graceful degradation, do NOT abort the skill if ingest fails (the commits are the primary artifact).
+
+**Closing output** — report what was ingested:
+- `Knowledge capture: [N] items ingested, no conflicts`
+- Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
+- Or: `Knowledge capture: skipped (mengdie unavailable / scope: trivial)`
+
 ## Completion Invariant
 
 When all plan steps are `[x]`, write pipeline state before suggesting next steps:
