@@ -471,18 +471,18 @@ Fix findings, re-run from Check D until clean pass.
      ```
    - UNVERIFIED states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
-5. All steps done → run Completion Invariant, then `All steps complete. Next: /ae:review <plan-file-path>`
+5. All steps done → run **Knowledge capture (below) → Completion Invariant**, then `All steps complete. Next: /ae:review <plan-file-path>`
 
 ### Knowledge capture (Mengdie)
 
 **Fires only when all plan steps are `[x]`** — per-step ingest is too noisy (TDD micro-commits aren't durable knowledge). Plan-completion is the right granularity: the operator now has a coherent unit of work to remember.
 
-Run this step after the final step's commit lands and before Completion Invariant. Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules.
+Order: this step runs AFTER the final step's commit lands AND BEFORE Completion Invariant (matches step 5 above). Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules.
 
 **Skill-specific extraction**:
-- 1 item per shipped feature reflecting *what was decided / changed at the plan level* — NOT per-commit summaries (those are git log's job).
-- Skip if the work was a trivial mechanical refactor with no decisions worth remembering.
-- `source_type`: `plan` (the plan completion is the durable artifact; commits are the diff)
+- 1 item per shipped feature reflecting *what was decided / changed at the plan level* — NOT per-commit summaries (those are git log's job). The "1 item" cap is intentionally stricter than the protocol's "max 3" default because plan-completion is a coarser unit than the per-call grain other skills use; a typical /ae:work plan ships 1 coherent feature.
+- Skip if the work was a trivial mechanical refactor with no decisions worth remembering. This `scope: trivial` skip is an /ae:work-specific extension to the protocol's graceful-degradation list — appropriate because plan-completion can legitimately have zero durable knowledge (e.g., pure rename refactor).
+- `source_type`: `review` (the experiential knowledge produced by executing a plan — rework rate, drift events, surprises — is review-class, not plan-class. `plan` is reserved for `/ae:plan`'s plan-document content; using it for /ae:work outcomes would confuse retrieval queries that filter by source_type).
 - `knowledge_type`: `experiential` (rework rate, drift events, what surprised the implementation)
 - `entities`: derive from plan file path (e.g., `f-007`, `entity-materialization`) + key technical surfaces touched
 - `source_file`: path to the plan file
