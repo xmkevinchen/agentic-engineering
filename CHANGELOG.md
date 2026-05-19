@@ -2,7 +2,122 @@
 
 ## Unreleased
 
+(empty)
+
+---
+
+## v0.9.8 — 2026-05-19
+
+**Release theme**: AE quality regression closure + cast-and-spawn protocol + agent reinforcement. 11 features shipped between v0.9.7 (2026-05-10) and v0.9.8 (2026-05-19) — heavy investment in the multi-agent review surface (F-016 + F-019), TL substitution visibility (F-022), and dog-food validation of cast block emission (F-020). (Strict semver would have warranted minor `v0.10.0` since F-008's `/ae:status` skill and F-011's vendored `minimal-change-engineer` agent are new components; user decision to keep on patch track per `0.x.y.z` cadence.)
+
+### F-022 — KL #1 substitution visibility via /ae:review (XS, BL-085, done 2026-05-18)
+
+Adds one synthesis bullet to `plugins/ae/skills/review/SKILL.md` `### 4. TL Synthesizes Final Report` instructing TL to verify each plan-step `/ae:code-review` checkbox against a multi-track artifact (matching `milestones/code-review-step-<N>.md` OR commit-message reference). Absent or single-track-only → emit `KL #1 substitution` P2 finding. `[ELEVATED]` tag (not P1 escalation, to preserve line-414 P1 definition's narrow security/data/crash scope) when same-step shipped a P1/P2-logic defect this review separately caught. Documented substitution still emits the finding — visibility is the goal, not absence.
+
+**Scope revised** from BL-085's original 5-mechanism enforcement design (covered in `BL-085.md` `scope_revision:` frontmatter): LLM cannot mechanically enforce LLM TL behavior; defense-in-depth via `/ae:review` already worked on F-008. F-022 ships visibility-only.
+
+**Validated 3 times in same session**: F-021 review (with `[ELEVATED]`, same-step CLAUDE.md cap P1 found), F-022 self-application (no `[ELEVATED]`, intentional design), F-020 Step 1 (no `[ELEVATED]`, P1s in different steps).
+
+**Commits**: `aeb58e6` (Step 1), `8bfa832` (review fixup — P1 AC3 logical contradiction + P2 escalation/P1-def conflict + 3 P2 bullet ambiguities).
+
+**Files**: `plugins/ae/skills/review/SKILL.md`.
+
+### F-021 — prompt-patterns.md P2 fixes (XS, BL-082, done 2026-05-18)
+
+Three F-019 dog-food challenger findings on `docs/references/prompt-patterns.md`:
+
+1. Line 14: dead `.ae/features/active/F-016-...` link removed (`.ae/` gitignored); replaced with in-doc Quick Reference table reference.
+2. Line 313: unjustified `500 lines / 1000 tokens` ratio removed; replaced with relative guidance citing CLAUDE.md:157's `~100 lines` cap as the actionable threshold (fixup applied this — original commit cited `~200 lines` which conflicted with CLAUDE.md).
+3. Line 331 (above Quick Reference table): added body-prose definition of `"extend existing"` used in 3 table cells.
+
+**F-022 KL #1 substitution rule's first dog-food validation**: F-021 commit `13854ac` had documented TL substitution AND review caught a P1 (CLAUDE.md cap conflict) — synthesis bullet correctly emitted KL #1 substitution finding with `[ELEVATED]` tag per same-step-defect rule.
+
+**Commits**: `13854ac` (Step 1), `50212b6` (review fixup — P1 CLAUDE.md cap + P2 arithmetic ambiguity in row-count enumeration).
+
+**Files**: `docs/references/prompt-patterns.md`.
+
+### F-020 — F-019 KL-1 dog-food: AC8c runtime smoke tests (S, BL-078, done 2026-05-19)
+
+Closes F-019 ship's 2-week dog-food window 12 days early. Validates F-019 cast-and-spawn protocol via 5 runtime smoke tests:
+
+- **Test 1** (`/ae:trace` cast visibility): live `/ae:trace` invocation on `plugins/ae/skills/next/SKILL.md` — 4 spawn cast blocks emitted, Selection Trace `[cast]` lines present, 0 drift. (`.ae/analyses/014-trace-next-skill-inference-chain.md`.)
+- **Tests 2a/2b** (challenger Role differs by mode): `review/SKILL.md` static + LIVE corroboration from 3 review-mode spawns this session; `analyze/SKILL.md` static + LIVE isolated spawn 2026-05-19 confirming `Role: opposition (analyze mode)` + 4-step analyze protocol.
+- **Test 3** (SKILL.md position-2 ordering): PASS, F-019 architect static check + post-33965a2-commit re-verification (zero drift across aeb58e6 / 50212b6 / 8bfa832).
+- **Test 7** (cast-block Layer 1 assertion fixture): `plugins/ae/tests/{prompts,assertions}/cast-block-emit.md` committed (was untracked since F-019 work; F-020 staged them). Layer 1 assertions cover Cast Block Syntax section + per-skill `📋 Cast:` counts (49 spawn sites across 13 spawning SKILL.md) + challenger.md mode migration.
+- **Test 8** (`/ae:team` ad-hoc cast generation): direct live `/ae:team --agents architect,challenger` invocation (team `f020-review-audit`) + earlier-in-session unaware-of-test `/ae:plan-review` batch corroboration.
+
+**0 drift across all 5 tests** — Step 4 fast-track fixup not triggered.
+
+**Commits**: `33965a2` (Step 1: commit fixtures + capture baseline SHA + L1 mechanical spot-check). Steps 2/3/4 are evidence-only into gitignored `milestones/` — deliberate for dog-food-validation feature class, not a substitute for production-code plan structure.
+
+**Files**: `plugins/ae/tests/prompts/cast-block-emit.md`, `plugins/ae/tests/assertions/cast-block-emit.md`.
+
+### F-019 — Cast-and-spawn protocol (L, BL-076 + BL-077, done 2026-05-17)
+
+Merger of F-017 (agents-as-roles) + F-018 (cast block protocol) into a single shipping vehicle. Two complementary changes:
+
+1. **Cast block syntax** in `agent-teams/SKILL.md`: canonical 4-field form `📋 Cast: <agent>` + indented `Role` / `Angle` / `Why` lines, position 2 in spawn prompt (after PRIMARY CONTEXT BUNDLE, before task instructions). Selection Trace extended with `[cast] <agent> — role=..., angle=..., why=...` line emitted at TL spawn-decision-time for mechanical verification.
+2. **challenger.md mode migration** ("Routing lateral" anti-pattern fix): mode-specific protocol steps moved FROM `agents/workflow/challenger.md` body INTO each spawning skill's spawn-prompt template (`analyze/SKILL.md` embeds analyze-mode 4-step protocol; `review/SKILL.md` embeds review-mode 4-step protocol; `consensus/SKILL.md` embeds critic-mode; `think/SKILL.md` embeds think-mode). challenger.md trimmed from 191 → 114 lines.
+
+49 spawn sites updated across 13 spawning SKILL.md files (analyze 4 · discuss 9 · plan 6 · work 3 · review 3 · plan-review 3 · think 4 · trace 4 · testgen 3 · code-review 1 · consensus 3 · team 3 · test-plugin 3). 5 deferred runtime smoke tests (KL-1) handed off to F-020 dog-food window.
+
+**Commits**: `dce8db9` (Step 1 foundation), `a59211f` (Step 2 challenger migration), `a69977f` (Step 3: analyze+discuss+plan), `735edc3` (Step 4: work+review+plan-review), `8006022` (Step 5: think+trace+testgen+code-review), `e93a4a4` (Step 6: consensus+team+test-plugin), `e2f393f` (Step 7: agent-teams spec realignment), `75bac65` (review fixup — code-reviewer P1 spec inconsistency + architect P3).
+
+**Files**: `plugins/ae/skills/agent-teams/SKILL.md`, `plugins/ae/agents/workflow/challenger.md`, and 13 spawning skill SKILL.md files.
+
+### F-016 — Reinforce 17 builtin agents with prompt patterns (M, BL-075, done 2026-05-10)
+
+Applied agency-agents prompt patterns (Identity + Vibe + Critical Rules + Decision matrix + ADR template + Worked examples + Severity+Rationale+nit cap) across 13 of 17 AE builtin agents per per-agent-type matrix (Doodlestein × 3 and minimal-change-engineer kept minimal; intentional). Canonical reference doc `docs/references/prompt-patterns.md` (339 lines, 7 patterns + 5 anti-patterns) shipped as single source of truth.
+
+**Commits**: `8f3812d` (Step 1 reference doc), `0d0ece1` (Step 2 research agents), `e17e7be` (Step 3 cross-family proxies), `742d6dd` (Step 4 architect tooling + architecture-reviewer), `12ef813` (Step 5 domain reviewers — security/performance/qa), `136af0b` (Step 6a code-reviewer reposition + capability injection), `caedf6a` (Step 6b prose: specialist-first routing), `59387b0` (Step 7 light touches — challenger Vibe + test-lead Identity/Vibe/example).
+
+**Files**: `docs/references/prompt-patterns.md` + 13 agent .md files under `plugins/ae/agents/`.
+
+### F-014 — ae:plan-review TaskCreate task tracking (S, BL-069, done 2026-05-09)
+
+P1-minimum scope from F-001 TaskCreate pattern extension. `/ae:plan-review` now creates 4 tasks per invocation (Pre-check + Architect review + Dependency analysis + Cross-family review) following the agent-teams §C.1 batch-create-at-skill-start convention. Tasks update through `pending → in_progress → completed` per their lifecycle. Other long-running skills (code-review / consensus / think / trace / testgen) deferred — `/ae:plan-review` was the priority P1 surface.
+
+**Commits**: `bdca899`.
+
+**Files**: `plugins/ae/skills/plan-review/SKILL.md`.
+
+### F-013 — pipeline.yml ceremony preset toggle (S, BL-068, done 2026-05-09)
+
+New top-level `ceremony:` field in `pipeline.yml` with 3 presets — `full` (default, all gates fire), `light` (work.review_mode → light, skip Doodlestein, skip plan-review Doodlestein), `minimal` (light + skip plan-review entirely). Per-invocation flags (`--light`, `--full`, `--skip-review`) win on conflict. 5 ceremony-aware read sites in `work/SKILL.md` + 2 in `plan/SKILL.md`. Backward compatibility: missing `ceremony:` field → `full` (current behavior preserved).
+
+**Commits**: `2d6ad52` (Step 1: ceremony preset field + precedence + accumulated_doodlestein gap fix), `28fff2d` (Step 2: work/SKILL.md 3 read sites), `fe39849` (Step 3: plan/SKILL.md 2 read sites), `f821cea` (Step 4: L1 fixture pair for backward compat), `3249007` (Step 5: README inline YAML example).
+
+**Files**: `plugins/ae/templates/pipeline.template.yml`, `plugins/ae/skills/work/SKILL.md`, `plugins/ae/skills/plan/SKILL.md`, `plugins/ae/tests/{prompts,assertions}/ceremony-preset-bundling.md`, `README.md`.
+
+### F-012 — /ae:review + /ae:code-review ad-hoc target + --reviewer flag (S, BL-067, done 2026-05-09)
+
+`/ae:review` argument inference extended: Form 1 (file/dir path), Form 2 (commit ref / range with `..`), Form 3 (empty/plan-path/free-text). `/ae:code-review` similarly accepts ad-hoc targets. New `--reviewer <name>` flag spawns ONLY listed agents (override, NOT additive — explicit-scope-reduction use case for D3 re-review). Filename timestamp normalization to `YYYYMMDDTHHMMSSsssZ` (UTC, ms precision, filesystem-safe).
+
+**Commits**: `afb4393` (Step 1: ae:review SKILL.md ad-hoc target + --reviewer flag), `f082746` (Step 2: ae:code-review SKILL.md ad-hoc target), `451d815` (Step 3: L1 fixtures for ad-hoc target + --reviewer flag), `0213303` (Step 4 dogfood Layer A: 6 spec ambiguities fixed), `ea9979b` (review fixup: 1 P1 + 6 P2 from Codex/challenger/Doodlestein/Gemini).
+
+**Files**: `plugins/ae/skills/review/SKILL.md`, `plugins/ae/skills/code-review/SKILL.md`, `plugins/ae/tests/{prompts,assertions}/review-adhoc-*`, `review-commit-range-target.md`, `review-reviewer-flag-override.md`, `code-review-target-aware-diff.md`.
+
+### F-011 — Vendor minimal-change-engineer as plugin built-in (XS, BL-066, done 2026-05-08)
+
+Moved `engineering-minimal-change-engineer` from `project_agents[]` config-mounted to plugin built-in at `plugins/ae/agents/engineering/minimal-change-engineer.md` with `subagent_type: ae:engineering:minimal-change-engineer`. `.ae/` no longer required for project-agents discovery. NOTICE.md updated to document the vendored agent's origin + modifications.
+
+**Commits**: `d8218c7` (Step 1: vendor + NOTICE.md), `f49a1f7` (Step 2: discuss/SKILL.md spawn + preflight → namespaced agent type), `1cf539d` (Step 3: L1 fixture for vendor + namespace + NOTICE regression guard), `0f71329` (Step 5 AC2 P2 fix), `4f9c669` (Step 5 doc updates for plugin-built-in vendor).
+
+**Files**: `plugins/ae/agents/engineering/minimal-change-engineer.md`, `NOTICE.md`, `plugins/ae/skills/discuss/SKILL.md`.
+
+### F-010 — /ae:discuss REVISE preserves user's original question (XS, BL-065, done 2026-05-08)
+
+5 structural patches to `discuss/SKILL.md` to ensure REVISE never modifies the frozen `## Original Question` section captured during framing. Failure was observed twice within 12 hours pre-fix (Discussion 053 + D001). L1 fixture (1 pair) added as regression guard.
+
+**Commits**: `5e24c50` (Step 1: structural fix), `245efb9` (Step 2: L1 fixture).
+
+**Files**: `plugins/ae/skills/discuss/SKILL.md`, `plugins/ae/tests/{prompts,assertions}/discuss-frozen-section.md`.
+
 ### F-009 — Agent invocation consistency fixes (4 commits + 1 fixup)
+
+**Commits**: `ad58564` (Step 1), `6df259e` (Step 2), `0f3226e` (Step 3), `a3a09c2` (Step 4), `5da112b` (post-review fixup applying 5 P1 + 7 P2 findings).
+
+#### Step 1 — `/ae:discuss` preflight no longer silently degrades quorum (`ad58564`)
 
 **Commits**: `ad58564` (Step 1), `6df259e` (Step 2), `0f3226e` (Step 3), `a3a09c2` (Step 4), `5da112b` (post-review fixup applying 5 P1 + 7 P2 findings).
 
@@ -62,7 +177,19 @@ Codex P1-a in F-009 plan-review rejected the original plan's approach of adding 
 
 #### Post-review fixup (`5da112b`)
 
-`/ae:review` 4-reviewer pass (architecture + challenger + codex + gemini) surfaced 5 P1 + 7 P2 findings post-ship. Fixup commit applies all of them: cross-spec drift in `agent-governance-format.md`, `schema_version:` placement ambiguity, AC1 rollback procedure broken as written, `qa` first-class declaration vs absent override table, `agent-contract.md` L99/L105 contradiction, trace example conflated 2 scenarios, "one-time warning" implementation gap (rewritten to "per-invocation"), omitted-field default not shown, unknown-version not routed, "do nothing" migration option missing, CHANGELOG missing Step 1+4 entries. See `.ae/features/active/F-009-agent-invocation-audit/review.md` for the full review record.
+`/ae:review` 4-reviewer pass (architecture + challenger + codex + gemini) surfaced 5 P1 + 7 P2 findings post-ship. Fixup commit applies all of them: cross-spec drift in `agent-governance-format.md`, `schema_version:` placement ambiguity, AC1 rollback procedure broken as written, `qa` first-class declaration vs absent override table, `agent-contract.md` L99/L105 contradiction, trace example conflated 2 scenarios, "one-time warning" implementation gap (rewritten to "per-invocation"), omitted-field default not shown, unknown-version not routed, "do nothing" migration option missing, CHANGELOG missing Step 1+4 entries. See `.ae/features/done/F-009-agent-invocation-audit/review.md` for the full review record.
+
+### F-008 — AE quality regression diagnosis + /ae:status skill (M, done 2026-05-17)
+
+Two-step feature addressing AE's documented failure modes (简单复杂化 / 复杂偷懒化 / 跑偏 / 状态丢失 / 递归过度设计) observed across 5 projects (AE-on-AE / mengdie / Games / SmartPal / domain-rich):
+
+- **Step 1** (`4ed382c`): Extended F-001 TaskCreate progress visibility pattern to 6 remaining long-running skills (skills proactively emit task lists per agent-teams §C.1 batch-create convention).
+- **Step 2** (`6b4c415`): New `/ae:status` skill — mid-skill-safe session readout (git context + active features + in-flight teams + recent review verdicts + BLs captured today). Pure-read, no team spawn, completes in <2s. Distinct from `/ae:dashboard` (which requires read-only pipeline scan and may be ~5s on large projects).
+- **Review fixup** (`f96ca07`): 3 P1 + 2 P2 from `/ae:review` 4-reviewer pass.
+
+F-008 originated the KL #1 substitution detection problem that F-022 later operationalized — the F-008 work itself ran inline TL self-review for `/ae:code-review` per-step gate, which review challenger C4 caught as a falsified counterfactual. That escape became the canonical motivation for BL-085 → F-022.
+
+**Files**: `plugins/ae/skills/{plan,work,review,plan-review,trace,testgen}/SKILL.md` (Step 1 task-tracking patterns), `plugins/ae/skills/status/SKILL.md` (Step 2 new skill).
 
 ---
 

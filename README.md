@@ -107,7 +107,7 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 
 ## Agents
 
-16 specialized agents in four groups:
+17 specialized agents in four groups:
 
 ### Review Agents — the quality gate
 | Agent | Focus |
@@ -229,7 +229,7 @@ Controls 5 stages with existing solo paths: `work.agent_teams`, `work.review_mod
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest
   skills/                         # 20 slash commands (the shell)
-  agents/                         # 16 specialized agents (the processes)
+  agents/                         # 17 specialized agents (the processes)
     review/                       #   4 review agents
     research/                     #   3 research agents
     workflow/                     #   6 workflow agents (incl. test-lead)
