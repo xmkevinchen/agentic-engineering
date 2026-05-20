@@ -58,3 +58,8 @@ Each skill defines what to extract. Common patterns:
 | ae:plan | Overall approach rationale; non-obvious technical choices | plan | decisional |
 | ae:review | Reusable patterns (P2+ findings that apply beyond this code) | review | experiential |
 | ae:retrospect | Actionable trend conclusions; skip raw statistics | retrospect | experiential |
+
+## Related references
+
+- T1 trace schema spec: [trace-schema.md](references/trace-schema.md)
+- T1 trace emission wiring (called from 7 SKILL.md `## Trace emission (final step)` sections): [trace-emission-protocol.md](references/trace-emission-protocol.md)
