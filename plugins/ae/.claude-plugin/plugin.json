@@ -46,5 +46,17 @@
         "GEMINI_API_KEY": "${GEMINI_API_KEY}"
       }
     }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-cross-family.sh"
+          }
+        ]
+      }
+    ]
   }
 }

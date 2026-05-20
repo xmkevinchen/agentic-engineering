@@ -67,3 +67,16 @@ if [ ${#ISSUES[@]} -gt 0 ]; then
     echo "[ae] WARNING: $issue" >&2
   done
 fi
+
+# BL-023 / Plan 054 Step 1 smoke test: log session ID env vars on every SessionStart.
+# Verifies (a) plugin.json hooks block 是否真的被 CC 注册触发, (b) $CLAUDE_CODE_SESSION_ID
+# 是否在 hook 执行 context 暴露 (T1 trace filename = session id 依赖此变量)。
+# Output appended to /tmp/ae-session-check.log; user 验证后可删除该 log 与本段代码。
+{
+  echo "---"
+  echo "ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "CLAUDE_CODE_SESSION_ID=${CLAUDE_CODE_SESSION_ID:-MISSING}"
+  echo "CC_SESSION_ID=${CC_SESSION_ID:-MISSING}"
+  echo "AE_SESSION_ID=${AE_SESSION_ID:-MISSING}"
+  echo "agent_teams=$AGENT_TEAMS codex=$CODEX_AVAILABLE gemini=$GEMINI_AVAILABLE"
+} >> /tmp/ae-session-check.log 2>/dev/null
