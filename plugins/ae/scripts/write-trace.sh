@@ -106,7 +106,7 @@ fi
 
 # ---- Assemble 9-field JSON record via jq (no shell concat per security advisory) ----
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-if ! jq -n \
+if ! jq -nc \
     --arg ts "$NOW" \
     --arg project_root "$PROJECT_ROOT" \
     --arg skill "$AE_TRACE_SKILL" \
