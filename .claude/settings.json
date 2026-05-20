@@ -1,0 +1,11 @@
+{
+  "enabledPlugins": {
+    "ae": true
+  },
+  "plugins": [
+    {
+      "path": ".",
+      "isLocal": true
+    }
+  ]
+}

@@ -4,13 +4,15 @@
 *~
 node_modules/
 # dist/ — committed for plugin distribution (no build step on install)
-.claude/settings.json
 .claude/settings.local.json
 .claude/cross-family-status.json
-.claude/pipeline.yml
+.claude/worktrees/
 
 # Embedding model cache (from mengdie/second-brain MCP)
 .fastembed_cache/
 
 # Process artifacts (discussions, plans, reviews, analyses, etc.)
 .ae/
+
+# Local-only references (kept out of repo)
+docs/references/pipeline-quality-failure-cases.md

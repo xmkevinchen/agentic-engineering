@@ -1,0 +1,50 @@
+# .claude/pipeline.yml — Agentic Engineering (self-hosted)
+# Updated by /ae:setup update
+
+test:
+  command: ""
+
+lint:
+  command: ""
+
+# --- Output Directories ---
+output:
+  discussions: ".ae/discussions/"
+  plans: ".ae/plans/"
+  milestones: ".ae/milestones/"
+  backlog: ".ae/backlog/"
+  reviews: ".ae/reviews/"
+  analyses: ".ae/analyses/"
+
+# --- Scratch ---
+# scratch: "~/.claude/scratch/"
+
+# --- Agent Libraries (BL-005 Phase 1) ---
+agent_libraries:
+  - name: agency-agents
+    source: "../agency-agents"
+    checked_at: "2026-04-19"
+    # 178 agents across 17 categories; low-signal scan passed (5% short desc, 19% no role kw)
+    # Temporary configuration for BL-005 Phase 2 Step 3 ae-self scorer validation
+
+# --- Project Agents (BL-005 Phase 1) ---
+project_agents:
+  - name: engineering-technical-writer
+    role: domain-expert
+    source: "agency-agents:engineering/engineering-technical-writer.md"
+    source_sha: 447c306c31458634d686ec040697808cd931a772
+    display_name: "Technical Writer"
+    imported_at: "2026-04-19"
+    modified: false
+    priority: 50
+    required: false
+
+# Note: engineering-minimal-change-engineer entry removed in F-011 (2026-05-08).
+# The agent is now bundled as plugin built-in at
+# plugins/ae/agents/engineering/minimal-change-engineer.md (subagent_type:
+# ae:engineering:minimal-change-engineer). project_agents entry no longer needed.
+
+# --- Cross-Family ---
+cross_family:
+  codex: true
+  gemini: true
