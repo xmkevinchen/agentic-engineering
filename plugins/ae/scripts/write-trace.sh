@@ -87,8 +87,10 @@ while ! mkdir "$LOCK_DIR" 2>/dev/null; do
   fi
   sleep 0.1
 done
-# shellcheck disable=SC2064
-trap "rmdir '$LOCK_DIR' 2>/dev/null" EXIT INT TERM
+# Single-quoted trap body (defense in depth per security-reviewer P3):
+# $LOCK_DIR expands at trap-fire time, not trap-set time.
+# shellcheck disable=SC2016
+trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT INT TERM
 
 # ---- Header line if file new ----
 if [ ! -f "$TRACE_FILE" ]; then

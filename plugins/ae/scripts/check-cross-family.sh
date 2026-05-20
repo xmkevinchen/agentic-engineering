@@ -68,15 +68,14 @@ if [ ${#ISSUES[@]} -gt 0 ]; then
   done
 fi
 
-# BL-023 / Plan 054 Step 1 smoke test: log session ID env vars on every SessionStart.
-# Verifies (a) plugin.json hooks block 是否真的被 CC 注册触发, (b) $CLAUDE_CODE_SESSION_ID
-# 是否在 hook 执行 context 暴露 (T1 trace filename = session id 依赖此变量)。
-# Output appended to /tmp/ae-session-check.log; user 验证后可删除该 log 与本段代码。
-{
-  echo "---"
-  echo "ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  echo "CLAUDE_CODE_SESSION_ID=${CLAUDE_CODE_SESSION_ID:-MISSING}"
-  echo "CC_SESSION_ID=${CC_SESSION_ID:-MISSING}"
-  echo "AE_SESSION_ID=${AE_SESSION_ID:-MISSING}"
-  echo "agent_teams=$AGENT_TEAMS codex=$CODEX_AVAILABLE gemini=$GEMINI_AVAILABLE"
-} >> /tmp/ae-session-check.log 2>/dev/null
+# Plan 054 Step 1 BL-023 smoke test debug log: removed after AC1 verified
+# (entry ts=2026-05-20T21:45:15Z confirmed hook fires + CLAUDE_CODE_SESSION_ID exposed).
+# Per architecture-reviewer + security-reviewer findings on /ae:review: indefinite
+# /tmp/ae-session-check.log accumulation + session id leak risk → remove.
+
+# Plan 054 review findings: cleanup orphan ~/.ae/traces/*.lockdir from prior SIGKILL'd
+# hook executions (gemini-proxy MF#1 reclassified). 5min stale threshold — write-trace.sh
+# critical section is < 1s; anything older is orphan.
+if [ -d "$HOME/.ae/traces" ]; then
+  find "$HOME/.ae/traces" -maxdepth 1 -name '*.lockdir' -type d -mmin +5 -exec rmdir {} \; 2>/dev/null
+fi

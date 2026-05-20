@@ -65,14 +65,21 @@ else
     [ -f "$group_list" ] || continue
     ym="$(basename "$group_list" .list)"
     archive_path="$ARCHIVE_DIR/${ym}.tar.zst"
-    staging_path="$(mktemp -t "ae-rotate-staging-${ym}.XXXXXX.tar.zst")"
+    # Staging in $ARCHIVE_DIR (not /tmp) per architecture-reviewer P2-logic:
+    # mv same-filesystem POSIX atomic on Linux/macOS; /tmp tmpfs vs $HOME ext4 breaks atomic on Linux.
+    staging_path="$(mktemp -p "$ARCHIVE_DIR" "ae-rotate-staging-${ym}.XXXXXX.tar.zst" 2>/dev/null || mktemp -t "ae-rotate-staging-${ym}.XXXXXX.tar.zst")"
 
     # If archive already exists, extract its members + merge with new
     if [ -f "$archive_path" ]; then
       extract_dir="$(mktemp -d -t ae-rotate-extract.XXXXXX)"
-      if ! tar --use-compress-program=zstd -xf "$archive_path" -C "$extract_dir" 2>/dev/null; then
+      # gemini-proxy MF#3 reclassified: trap cleanup extract_dir on SIGKILL/INT/TERM.
+      # shellcheck disable=SC2016
+      trap 'rm -rf "$extract_dir" 2>/dev/null' EXIT INT TERM
+      # security-reviewer P3: --no-absolute-names defense in depth on extract (archive content trust).
+      if ! tar --use-compress-program=zstd --no-absolute-names -xf "$archive_path" -C "$extract_dir" 2>/dev/null; then
         echo "[rotate] warn: cannot extract existing archive $archive_path, skip group $ym" >&2
         rm -rf "$extract_dir" "$staging_path"
+        trap - EXIT INT TERM
         continue
       fi
       # Stage: extracted + new candidates
@@ -86,6 +93,7 @@ else
       done < "$group_list"
       (cd "$extract_dir" && tar --use-compress-program=zstd -cf "$staging_path" -- *) 2>/dev/null
       rm -rf "$extract_dir"
+      trap - EXIT INT TERM
     else
       # Fresh archive: tar new candidates directly (using basenames)
       tar_input_dir="$(mktemp -d -t ae-rotate-input.XXXXXX)"
