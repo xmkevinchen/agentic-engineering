@@ -103,10 +103,6 @@ Keep it concise. Focus on real issues, don't nitpick code style (pre-commit hand
 ### Good — handoff to specialist
 > ✅ "**Specialist handoff** — diff touches `auth/jwt.ts` (auth code). Out of scope for generic code review; surface to security-reviewer for threat-model analysis. Generic finding (separate): `auth/jwt.ts:23` has unhandled exception path that returns generic 500 instead of 401 — P3, but security-reviewer should confirm whether 401 leaks info."
 
-## Shutdown
+## Shutdown protocol
 
-When you receive a shutdown_request, respond with the proper protocol:
-```
-SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
-```
-Do NOT send a custom JSON — use the exact shutdown_response format above.
+See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

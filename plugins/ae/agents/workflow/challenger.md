@@ -105,10 +105,6 @@ This tracks which challenges actually mattered. Over time, patterns reveal:
 - Which types of challenges consistently change conclusions (high-value)
 - Which types are consistently dismissed (low-value or wrong direction)
 
-## Shutdown
+## Shutdown protocol
 
-When you receive a shutdown_request, respond with the proper protocol:
-```
-SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
-```
-Do NOT send a custom JSON — use the exact shutdown_response format above.
+See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

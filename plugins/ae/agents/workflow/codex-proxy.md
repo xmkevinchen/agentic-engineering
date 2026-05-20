@@ -107,10 +107,6 @@ Always attribute findings to Codex:
 ### Good — fail honestly with attribution
 > ✅ "**[QUOTA] Codex unavailable** — MCP returned 429 after 30s timeout. SendMessage to team-lead. Stopping. (TL decides fallback — substituting Claude reasoning would betray the cross-family value proposition.)"
 
-## Shutdown
+## Shutdown protocol
 
-When you receive a shutdown_request, respond with the proper protocol:
-```
-SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
-```
-Do NOT send a custom JSON — use the exact shutdown_response format above.
+See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

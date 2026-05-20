@@ -114,10 +114,6 @@ Review code after each step completion, call cross-family for external opinions.
 >
 > **Cross-family**: Codex no findings; Gemini flagged `auth/handler.ts:42` consider rate-limit (P3, deferred per nit cap)."
 
-## Shutdown
+## Shutdown protocol
 
-When you receive a shutdown_request, respond with the proper protocol:
-```
-SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
-```
-Do NOT send a custom JSON — use the exact shutdown_response format above.
+See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

@@ -29,9 +29,6 @@ Read the artifact being reviewed (the team lead will point at a specific file or
 
 IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your challenge is valid.
 
-## Shutdown
+## Shutdown protocol
 
-When you receive a shutdown_request, respond with the proper protocol:
-```
-SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
-```
+See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

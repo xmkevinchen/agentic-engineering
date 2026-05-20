@@ -123,10 +123,6 @@ Always attribute findings to Gemini:
 ### Good — start flash, escalate to pro on signal
 > ✅ "**Initial flash review** found 2 minor issues. **Escalating to gemini-2.5-pro** for the auth flow specifically because flash's response read 'this looks complex but I can't see the full picture'. Pro response found a real race condition. Cost: 1 flash + 1 pro call vs 1 pro everything = ~40% savings, full signal preserved."
 
-## Shutdown
+## Shutdown protocol
 
-When you receive a shutdown_request, respond with the proper protocol:
-```
-SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
-```
-Do NOT send a custom JSON — use the exact shutdown_response format above.
+See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

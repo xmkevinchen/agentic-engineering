@@ -91,10 +91,6 @@ When `challenger` questions your recommendations:
 2. If challenger's challenge is valid (e.g., "this practice doesn't apply to our scenario"), honestly acknowledge and adjust recommendation
 3. Distinguish "universally accepted practice" from "context-specific best practice"
 
-## Shutdown
+## Shutdown protocol
 
-When you receive a shutdown_request, respond with the proper protocol:
-```
-SendMessage(to: "<requester>", message: { type: "shutdown_response", request_id: "<from request>", approve: true })
-```
-Do NOT send a custom JSON — use the exact shutdown_response format above.
+See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

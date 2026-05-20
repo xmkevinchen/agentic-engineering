@@ -576,3 +576,34 @@ They are complementary, not redundant. A skill execution that completes successf
 ### Auto-compact panel freeze (known limit)
 
 The Claude Code task panel can freeze rendering during auto-compact for long-running skills (10+ phase transitions in one run). The underlying state is consistent — only the rendering is frozen. If a skill appears stuck in the panel but the conversation is progressing, trust the conversation; the panel will catch up after the next refresh.
+
+## Shutdown handshake (canonical)
+
+Per Plan 055 T2 schema discipline: this is the single canonical specification of the SendMessage shutdown handshake protocol. All teammate agents reference this section instead of inlining the JSON schema (CI enforced by `plugins/ae/scripts/check-shutdown-canonical.sh`).
+
+When TL sends `shutdown_request` to a teammate, the teammate replies `shutdown_response`:
+
+**Request (TL → teammate)**:
+```
+{"type": "shutdown_request", "reason": "<short string>"}
+```
+
+**Response (teammate → TL)**:
+```
+{"type": "shutdown_response", "request_id": "<echo from request id>", "approve": true | false, "reason": "<optional>"}
+```
+
+**Behavior**:
+- Teammate MUST reply within 30s of request OR be force-abandoned by TL
+- `approve: false` blocks shutdown (rare — teammate has urgent in-flight work)
+- TL calls `TeamDelete()` after all approved responses OR force-abandon window expires
+- Force-abandoned teammates have verdict files written BEFORE `TeamDelete()` (audit trail)
+- Do NOT send custom JSON variants — use the exact shape above
+
+**Why centralized**: 15 agent .md files previously embedded this schema inline (copy-paste drift accumulated). Centralizing to this canonical section means schema evolution (e.g., adding fields) only edits this 1 location; agent references inherit automatically.
+
+**Whitelist exempt agents** (not required to reference this section):
+- `agents/engineering/minimal-change-engineer.md` — current contract is "stay in team until force-abandon", no shutdown_response participation
+- `agents/workflow/test-lead.md` — same; uses Class A/B resurrection lifecycle instead
+
+Future agent additions either reference this section OR get explicitly added to the whitelist in `scripts/check-shutdown-canonical.sh` (audit trail requirement).
