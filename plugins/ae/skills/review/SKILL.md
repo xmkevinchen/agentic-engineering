@@ -656,3 +656,7 @@ Based on review outcome, suggest with exact executable command:
 - If review passed → `Review passed.` Suggest next action based on project's source control workflow and context. Let user decide.
 - If review has P1 findings → `P1 findings remain. Fix and re-run /ae:review <plan-file-path>`
 - If review deferred items → `Deferred items exist. Address in next iteration or /ae:plan for follow-up.`
+
+## Trace emission (final step)
+
+Before skill exit, follow [Trace Emission Protocol](../../docs/references/trace-emission-protocol.md) — emit 9-field trace record to `~/.ae/traces/<session-id>.ndjson` (no LLM content, per-skill-invocation metadata for v0.11.x consumers).

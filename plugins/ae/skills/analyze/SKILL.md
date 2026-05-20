@@ -384,3 +384,7 @@ Based on the analysis output, suggest:
 - Decision points remain → `/ae:discuss .ae/features/active/F-NNN-<slug>/`
 - Path is clear → `/ae:plan` will create `<feature-dir>/plan.md` inside this feature dir (Plan 051+ behavior: feature ID is path-derived from the parent dir; optional `feature:` frontmatter is validation-only).
 - Deeper investigation needed → `/ae:trace` (execution flow) or `/ae:think` (focused deep-dive).
+
+## Trace emission (final step)
+
+Before skill exit, follow [Trace Emission Protocol](../../docs/references/trace-emission-protocol.md) — emit 9-field trace record to `~/.ae/traces/<session-id>.ndjson` (no LLM content, per-skill-invocation metadata for v0.11.x consumers).

@@ -215,3 +215,7 @@ Based on output, suggest:
 `/ae:plugin-stats` = **AE plugin self-development outcome stats** (this skill). Reads `.ae/reviews/`, surfaces delivery metrics across the AE plugin's own development pipeline. Persistent file output for trend tracking.
 
 Both can coexist on the same project. Use `ae:retrospect` to reflect on shipped product features; use `ae:plugin-stats` to reflect on the meta-process that produced them (when this project IS the AE plugin, or any project that uses AE for self-bootstrapping).
+
+## Trace emission (final step)
+
+Before skill exit, follow [Trace Emission Protocol](../../docs/references/trace-emission-protocol.md) — emit 9-field trace record to `~/.ae/traces/<session-id>.ndjson` (no LLM content, per-skill-invocation metadata for v0.11.x consumers).

@@ -184,3 +184,7 @@ The skill never tells the user what to do — it surfaces a snapshot for them to
 - A lesson worth keeping → user decides to save a memory or open a discussion.
 - A promote candidate sticking out → user runs `/ae:analyze BL-NNN`.
 - A pattern in estimate-vs-actual → user adjusts their sizing heuristic, no skill call needed.
+
+## Trace emission (final step)
+
+Before skill exit, follow [Trace Emission Protocol](../../docs/references/trace-emission-protocol.md) — emit 9-field trace record to `~/.ae/traces/<session-id>.ndjson` (no LLM content, per-skill-invocation metadata for v0.11.x consumers).

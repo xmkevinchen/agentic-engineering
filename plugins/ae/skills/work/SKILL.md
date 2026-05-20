@@ -524,3 +524,7 @@ Based on work completion, suggest with exact executable command:
 - If all plan steps completed → `Pipeline state updated. All steps complete. Next: /ae:review <plan-file-path>`
 - If steps remain → auto-continue to next step (or pause if gate failed)
 - If blockers encountered → `Blocker on Step N. Try: /ae:think <blocker description>`
+
+## Trace emission (final step)
+
+Before skill exit, follow [Trace Emission Protocol](../../docs/references/trace-emission-protocol.md) — emit 9-field trace record to `~/.ae/traces/<session-id>.ndjson` (no LLM content, per-skill-invocation metadata for v0.11.x consumers).

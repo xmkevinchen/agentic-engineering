@@ -818,3 +818,7 @@ tags: [relevant, tags]
 - [Analysis](analysis.md) *(if exists)*
 - [Conclusion](conclusion.md) *(after discussion complete)*
 ```
+
+## Trace emission (final step)
+
+Before skill exit, follow [Trace Emission Protocol](../../docs/references/trace-emission-protocol.md) — emit 9-field trace record to `~/.ae/traces/<session-id>.ndjson` (no LLM content, per-skill-invocation metadata for v0.11.x consumers).
