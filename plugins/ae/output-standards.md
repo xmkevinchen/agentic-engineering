@@ -39,7 +39,7 @@ The `---` horizontal rule + heading visually separates summary from process flow
 
 ### Standard 3 — Document layered structure
 
-Pyramid: top ≤ 5 lines TL;DR, lower layers as 留档 (audit trail). Each document type has a different pyramid tip — see *Per-document pyramid tips* table below.
+Pyramid: top ≤ 5 lines TL;DR, lower layers as audit-trail detail. Each document type has a different pyramid tip — see *Per-document pyramid tips* table below.
 
 ### Standard 4 — Closed loop
 
@@ -68,15 +68,15 @@ This is the protocol-level enforcement. Standards 1–4 describe the form; Stand
 Receiving information (agent report / research / tool output) →
 **First understand + distill into a ≤ 5 line "if you only read this paragraph"** →
 This paragraph goes to session (pyramid tip) + document top →
-Detail goes to document lower layers, marked 留档.
+Detail goes to document lower layers, retained as audit-trail.
 
 ---
 
 ## Per-document pyramid tips
 
-Each document type has a different pyramid tip but all follow "top ≤ 5 lines + lower layers as 留档".
+Each document type has a different pyramid tip but all follow "top ≤ 5 lines + lower layers as audit-trail detail".
 
-| Document | Pyramid tip required content | Lower-layer 留档 |
+| Document | Pyramid tip required content | Lower-layer audit-trail |
 |---|---|---|
 | `feature/index.md` | Feature scope + current stage + key decision + next step | File list + links |
 | `analysis.md` | Problem + current judgment + key open questions + next step | Research notes + agent report references |

@@ -7,7 +7,7 @@ source: regression
 
 ## Context
 
-F-012 在 `plugins/ae/skills/review/SKILL.md` 加入 ad-hoc target 支持：Argument Inference 改为 3-form ladder (file/dir / commit ref/range / 空)，Pre-checks 段加 router (target-mode skip Check 2-5)，Output 段加 case (c) ad-hoc/re-review 写到 `output.reviews/adhoc/<id>-<ISO8601>.md`。本测试验证 spec text 完整存在 + 关键约束没漏。
+F-012 adds ad-hoc target support to `plugins/ae/skills/review/SKILL.md`: the Argument Inference becomes a 3-form ladder (file/dir, commit ref/range, empty), the Pre-checks section gains a router (target-mode skips Check 2-5), and the Output section adds case (c) — ad-hoc / re-review writes go to `output.reviews/adhoc/<id>-<ISO8601>.md`. This test verifies the spec text is complete and that no key constraint has been dropped.
 
 ## Prompt
 

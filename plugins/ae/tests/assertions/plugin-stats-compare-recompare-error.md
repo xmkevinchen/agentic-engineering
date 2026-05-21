@@ -9,7 +9,7 @@ source: generated
 
 ### MUST
 - [behavior] SKILL.md pre-check: when either ID matches a `type: retrospect-comparison` file → error output
-- [text:contains] Output contains "比较失败：不支持对比较报告再次比较" or equivalent "cannot compare a comparison report" message
+- [text:contains] Output contains "cannot compare a comparison report" or equivalent localized "comparison-of-a-comparison rejected" message
 - [behavior] Execution stops — no further comparison attempted
 
 ### MUST_NOT

@@ -9,7 +9,7 @@ source: generated
 
 ### MUST
 - [behavior] SKILL.md pre-check: when either ID not found → error output
-- [text:contains] Output contains "比较失败：未找到 ID 为" or equivalent "ID not found" error message
+- [text:contains] Output contains "ID not found" error message (e.g., "comparison failed: ID not found")
 - [behavior] Execution stops — no comparison report written
 
 ### MUST_NOT

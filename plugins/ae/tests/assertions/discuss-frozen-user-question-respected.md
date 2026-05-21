@@ -15,7 +15,7 @@ source: regression
 - [structure:order] `## User Question (Frozen)` heading appears after `# Framing — [title]` and before `## Problem Statement` (within the framing.md template block in the Appendix)
 - [text:contains] Frozen section description contains the words "sacred" AND "immutable"
 - [text:contains] Frozen section description contains "do NOT rewrite, paraphrase, normalize, translate, narrow, broaden" or equivalent listing
-- [text:contains] File contains `### 1.4. Writing the` sub-section heading (the §1.4 framing.md write 约束)
+- [text:contains] File contains `### 1.4. Writing the` sub-section heading (the §1.4 framing.md write constraint)
 - [structure:order] `### 1.4.` heading appears before `### 1.5. Round 0 — Framing Review`
 - [text:contains] §1.4 sub-section contains the word `verbatim`
 - [text:contains] §1.4 sub-section contains at least 4 distinct MUST NOT items covering: summarize/condense, translate, normalize formatting, explanatory wrapping

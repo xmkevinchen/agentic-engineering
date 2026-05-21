@@ -9,7 +9,7 @@ source: generated
 
 ### MUST
 - [behavior] SKILL.md edge case: same ID provided twice → error output
-- [text:contains] Output contains "比较失败：两个 ID 相同" or equivalent "same ID" error message
+- [text:contains] Output contains "same ID" error message (e.g., "comparison failed: both IDs are identical")
 - [behavior] Execution stops — no comparison report written
 
 ### MUST_NOT

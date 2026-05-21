@@ -76,7 +76,7 @@ Decision: <what we're doing>
 Consequences: + <what's easier> / − <what's harder> / future <reversal cost>
 ```
 
-No "ADR-001 ... ADR-XXX 编号体系" ceremony; plan-local 编号即可.
+No "ADR-001 ... ADR-XXX numbering scheme" ceremony; a plan-local number is sufficient.
 
 ## Worked Examples
 

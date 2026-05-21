@@ -3,8 +3,9 @@
 #
 # v0.10.x schema grep script; v0.11.x candidate to upgrade to schema validator framework.
 # Intentional coupling: validates feature index.md + plan frontmatter same schema mechanism,
-# schema 演化要触此 script. SPLIT CONDITION: 当 feature vs plan schema 在 single quarter 内
-# diverge in > 1 field 时, 允许拆 2 script (合法 escape hatch per Doodlestein-regret).
+# schema evolution must touch this script. SPLIT CONDITION: when the feature schema
+# and the plan schema diverge by more than 1 field within a single quarter, the script
+# may be split into 2 (legitimate escape hatch surfaced by an earlier regret review).
 #
 # Hardcoded AE-internal paths (does NOT read pipeline.yml; external projects with
 # custom output.plans: path NOT covered — out of scope by design).

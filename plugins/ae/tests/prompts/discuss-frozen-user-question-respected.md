@@ -7,7 +7,7 @@ source: regression
 
 ## Context
 
-F-010 在 `plugins/ae/skills/discuss/SKILL.md` 加入 frozen-section 结构性 fix：framing.md 模板加 `## User Question (Frozen)` section + §1.4 write 约束 + §1.5.1 Frozen-field rule + §1.5.3 verdict format `target:` 字段 + §1.5.3 Rule 1.5 byte-for-byte diff guard。本测试验证这些 spec text 完整存在 + 顺序正确 + 没有 strategic Doodlestein 删除的 recovery path 残留。
+F-010 adds a structural frozen-section fix to `plugins/ae/skills/discuss/SKILL.md`: the framing.md template gets a `## User Question (Frozen)` section, §1.4 adds a write constraint, §1.5.1 adds the Frozen-field rule, §1.5.3 adds the verdict format `target:` field, and §1.5.3 adds the Rule 1.5 byte-for-byte diff guard. This test verifies all the spec text is present, the section order is correct, and no residue remains from the recovery path that the strategic Doodlestein challenge removed.
 
 ## Prompt
 

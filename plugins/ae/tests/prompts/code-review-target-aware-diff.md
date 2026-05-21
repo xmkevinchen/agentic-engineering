@@ -7,7 +7,7 @@ source: regression
 
 ## Context
 
-F-012 在 `plugins/ae/skills/code-review/SKILL.md` 首次实际 wire `$ARGUMENTS` argument logic（argument-hint 8 个月前已宣告但 Track 1+4 都硬编码 `git diff + git diff --cached`）。改动加 Argument Inference 3-form 段、引入 substitution markers `{{ TARGET_DIFF_CMD }}` 和 `{{ TARGET_DIFF_OUTPUT }}`、Track 1 + Track 4 spawn 用 marker 替代硬编码 diff。本测试验证 spec text 完整 + substitution discipline 写明 + 没漏 marker。
+F-012 actually wires the `$ARGUMENTS` argument logic in `plugins/ae/skills/code-review/SKILL.md` for the first time. The argument-hint was declared 8 months earlier but Track 1 + Track 4 both hardcoded `git diff + git diff --cached`. The change adds an Argument Inference 3-form section, introduces substitution markers `{{ TARGET_DIFF_CMD }}` and `{{ TARGET_DIFF_OUTPUT }}`, and updates the Track 1 + Track 4 spawn templates to use the markers instead of the hardcoded diff. This test verifies the spec text is complete, that the substitution discipline is documented, and that no marker has been missed.
 
 ## Prompt
 

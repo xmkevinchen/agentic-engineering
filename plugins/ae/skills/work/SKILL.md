@@ -12,7 +12,7 @@ effort: high
 All deliverables (SendMessage to TL, git-tracked docs, TL replies) MUST follow:
 - Line 1: conclusion / judgment / action (one sentence)
 - Phase summary: `---` + heading separator + bullets
-- Documents: pyramid (top ≤ 5 lines TL;DR + 留档 below)
+- Documents: pyramid (top ≤ 5 lines TL;DR + supporting detail below)
 - Closed loop: reader makes 90%+ judgments without opening lower layers
 - Self-verify: re-read your output before sending; misaligned → fix first
 

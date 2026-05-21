@@ -21,3 +21,8 @@ docs/references/nyk-framework.md
 
 # Local-only decision records (process artifacts; kept out of repo)
 docs/decisions/
+
+# Claude Code convention: contributor-local memory file (loaded alongside CLAUDE.md
+# but never committed). AE uses this for AE-internal process detail (GTD model,
+# feature dir layout, frontmatter schemas, autonomy boundary).
+CLAUDE.local.md

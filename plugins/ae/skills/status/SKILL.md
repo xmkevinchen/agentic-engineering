@@ -114,7 +114,7 @@ Total wall-clock target: under 2 seconds for a typical project (≤20 active fea
   Unpushed: 2 commits ahead of origin/main
 
 🎯 Active features (1)
-  F-008 — AE 质量回归 — 三种失败模式诊断 (ae-self-quality)
+  F-008 — AE quality regression — three failure-mode diagnoses (ae-self-quality)
 
 🤖 In-flight teams (0 in the last 4 hours)
   (no in-flight teams in the last 4 hours)

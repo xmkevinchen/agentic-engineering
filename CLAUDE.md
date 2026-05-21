@@ -2,7 +2,7 @@
 
 ## Language Convention
 
-All git-tracked files in this repository are written in English: `README.md`, `CHANGELOG.md`, every `SKILL.md`, agent definition files under `plugins/ae/agents/`, and everything under `docs/` (references, public-facing guides). Process artifacts under `.ae/` (gitignored — discussions, plans, reviews, analyses, milestones) may use whatever language is convenient for the working session; they never ship to the published repository. Local-only contributor notes under `docs/decisions/` follow the same convenience-language policy and are kept out of the repository.
+All git-tracked files in this repository are written in English: `README.md`, `CHANGELOG.md`, every `SKILL.md`, agent definition files under `plugins/ae/agents/`, and everything under `docs/` (references, public-facing guides). Process artifacts under `.ae/` (gitignored — discussions, plans, reviews, analyses, milestones) may use whatever language is convenient for the working session; they never ship to the published repository. Local-only contributor notes (such as `CLAUDE.local.md` and files under `docs/decisions/`) follow the same convenience-language policy and are kept out of the repository.
 
 ## Versioning
 
@@ -45,98 +45,6 @@ plugins/ae/             # The actual plugin
 - **Feature branch** — all work on feature branches, PR to main. Branch naming: `feature/<slug>` or `fix/<slug>`
 - Never push to remote unless explicitly approved by the user
 
-## Project Management (GTD)
-
-AE uses **GTD (Getting Things Done)** as its project management model. Skills map to the five GTD phases (Capture / Clarify / Organize / Reflect / Engage), plus an AE-self-development sidebar for plugin delivery metrics:
-
-| GTD Phase | AE Skill | Artifact Path |
-|---|---|---|
-| **Capture** | `ae:backlog` | `.ae/backlog/unscheduled/BL-NNN-slug.md` (inbox; sibling subdirs `closed/` and `done/` hold terminal-state BLs) |
-| **Clarify** | `ae:roadmap` | scan backlog → promote candidates + feature dependency analysis + size aggregate + roadmap archive prompt |
-| **Organize** | `ae:analyze` | promote BL → `.ae/features/active/F-NNN-slug/` with initial size + depends_on |
-| **Reflect (short-cycle)** | `ae:dashboard` + `ae:next` | default reads `features/active/`; `--all` includes done + abandoned |
-| **Reflect (long-cycle)** | `ae:retrospect` | project-level review of `features/done/` — what shipped + lessons learned |
-| AE plugin self-stats | `ae:plugin-stats` | independent of project retrospect; preserves the old `ae:retrospect` parser + 23 existing review records |
-| **Engage** | `ae:discuss` / `ae:plan` / `ae:work` / `ae:review` | execute inside feature dir; `ae:review` verdict pass triggers archive |
-| **Archive** *(GTD Reflect sub-phase)* | `ae:review` (feature-level) + `ae:roadmap` (roadmap-level) | feature: mv `active/` → `done/`; roadmap: all features done → mv `roadmaps/active/X.md` → `roadmaps/done/X.md` |
-
-`/ae:retrospect` = project-level long-cycle Reflect (GTD Weekly Review style). `/ae:plugin-stats` = AE plugin self-development outcome stats (delivery metrics, separated from product retrospective per OpenAI/Google patterns).
-
-### Feature directory layout
-
-```
-.ae/features/
-├── active/      # in-flight features (most lookups read this)
-├── done/        # archived after ae:review verdict pass
-└── abandoned/   # started then dropped (superseded / not doing)
-
-.ae/features/active/F-NNN-slug/
-├── index.md       # feature frontmatter + GTD state
-├── analysis.md    # ae:analyze research output (when applicable)
-├── BL-NNN.md      # original BL file (preserved name for grep / cite)
-└── ...            # discuss/plan/work/review outputs (feature-resident path layout)
-```
-
-### Feature index.md frontmatter schema
-
-```yaml
-# Required
-id: F-NNN
-title: "<feature title>"
-status: active        # active | done | abandoned
-created: YYYY-MM-DD
-
-# Optional (GTD-related)
-theme: <tag>          # grouping in ae:roadmap theme view
-roadmap: <name>       # link to .ae/roadmaps/active/<name>.md
-size: M               # T-shirt: XS (<1d) | S (1d) | M (2-3d) | L (≈1w) | XL (>1w)
-depends_on: [F-MMM]   # other features that must complete first
-origin_bl: BL-042     # or list: [BL-042, BL-051] for multi-BL consolidation
-done: YYYY-MM-DD      # set when status transitions to done
-abandoned: YYYY-MM-DD
-abandoned_reason: "<why>"
-
-# Optional (user-defined — no enum constraint)
-# priority, assignee, notes, or any user-added field
-```
-
-### Reader contract
-
-All skills that read feature `index.md` frontmatter (`ae:analyze`, `ae:roadmap`, `ae:dashboard`, `ae:next`, `ae:retrospect`, `ae:review`) MUST be **reader-tolerant**:
-- **Unknown fields** (not in this schema) → silently ignore. User-defined fields are metadata-only; any field that drives automated skill logic (sorting, filtering, routing, archive triggers) MUST be promoted into this schema first.
-- **Known field with unknown enum value** (e.g., `status: paused`) → log warning, preserve value as-is, skip the feature from enum-dependent workflows. Do NOT silently coerce to a default.
-- **Missing optional field** → graceful default (treat as absent, not invalid).
-- **Missing required field** (`id` / `title` / `status` / `created`) → log error, skip this feature record; continue scanning other records.
-- **List-or-scalar fields** (`origin_bl`, `depends_on`): readers MUST normalize to list internally — `origin_bl: BL-042` and `origin_bl: [BL-042, BL-051]` are semantically equivalent.
-- **Missing `theme`**: features without a `theme:` value group under a uniform bucket named `(unthemed)` — never invented from title or body. All grouping skills (`ae:roadmap` section (a) feature listing, `ae:retrospect` section (1) recently-shipped grouping) MUST use this exact bucket name to prevent silent divergence.
-
-### Path classes
-
-AE distinguishes two classes of paths in the project tree:
-
-- **`.ae/features/{active,done,abandoned}/`** — **fixed AE internal state** (not configurable). The directory layout is hardcoded into reader skills (`ae:dashboard`, `ae:next`, `ae:roadmap`, `ae:retrospect`, `ae:plugin-stats`). External projects do not override these paths via `pipeline.yml` — they are AE convention.
-- **`output.{plans,reviews,discussions,milestones,backlog,analyses}`** — **configurable customization paths** in `pipeline.yml`. Existing projects with custom `output.discussions: docs/discussions/` etc. continue to work; these paths host legacy artifacts (created before the feature-dir layout was introduced) and free-text / standalone artifacts that do not resolve to a feature directory.
-
-Without this distinction, external-project users would not know which paths they can override and which are AE internal convention.
-
-**`.gitignore` policy**: the top-level `.ae/` blanket gitignore covers `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` and every artifact inside (plan.md, review.md, discussions/, milestones/, etc.). External projects do not need per-subdirectory overrides; the single `.ae/` line is sufficient. AE internal state stays local to each working tree.
-
-### Path-derived feature ID convention
-
-For feature-resident plan, review, and discussion artifacts inside `.ae/features/<state>/F-NNN-<slug>/`, the feature ID is **path-derived** from the parent directory name. Readers MUST extract `F-NNN` from the directory path; this is the canonical lookup.
-
-- **Optional `feature:` frontmatter** on plan/review/discussion files (NOT on the feature `index.md` — that container already encodes `id: F-NNN`): when present, readers validate frontmatter matches path-derived `F-NNN` and warn on mismatch. **Path always wins.** When absent, readers derive ID from path silently.
-- **Legacy plan/review/discussion files** (under `output.plans/`, `output.reviews/`, `output.discussions/`) have no `feature:` field. They link to features (when applicable) via `discussion:` chains or are unaffiliated.
-- **Reader behavior**: skills that surface review/plan state across the project MUST scan BOTH `output.{plans,reviews,discussions}/` (legacy) AND `.ae/features/{active,done,abandoned}/F-*/...` (feature-resident) — union the results. No surface-index pointer files; readers, not writers, bridge the two locations.
-
-### Schema evolution
-
-To add a new field: update this section AND the SKILL.md files that consume it. No Liquibase versioning, no separate `schema.md` file (intentional — a lightweight in-repo schema description is sufficient at this scale).
-
-### Legacy artifacts
-
-Pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts from earlier AE versions are **legacy** — they stay where they are; new work goes through `.ae/features/`. `ae:dashboard` and `ae:next` hide legacy entries by default; pass `--legacy` to surface them.
-
 ## Design Principles
 
 - **Self-bootstrapping** — AE develops AE. All changes to this plugin go through the AE pipeline (discuss→plan→work→review). This is the default working mode, not a special case.
@@ -154,23 +62,10 @@ Pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts from ear
 - **No self-check steps** — don't add "verify your output" instructions; they add hesitation without enforcement
 - **Size awareness** — if an agent definition exceeds ~100 lines, review for bloat
 
-## TL Autonomy Boundary
+## Further reading
 
-TL (Team Lead / Claude) decides autonomously by default:
-- Topic convergence, agent selection, round management, and the adversarial-challenge passes (the "Doodlestein" review agents `doodlestein-strategic` / `doodlestein-adversarial` / `doodlestein-regret`, applied as a final-pass adversarial check)
-- Resolving deferred items in the Sweep phase of `ae:discuss`
-- Choosing between options when evidence clearly supports one
+- [docs/quickstart.md](docs/quickstart.md) — getting started
+- [docs/agent-authoring.md](docs/agent-authoring.md) — authoring custom agents
+- [docs/references/](docs/references/) — design rationale, plugin API, prompt patterns, AE↔CC contract surface
 
-TL escalates to user only when:
-- Low-reversibility decision with genuine ambiguity
-- Domain context only user has
-- Topic directly affects user's workflow or preferences
-
-### Operational Rules (agents inherit these)
-
-- **P3 auto-skip** — P3 findings in code review: skip without asking user
-- **P2-style auto-skip** — P2 style/naming findings: skip without asking user
-- **Single-option converge** — discussion topic with only one viable option: converge directly
-- **High-reversibility fast-track** — all topics high-reversibility: TL may converge in one round
-- **Adversarial-challenge dismiss** — when TL dismisses a Doodlestein challenge as invalid, record the reason inline; do not ask the user to confirm
-- **Review findings triage** — only P1 and P2-logic/security require user disposition
+Contributors actively running the AE-on-AE workflow can additionally maintain a local-only `CLAUDE.local.md` for AE-internal process detail (project-management model, feature directory layout, frontmatter schemas, autonomy boundary). That file is gitignored and never ships.

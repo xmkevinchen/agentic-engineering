@@ -13,7 +13,7 @@ effort: high
 All deliverables (SendMessage to TL, git-tracked docs, TL replies) MUST follow:
 - Line 1: conclusion / judgment / action (one sentence)
 - Phase summary: `---` + heading separator + bullets
-- Documents: pyramid (top ≤ 5 lines TL;DR + 留档 below)
+- Documents: pyramid (top ≤ 5 lines TL;DR + supporting detail below)
 - Closed loop: reader makes 90%+ judgments without opening lower layers
 - Self-verify: re-read your output before sending; misaligned → fix first
 
@@ -619,11 +619,11 @@ Try in order. The first match resolves; on no match emit the manual-archive mess
 
 When `verdict: fail` → **do NOT mv**. The feature stays in `features/active/`. The user may, after fixup, re-run `/ae:work` and `/ae:review` for another verdict, OR manually `mv .ae/features/active/F-NNN-<slug>/ .ae/features/abandoned/F-NNN-<slug>/` if the feature is being dropped.
 
-### Legacy artifact preservation — Plan 050 / Plan 051 known limit
+### Legacy artifact preservation — known limit
 
-Plan 051's path migration moves NEW work into feature dirs but deliberately leaves the 175 pre-existing legacy artifacts in `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` untouched (Plan 050 known limit: "既有 175 legacy artifact 不迁 = 自然终态消亡"). The audit chain is therefore split based on each artifact's birth date:
+The feature-dir path migration moves NEW work into feature directories but deliberately leaves pre-existing legacy artifacts in `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` untouched (known limit: existing legacy artifacts are not migrated; they age out naturally as new work supersedes them). The audit chain is therefore split based on each artifact's birth date:
 
-- **Post-Plan-051 features**: `features/{active,done,abandoned}/F-NNN-<slug>/` contains origin-BL + feature frontmatter + analysis + plan.md + review.md + discussions/.
+- **Feature-dir features (post-migration)**: `features/{active,done,abandoned}/F-NNN-<slug>/` contains origin-BL + feature frontmatter + analysis + plan.md + review.md + discussions/.
 - **Pre-Plan-051 features**: feature dir contains origin-BL + index + analysis only; plan + review files remain in legacy `.ae/plans/`, `.ae/reviews/` (linked via discussion id chain or optional `feature: F-NNN` frontmatter on legacy plans).
 
 The archive trigger **does not** attempt to collect or symlink legacy plan/review files into the feature dir for pre-Plan-051 features. Cross-references work via frontmatter `id:` (feature/plan/review IDs are stable across mv — directory location is not load-bearing for lookup). Run `/ae:roadmap` or `/ae:dashboard` to verify the feature shows up in `done/` and the linkage chain still resolves across both locations (dashboard/next union-scan both legacy and feature-dir reviews per Plan 051 Step 5).

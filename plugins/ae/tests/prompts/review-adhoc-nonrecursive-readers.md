@@ -7,7 +7,7 @@ source: regression
 
 ## Context
 
-F-012 引入跨技能 contract：4 个 review-reading skill (ae:dashboard / ae:next / ae:plugin-stats / ae:retrospect) 必须用非递归 glob `output.reviews/*.md` 扫，从而自然排除 `output.reviews/adhoc/` 子目录里的 ad-hoc review。本测试是 enforced cross-skill contract guard —— 如果未来任何一个 reader skill 改成递归 glob (`**/*.md`)，本测试 fail，强制 reviewer 知会 contract 影响。
+F-012 introduces a cross-skill contract: the 4 review-reading skills (ae:dashboard / ae:next / ae:plugin-stats / ae:retrospect) MUST scan with a non-recursive glob `output.reviews/*.md`, which naturally excludes ad-hoc reviews under the `output.reviews/adhoc/` subdirectory. This test is the enforced cross-skill contract guard — if any future change switches a reader skill to a recursive glob (`**/*.md`), this test fails, forcing the reviewer to acknowledge the contract impact.
 
 ## Prompt
 

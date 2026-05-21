@@ -7,7 +7,7 @@ source: regression
 
 ## Context
 
-F-012 在 `plugins/ae/skills/review/SKILL.md` 加 `--reviewer <name>` flag。语义：override（NOT additive）—— 列了 flag 就跳过 default selection table，spawn 仅指定 reviewers。flag 可重复（multi-flag 间 additive，但整体 override default）。Unknown name → hard fail。orthogonal to `<target>` argument。本测试验证语义 spec 完整 + 给出 WRONG/CORRECT 例子澄清 + scale anchor 解释默认 4-5 reviewers + forward-reference 提到 `--add-reviewer` deferred。
+F-012 adds a `--reviewer <name>` flag to `plugins/ae/skills/review/SKILL.md`. Semantics: override (NOT additive) — when any flag is provided, the default selection table is skipped and only the named reviewers spawn. The flag can repeat (multi-flag is additive among the flags, but the set collectively overrides the default). An unknown name is a hard fail. The flag is orthogonal to the `<target>` argument. This test verifies that the spec is complete: WRONG/CORRECT examples are present, a scale anchor explains the default 4-5 reviewer count, and a forward-reference notes the deferred `--add-reviewer` flag.
 
 ## Prompt
 
