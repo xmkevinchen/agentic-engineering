@@ -196,7 +196,19 @@ Read plan frontmatter `discussion:` field.
     ```
     The refusal MUST show the discussion-**directory** path (same as plan's `discussion:` field value), NOT the `conclusion.md` file path, so the suggested `/ae:discuss` fix-command is directly runnable. Empty conclusion is rejected because the Per-review Primary Context Bundle requires the "full verbatim body" as primary input; a zero-byte file would silently erase all discussion-derived constraints despite passing a file-exists check.
 
-**Placement rationale**: Check 5 is a blocking gate that re-uses the plan file already loaded by Check 2 (Plan All Done) — adding only one frontmatter-field read plus a conclusion.md stat/read. Independent of Check 2-4 ordering: Check 2 scans step checkboxes, Check 4 parses milestone notes; neither depends on the conclusion.md file Check 5 guards. Grouping it last in the Pre-check chain keeps entry gates together and mirrors Plan 047's Pre-check Check 5 placement at the tail of `/ae:work`'s Pre-check section.
+**Placement rationale**: Check 5 is a blocking gate that re-uses the plan file already loaded by Check 2 (Plan All Done) — adding only one frontmatter-field read plus a conclusion.md stat/read. Independent of Check 2-4 ordering: Check 2 scans step checkboxes, Check 4 parses milestone notes; neither depends on the conclusion.md file Check 5 guards. Grouping it last in the Pre-check chain keeps entry gates together and mirrors `/ae:work`'s Pre-check Check 5 placement at the tail of its Pre-check section.
+
+### Check 6: Protocol Invariant Check
+
+If `git diff --name-only <feature-base>...HEAD` (the cumulative review scope, across all step commits in the feature) includes files under `plugins/ae/skills/` or `plugins/ae/agents/`:
+
+1. Run `/ae:test-plugin --regression --layer1` targeting the changed skills/agents (Layer 1 static analysis only — do NOT execute Layer 2 during pre-verdict).
+2. **Layer 1 failure = P1** (blocks verdict pass via the standard P1 disposition path).
+3. **Trace emission**: when Check 6 fires, append one line to `~/.ae/traces/<session-id>.ndjson` with fields `{skill: "ae:review", check: "C6", outcome: "pass|fail|skip", files_checked: <count>}`. Provides SRE-level observability into when the cumulative-diff protocol invariant fires and what it catches.
+
+If no plugin files in cumulative diff → skip with "No plugin skill/agent files changed across feature commits, skipping protocol check."
+
+**Mirrors `plugins/ae/skills/work/SKILL.md` Check C.5** (per-commit pre-commit) at feature-completion-review granularity (cumulative across commits). The two checks are deliberately layered: C.5 catches step-local drift incrementally; Check 6 catches multi-step interaction drift cumulatively. For features with a single plugin-touching commit the two checks fully overlap; for features with multiple plugin-touching commits Check 6's cumulative scope can find issues that per-commit C.5 didn't surface in isolation.
 
 ### Prior Context (from Mengdie)
 
