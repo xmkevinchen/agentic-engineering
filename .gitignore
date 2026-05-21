@@ -16,3 +16,8 @@ node_modules/
 
 # Local-only references (kept out of repo)
 docs/references/pipeline-quality-failure-cases.md
+docs/references/harness-engineering.md
+docs/references/nyk-framework.md
+
+# Local-only decision records (process artifacts; kept out of repo)
+docs/decisions/

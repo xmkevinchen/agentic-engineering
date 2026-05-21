@@ -2,7 +2,7 @@
 
 ## Language Convention
 
-All git-tracked files in this repository are written in English: `README.md`, `CHANGELOG.md`, every `SKILL.md`, agent definition files under `plugins/ae/agents/`, and everything under `docs/` (references, decisions, etc.). Process artifacts under `.ae/` (gitignored — discussions, plans, reviews, analyses, milestones) may use whatever language is convenient for the working session; they never ship to the published repository.
+All git-tracked files in this repository are written in English: `README.md`, `CHANGELOG.md`, every `SKILL.md`, agent definition files under `plugins/ae/agents/`, and everything under `docs/` (references, public-facing guides). Process artifacts under `.ae/` (gitignored — discussions, plans, reviews, analyses, milestones) may use whatever language is convenient for the working session; they never ship to the published repository. Local-only contributor notes under `docs/decisions/` follow the same convenience-language policy and are kept out of the repository.
 
 ## Versioning
 
