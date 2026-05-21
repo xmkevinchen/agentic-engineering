@@ -30,7 +30,7 @@ Start a structured design discussion for: **$ARGUMENTS**
 
 ```
 Setup → Spawn Team → Discussion Rounds → Doodlestein → Sweep → Conclusion → Shutdown
-                          ↑                    │
+                          ↑ │
                           └── revisit topics ───┘
 ```
 
@@ -84,7 +84,7 @@ Owner field: omit. On error: stay `in_progress`. Steps 4-6 and 10 are sub-action
 3. **If existing**: show convergence status:
    ```
    📊 Discussion NNN: N topics
-   - converged: X ✅  revisit: Y 🔄  deferred: Z ⏳  pending: W
+   - converged: X ✅ revisit: Y 🔄 deferred: Z ⏳ pending: W
    ```
 4. **Route**:
    - All converged + no deferred → go to Sweep (step 7) / Conclusion (step 8) / Doodlestein (step 9)
@@ -107,7 +107,7 @@ This constraint exists because every downstream guard (§1.5.1 Frozen-field rule
 
 **Framing quality review is its own task**, with its own TeamCreate/TeamDelete lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two teams is consistent with ae:agent-teams "one team per task"; it is not a pre-flight hack.
 
-**Path note**: throughout sections 1.5.x and 2-8 below, the symbolic `<discussion-dir>` resolves to whichever path Step 1 chose. For feature-internal discussions, `<discussion-dir>` = `<feature-dir>/discussions/<NNN>-<slug>/` (Plan 051+); for free-text discussions, `<discussion-dir>` = `<output.discussions>/NNN-slug/` (legacy fallback). Round-00, round-NN, and conclusion files all live under `<discussion-dir>/` regardless of which location was resolved.
+**Path note**: throughout sections 1.5.x and 2-8 below, the symbolic `<discussion-dir>` resolves to whichever path Step 1 chose. For feature-internal discussions, `<discussion-dir>` = `<feature-dir>/discussions/<NNN>-<slug>/`; for free-text discussions, `<discussion-dir>` = `<output.discussions>/NNN-slug/` (legacy fallback). Round-00, round-NN, and conclusion files all live under `<discussion-dir>/` regardless of which location was resolved.
 
 **Goal**: catch three failure modes before Round 1 anchors on the framing:
 1. **Bias anchoring** — framing reflects TL's pre-commitments → caught by cross-family peer review
@@ -127,7 +127,7 @@ Applies to **new discussions** and any discussion where `framing.md` was changed
 - `.claude/agents/engineering-minimal-change-engineer.md` (project-local override, optional)
 - `~/.claude/agents/engineering-minimal-change-engineer.md` (user override, optional)
 
-If not found in any location, **do NOT silently degrade quorum** (F-009 Step 1: previous behavior auto-dropped over-complication detection coverage without user awareness — incompatible with F-008 "drift" failure-mode containment). Instead, surface the choice via `AskUserQuestion` with exactly two options (no "install agent now" option — AE has no in-skill auto-install capability; offering it would misrepresent what the skill can do):
+If not found in any location, **do NOT silently degrade quorum**. Instead, surface the choice via `AskUserQuestion` with exactly two options (no "install agent now" option — AE has no in-skill auto-install capability; offering it would misrepresent what the skill can do):
 
 1. **Continue with reduced 4-agent quorum (3-of-4 threshold)** — accept the loss of over-complication detection coverage for this discussion; Round 0 runs with 2 cross-family + 2 Doodlestein.
 2. **Abort discussion** — TL output includes the install command string `/ae:setup agents --add engineering-minimal-change-engineer` (or instructs user to drop the agent file under `.claude/agents/`), then refuses to proceed.
@@ -332,7 +332,7 @@ TeamCreate(team_name: "<discussion>-council")
 
 # All agents are equal participants — dynamic roles per Agent Selection Reference.
 Agent(subagent_type: "<per agent-selection>",
-      name: "<role-name>",  # e.g., "architect", "code-researcher", "security-expert"
+      name: "<role-name>", # e.g., "architect", "code-researcher", "security-expert"
       team_name: "<team>", run_in_background: true,
       prompt: "📋 Cast: <runtime-selected>
                   Role: <role-name> (council participant in <discussion title>)
@@ -674,25 +674,25 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
 
 ```
 <discussion-dir>/
-  framing.md                 # problem statement + round_0 verdict (Step 1/1.5)
-  index.md                   # minimal scaffolding
-  round-00/                  # Step 1.5 framing review artifacts
-    codex-proxy.md           # per-agent verdict (APPROVED / REVISE / unavailable + reason)
+  framing.md # problem statement + round_0 verdict (Step 1/1.5)
+  index.md # minimal scaffolding
+  round-00/ # Step 1.5 framing review artifacts
+    codex-proxy.md # per-agent verdict (APPROVED / REVISE / unavailable + reason)
     gemini-proxy.md
     doodlestein-strategic.md
     doodlestein-adversarial.md
     minimal-change-engineer.md
-    dogfood-evidence.md      # optional — session evidence for protocol verification
+    dogfood-evidence.md # optional — session evidence for protocol verification
   topic-NN-slug/
-    summary.md               # current state — agent reads ONLY this each round
-  round-01/                  # per-round directory
-    <agent-name>.md          # each agent's own file (self-written, TL does not edit)
-    synthesis.md             # TL index/orientation + 4 mandatory fields (Pruned / Of-framing disposition / Verification artifact / Frame-challenge self-check)
+    summary.md # current state — agent reads ONLY this each round
+  round-01/ # per-round directory
+    <agent-name>.md # each agent's own file (self-written, TL does not edit)
+    synthesis.md # TL index/orientation + 4 mandatory fields (Pruned / Of-framing disposition / Verification artifact / Frame-challenge self-check)
   round-02/
     <agent-name>.md
     synthesis.md
-  conclusion.md              # Step 8
-  round-doodlestein/         # Step 9 post-conclusion review
+  conclusion.md # Step 8
+  round-doodlestein/ # Step 9 post-conclusion review
     strategic.md
     adversarial.md
     regret.md
@@ -705,9 +705,9 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
 id: "NNN"
 stage: framing
 created: YYYY-MM-DD
-round_0: pending             # pending → approved | approved (cross-family-degraded) | revise_requested | overridden
-round_0_reviewers: []        # populated by Step 1.5 after aggregation; list of reviewer names
-round_0_notes: ""            # human-readable rationale for override, or aggregation notes
+round_0: pending # pending → approved | approved (cross-family-degraded) | revise_requested | overridden
+round_0_reviewers: [] # populated by Step 1.5 after aggregation; list of reviewer names
+round_0_notes: "" # human-readable rationale for override, or aggregation notes
 ---
 
 # Framing — [title]
@@ -736,7 +736,7 @@ and §1.5.1 / §1.5.3 for review-time guards (Frozen-field rule + Rule 1.5 byte-
 ---
 id: "NN"
 title: "[topic title]"
-status: pending          # pending → converged / revisit / deferred
+status: pending # pending → converged / revisit / deferred
 current_round: 1
 created: YYYY-MM-DD
 decision: ""

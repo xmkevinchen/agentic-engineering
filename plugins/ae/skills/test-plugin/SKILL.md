@@ -155,14 +155,14 @@ Session TL receives approved suite → shutdown writers only (prompts-writer, an
 ### Info Flow (Blind Protocol)
 
 ```
-prompts-writer  → plugins/ae/tests/prompts/<id>.md      (Context + Prompt)
-answer-writer   → plugins/ae/tests/assertions/<id>.md   (Expected Behavior)
+prompts-writer → plugins/ae/tests/prompts/<id>.md (Context + Prompt)
+answer-writer → plugins/ae/tests/assertions/<id>.md (Expected Behavior)
                                     │
-Session TL reads ONLY:              │
-  - plugins/ae/tests/prompts/       │  ← prompt files
+Session TL reads ONLY: │
+  - plugins/ae/tests/prompts/ │ ← prompt files
                                     │
-Session TL does NOT read:           │
-  - plugins/ae/tests/assertions/    │  ← assertion files
+Session TL does NOT read: │
+  - plugins/ae/tests/assertions/ │ ← assertion files
                                     │
 Session TL executes prompt ──────→ collects artifacts (git diff + teams dir + output text)
                                     │

@@ -146,13 +146,13 @@ Given `$ARGUMENTS` (already classified into Form 1/2/3 by Argument Inference), r
 
 ```markdown
 ---
-id: "NNN"                  # legacy fallback only; feature-dir plans MAY omit (path is canonical)
+id: "NNN" # legacy fallback only; feature-dir plans MAY omit (path is canonical)
 title: "<title>"
 type: plan
 created: YYYY-MM-DD
-status: draft              # Valid status: draft | reviewed | done | cancelled
-discussion: ""             # path to source discussion directory (e.g., ".ae/discussions/029-slug/" or "<feature-dir>/discussions/<id>-slug/")
-feature: ""                # OPTIONAL on feature-resident plans (e.g., "F-002"); empty/absent on legacy plans
+status: draft # Valid status: draft | reviewed | done | cancelled
+discussion: "" # path to source discussion directory (e.g., ".ae/discussions/029-slug/" or "<feature-dir>/discussions/<id>-slug/")
+feature: "" # OPTIONAL on feature-resident plans (e.g., "F-002"); empty/absent on legacy plans
 ---
 
 # Feature: <title>
@@ -165,11 +165,11 @@ One sentence: what problem does this feature solve.
 ### Step 1: <description> (AC1)
 - [ ] Subtask a
 - [ ] Subtask b
-Expected files: path/to/file1.ts, path/to/file2.ts   ← REQUIRED: list all files this step will modify
+Expected files: path/to/file1.ts, path/to/file2.ts ← REQUIRED: list all files this step will modify
 
 ### Step 2: <description> (AC2, AC3)
 - [ ] Subtask a
-Expected files: path/to/file3.ts   ← REQUIRED: enables drift detection in /ae:work
+Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:work
 
 ## Acceptance Criteria
 

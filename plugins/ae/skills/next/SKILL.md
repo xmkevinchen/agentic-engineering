@@ -46,21 +46,21 @@ Check: `pipeline.yml` exists, but no files exist in any `output.*` directory AND
 Project configured but no work started yet.
 
 GTD entry points (recommended):
-  /ae:backlog <idea>    — Capture: drop a one-line idea into the inbox
-  /ae:roadmap           — Clarify: see promote candidates from backlog
-  /ae:analyze <BL-NNN>  — Organize: promote a BL into a feature dir
+  /ae:backlog <idea> — Capture: drop a one-line idea into the inbox
+  /ae:roadmap — Clarify: see promote candidates from backlog
+  /ae:analyze <BL-NNN> — Organize: promote a BL into a feature dir
 
 Direct pipeline (when scope is already clear):
-  /ae:analyze <topic>   — research a topic before deciding
-  /ae:discuss <topic>   — structured design discussion with agent team
-  /ae:plan <feature>    — create an execution plan with acceptance criteria
-  /ae:work              — execute plan (TDD + commit + review per step)
-  /ae:review            — deep multi-agent review (feature completion gate)
+  /ae:analyze <topic> — research a topic before deciding
+  /ae:discuss <topic> — structured design discussion with agent team
+  /ae:plan <feature> — create an execution plan with acceptance criteria
+  /ae:work — execute plan (TDD + commit + review per step)
+  /ae:review — deep multi-agent review (feature completion gate)
 
 Start with:
-  /ae:backlog <idea>    — if you have ideas to capture but aren't sure which to work on
-  /ae:plan <feature>    — if requirements are already clear
-  /ae:analyze <topic>   — if you need to research first
+  /ae:backlog <idea> — if you have ideas to capture but aren't sure which to work on
+  /ae:plan <feature> — if requirements are already clear
+  /ae:analyze <topic> — if you need to research first
 ```
 
 ### Step 3: Active analysis
@@ -193,8 +193,8 @@ Items with NEITHER a discussion nor a plan are "sprint-committed but unworked." 
 ```
 Committed in sprint <version> but no discussion/plan yet: BL-XXX (title)
 
-Run: /ae:discuss <BL-ID>   — if scope needs clarification first
-  or /ae:plan <BL-ID>       — if scope is clear, plan directly
+Run: /ae:discuss <BL-ID> — if scope needs clarification first
+  or /ae:plan <BL-ID> — if scope is clear, plan directly
 ```
 
 If multiple such items → apply tiebreaker (highest priority, then lowest BL ID). If unique → output directly. If tie → go to Step 9.
@@ -210,10 +210,10 @@ Check: `features/active/` is empty AND no active discussions, no pending plans, 
 ```
 All pipeline work is complete.
 
-  /ae:roadmap            — see promote candidates from backlog
-  /ae:backlog <idea>     — capture a new idea (frictionless inbox drop)
-  /ae:retrospect         — project-level review of recently shipped features
-  /ae:plugin-stats       — AE plugin self-development outcome stats
+  /ae:roadmap — see promote candidates from backlog
+  /ae:backlog <idea> — capture a new idea (frictionless inbox drop)
+  /ae:retrospect — project-level review of recently shipped features
+  /ae:plugin-stats — AE plugin self-development outcome stats
 ```
 
 ## State Reading

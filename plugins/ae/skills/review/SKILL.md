@@ -272,7 +272,7 @@ TaskCreate(subject: "ae:review: Architecture review")
 TaskCreate(subject: "ae:review: Cross-family challenge + synthesis")
 ```
 
-Track the 4 task IDs alongside the team handle. Do NOT create additional tasks beyond these 5 (Pre-check + 4 tracks). Synthesis, Fixup, Outcome Statistics, Output, Knowledge Capture, and Completion Invariant are sub-actions; they do NOT get their own tasks (would produce ~16-task panel noise — explicitly rejected per Plan 052).
+Track the 4 task IDs alongside the team handle. Do NOT create additional tasks beyond these 5 (Pre-check + 4 tracks). Synthesis, Fixup, Outcome Statistics, Output, Knowledge Capture, and Completion Invariant are sub-actions; they do NOT get their own tasks (would produce ~16-task panel noise — explicitly rejected).
 
 ### 3. Select and Launch Reviewers
 
@@ -351,7 +351,7 @@ Agent(subagent_type: "challenger", name: "challenger",
                📋 Cast: challenger
                   Role: opposition (review mode)
                   Angle: blind spots in reviewer + cross-family findings
-                  Why: mandatory adversarial pass before TL synthesizes (F-019 challenger.md migration: mode behavior embedded here, not in agent body)
+                  Why: mandatory adversarial pass before TL synthesizes (mode behavior embedded here, not in agent body)
 
                Review mode protocol steps (embedded per F-019 mode migration):
                1. Parallel Launch: independent review (blind spots reviewers might miss — hallucinated code, edge cases, type lies) + call Codex independently + call Gemini on high-risk files. Track reviewer findings arrival.
@@ -400,7 +400,7 @@ TL collects all findings from reviewers + challenger + cross-family proxies, the
 - Merge overlapping findings, resolve contradictions
 - Produce Disagreement Value Assessment where reviewers disagreed
 - Classify by severity (P1/P2/P3)
-- **KL #1 substitution check** (F-022): for each plan step whose checkbox claims `/ae:code-review` ran, require evidence of multi-track execution — either (a) a `milestones/code-review-step-<N>.md` file matching the step number, OR (b) a commit message from that step's commit(s) containing a `/ae:code-review` output reference. **"Multi-track execution"** = the artifact (or commit-message disclosure) names ≥ 2 distinct review tracks among {Claude inline, Codex, Gemini, Doodlestein} — TL inline prose alone counts as Track 1 only and does NOT satisfy. If evidence is absent OR the artifact/disclosure shows only Track 1 → emit `KL #1 substitution` finding. **Default severity P2.** When the same step (matched by step number) ALSO has a P1/P2-logic defect this review separately surfaced, append `[ELEVATED]` tag to the finding entry and TL MUST flag for explicit human triage in the verdict section (do NOT silently re-class to P1 — that conflicts with the P1 definition at line 414 which scopes P1 to security/data/crash). Documented substitution (commit message explicitly states `[KL#1] ... SUBSTITUTED` with rationale) still emits the finding — visibility is the goal, not absence of substitution; the disclosure itself counts as the substitution evidence the rule fires on.
+- **KL #1 substitution check**: for each plan step whose checkbox claims `/ae:code-review` ran, require evidence of multi-track execution — either (a) a `milestones/code-review-step-<N>.md` file matching the step number, OR (b) a commit message from that step's commit(s) containing a `/ae:code-review` output reference. **"Multi-track execution"** = the artifact (or commit-message disclosure) names ≥ 2 distinct review tracks among {Claude inline, Codex, Gemini, Doodlestein} — TL inline prose alone counts as Track 1 only and does NOT satisfy. If evidence is absent OR the artifact/disclosure shows only Track 1 → emit `KL #1 substitution` finding. **Default severity P2.** When the same step (matched by step number) ALSO has a P1/P2-logic defect this review separately surfaced, append `[ELEVATED]` tag to the finding entry and TL MUST flag for explicit human triage in the verdict section (do NOT silently re-class to P1 — that conflicts with the P1 definition at line 414 which scopes P1 to security/data/crash). Documented substitution (commit message explicitly states `[KL#1] ... SUBSTITUTED` with rationale) still emits the finding — visibility is the goal, not absence of substitution; the disclosure itself counts as the substitution evidence the rule fires on.
 
 If any agent idle > 5 minutes without sending findings, SendMessage to prompt.
 
@@ -420,10 +420,10 @@ After report arrives, send shutdown_request to all teammates.
 ### 1. Build Mapping Table
 
 ```
-| Finding       | Commit (step)           | Fix              |
+| Finding | Commit (step) | Fix |
 |---------------|-------------------------|------------------|
-| Missing guard | abc123 (step 2: repo)   | Add null check   |
-| Unused import | def456 (step 4: screen) | Remove           |
+| Missing guard | abc123 (step 2: repo) | Add null check |
+| Unused import | def456 (step 4: screen) | Remove |
 ```
 
 Group by commit. Check for dependencies between findings.
@@ -505,12 +505,12 @@ Review file frontmatter:
 
 ```yaml
 ---
-id: "NNN"                  # legacy fallback only; feature-dir reviews MAY omit (path is canonical)
+id: "NNN" # legacy fallback only; feature-dir reviews MAY omit (path is canonical)
 title: "Review: <feature>"
 type: review
 created: YYYY-MM-DD
 target: "<path-to-plan-file>"
-verdict: pass    # or: fail
+verdict: pass # or: fail
 ---
 ```
 
@@ -522,10 +522,10 @@ The `verdict` field is required in pipeline mode — it enables `/ae:dashboard` 
 ---
 title: "Review: <target-derived-name>"
 type: review
-created: YYYYMMDDTHHMMSSsssZ    # filesystem-safe + millisecond precision; same form as filename timestamp; collision-free across rapid invocations
+created: YYYYMMDDTHHMMSSsssZ # filesystem-safe + millisecond precision; same form as filename timestamp; collision-free across rapid invocations
 target: "<commit-range | file-path | dir-path | plan-path-with-rerun>"
-mode: adhoc                      # explicit marker to disambiguate from pipeline
-reviewers: [<list of agent names spawned>]   # ALWAYS written in ad-hoc mode (with or without --reviewer flag); records actual spawn for audit
+mode: adhoc # explicit marker to disambiguate from pipeline
+reviewers: [<list of agent names spawned>] # ALWAYS written in ad-hoc mode (with or without --reviewer flag); records actual spawn for audit
 ---
 ```
 
@@ -533,7 +533,7 @@ The `reviewers:` field is **always required in ad-hoc mode** regardless of wheth
 
 **Why `verdict` is omitted in ad-hoc mode**: dashboard/next infer pipeline progress from `verdict: pass`. An ad-hoc review of `HEAD~3..HEAD` or a re-review with override reviewers does not represent a pipeline gate transition; emitting `verdict:` would either (a) corrupt pipeline state if scanned, or (b) confuse dashboard if it ever scans `adhoc/` (current contract: it does not scan, but defense-in-depth wins). The `mode: adhoc` field is an explicit second guard.
 
-**Cross-skill contract** (verified F-012 dogfood Layer A): the 4 review-reading skills (`ae:dashboard`, `ae:next`, `ae:plugin-stats`, `ae:retrospect`) all use non-recursive glob `output.reviews/*.md` which naturally excludes `output.reviews/adhoc/*.md`. Future modifications to these skills MUST preserve non-recursive scan behavior; recursive scan would silently surface ad-hoc reviews into pipeline state.
+**Cross-skill contract**: the 4 review-reading skills (`ae:dashboard`, `ae:next`, `ae:plugin-stats`, `ae:retrospect`) all use non-recursive glob `output.reviews/*.md` which naturally excludes `output.reviews/adhoc/*.md`. Future modifications to these skills MUST preserve non-recursive scan behavior; recursive scan would silently surface ad-hoc reviews into pipeline state.
 
 Report contents:
 1. TL synthesis report (merged findings from all reviewers + challenger + cross-family, with Disagreement Value Assessment and severity classification)
@@ -571,13 +571,13 @@ After writing the review file with `verdict:`, update pipeline state:
 
 When `verdict: pass` AND the target plan's feature dir is in `.ae/features/active/F-NNN-slug/`, archive the feature.
 
-**Plan 051 path-derived archive trigger**: as of Plan 051, feature-dir plans live at `.ae/features/<state>/F-NNN-<slug>/plan.md`. The archive trigger derives the feature dir directly from the plan path — no frontmatter required, no scan, no ambiguous-match flow. Legacy plans (under `output.plans/`) retain a single explicit-fallback path emitting the manual-archive message.
+**Path-derived archive trigger**: feature-dir plans live at `.ae/features/<state>/F-NNN-<slug>/plan.md`. The archive trigger derives the feature dir directly from the plan path — no frontmatter required, no scan, no ambiguous-match flow. Legacy plans (under `output.plans/`) retain a single explicit-fallback path emitting the manual-archive message.
 
 #### Phase 1 — Locate the feature dir
 
 Try in order. The first match resolves; on no match emit the manual-archive message and STOP (do not proceed to Phase 2).
 
-1. **Feature-dir plan path** (Plan 051+): if the target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`, the feature dir IS the plan's parent directory. Path-derived; resolves directly. No frontmatter or scan needed.
+1. **Feature-dir plan path**: if the target plan path matches `.ae/features/<state>/F-NNN-<slug>/plan.md`, the feature dir IS the plan's parent directory. Path-derived; resolves directly. No frontmatter or scan needed.
 2. **Legacy plan with `feature: F-NNN` frontmatter**: optional bridge for legacy plans that explicitly tag a feature dir → resolves directly via that field.
 3. **No match** (legacy plan with no `feature:` field; or path matching neither shape) → list `ls .ae/features/active/` and embed the actual paths in the message (do NOT print the literal placeholder `F-NNN-<slug>` — substitute the candidate dirs):
    ```
@@ -608,8 +608,8 @@ Try in order. The first match resolves; on no match emit the manual-archive mess
 
 2. **Update the feature `index.md` frontmatter** in place:
    ```yaml
-   status: done       # was: active
-   done: YYYY-MM-DD   # today
+   status: done # was: active
+   done: YYYY-MM-DD # today
    ```
    Preserve all other fields. Do NOT remove `origin_bl:` or any optional field — they remain part of the audit trail.
 
@@ -624,16 +624,16 @@ When `verdict: fail` → **do NOT mv**. The feature stays in `features/active/`.
 The feature-dir path migration moves NEW work into feature directories but deliberately leaves pre-existing legacy artifacts in `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` untouched (known limit: existing legacy artifacts are not migrated; they age out naturally as new work supersedes them). The audit chain is therefore split based on each artifact's birth date:
 
 - **Feature-dir features (post-migration)**: `features/{active,done,abandoned}/F-NNN-<slug>/` contains origin-BL + feature frontmatter + analysis + plan.md + review.md + discussions/.
-- **Pre-Plan-051 features**: feature dir contains origin-BL + index + analysis only; plan + review files remain in legacy `.ae/plans/`, `.ae/reviews/` (linked via discussion id chain or optional `feature: F-NNN` frontmatter on legacy plans).
+- **Pre-migration features**: feature dir contains origin-BL + index + analysis only; plan + review files remain in legacy `.ae/plans/`, `.ae/reviews/` (linked via discussion id chain or optional `feature: F-NNN` frontmatter on legacy plans).
 
-The archive trigger **does not** attempt to collect or symlink legacy plan/review files into the feature dir for pre-Plan-051 features. Cross-references work via frontmatter `id:` (feature/plan/review IDs are stable across mv — directory location is not load-bearing for lookup). Run `/ae:roadmap` or `/ae:dashboard` to verify the feature shows up in `done/` and the linkage chain still resolves across both locations (dashboard/next union-scan both legacy and feature-dir reviews per Plan 051 Step 5).
+The archive trigger **does not** attempt to collect or symlink legacy plan/review files into the feature dir for pre-migration features. Cross-references work via frontmatter `id:` (feature/plan/review IDs are stable across mv — directory location is not load-bearing for lookup). Run `/ae:roadmap` or `/ae:dashboard` to verify the feature shows up in `done/` and the linkage chain still resolves across both locations (dashboard/next union-scan both legacy and feature-dir reviews per the feature-dir migration Step 5).
 
 ### Cross-references survive the mv
 
 AE internal cross-references use frontmatter `id:` not path strings. `mv` of the feature dir does not break:
 
 - `BL-NNN.md` `promoted_to: F-NNN` → still resolves (grep for `id: F-NNN` across `features/{active,done,abandoned}/`).
-- Plan/review path-derived feature ID (Plan 051+): when plan.md / review.md live inside the feature dir, the dir IS the feature ID — no frontmatter required, no scan, archive trigger Phase 1 step 1 resolves directly.
+- Plan/review path-derived feature ID: when plan.md / review.md live inside the feature dir, the dir IS the feature ID — no frontmatter required, no scan, archive trigger Phase 1 step 1 resolves directly.
 - Optional `feature: F-NNN` frontmatter (legacy bridge): readers validate against parent dir path and warn on mismatch; path always wins.
 - `ae:roadmap` section (a) `origin_bl:` dedup → already scans active+done+abandoned per Step 4 fix.
 - `ae:roadmap` section (d) archive prompt → recognizes a fully-done roadmap when all linked features are in `done/` (or `done/`+`abandoned/`).
@@ -648,7 +648,7 @@ Archive is `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/
 
 Plan/review files in legacy paths are unaffected by archive (they were never moved by the trigger). The review file's `verdict:` field stays as written; if the user wants to rebut, they edit the review file's frontmatter or write a new review pointing at the same plan.
 
-Recovery is a manual flow — automation would require persistent archive-history beyond Plan 050's scope.
+Recovery is a manual flow — automation would require persistent archive-history; deferred until a real need emerges.
 
 ## Next Steps
 

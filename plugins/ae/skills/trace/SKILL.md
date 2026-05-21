@@ -132,7 +132,7 @@ Entry → A.method() → B.service() → C.query() → Response
 Module A
 ├── imports B (direct)
 ├── imports C (direct)
-│   └── imports D (transitive)
+│ └── imports D (transitive)
 └── implements Interface E
 ```
 

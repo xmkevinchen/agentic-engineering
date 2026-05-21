@@ -40,6 +40,17 @@ plugins/ae/             # The actual plugin
 - This ensures `/ae:plan` shows in autocomplete, not just `/plan (ae)`
 - Agent names are auto-prefixed by plugin system
 
+### Internal terminology referenced in skill/agent prose
+
+Skill definitions and agent files occasionally cite the following internal terms. They are project artifacts, not external concepts:
+
+- **`F-NNN`** — a *feature* identifier. Features live under `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` (gitignored process artifacts). When a SKILL.md says e.g. "F-019 cast-block protocol" it is naming a specific past feature that introduced the protocol now described.
+- **`BL-NNN`** — a *backlog item* identifier (idea / task / known gap). Backlog files live under `.ae/backlog/` (gitignored). When prose says "BL-076" it is citing the backlog entry that produced or motivated the surrounding behavior.
+- **`Plan NNN`** — a *legacy plan number* from the pre-feature-directory era of this plugin's own self-development. Plans now live inside their feature dir; references to `Plan 0XX` in older prose mean "the historical plan record that established the behavior being described". They are archaeological references, not currently-tracked artifacts.
+- **`KL #N`** — a *knowledge-ladder* finding number; cited only in `plugins/ae/skills/review/SKILL.md` as part of a synthesis-quality check the reviewer applies.
+
+These identifiers do not need to be resolved to understand what a skill does — they are provenance hooks for contributors interested in the design history.
+
 ## Git
 
 - **Feature branch** — all work on feature branches, PR to main. Branch naming: `feature/<slug>` or `fix/<slug>`

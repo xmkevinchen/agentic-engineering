@@ -8,7 +8,7 @@ effort: medium
 
 ## Argument Inference
 
-If `$ARGUMENTS` is empty, scan for the most recent plan with `status: draft` or `status: reviewed` across BOTH plan locations (Plan 051+):
+If `$ARGUMENTS` is empty, scan for the most recent plan with `status: draft` or `status: reviewed` across BOTH plan locations:
 1. **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
 2. **Legacy plans (fallback)**: `output.plans/*.md` (default `.ae/plans/`, configurable via `pipeline.yml`)
 3. Apply tiebreaker rules across the union of both locations (mirrors `/ae:work` and `/ae:review` argument-inference union scan).
@@ -55,7 +55,7 @@ Read the full plan text, then create a Team for parallel review.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-### Reviewer slots — built-in default + project-agent override (F-009 Step 4)
+### Reviewer slots — built-in default + project-agent override
 
 `plan-review` hardcodes two built-in reviewer slots. `project_agents[]` entries override only when both `role` and `specialty` match:
 

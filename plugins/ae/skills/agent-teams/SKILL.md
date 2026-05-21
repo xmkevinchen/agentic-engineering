@@ -84,18 +84,18 @@ Cast block timing relative to existing Selection Trace + TeamCreate:
 4. Agent() calls — each with cast block embedded in prompt: field at position 2 (below)
 ```
 
-When a spawn prompt has a PRIMARY CONTEXT BUNDLE (per F-016 Plan 050 convention — assembled context files / verbatim discussion bodies), the cast block MUST appear at **position 2** of the prompt:
+When a spawn prompt has a PRIMARY CONTEXT BUNDLE, the cast block MUST appear at **position 2** of the prompt:
 
 ```
 Agent(prompt: """
-  <PRIMARY CONTEXT BUNDLE — position 1: files / discussion context / verbatim per Plan 050>
+  <PRIMARY CONTEXT BUNDLE — position 1: files / discussion context / verbatim>
 
   📋 Cast: <agent-name>
     Role: <role>
     Angle: <angle>
-    Why: <why>                                                 ← position 2
+    Why: <why> ← position 2
 
-  <Task-specific instructions: domain, scope, checks>          ← position 3
+  <Task-specific instructions: domain, scope, checks> ← position 3
 """)
 ```
 

@@ -63,7 +63,7 @@ Review the Architect's step decomposition, validate that dependency assumptions 
 ### Parallel Group Verification
 | Step A | Step B | File Domain | Type Deps | Runtime | Conclusion |
 |--------|--------|-------------|-----------|---------|------------|
-| Step 2 | Step 3 | no overlap  | shared enum | none  | can parallel (enum in Step 1) |
+| Step 2 | Step 3 | no overlap | shared enum | none | can parallel (enum in Step 1) |
 
 ### Hidden Dependencies Found
 - [Specific, with file:line]

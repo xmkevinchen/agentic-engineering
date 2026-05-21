@@ -41,7 +41,7 @@ This section is read-only — does NOT re-run the `/ae:dashboard` stage-detectio
 
 ### 3. In-flight teams
 
-Scan `~/.claude/teams/<name>/config.json` directly. **Do NOT use `TaskList`** — `TaskList` is conversation-scoped and cannot see tasks from other sessions (per F-008 plan-review dep-analyst Finding 2). Team dirs are filesystem-persistent and authoritative across sessions.
+Scan `~/.claude/teams/<name>/config.json` directly. **Do NOT use `TaskList`** — `TaskList` is conversation-scoped and cannot see tasks from other sessions. Team dirs are filesystem-persistent and authoritative across sessions.
 
 **Performance critical**: filesystem traversal only — no team spawn, no file writes, no expensive parses. If a future edit introduces a per-team expensive operation (e.g., reading every member's full output), the <2s aggregate /ae:status contract will silently break. See integration-test.md baseline (155ms for full skill).
 
@@ -68,16 +68,16 @@ Implementation outline (the actual sort step that section 4 must perform):
 {
   for f in .ae/features/done/F-*/review.md .ae/reviews/*.md; do
     [ -f "$f" ] || continue
-    case "$f" in *adhoc*) continue ;; esac   # defense-in-depth against future glob change
+    case "$f" in *adhoc*) continue ;; esac # defense-in-depth against future glob change
     created=$(grep -E '^created:' "$f" | head -1 | sed 's/^created: *//; s/"//g')
-    [ -n "$created" ] || continue            # skip files lacking frontmatter `created:`
+    [ -n "$created" ] || continue # skip files lacking frontmatter `created:`
     echo "$created|$f"
   done
 } | sort -r | head -5 | while IFS='|' read created path; do
   verdict=$(grep -E '^verdict:' "$path" | head -1 | sed 's/^verdict: *//; s/"//g')
   title=$(grep -E '^title:' "$path" | head -1 | sed 's/^title: *//; s/"//g')
   icon="?"; [ "$verdict" = "pass" ] && icon="✓"; [ "$verdict" = "fail" ] && icon="✗"
-  echo "  $icon $title ($created)"
+  echo " $icon $title ($created)"
 done
 ```
 

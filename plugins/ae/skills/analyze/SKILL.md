@@ -34,9 +34,9 @@ TaskCreate(subject: "ae:analyze: Synthesize")
 After Mode selection (Mode A vs Mode B determined from $ARGUMENTS), create the mode-specific task:
 
 ```
-TaskCreate(subject: "ae:analyze: Mode A — Promote BL")    # if BL-NNN input
+TaskCreate(subject: "ae:analyze: Mode A — Promote BL") # if BL-NNN input
 # OR
-TaskCreate(subject: "ae:analyze: Mode B — Free-text Feature")    # if free-text input
+TaskCreate(subject: "ae:analyze: Mode B — Free-text Feature") # if free-text input
 ```
 
 Owner field: omit. On error: stay `in_progress`.
@@ -59,13 +59,13 @@ Inspect `$ARGUMENTS`:
 
 ### Pre-approved values input (BL-063 / F-007)
 
-`/ae:analyze` may be invoked from `/ae:roadmap`'s batch-approval orchestration loop (per F-007). When invoked from that loop, the spawn prompt contains a `PRE_APPROVED_VALUES` block that pre-fills the Step 7 (size) and Step 8 (depends_on) interactive advisories so the user is not re-prompted per BL.
+`/ae:analyze` may be invoked from `/ae:roadmap`'s batch-approval orchestration loop. When invoked from that loop, the spawn prompt contains a `PRE_APPROVED_VALUES` block that pre-fills the Step 7 (size) and Step 8 (depends_on) interactive advisories so the user is not re-prompted per BL.
 
 **Format spec authority**: the canonical `PRE_APPROVED_VALUES` block format is defined in `plugins/ae/skills/roadmap/SKILL.md` section (a) "Batch-approval block" subsection (Step 1's "Canonical PRE_APPROVED_VALUES block format" sub-bullet). This skill RECOGNIZES and CONSUMES that format; it does NOT redefine it. Any change to the wire format MUST update `roadmap/SKILL.md` first; this skill references it.
 
 **Recognition**: at the start of Mode A — before the double-promote pre-check, before any agent spawn — grep the spawn prompt for the literal opening sentinel `---PRE_APPROVED_VALUES---`. The sentinel must appear as a free-standing line (not inside a fenced code block, not quoted in surrounding prose); SKILL.md text that documents the format is NOT a live block. If found, parse the block's `size:` and `depends_on:` field values and stash them for Steps 7 + 8 to consume. If absent, proceed with normal interactive flow (today's behavior — unchanged).
 
-**Malformed-block fallback** (per F-007 ship review — gemma + challenger + codex convergent finding on sentinel-parsing brittleness):
+**Malformed-block fallback**:
 
 - **Missing closing sentinel**: opening `---PRE_APPROVED_VALUES---` found but `---END_PRE_APPROVED_VALUES---` absent → log `[ANALYZE] PRE_APPROVED_VALUES block malformed (missing closing sentinel); falling through to interactive prompts for size + depends_on.` Discard any partially-parsed values; Step 7 + Step 8 run interactively as if the block were absent.
 - **Invalid `size:` value**: parsed value is not in `{XS, S, M, L, XL}` → log `[ANALYZE] PRE_APPROVED_VALUES.size invalid: <value>; falling through to interactive size prompt.` Skip the pre-approved-size guard for this invocation; Step 7 runs interactively. (Other fields, if valid, still apply — partial fallback.)
@@ -115,9 +115,9 @@ Execute in order; each step's success is required for the next.
 
 5. **Update the moved BL file's frontmatter** (in place):
    ```yaml
-   status: promoted          # was: open / unscheduled
-   promoted: YYYY-MM-DD      # today
-   promoted_to: F-NNN        # back-pointer to the feature
+   status: promoted # was: open / unscheduled
+   promoted: YYYY-MM-DD # today
+   promoted_to: F-NNN # back-pointer to the feature
    ```
    Preserve all other frontmatter fields. The BL stays under the feature dir as the original audit-trail document.
 
@@ -128,7 +128,7 @@ Execute in order; each step's success is required for the next.
    title: <BL title verbatim>
    status: active
    created: YYYY-MM-DD
-   origin_bl: BL-<NNN>            # scalar OR list — see (6a)
+   origin_bl: BL-<NNN> # scalar OR list — see (6a)
    ---
    ```
    Optional fields (`theme`, `roadmap`, `size`, `depends_on`) are written by steps 7 and 8 below if and only if the user accepts the proposals.
@@ -161,7 +161,7 @@ The user is proposing a feature directly without going through the BL inbox. Sam
    title: <description verbatim, or LLM-shortened to a one-line title if input is long>
    status: active
    created: YYYY-MM-DD
-   origin_bl: ""           # empty — origin is direct user request, not a captured BL
+   origin_bl: "" # empty — origin is direct user request, not a captured BL
    ```
 5. Same advisory flow for `size:` (step 7 of Mode A) and `depends_on:` (step 8).
 6. Run the codebase research flow → `analysis.md`.

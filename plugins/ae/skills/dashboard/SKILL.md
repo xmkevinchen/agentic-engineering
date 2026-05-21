@@ -49,7 +49,7 @@ For each feature, determine the **current stage**:
 | `review failed` | linked plan has all `- [x]` AND linked review with `verdict: fail` |
 | `done` | feature `index.md` frontmatter `status: done` (i.e., already in `features/done/`, only shown under `--all`) |
 
-### Plan linkage (Plan 051+)
+### Plan linkage
 
 The dashboard infers plan linkage in priority order:
 
@@ -81,7 +81,7 @@ For each discussion subdirectory:
    - `pipeline.analyze`, `pipeline.discuss`, `pipeline.plan`, `pipeline.work`
    - `plan` — path to plan file (empty string `""` = no plan yet)
    - `feature` — optional, F-NNN identifier (path-derived ID is canonical for feature-internal discussions)
-2. **Staleness validation (Plan 051+)** — for feature-internal discussions, derive `F-NNN` from the parent feature dir's name and compare to the discussion `index.md` frontmatter `feature:` field:
+2. **Staleness validation** — for feature-internal discussions, derive `F-NNN` from the parent feature dir's name and compare to the discussion `index.md` frontmatter `feature:` field:
    - Frontmatter absent → silently OK (path-derived is canonical).
    - Frontmatter matches path-derived `F-NNN` → silently OK.
    - Frontmatter conflicts with parent dir path → emit warning: `[STALENESS] Discussion <discussion-dir>: frontmatter feature: <X> conflicts with parent dir <Y>; using path-derived <Y>. Manually edit frontmatter to fix.` Continue with path-derived ID. Do NOT auto-relocate or auto-rewrite frontmatter.

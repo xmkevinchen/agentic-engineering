@@ -95,9 +95,9 @@ When the verdict pass produced one or more PROMOTE verdicts, append a structured
 Items will run in the order shown. To override: drop a BL from this batch and
 re-run /ae:roadmap with explicit depends_on: frontmatter on the affected BL/feature.
 ─────────────────────────────────────────────────────────────────────
- 1. BL-NNN  Title (truncated to ~55 chars)            Size: <T> [<provenance>]
-            Depends on: F-MMM [<provenance>]            ← only when non-empty
-            Order reason: <one line>                    ← only when LLM-inferred AND non-trivial
+ 1. BL-NNN Title (truncated to ~55 chars) Size: <T> [<provenance>]
+            Depends on: F-MMM [<provenance>] ← only when non-empty
+            Order reason: <one line> ← only when LLM-inferred AND non-trivial
  2. ...
 ─────────────────────────────────────────────────────────────────────
 ```
@@ -136,14 +136,14 @@ On Cancel-all → no `/ae:analyze` invocations, exit with a clear "no promotions
 
 On Ctrl-C mid-loop → harness handles termination; partial state remains as already-promoted features have their `promoted_to:` / `origin_bl:` frontmatter set; user re-runs `/ae:roadmap` to continue (next run's PROMOTE filtering naturally skips already-promoted BLs).
 
-#### Out-of-scope edit operations (per F-007/001 conclusion)
+#### Out-of-scope edit operations
 
 The batch-approval block intentionally does NOT support inline editing of: (a) execution order beyond `Remove`, (b) per-BL `size` override, (c) per-BL `depends_on` override. The escape hatches:
 
 - **Order is wrong**: drop the misplaced BL via `Remove some`, run `/ae:analyze` separately for it after the batch, or re-run `/ae:roadmap` with explicit `depends_on:` frontmatter on the affected BL/feature so the deterministic ordering changes.
 - **Inferred size or deps wrong**: let the batch run; edit `index.md` `size:` / `depends_on:` directly after `/ae:analyze` writes the feature dir. The post-analyze edit is one-line and trivially auditable.
 
-The batch UI is an approval gate, not a config editor. Inline override would convert the gate into a form (per F-007/001 codex-proxy + architect Round 1 convergence).
+The batch UI is an approval gate, not a config editor. Inline override would convert the gate into a form.
 
 ### (b) Dependency analysis
 
@@ -204,8 +204,8 @@ For each unsized feature:
    features:
      F-NNN:
        auto_size_value: M
-       auto_size_reason: "single-skill SKILL.md edit, no agent changes"  # required for cache HIT to compose [cached] output line
-       basis_sha: "a3f7b1e8c2d09b4f"  # 16 hex chars (sha256 prefix)
+       auto_size_reason: "single-skill SKILL.md edit, no agent changes" # required for cache HIT to compose [cached] output line
+       basis_sha: "a3f7b1e8c2d09b4f" # 16 hex chars (sha256 prefix)
        computed_at: 2026-05-07
    ```
    The `auto_size_reason` field is required: cache HIT must produce `F-NNN → <T-shirt> (~<range>) — <reason> [cached]` per the output format below, so the reason is part of the cacheable LLM output (not just the T-shirt classification).
@@ -218,14 +218,14 @@ For each unsized feature:
 ```
 Active features by size:
   XS: <count>
-  S:  <count>
-  M:  <count>
-  L:  <count>
+  S: <count>
+  M: <count>
+  L: <count>
   XL: <count>
 
 Auto-sized this run:
-  F-NNN → S  (~1d)  — <one-line LLM reason>           [cached]
-  F-MMM → M  (~2-3d) — <one-line LLM reason>           [evaluated]
+  F-NNN → S (~1d) — <one-line LLM reason> [cached]
+  F-MMM → M (~2-3d) — <one-line LLM reason> [evaluated]
 
 Total estimated effort (sized + auto-sized): <lower-sum>d – <upper-sum>d
 

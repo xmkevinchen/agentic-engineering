@@ -37,16 +37,16 @@ Filter to features with `done >= <cutoff date>`. Empty result:
 ```
 No features archived in the last <window>. ae:retrospect needs shipped features
 to surface patterns. To start the GTD loop on a fresh project:
-  /ae:backlog "<idea>"   — Capture an idea
-  /ae:roadmap            — see promote candidates from backlog
-  /ae:analyze BL-NNN     — Organize a captured BL into a feature
+  /ae:backlog "<idea>" — Capture an idea
+  /ae:roadmap — see promote candidates from backlog
+  /ae:analyze BL-NNN — Organize a captured BL into a feature
 For AE plugin self-development outcome stats (delivery metrics across the
 AE pipeline itself), use /ae:plugin-stats — that's a separate concern.
 ```
 
 Stop here. Do not synthesize a 4-section report from zero data.
 
-For each in-window feature, also read `<feature-dir>/analysis.md` (if present) and any review file. Review-file lookup unions BOTH locations (Plan 051+):
+For each in-window feature, also read `<feature-dir>/analysis.md` (if present) and any review file. Review-file lookup unions BOTH locations:
 - **Feature-dir (primary)**: `<feature-dir>/review.md` — sibling of `<feature-dir>/plan.md` for post-Plan-051 features.
 - **Legacy (fallback)**: `output.reviews/*.md` with `target:` matching the feature's plan path — for pre-Plan-051 features whose plan/review files remained in legacy paths.
 

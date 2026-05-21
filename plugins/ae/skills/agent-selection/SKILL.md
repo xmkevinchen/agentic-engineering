@@ -66,18 +66,18 @@ Every skill that builds an Agent Team references this table.
 
    Malformed YAML → warn + skip all rules for this run (fall-through to Layer 2 for every slot).
 
-   ### Governance file schema versioning (F-009 Step 2)
+   ### Governance file schema versioning
 
    **Placement — top-level YAML field inside the governance YAML code block** (NOT markdown `---` frontmatter): the governance file (`.claude/agent-governance.md`) is a markdown file with a YAML code block (\`\`\`yaml ... \`\`\`); `schema_version:` is a top-level field inside that YAML block, sibling to `rules:`. It is NOT inside an individual rule entry, and NOT a markdown `---` frontmatter field at the head of the file.
 
    Concrete placement:
 
    ```yaml
-   schema_version: 2     # ← top-level, sibling to `rules:`
+   schema_version: 2 # ← top-level, sibling to `rules:`
    rules:
      - action: force
        agent: php-test-reviewer
-       stack_check: enforce   # ← per-rule field, only valid under schema_version: 2
+       stack_check: enforce # ← per-rule field, only valid under schema_version: 2
    ```
 
    Missing top-level `schema_version:` defaults to `1` (legacy). Recognized values:
@@ -94,7 +94,7 @@ Every skill that builds an Agent Team references this table.
 
    <a name="project-agent-precedence"></a>
 
-   ### Project-agent precedence — single canonical rule (F-009 Step 3)
+   ### Project-agent precedence — single canonical rule
 
    `project_agents[]` does NOT receive a priority bonus over built-ins. The only paths by which `project_agents[]` entries reach a slot ahead of an equally-fitting built-in are:
 
@@ -126,7 +126,7 @@ Every skill that builds an Agent Team references this table.
       - **schema_version=2** with rule `stack_check: enforce` (default when omitted from a rule under v2): if the force agent's `tech_stack` is disjoint from the project's, AE emits `[layer1] force-apply: <agent> stack-mismatch detected; user disposition required` and surfaces `AskUserQuestion` (accept incompatible force / drop this force / abort skill). User disposition is recorded in trace.
       - **schema_version=2** with rule `stack_check: skip`: silently bypass the stack-mismatch filter for this rule, mirroring schema_version=1 behavior; AE emits `[layer1] force-apply: <agent> stack-mismatch SKIPPED via stack_check: skip` for audit.
       - Either way, an `action: exclude` rule on the same agent wins (exclude is the hardest signal).
-      - **Trace event supersession** (F-009 Step 2): when a force agent triggers the stack-mismatch path under `schema_version=2` (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event from step 2 below is **suppressed for that agent** — the new force-apply line is the single authoritative record. Under `schema_version=1` legacy bypass, neither line fires for the force agent (silent bypass is the documented v1 behavior). Hard-constraint stack-mismatch events continue to fire for non-force agents in the normal flow regardless of schema_version.
+      - **Trace event supersession**: when a force agent triggers the stack-mismatch path under `schema_version=2` (detected or SKIPPED), the legacy `[layer1] hard-constraint: stack-mismatch filter REMOVED <agent>` event from step 2 below is **suppressed for that agent** — the new force-apply line is the single authoritative record. Under `schema_version=1` legacy bypass, neither line fires for the force agent (silent bypass is the documented v1 behavior). Hard-constraint stack-mismatch events continue to fire for non-force agents in the normal flow regardless of schema_version.
    2. **Hard-constraint filter** (mechanical, BEFORE Claude):
       - `action: exclude` governance rules remove the named agent from the candidate pool.
       - Stack-mismatch: agent declares `tech_stack: [X, Y, ...]` in its frontmatter or `pipeline.yml project_agents[]` entry; project declares `tech_stack` at the top level of `pipeline.yml` (source of truth — no file-extension auto-detection). Disjoint sets → filtered out. (For force agents, see step 1 — the supersession rule routes the event through force-apply instead.)

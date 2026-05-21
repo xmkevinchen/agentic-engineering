@@ -82,15 +82,15 @@ If `.claude/pipeline.yml` already exists: suggest `/ae:setup update`.
 Phase 1 CLI surface (all subcommands below are implemented and documented in subsections further down):
 
 ```
-/ae:setup agents --library <path>                              # declare library (multi-library supported)
-/ae:setup agents --list [--category <cat>]                     # browse configured libraries
-/ae:setup agents --add <name|library:name> [--reason <text>]   # import with upstream tracking
-/ae:setup agents --remove <name>                               # delete + cleanup (incl. governance rules)
-/ae:setup agents --sync [--diff]                               # upstream drift detection
-/ae:setup agents --detach <name>                               # break upstream link (keep file)
-/ae:setup agents --suggest [--phase <enum>] [--why]            # LLM-based recommendation
-/ae:setup agents --refresh                                     # advisory audit (unused / new / stale)
-/ae:setup agents --rule-cleanup                                # governance stale-rule cleanup
+/ae:setup agents --library <path> # declare library (multi-library supported)
+/ae:setup agents --list [--category <cat>] # browse configured libraries
+/ae:setup agents --add <name|library:name> [--reason <text>] # import with upstream tracking
+/ae:setup agents --remove <name> # delete + cleanup (incl. governance rules)
+/ae:setup agents --sync [--diff] # upstream drift detection
+/ae:setup agents --detach <name> # break upstream link (keep file)
+/ae:setup agents --suggest [--phase <enum>] [--why] # LLM-based recommendation
+/ae:setup agents --refresh # advisory audit (unused / new / stale)
+/ae:setup agents --rule-cleanup # governance stale-rule cleanup
 ```
 
 Library reference is persistent — set once via `--library`, reused across subsequent `--suggest` / `--add` runs.
@@ -125,17 +125,17 @@ Behavior:
 
 1. **Read `agent_libraries:` from pipeline.yml**. Absent → print `[ae:setup] No library configured. Run /ae:setup agents --library <path> first.` and exit.
 2. **Traverse each library**: for each library source, list `.md` files under configured categories (or all if flat). Read frontmatter `name`, `description`. Skip files with malformed YAML (warn once per library: `[ae:setup] <library>: M/N agents have malformed YAML, skipped`).
-3. **Library-path-missing tolerance** (per F-005): if a library's `source:` path no longer exists → warn `[ae:setup] library '<name>' source path '<source>' does not exist on disk. Cross-machine fresh checkout? See README "Cross-machine setup". Skipping this library and continuing with remaining libraries.` and continue with remaining libraries (do not abort).
+3. **Library-path-missing tolerance**: if a library's `source:` path no longer exists → warn `[ae:setup] library '<name>' source path '<source>' does not exist on disk. Cross-machine fresh checkout? See README "Cross-machine setup". Skipping this library and continuing with remaining libraries.` and continue with remaining libraries (do not abort).
 4. **Filter by `--category <cat>`** (optional): show only agents whose category matches. Case-insensitive match on directory name. If no agents match → print `No agents in category '<cat>'`.
 5. **Output format**: pretty table with columns `library-qualified-id | category | role-hint | description`. `library-qualified-id` = `<library>:<filename-stem>`. Role hint is inferred per `./agent-contract.md` role-inference heuristic.
 
 Example:
 ```
 $ /ae:setup agents --list --category engineering
-library-qualified-id                                  category     role          description
-agency-agents:engineering-code-reviewer               engineering  reviewer      Expert code reviewer who provides constructive feedback...
-agency-agents:engineering-software-architect          engineering  domain-expert System design, DDD, architectural patterns expert...
-agency-agents:engineering-security-engineer           engineering  reviewer      Security vulnerabilities, auth bypass, injection vectors...
+library-qualified-id category role description
+agency-agents:engineering-code-reviewer engineering reviewer Expert code reviewer who provides constructive feedback...
+agency-agents:engineering-software-architect engineering domain-expert System design, DDD, architectural patterns expert...
+agency-agents:engineering-security-engineer engineering reviewer Security vulnerabilities, auth bypass, injection vectors...
 (23 agents in category engineering)
 ```
 
@@ -160,7 +160,7 @@ Optional `--reason "<text>"` captures the user's rationale for importing this ag
 Behavior (ordered protocol):
 
 1. **Resolve target**. Accept plain filename stem (e.g., `engineering-code-reviewer`) OR library-qualified form (`agency-agents:engineering-code-reviewer`). If plain form AND multiple libraries contain the same stem → refuse with `[ae:setup] name '<stem>' ambiguous — present in libraries: <A>, <B>. Use library-qualified form: <A>:<stem>`.
-2. **Library-directory-missing guard** (per F-005, BL-059-style mechanical pre-check): run `test -d "<library.source>"` via Bash. If the library directory does not exist → refuse with `[ae:setup] library '<library-name>' source path '<source>' does not exist on disk. Cannot --add agent from missing library — --add modifies agent state, refusing prevents partial installs from an unavailable library. See README "Cross-machine setup".` Refuse the operation; do NOT proceed to step 3. This is dir-level missing — distinct from step 5's "cannot compute content hash" fallback which is agent-FILE-level (fires when the directory exists but the specific agent file fails to read or hash).
+2. **Library-directory-missing guard**: run `test -d "<library.source>"` via Bash. If the library directory does not exist → refuse with `[ae:setup] library '<library-name>' source path '<source>' does not exist on disk. Cannot --add agent from missing library — --add modifies agent state, refusing prevents partial installs from an unavailable library. See README "Cross-machine setup".` Refuse the operation; do NOT proceed to step 3. This is dir-level missing — distinct from step 5's "cannot compute content hash" fallback which is agent-FILE-level (fires when the directory exists but the specific agent file fails to read or hash).
 3. **Read library file**. Open `<library.source>/<category>/<name>.md` (or flat path if library has no categories).
 4. **Parse YAML frontmatter**. If malformed → skip this agent with warning `[ae:setup] skip <name>: malformed YAML (line N)`. Do NOT abort. (Relevant in batch contexts — single `--add` refuses, `--suggest` batch-apply continues.)
 5. **Compute source SHA**.
@@ -175,7 +175,7 @@ Behavior (ordered protocol):
    ```yaml
    project_agents:
      - name: <filename-stem>
-       role: <inferred>                # per ./agent-contract.md role-inference fallback
+       role: <inferred> # per ./agent-contract.md role-inference fallback
        source: "<library-name>:<category>/<filename>.md"
        source_sha: <sha>
        display_name: "<original name: field>"
@@ -184,7 +184,7 @@ Behavior (ordered protocol):
        # Optional fields populated if frontmatter provides them:
        tech_stack: <from library frontmatter or []>
        specialty: <from library frontmatter or "">
-       priority: 50                    # Phase 1 default
+       priority: 50 # Phase 1 default
        required: false
    ```
 11. **Summary output**: `[ae:setup] Imported <library>:<name> → .claude/agents/<name>.md (role: <role>, sha: <sha>)`.
@@ -416,7 +416,7 @@ When `/ae:setup agents --add <name>` is invoked with an explicit rationale strin
    ```
    [ae:governance] Propose rule: prefer engineering-security-engineer for contexts [security, mcp, auth]?
      Derived from import rationale: "MCP server security profile"
-     Action: prefer    Scope: all    Confidence: medium
+     Action: prefer Scope: all Confidence: medium
    
    Options:
    1. Accept — add rule to .claude/agent-governance.md
@@ -498,7 +498,7 @@ When `pipeline.yml` is absent or a slot is missing, skills use these defaults:
 | `output.analyses` | `.ae/analyses/` | ae:think |
 | `test_plugin.judge` | `codex` | ae:test-plugin |
 
-Defaults are GTD-first canonical (Plan 050+). External projects with `docs/*` legacy layouts override via `output.*` slots — `/ae:setup` auto-detects existing `docs/<slot>/` directories with content and writes only those slots, leaving the rest to fall through to these defaults.
+Defaults are GTD-first canonical. External projects with `docs/*` legacy layouts override via `output.*` slots — `/ae:setup` auto-detects existing `docs/<slot>/` directories with content and writes only those slots, leaving the rest to fall through to these defaults.
 
 Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is missing or pipeline.yml doesn't exist, fall back to the default above. This ensures zero-config works for new projects.
 

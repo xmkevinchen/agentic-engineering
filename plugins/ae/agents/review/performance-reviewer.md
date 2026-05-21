@@ -61,7 +61,7 @@ Review all changes (via `git diff main...HEAD` or `git diff`), focusing on:
 ### Findings
 | # | Severity | File:Line | Issue | Why it matters (Impact) | Suggestion |
 |---|----------|-----------|-------|-------------------------|------------|
-| 1 | P1/P2/P3 | path:line | ...   | ...                     | ...        |
+| 1 | P1/P2/P3 | path:line | ... | ... | ... |
 
 **Nit cap**: at most 5 P3 findings per review. If more, report count: "12 P3 findings (5 listed; suppressed for signal)."
 ```

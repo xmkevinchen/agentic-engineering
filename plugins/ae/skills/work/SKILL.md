@@ -41,7 +41,7 @@ Execute the plan at **$ARGUMENTS**.
 
 ```
 Pre-checks → Locate step → [Agent Teams?] → TDD cycle → Pre-commit → Commit → Auto-pass gate
-                                                              ↑                       │
+                                                              ↑ │
                                                               └── fix & re-review ────┘
 ```
 
