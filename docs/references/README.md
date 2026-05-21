@@ -12,3 +12,4 @@ ae 的设计借鉴了多个外部来源。每个来源记录：出处、借鉴�
 | Ralph Wiggum 自主循环 | [harness-engineering.md](harness-engineering.md) | 启发了 auto-pass 默认开的方向 | Stop hook 循环（与 ae review-heavy 流程不兼容）|
 | NykDev "Agreement is a bug" | [nyk-framework.md](nyk-framework.md) | 结构化分歧格式、分歧价值评估 | Education Gate、Capture Stack、Independent Perspective agent |
 | Claude Code Source Analysis | [claude-code-plugin-api.md](claude-code-plugin-api.md) | Plugin API reference: frontmatter fields, hooks, security boundaries, feature flags | — |
+| Claude Code Plugin Contract | [cc-plugin-contract.md](cc-plugin-contract.md) | AE↔CC dependency surface (9 live deps + mitigations) + failure-class taxonomy + BL-023 closure evidence + dist/-committed policy | — |
