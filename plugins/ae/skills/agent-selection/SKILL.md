@@ -6,7 +6,7 @@ user-invocable: true
 
 # Agent Selection Reference
 
-所有需要组建 Agent Team 的 skill 引用此表。
+Every skill that builds an Agent Team references this table.
 
 ## Selection Table
 
@@ -231,7 +231,7 @@ user-invocable: true
 
 ## Cross-family Prompt Reference
 
-TL 根据 context 决定外部专家从什么角度审查。以下是常见角度的 prompt 示例：
+TL decides from which angle the external expert should review based on context. Common angles with example prompt phrasing:
 
 | Review Angle | Specialized Prompt Focus |
 |-------------|------------------------|

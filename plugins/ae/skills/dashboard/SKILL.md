@@ -89,7 +89,7 @@ For each discussion subdirectory:
    - `analyze: in_progress` → stage = "analyzing", action = `/ae:analyze <dir>`
    - `discuss: in_progress` → stage = "discussing"
    - `discuss: done`, `plan:` field is `""` or missing, AND `pipeline.plan` is in `{pending, in_progress}` or missing → stage = "awaiting plan", action = `/ae:plan`
-   - `discuss: done`, `plan:` field is `""` or missing, AND `pipeline.plan` is `skipped` or `done` → stage = "done" (collapses into done bucket per Done Feature Handling section). Discussion 已 conclude 且 explicitly 决定不需要 plan（或 plan 已交付但路径未回写）—— 不再有 actionable next step。
+   - `discuss: done`, `plan:` field is `""` or missing, AND `pipeline.plan` is `skipped` or `done` → stage = "done" (collapses into done bucket per Done Feature Handling section). Discussion is concluded AND explicitly decided no plan is needed (or the plan was delivered but its path was never written back) — no actionable next step remains.
    - `discuss: done`, `plan: <path>` (non-empty) → follow plan (see Plans below)
 
 **Guard — when does "awaiting plan" stage fire?**

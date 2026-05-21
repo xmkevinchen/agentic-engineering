@@ -259,7 +259,7 @@ After all teammates have SendMessage'd findings to TL, before synthesis:
 
 TL collects findings, resolves disagreements, writes to `.ae/features/active/F-NNN-<slug>/analysis.md`:
 
-**Per CLAUDE.md `Output Standards`** — 金字塔顶 ≤ 5 行（必填），下层留档（按需，省略空段落）。TL 必须先理解 + 提炼，不要直接拼贴 agent finding。
+**Per CLAUDE.md `Output Standards`** — pyramid tip ≤ 5 lines (required), supporting detail below (on-demand, omit empty sections). TL must first understand and distill — do not just splice raw agent findings together.
 
 ```markdown
 ---
@@ -273,34 +273,34 @@ created: YYYY-MM-DD
 
 ## TL;DR
 
-- **问题**: <一句话 — 复述 BL 核心，不是全文照搬>
-- **当前判断**: <一句话 — TL 综合 agent 调研后的 stance，不是 raw aggregation>
-- **关键开放问题**: <0-2 个 — 必须 user 拍板的 / 仍有分歧的；没有就写「无」>
-- **下一步**: <具体: /ae:discuss / /ae:plan / 关掉 / 等 trigger 等>
+- **Question**: <one sentence — restate the BL's core problem, not the full text>
+- **Current judgment**: <one sentence — TL's stance after synthesizing agent research, not raw aggregation>
+- **Key open questions**: <0-2 items — items the user must decide / still-disputed; write "none" if there are none>
+- **Next step**: <concrete: /ae:discuss / /ae:plan / close / wait for trigger / etc.>
 
 ---
 
-## 调研留档
+## Supporting detail
 
-只在金字塔尖承载 user 判断不够时才写下面段落。每段独立按需出现，**省略空段落**——不要写"未做 X 因 overkill"。
+Only write the sections below when the TL;DR tip is insufficient to carry the user's judgment. Each section appears on demand independently; **omit empty sections** — do not write "skipped X because overkill".
 
-### 关键证据（按需）
-<archaeologist + agent 调研 finding，cite file:line。删冗余/低信号 finding；不要每个 agent 各占一节平铺。>
+### Key evidence (on-demand)
+<archaeologist + agent research findings, cite file:line. Remove redundant / low-signal findings; do not give every agent its own flat section.>
 
-### 反对意见处理（按需）
-<challenger / cross-family 提的关键挑战 + 怎么处理（接受 / 拒绝 + 一句话理由 / defer 到 BL）。不全文 enumerate。>
+### Counter-opinions handled (on-demand)
+<key challenges raised by challenger / cross-family + disposition (accepted / rejected + one-sentence reason / deferred to BL). Do not enumerate everything verbatim.>
 
-### Industry comparison（按需）
-<standards-expert，仅当对当前判断有 actionable 影响时。否则省。>
+### Industry comparison (on-demand)
+<standards-expert, only when it has actionable impact on the current judgment. Otherwise omit.>
 
-### Mengdie prior art（按需）
-<仅当有相关 result 时。无 result 不写"unavailable"占位。>
+### Mengdie prior art (on-demand)
+<only when there are relevant results. No results → do not write an "unavailable" placeholder.>
 ```
 
-**反例**（违反 Output Standards 的旧形态）：
-- 9 个 sub-section 平铺（`Question` / `Findings` / `Prior Art` / `Relevant Code` / `Architecture` / `Industry Practice` / `Challenges` / `Summary` / `Next Steps`）—— 每个 section 留着就要填，填不出实质就填"未做"
-- 没有 TL;DR，user 必须读完整篇才能判断
-- 每个 agent 各占一段平铺，60%+ 内容跨 section 重叠
+**Anti-patterns** (violate Output Standards):
+- 9 flat sub-sections (`Question` / `Findings` / `Prior Art` / `Relevant Code` / `Architecture` / `Industry Practice` / `Challenges` / `Summary` / `Next Steps`) — once a section exists it must be filled; if there is nothing substantive, authors write "not done"
+- No TL;DR; user must read the whole document before they can make a judgment
+- Each agent gets its own flat section, 60%+ content overlap across sections
 
 ### Knowledge capture (Mengdie)
 

@@ -204,7 +204,7 @@ Codex P1-a in F-009 plan-review rejected the original plan's approach of adding 
 
 ### F-008 — AE quality regression diagnosis + /ae:status skill (M, done 2026-05-17)
 
-Two-step feature addressing AE's documented failure modes (简单复杂化 / 复杂偷懒化 / 跑偏 / 状态丢失 / 递归过度设计) observed across 5 projects (AE-on-AE / mengdie / Games / SmartPal / domain-rich):
+Two-step feature addressing AE's documented failure modes (over-complicating-the-simple / under-investing-on-the-complex / scope-drift / state-loss / recursive-over-design) observed across multiple projects:
 
 - **Step 1** (`4ed382c`): Extended F-001 TaskCreate progress visibility pattern to 6 remaining long-running skills (skills proactively emit task lists per agent-teams §C.1 batch-create convention).
 - **Step 2** (`6b4c415`): New `/ae:status` skill — mid-skill-safe session readout (git context + active features + in-flight teams + recent review verdicts + BLs captured today). Pure-read, no team spawn, completes in <2s. Distinct from `/ae:dashboard` (which requires read-only pipeline scan and may be ~5s on large projects).
@@ -223,7 +223,7 @@ F-008 originated the KL #1 substitution detection problem that F-022 later opera
 Patch release fixing 2 P1 findings from `/ae:review` 3-reviewer pass missed in v0.9.6:
 
 - **Inline block in `ae:work` + `ae:review` SKILL.md**: was 4-bullet (missing Standard 5 self-verify); rewritten to 5-bullet per plan AC3 spec (`## AE Output Standards` heading + 5 bullets including Self-verify + relative link). Standard 5 is the core behavioral innovation — it must reach agent context, not just live in the canonical doc.
-- **Drift fixture removed**: `plugins/ae/tests/fixtures/standards-drift-detection.md` deleted. Plan v3 explicitly dropped the fixture in "What we did NOT do" section ("shell script byte-compare 有限码判无限输出, brittle"); v0.9.6 ship erroneously included it. Standard 5 self-verify is the primary enforcement mechanism, not external fixture.
+- **Drift fixture removed**: `plugins/ae/tests/fixtures/standards-drift-detection.md` deleted. Plan v3 explicitly dropped the fixture in "What we did NOT do" section ("shell-script byte-compare uses finite tests to judge unbounded output — brittle"); v0.9.6 ship erroneously included it. Standard 5 self-verify is the primary enforcement mechanism, not external fixture.
 
 ### Why patch release
 
@@ -279,7 +279,7 @@ Two UX-friction-themed features ship together: F-006 (BL-061 + BL-062 — ae:set
 
 ### Why bundled
 
-Both F-006 and F-007 are UX-friction-themed (theme: `ux-friction`) — one cohesive v0.9.5 release per CLAUDE.md "Versioning: intentional releases only" rule. F-006 lands the GTD-first canonical defaults that F-007's chained orchestration assumes; together they're the "AE 多干活, user 少填表" wave the session converged on.
+Both F-006 and F-007 are UX-friction-themed (theme: `ux-friction`) — one cohesive v0.9.5 release per CLAUDE.md "Versioning: intentional releases only" rule. F-006 lands the GTD-first canonical defaults that F-007's chained orchestration assumes; together they're the "AE does more, the user fills in less" wave the session converged on.
 
 ### Discussions and follow-ups
 
@@ -781,7 +781,7 @@ First release focused on external users. The core pipeline (discuss→plan→wor
 - **Doodlestein role reversal**: Attacker/Defender pattern replaces independent Q1/Q2/Q3 questionnaire — validated with real attack/defense exchange
 - **Agent persistence**: "STAY IN THE TEAM" protocol for multi-round discussions — agents survive across rounds
 - **Agent definition trimming**: removed duplicate rules from proxy/challenger definitions (v0.1.2 bloat caused Gemini proxy timeout)
-- **CLAUDE.md principles**: agent definition rules (no duplication, one-line, test after changes), TL autonomy boundary, 先运行后决策 principle
+- **CLAUDE.md principles**: agent definition rules (no duplication, one-line, test after changes), TL autonomy boundary, "run before deciding" principle (require at least one real execution before the next planning cycle)
 - **/ae:consensus first execution**: smoke test successful — 5-agent debate produced majority consensus with cross-examination
 
 ### AE Evolution — Pipeline Validation + Infrastructure
