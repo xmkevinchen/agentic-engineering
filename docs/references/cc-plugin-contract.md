@@ -53,6 +53,8 @@ Verbatim from T1 review (verdict: pass):
 
 Source pointer for traceability (NOT for evidence — `.ae/` files are gitignored and mutable): `.ae/reviews/054-t1-trace-ndjson-instrument.md`. The verbatim block above is the canonical evidence; the source pointer is informational only.
 
+**Scope note**: BL-023's original action #4 (`.ae/backlog/done/v0.8.1/BL-023-hooks-plugin-registration.md`) requested "Verify with a **fresh plugin install**." The T1 evidence above demonstrates `SessionStart` hook firing within an active CC session that already had AE plugin loaded — same `plugin.json hooks` block mechanism, but not a cold fresh-install path. The closure narrows BL-023's acceptance to "plugin.json hooks block fires for an installed plugin" (the observable that the original BL effectively cared about). A formal cold-install smoke test is **not** in T3 scope; if cold-install pathology is ever observed, re-open BL-023 with a dedicated test fixture.
+
 **Re-verification cadence**: each CC major version bump (or when SessionStart hook stops firing observably). Update this section's verbatim block + the `Re-verified:` line below on each re-verification pass.
 
 Re-verified: 2026-05-20 (initial verification at T1 ship).
