@@ -13,6 +13,13 @@
 # mtime > 30d are grandfathered (skip validation). Active features + recently-created
 # (mtime <= 30d) features validate fully.
 #
+# KNOWN LIMIT (per Plan 055 /ae:review gemini + challenger findings):
+# mtime-based grandfather is RELIABLE only for local dev-time workflow. In CI / fresh
+# git clone / new worktree / cross-machine sync, file mtime resets to checkout time —
+# all files appear "new", grandfather logic effectively disabled (all features validate
+# full-strictly even legacy ones). Acceptable for v0.10.x local dev-time pre-commit use.
+# If moving to CI pre-commit gate, migrate to git-log-based file age (deferred v0.11.x).
+#
 # Behavior:
 # - Validate feature index.md frontmatter: required id/title/status/created, status enum, size enum (if present)
 # - Validate plan .md frontmatter: status enum
@@ -40,6 +47,12 @@ extract_frontmatter() {
 }
 
 # Extract value of a frontmatter field (returns empty if absent)
+# YAML PARSE LIMIT (per Plan 055 /ae:review gemini): basic grep+sed; fragile for:
+# - Values with internal colons (e.g., `title: "Foo: Bar"`)
+# - Multi-line YAML (| or > scalars)
+# - Quoted strings with embedded quotes (e.g., `"foo \"bar\" baz"`)
+# Current AE frontmatter is simple key-value; OK for v0.10.x. Migrate to yq if schema
+# grows multi-line/complex YAML (BL-090 tracks this).
 get_field() {
   # $1 = file, $2 = field name
   extract_frontmatter "$1" | grep -E "^${2}:" | head -1 | sed -E "s/^${2}:[[:space:]]*//; s/^\"//; s/\"$//; s/^'//; s/'$//"

@@ -3,12 +3,18 @@
 #
 # v0.10.x schema grep script; v0.11.x candidate to upgrade to schema validator framework.
 #
+# Scope: sentinel drift lint (per codex-proxy review caveat), NOT JSON parsing.
+# The exact `"type": "shutdown_response"` literal is treated as forbidden inline
+# schema/example text in agent prompts. Multi-line block vs single-line is irrelevant —
+# any line containing this sentinel string fails. Markdown prose mentions in agent .md
+# files would false-positive (no current instance; AC2 negative test covers this).
+#
 # Behavior:
 # - For each agent .md file under plugins/ae/agents/:
 #   - If file is in SHUTDOWN_EXEMPT whitelist → skip
 #   - If file does NOT contain canonical reference link → fail (forces new agents to choose: reference OR explicit whitelist)
-#   - If file contains inline shutdown_response JSON (any form: multi-line block, single-line, etc.) → fail
-# - Exit 0 = all references canonical OR exempt. Exit 1 = inline detected OR new agent missing both reference and exemption.
+#   - If file contains inline `"type": "shutdown_response"` sentinel literal → fail
+# - Exit 0 = all references canonical OR exempt. Exit 1 = inline sentinel detected OR new agent missing both reference and exemption.
 
 set -u
 
@@ -37,9 +43,18 @@ exempt_count=0
 referenced_count=0
 total_count=0
 
-# Use find to enumerate agent files
-for f in $(find "$AGENTS_DIR" -type f -name '*.md' 2>/dev/null); do
-  total_count=$((total_count + 1))
+# Use find with while-read for portability (per architect P2 + security C1 + gemini P2):
+# `for f in $(find ...)` word-splits on $IFS — breaks on filenames with spaces.
+# Pipe to while-read with IFS= preserves filenames verbatim.
+# Note: failures/counts accumulated in subshell would not propagate — switched to
+# process substitution via temp file.
+COUNT_FILE="$(mktemp -t ae-check-shutdown.XXXXXX 2>/dev/null || echo /tmp/ae-check-shutdown-$$)"
+echo "0 0 0 0" > "$COUNT_FILE"  # total exempt referenced failures
+
+find "$AGENTS_DIR" -type f -name '*.md' 2>/dev/null | while IFS= read -r f; do
+  # Read counts from temp file (subshell-safe accumulation)
+  read t e r fl < "$COUNT_FILE"
+  t=$((t + 1))
   relpath="${f#$REPO_ROOT/plugins/ae/}"
 
   # Whitelist check (newline-delimited string match)
@@ -49,31 +64,37 @@ $SHUTDOWN_EXEMPT
     *"
 $relpath
 "*)
-      exempt_count=$((exempt_count + 1))
+      e=$((e + 1))
+      echo "$t $e $r $fl" > "$COUNT_FILE"
       continue
       ;;
   esac
 
-  # Inline detection: any line containing `"type": "shutdown_response"` JSON literal.
-  # Covers: multi-line JSON block, single-line SendMessage inline, doodlestein simplified form.
+  # Inline sentinel drift lint (NOT JSON parsing — see header)
   if grep -q '"type": "shutdown_response"' "$f" 2>/dev/null; then
-    echo "[check-shutdown] FAIL: inline shutdown_response JSON detected in $relpath" >&2
+    echo "[check-shutdown] FAIL: inline shutdown_response sentinel detected in $relpath" >&2
     grep -n '"type": "shutdown_response"' "$f" | sed 's/^/    /' >&2
-    failures=$((failures + 1))
+    fl=$((fl + 1))
+    echo "$t $e $r $fl" > "$COUNT_FILE"
     continue
   fi
 
   # Reference check: must contain the canonical reference pattern
   if grep -qF "$REFERENCE_PATTERN" "$f" 2>/dev/null; then
-    referenced_count=$((referenced_count + 1))
+    r=$((r + 1))
   else
     echo "[check-shutdown] FAIL: agent missing both canonical reference and exemption: $relpath" >&2
     echo "    Fix options:" >&2
     echo "    (a) Reference: add [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical) to file" >&2
     echo "    (b) Exempt: add '$relpath' to SHUTDOWN_EXEMPT array in $(basename "$0") with rationale" >&2
-    failures=$((failures + 1))
+    fl=$((fl + 1))
   fi
+  echo "$t $e $r $fl" > "$COUNT_FILE"
 done
+
+# Final counts from temp file
+read total_count exempt_count referenced_count failures < "$COUNT_FILE"
+rm -f "$COUNT_FILE"
 
 echo "[check-shutdown] scanned=$total_count referenced=$referenced_count exempt=$exempt_count failures=$failures"
 
