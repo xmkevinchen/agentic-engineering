@@ -2,9 +2,7 @@
 
 ## Language Convention
 
-- **聊天** — 中文（与 user 的对话）
-- **Git-tracked docs** — English（仓库里 committed 的文件：README, CHANGELOG, SKILL.md, agent definitions, `docs/` 下的 references/decisions 等）
-- **非归档 docs** — 中文（gitignored 的过程产物：`.ae/` 下的 discussions / plans / reviews / analyses / milestones）
+All git-tracked files in this repository are written in English: `README.md`, `CHANGELOG.md`, every `SKILL.md`, agent definition files under `plugins/ae/agents/`, and everything under `docs/` (references, decisions, etc.). Process artifacts under `.ae/` (gitignored — discussions, plans, reviews, analyses, milestones) may use whatever language is convenient for the working session; they never ship to the published repository.
 
 ## Versioning
 
@@ -49,7 +47,7 @@ plugins/ae/             # The actual plugin
 
 ## Project Management (GTD)
 
-AE uses **GTD (Getting Things Done)** as its project management model. Skills map to GTD's 5+1 phases (plus an AE-self-development sidebar):
+AE uses **GTD (Getting Things Done)** as its project management model. Skills map to the five GTD phases (Capture / Clarify / Organize / Reflect / Engage), plus an AE-self-development sidebar for plugin delivery metrics:
 
 | GTD Phase | AE Skill | Artifact Path |
 |---|---|---|
@@ -76,7 +74,7 @@ AE uses **GTD (Getting Things Done)** as its project management model. Skills ma
 ├── index.md       # feature frontmatter + GTD state
 ├── analysis.md    # ae:analyze research output (when applicable)
 ├── BL-NNN.md      # original BL file (preserved name for grep / cite)
-└── ...            # discuss/plan/work/review outputs (path migration in plan 051)
+└── ...            # discuss/plan/work/review outputs (feature-resident path layout)
 ```
 
 ### Feature index.md frontmatter schema
@@ -112,18 +110,18 @@ All skills that read feature `index.md` frontmatter (`ae:analyze`, `ae:roadmap`,
 - **List-or-scalar fields** (`origin_bl`, `depends_on`): readers MUST normalize to list internally — `origin_bl: BL-042` and `origin_bl: [BL-042, BL-051]` are semantically equivalent.
 - **Missing `theme`**: features without a `theme:` value group under a uniform bucket named `(unthemed)` — never invented from title or body. All grouping skills (`ae:roadmap` section (a) feature listing, `ae:retrospect` section (1) recently-shipped grouping) MUST use this exact bucket name to prevent silent divergence.
 
-### Path classes (Plan 051+)
+### Path classes
 
 AE distinguishes two classes of paths in the project tree:
 
-- **`.ae/features/{active,done,abandoned}/`** — **fixed AE internal state** (not configurable). The directory layout is hardcoded into reader skills (`ae:dashboard`, `ae:next`, `ae:roadmap`, `ae:retrospect`, `ae:plugin-stats`). External projects DO NOT override these paths via `pipeline.yml` — they are AE convention.
-- **`output.{plans,reviews,discussions,milestones,backlog,analyses}`** — **configurable legacy/external-customization paths** in `pipeline.yml`. Existing projects with custom `output.discussions: docs/discussions/` etc. continue to work; these paths host pre-Plan-051 legacy artifacts AND host post-Plan-051 free-text/standalone artifacts that don't resolve to a feature dir.
+- **`.ae/features/{active,done,abandoned}/`** — **fixed AE internal state** (not configurable). The directory layout is hardcoded into reader skills (`ae:dashboard`, `ae:next`, `ae:roadmap`, `ae:retrospect`, `ae:plugin-stats`). External projects do not override these paths via `pipeline.yml` — they are AE convention.
+- **`output.{plans,reviews,discussions,milestones,backlog,analyses}`** — **configurable customization paths** in `pipeline.yml`. Existing projects with custom `output.discussions: docs/discussions/` etc. continue to work; these paths host legacy artifacts (created before the feature-dir layout was introduced) and free-text / standalone artifacts that do not resolve to a feature directory.
 
-Without this distinction, external-project users won't know which paths they can override and which are AE internal convention.
+Without this distinction, external-project users would not know which paths they can override and which are AE internal convention.
 
-**`.gitignore` policy**: the existing `.ae/` blanket gitignore (top-level) covers `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` and all artifacts inside (plan.md, review.md, discussions/, milestones/, etc.). External projects don't need per-subdir overrides; the `.ae/` line is sufficient. AE internal state stays local to each working tree.
+**`.gitignore` policy**: the top-level `.ae/` blanket gitignore covers `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` and every artifact inside (plan.md, review.md, discussions/, milestones/, etc.). External projects do not need per-subdirectory overrides; the single `.ae/` line is sufficient. AE internal state stays local to each working tree.
 
-### Path-derived feature ID convention (Plan 051+)
+### Path-derived feature ID convention
 
 For feature-resident plan, review, and discussion artifacts inside `.ae/features/<state>/F-NNN-<slug>/`, the feature ID is **path-derived** from the parent directory name. Readers MUST extract `F-NNN` from the directory path; this is the canonical lookup.
 
@@ -133,11 +131,11 @@ For feature-resident plan, review, and discussion artifacts inside `.ae/features
 
 ### Schema evolution
 
-To add a new field: update this section AND the SKILL.md files that consume it. No Liquibase versioning, no separate `schema.md` file (intentional — supersedes discussion 052's heavier proposal).
+To add a new field: update this section AND the SKILL.md files that consume it. No Liquibase versioning, no separate `schema.md` file (intentional — a lightweight in-repo schema description is sufficient at this scale).
 
 ### Legacy artifacts
 
-The 175 pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts are **legacy** — they stay where they are; new work goes through `.ae/features/`. `ae:dashboard` and `ae:next` hide legacy by default; pass `--legacy` to surface them.
+Pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts from earlier AE versions are **legacy** — they stay where they are; new work goes through `.ae/features/`. `ae:dashboard` and `ae:next` hide legacy entries by default; pass `--legacy` to surface them.
 
 ## Design Principles
 
@@ -146,7 +144,7 @@ The 175 pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts 
 - **Extensible** — projects define their own agents (developers, code reviewers) in pipeline.yml
 - **Cross-family by default** — Codex is mandatory baseline, Gemini is optional add-on
 - **Agent Teams** — parallel multi-agent workflows with structured communication protocols
-- **先运行后决策** — new skills or significant skill changes must be followed by at least one real execution before the next discussion/plan cycle
+- **Run before deciding** — new skills or significant skill changes must be followed by at least one real execution before the next discussion or plan cycle
 
 ## Agent Definition Principles
 
@@ -159,8 +157,8 @@ The 175 pre-existing `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` artifacts 
 ## TL Autonomy Boundary
 
 TL (Team Lead / Claude) decides autonomously by default:
-- Topic convergence, agent selection, round management, Doodlestein execution
-- Resolving deferred items in Sweep
+- Topic convergence, agent selection, round management, and the adversarial-challenge passes (the "Doodlestein" review agents `doodlestein-strategic` / `doodlestein-adversarial` / `doodlestein-regret`, applied as a final-pass adversarial check)
+- Resolving deferred items in the Sweep phase of `ae:discuss`
 - Choosing between options when evidence clearly supports one
 
 TL escalates to user only when:
@@ -174,5 +172,5 @@ TL escalates to user only when:
 - **P2-style auto-skip** — P2 style/naming findings: skip without asking user
 - **Single-option converge** — discussion topic with only one viable option: converge directly
 - **High-reversibility fast-track** — all topics high-reversibility: TL may converge in one round
-- **Doodlestein dismiss** — TL dismisses a challenge: record reason, do not ask user to confirm
+- **Adversarial-challenge dismiss** — when TL dismisses a Doodlestein challenge as invalid, record the reason inline; do not ask the user to confirm
 - **Review findings triage** — only P1 and P2-logic/security require user disposition
