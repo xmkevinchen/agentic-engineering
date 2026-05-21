@@ -22,9 +22,9 @@ This reference is **not runtime-loaded**. Agent prompts must remain self-contain
 
 ### Pattern: Identity & Memory
 
-**形态**: `## 🧠 Your Identity` block with 4 anchor lines defining who the agent is, before any task instruction.
+**Form**: `## 🧠 Your Identity` block with 4 anchor lines defining who the agent is, before any task instruction.
 
-**agency-agents 实例** (`../agency-agents/engineering/engineering-code-reviewer.md`):
+**agency-agents example** (`../agency-agents/engineering/engineering-code-reviewer.md`):
 
 ```markdown
 ## 🧠 Your Identity & Memory
@@ -34,7 +34,7 @@ This reference is **not runtime-loaded**. Agent prompts must remain self-contain
 - **Experience**: You've reviewed thousands of PRs and know that the best reviews teach, not just criticize
 ```
 
-**AE 适配版**: drop "Memory: I remember…" (假记忆 anti-pattern, see below); use 4 anchors (Role / Disposition / What you've seen / What you don't do):
+**AE-adapted version**: drop "Memory: I remember…" (fake-memory anti-pattern, see below); use 4 anchors (Role / Disposition / What you've seen / What you don't do):
 
 ```markdown
 ## 🧠 Your Identity
@@ -50,15 +50,15 @@ This reference is **not runtime-loaded**. Agent prompts must remain self-contain
 
 ### Pattern: Vibe
 
-**形态**: frontmatter `vibe:` field, 8-15 words, character anchor that sets tone before body is read.
+**Form**: frontmatter `vibe:` field, 8-15 words, character anchor that sets tone before body is read.
 
-**agency-agents 实例** (`../agency-agents/engineering/engineering-code-reviewer.md`):
+**agency-agents example** (`../agency-agents/engineering/engineering-code-reviewer.md`):
 
 ```yaml
 vibe: Reviews code like a mentor, not a gatekeeper. Every comment teaches something.
 ```
 
-**AE 适配版** (4 reviewers, distinct tone per domain):
+**AE-adapted version** (4 reviewers, distinct tone per domain):
 
 ```yaml
 # security-reviewer.md
@@ -80,9 +80,9 @@ vibe: Trade-offs over best practices. Name what you're giving up.
 
 ### Pattern: Critical Rules
 
-**形态**: `## 🚨 Critical Rules` numbered block with absolute constraints (not soft suggestions).
+**Form**: `## 🚨 Critical Rules` numbered block with absolute constraints (not soft suggestions).
 
-**agency-agents 实例** (`../agency-agents/engineering/engineering-code-reviewer.md`):
+**agency-agents example** (`../agency-agents/engineering/engineering-code-reviewer.md`):
 
 ```markdown
 ## 🔧 Critical Rules
@@ -94,7 +94,7 @@ vibe: Trade-offs over best practices. Name what you're giving up.
 6. **One review, complete feedback** — Don't drip-feed comments across rounds
 ```
 
-**AE 适配版** (`archaeologist.md`, scope-anchored):
+**AE-adapted version** (`archaeologist.md`, scope-anchored):
 
 ```markdown
 ## 🚨 Critical Rules
@@ -111,9 +111,9 @@ vibe: Trade-offs over best practices. Name what you're giving up.
 
 ### Pattern: Decision Matrix
 
-**形态**: `Pattern × Use When × Avoid When` table; gives agent a reach-for lookup tool when facing similar-looking choices.
+**Form**: `Pattern × Use When × Avoid When` table; gives agent a reach-for lookup tool when facing similar-looking choices.
 
-**agency-agents 实例** (`../agency-agents/engineering/engineering-software-architect.md`):
+**agency-agents example** (`../agency-agents/engineering/engineering-software-architect.md`):
 
 ```markdown
 | Pattern | Use When | Avoid When |
@@ -124,7 +124,7 @@ vibe: Trade-offs over best practices. Name what you're giving up.
 | CQRS | Read/write asymmetry, complex queries | Simple CRUD domains |
 ```
 
-**AE 适配版** (`architect.md`, decomposition strategy):
+**AE-adapted version** (`architect.md`, decomposition strategy):
 
 ```markdown
 ## Decomposition Strategy Reference
@@ -144,9 +144,9 @@ vibe: Trade-offs over best practices. Name what you're giving up.
 
 ### Pattern: ADR Template (lite)
 
-**形态**: 4-section decision record — Status / Context / Decision / Consequences. No filler-template boilerplate.
+**Form**: 4-section decision record — Status / Context / Decision / Consequences. No filler-template boilerplate.
 
-**agency-agents 实例** (`../agency-agents/engineering/engineering-software-architect.md`, full version):
+**agency-agents example** (`../agency-agents/engineering/engineering-software-architect.md`, full version):
 
 ```markdown
 # ADR-NNN: [Decision Title]
@@ -164,7 +164,7 @@ What is the change we're proposing/doing?
 What becomes easier or harder?
 ```
 
-**AE 适配版** (`architect.md`, plan-local lite version):
+**AE-adapted version** (`architect.md`, plan-local lite version):
 
 ```markdown
 ## ADR Output (when plan contains architectural decision)
@@ -181,7 +181,7 @@ Decision: <what we're doing>
 Consequences: + <what's easier> / − <what's harder> / future <reversal cost>
 ```
 
-无需 "ADR-001 ... ADR-XXX 编号体系" ceremony; plan-local 编号即可。
+No need for "ADR-001 … ADR-XXX numbering" ceremony; a plan-local number is sufficient.
 ```
 
 **Why it matters**: decision records anchor "why" so future readers can challenge or extend the decision without rediscovering the reasoning. Lite version avoids ceremony while preserving the essential 4 fields.
@@ -190,9 +190,9 @@ Consequences: + <what's easier> / − <what's harder> / future <reversal cost>
 
 ### Pattern: Worked Examples
 
-**形态**: `**Bad:** ❌ ... **Good:** ✅ ...` paired examples. Concrete input → output transformation showing what good output looks like vs what bad output looks like. Emoji is decorative; text label carries meaning (per codex F-016 review: emoji-only labels are unreliable for agent self-instruction).
+**Form**: `**Bad:** ❌ ... **Good:** ✅ ...` paired examples. Concrete input → output transformation showing what good output looks like vs what bad output looks like. Emoji is decorative; text label carries meaning (per codex F-016 review: emoji-only labels are unreliable for agent self-instruction).
 
-**agency-agents 实例** (`../agency-agents/engineering/engineering-code-reviewer.md`):
+**agency-agents example** (`../agency-agents/engineering/engineering-code-reviewer.md`):
 
 ```markdown
 🔴 **Security: SQL Injection Risk**
@@ -204,7 +204,7 @@ Line 42: User input is interpolated directly into the query.
 - Use parameterized queries: `db.query('SELECT * FROM users WHERE name = $1', [name])`
 ```
 
-**AE 适配版** (`security-reviewer.md`, paired good vs bad):
+**AE-adapted version** (`security-reviewer.md`, paired good vs bad):
 
 ```markdown
 ## Worked Examples
@@ -235,7 +235,7 @@ Line 42: User input is interpolated directly into the query.
 
 ### Pattern: Severity + Rationale + Nit Cap
 
-**形态**: reviewer output table has THREE structural elements: `Severity` column (P1/P2/P3 enum) + `Why it matters` (Rationale) column + agent-level nit cap statement (e.g., "at most 5 P3 findings; report count if more").
+**Form**: reviewer output table has THREE structural elements: `Severity` column (P1/P2/P3 enum) + `Why it matters` (Rationale) column + agent-level nit cap statement (e.g., "at most 5 P3 findings; report count if more").
 
 **Trigger**: CLAUDE.md `## TL Autonomy Boundary` defines auto-skip rules:
 - "**P3 auto-skip** — P3 findings in code review: skip without asking user"
@@ -244,7 +244,7 @@ Line 42: User input is interpolated directly into the query.
 
 These rules are TL-level and **assume reviewer agents emit per-finding priority + rationale**. Without per-finding severity, TL cannot precisely auto-skip; without rationale, TL cannot distinguish P2-style from P2-logic. This pattern is the agent-side prerequisite for TL Autonomy auto-skip to actually work.
 
-**AE 适配版** (reviewer output table format):
+**AE-adapted version** (reviewer output table format):
 
 ```markdown
 | Severity | File | Line | Issue | Why it matters | Suggestion |
@@ -262,67 +262,67 @@ These rules are TL-level and **assume reviewer agents emit per-finding priority 
 
 ---
 
-## Anti-patterns 别抄
+## Anti-patterns — do not copy
 
 These appear in agency-agents but should NOT be carried into AE.
 
 ### Anti-pattern 1: Fake memory
 
-**反例** (`../agency-agents/engineering/engineering-senior-developer.md` and similar):
+**Anti-example** (`../agency-agents/engineering/engineering-senior-developer.md` and similar):
 
 ```markdown
 ## 🧠 Your Identity & Memory
 - **Memory**: You remember every premium pattern that worked, every animation that felt smooth, every Three.js integration that wowed clients
 ```
 
-**别抄理由**: agents don't persist memory across spawns. Declarative "I remember…" prose is misleading — it implies state that doesn't exist. AE convention: replace with "What you've seen" (factual experience anchor) and "What you don't do" (scope boundary), both of which are stable across spawns because they're prompt content, not state.
+**Why not to copy**: agents don't persist memory across spawns. Declarative "I remember…" prose is misleading — it implies state that doesn't exist. AE convention: replace with "What you've seen" (factual experience anchor) and "What you don't do" (scope boundary), both of which are stable across spawns because they're prompt content, not state.
 
 ---
 
-### Anti-pattern 2: Emoji-heavy 散文 output
+### Anti-pattern 2: Emoji-heavy prose output
 
-**反例** (some agency reviewer agents):
+**Anti-example** (some agency reviewer agents):
 
 ```markdown
 🔴 OMG this is a critical issue!! 🚨 The auth code 💥 has a vulnerability 😱 because...
 ```
 
-**别抄理由**: emoji-heavy prose is unparseable by downstream consumers (agent-to-agent SendMessage, TL triage logic, Track 4 staging file frontmatter). AE uses structured table + severity column; emoji is decorative ONLY in worked examples (and even there, paired with text label per Worked Examples pattern above).
+**Why not to copy**: emoji-heavy prose is unparseable by downstream consumers (agent-to-agent SendMessage, TL triage logic, Track 4 staging file frontmatter). AE uses structured table + severity column; emoji is decorative ONLY in worked examples (and even there, paired with text label per Worked Examples pattern above).
 
 ---
 
 ### Anti-pattern 3: External file references
 
-**反例** (`../agency-agents/engineering/engineering-rapid-prototyper.md` and similar):
+**Anti-example** (`../agency-agents/engineering/engineering-rapid-prototyper.md` and similar):
 
 ```markdown
 Reference `ai/system/component-library.md` for component index
 Use `ai/system/premium-style-guide.md` for luxury patterns
 ```
 
-**别抄理由**: hardcodes assumptions about external file existence. AE is project-agnostic — agents read CLAUDE.md (per-project) and the spawn prompt; no other file references should be hardcoded into agent body. If an agent needs supplemental context, the spawning skill should pass it as part of the spawn prompt, not assume agent knows where to look.
+**Why not to copy**: hardcodes assumptions about external file existence. AE is project-agnostic — agents read CLAUDE.md (per-project) and the spawn prompt; no other file references should be hardcoded into agent body. If an agent needs supplemental context, the spawning skill should pass it as part of the spawn prompt, not assume agent knows where to look.
 
 ---
 
 ### Anti-pattern 4: Bloat workflow
 
-**反例** (`../agency-agents/engineering/engineering-database-optimizer.md` with 80-line SQL examples; `../agency-agents/engineering/engineering-voice-ai-integration-engineer.md` at 26KB):
+**Anti-example** (`../agency-agents/engineering/engineering-database-optimizer.md` with 80-line SQL examples; `../agency-agents/engineering/engineering-voice-ai-integration-engineer.md` at 26KB):
 
 Long inline code examples for specific frameworks / domains that bloat agent prompt past 200 lines.
 
-**别抄理由**: AE convention caps agent prompts at ~100 lines (per `CLAUDE.md` § Agent Definition Principles: "Size awareness — if an agent definition exceeds ~100 lines, review for bloat"). Past this threshold reviewer reliability degrades and spawn-time context budget is wasted; specific token thresholds are tool-dependent and not worth pinning. Domain-specific examples go in 1-2 worked examples per domain (per Worked Examples pattern). For deep domain coverage, add a separate domain-specific agent (e.g., a future `ios-expert.md`), don't bloat existing generic agents.
+**Why not to copy**: AE convention caps agent prompts at ~100 lines (per `CLAUDE.md` § Agent Definition Principles: "Size awareness — if an agent definition exceeds ~100 lines, review for bloat"). Past this threshold reviewer reliability degrades and spawn-time context budget is wasted; specific token thresholds are tool-dependent and not worth pinning. Domain-specific examples go in 1-2 worked examples per domain (per Worked Examples pattern). For deep domain coverage, add a separate domain-specific agent (e.g., a future `ios-expert.md`), don't bloat existing generic agents.
 
 ---
 
 ### Anti-pattern 5: Over-specified tools list
 
-**反例** (many agency engineering agents):
+**Anti-example** (many agency engineering agents):
 
 ```markdown
 You have access to: gh CLI, git, npm, yarn, pnpm, brew, asdf, nvm, docker, kubectl, helm, ...
 ```
 
-**别抄理由**: hardcoding 10+ specific CLI commands locks agent into one environment. AE convention: `tools:` frontmatter (Read / Grep / Glob / Bash) is the contract; specific CLI choice is delegated to the CC tool layer at runtime. Agent prompt may suggest tool category ("use a JSON parser") but should not name specific binaries.
+**Why not to copy**: hardcoding 10+ specific CLI commands locks agent into one environment. AE convention: `tools:` frontmatter (Read / Grep / Glob / Bash) is the contract; specific CLI choice is delegated to the CC tool layer at runtime. Agent prompt may suggest tool category ("use a JSON parser") but should not name specific binaries.
 
 ---
 

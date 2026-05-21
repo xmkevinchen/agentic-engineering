@@ -1,15 +1,13 @@
-# References — 知识来源与借鉴记录
+# References — Knowledge sources and rationale
 
-ae 的设计借鉴了多个外部来源。每个来源记录：出处、借鉴了什么、淘汰了什么、以及为什么。
+References cited or built upon by AE. Each entry records: source, what was adopted, what was rejected, and why.
 
 ## Index
 
-| 来源 | 文件 | 借鉴 | 淘汰 |
-|------|------|------|------|
-| LLM Self-Preference Bias 论文 | [cross-family-rationale.md](cross-family-rationale.md) | Cross-family review 的理论基础 | — |
-| OpenAI Harness Engineering | [harness-engineering.md](harness-engineering.md) | 评判标准、drift detection | Context budget 硬限制、CLAUDE.md 目录化 |
-| Anthropic Long-Running Apps | [harness-engineering.md](harness-engineering.md) | Auto-pass gate 设计 | Context checkpoint（无原生 API） |
-| Ralph Wiggum 自主循环 | [harness-engineering.md](harness-engineering.md) | 启发了 auto-pass 默认开的方向 | Stop hook 循环（与 ae review-heavy 流程不兼容）|
-| NykDev "Agreement is a bug" | [nyk-framework.md](nyk-framework.md) | 结构化分歧格式、分歧价值评估 | Education Gate、Capture Stack、Independent Perspective agent |
+| Source | File | Adopted | Rejected |
+|--------|------|---------|----------|
+| LLM Self-Preference Bias papers | [cross-family-rationale.md](cross-family-rationale.md) | Theoretical basis for cross-family review | — |
 | Claude Code Source Analysis | [claude-code-plugin-api.md](claude-code-plugin-api.md) | Plugin API reference: frontmatter fields, hooks, security boundaries, feature flags | — |
-| Claude Code Plugin Contract | [cc-plugin-contract.md](cc-plugin-contract.md) | AE↔CC dependency surface (9 live deps + mitigations) + failure-class taxonomy + BL-023 closure evidence + dist/-committed policy | — |
+| Claude Code Plugin Contract | [cc-plugin-contract.md](cc-plugin-contract.md) | AE↔CC dependency surface (live deps + mitigations) + failure-class taxonomy + BL-023 closure evidence + dist/-committed policy | — |
+| Model effort matrix | [model-effort-matrix.md](model-effort-matrix.md) | Effort-level mapping per task class | — |
+| Prompt patterns | [prompt-patterns.md](prompt-patterns.md) | Agent prompt anchors (Identity, Vibe, Critical Rules, Decision Heuristics, Worked Examples) | "I remember…" pseudo-memory; emoji-heavy prose; hardcoded paths; oversize agents; environment-locked tool lists |
