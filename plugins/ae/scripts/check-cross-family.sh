@@ -1,8 +1,10 @@
 #!/bin/bash
 # Check cross-family MCP availability and dependencies at session start
 #
-# NOTE (BL-023): hooks.json is NOT auto-registered by the Claude Code plugin system.
-# This script runs only if manually wired into ~/.claude/settings.json SessionStart hooks.
+# Registered via plugin.json `hooks.SessionStart`. BL-023 closure empirically
+# verified 2026-05-20 (T1 ship: plugin.json hooks block auto-registers and
+# fires on SessionStart). See `docs/references/cc-plugin-contract.md`
+# BL-023 closure evidence section for verbatim proof.
 # The cross-family-status.json output was never consumed by any skill; removed to avoid
 # dead writes. Check logic and stderr warnings preserved for future use.
 
