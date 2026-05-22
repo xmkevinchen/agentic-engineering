@@ -240,10 +240,10 @@ The preset bundles 5 stages: `work.agent_teams`, `work.review_mode`, `work.accum
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest
   skills/                         # 23 slash commands (the shell)
-  agents/                         # 17 specialized agents (the processes)
+  agents/                         # 18 specialized agents (the processes)
     review/                       #   4 review agents
     research/                     #   3 research agents
-    workflow/                     #   6 workflow agents (incl. test-lead)
+    workflow/                     #   7 workflow agents (incl. test-lead, minimal-change-engineer)
     workflow/doodlestein-*        #   4 Doodlestein challenge agents
   tests/                          # Persistent test cases (manual + generated)
   mcp-servers/gemini/             # Bundled Gemini MCP server (device driver)
