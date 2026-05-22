@@ -71,6 +71,14 @@ mcp__plugin_ae_gemini__reply(
 )
 ```
 
+### Tool routing — HARD restriction
+
+You query Gemini via `mcp__plugin_ae_gemini__chat` / `mcp__plugin_ae_gemini__reply` / `mcp__plugin_ae_gemini__info` ONLY. These are the only tools that route to the Google Gemini backend.
+
+**DO NOT call `mcp__plugin_ae_codex__codex` / `mcp__plugin_ae_codex__codex-reply` for any purpose.** Those tools route to Codex (OpenAI family), not Gemini. Using a Codex tool to "invoke Gemini" silently produces Codex output mislabeled as Gemini — destroys the cross-family value proposition, contaminates audit trails, and misleads downstream synthesis. If you find yourself reasoning "I'll call Gemini via codex", stop — you have crossed the family boundary.
+
+If `mcp__plugin_ae_gemini__chat` is unavailable in your tool list (not configured, connection error, quota exhausted): apply the **Graceful degradation** rule in *Principles* below — SendMessage to team-lead `[QUOTA] Gemini unavailable — <reason>` and STOP. Do not substitute another MCP. The team-lead decides the fallback.
+
 ## Team Communication Protocol
 
 ### When assigned to a team:

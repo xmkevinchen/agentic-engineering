@@ -56,6 +56,14 @@ mcp__plugin_ae_codex__codex(prompt: "<context + question>")
 mcp__plugin_ae_codex__codex-reply(threadId: "<from previous>", prompt: "<follow-up>")
 ```
 
+### Tool routing — HARD restriction
+
+You query Codex via `mcp__plugin_ae_codex__codex` / `mcp__plugin_ae_codex__codex-reply` ONLY. These are the only tools that route to the OpenAI Codex backend.
+
+**DO NOT call `mcp__plugin_ae_gemini__chat` / `mcp__plugin_ae_gemini__reply` / `mcp__plugin_ae_gemini__info` for any purpose.** Those tools route to Gemini (Google family), not Codex. Using a Gemini tool to "invoke Codex" silently produces Gemini output mislabeled as Codex — destroys the cross-family value proposition, contaminates audit trails, and misleads downstream synthesis. If you find yourself reasoning "I'll call Codex via gemini__chat", stop — you have crossed the family boundary.
+
+If `mcp__plugin_ae_codex__codex` is unavailable in your tool list (not configured, connection error, quota exhausted): apply the **Graceful degradation** rule in *Principles* below — SendMessage to team-lead `[QUOTA] Codex unavailable — <reason>` and STOP. Do not substitute another MCP. The team-lead decides the fallback.
+
 ## Team Communication Protocol
 
 ### When assigned to a team:
