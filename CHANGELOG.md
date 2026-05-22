@@ -6,6 +6,40 @@
 
 ---
 
+## v0.10.4 — 2026-05-22
+
+**Release theme**: Agent Teams policy doc + 3 cliff fixes. Ships `docs/agent-teams-policy.md` documenting the criterion for when each AE skill refuses vs auto-falls-back when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is unset, fixes 3 concrete policy cliffs surfaced by a 12-skill audit, and adds 4 L1 regression fixtures.
+
+### New
+
+- **`docs/agent-teams-policy.md`** — canonical reference for the fallback-vs-refuse policy. Adopts **Framing B** as organizing criterion: gate-keeper output (`status: reviewed` / `verdict: pass` / passing assertion suite) refuses; artifact-producer output (analysis.md / commits / plan draft) auto-falls back. Documents 3 **Framing A carve-outs** where multi-agent protocol is structurally required (`/ae:discuss` debate protocol, `/ae:consensus` mediation, `/ae:test-plugin` Layer 2 blind protocol — solo execution is a categorically different artifact, not a degraded version). Includes a 6-column 12-skill matrix (Skill / Load-bearing? / Behavior / Today / Solo behavior summary / Wrong-fallback failure mode), a 3-question "How to judge a new skill" checklist with a hypothetical `/ae:brainstorm` worked example, and a **Solo mode contract** section (3 MUST clauses + "convention not mechanically enforced" qualifier + explicit "manual frontmatter promotion is contract violation" line). Cross-linked from `setup/SKILL.md` + refusal messages in `discuss/`, `review/`, `consensus/`, `test-plugin/`, `plan-review/` SKILL.md.
+
+### Fixed
+
+- **Cliff 2 — trace decorative Agent Teams check removed.** `/ae:trace` is read-only code-tracing and never spawned a team in either mode, so the Pre-check item that warned "Agent Teams unavailable, running solo" was decorative (no behavior changed when env var was set). Removing the check eliminates a misleading WARNING in solo trace runs. Stale L1 fixture `trace-auto-fallback-no-agent-teams.{md,md}` (which tested the deleted prose) also removed; replacement fixture `trace-no-agent-teams-check` ships with this release.
+
+- **Cliff 4 — `/ae:test-plugin --regression --layer1` solo carve-out.** Layer 1 is pure static analysis (regex/grep over SKILL.md text) with no team spawn, no Phase 1 generation, no Layer 2 execution — there is no protocol reason to refuse it under solo conditions. But the prior uniform Pre-check 1 refuse blocked `/ae:review` Check 6 (`/ae:test-plugin --regression --layer1`) from running in the review fallback path. Pre-check 1 now applies a solo carve-out: env var unset AND both `--regression` AND `--layer1` flags present → Session TL runs Layer 1 checks directly. Layer 2 path explicitly preserved (blind protocol still requires Agent Teams — Framing A carve-out).
+
+- **Cliff 1+3 — plan-review solo no-promote.** Closes the solo-chain quality-gate bypass: today `/ae:plan-review` in solo mode promoted plan `status: draft → reviewed` despite TL-only inline review, which then let `/ae:work` proceed and ship code that was never seen by a second perspective. `plan-review/SKILL.md` Apply and Confirm section now splits into `[Agent Teams mode]` (promotes draft → reviewed) vs `[solo fallback mode]` (preserves `status: draft` + prints message instructing the user to enable Agent Teams and re-run). `/ae:work` Check 1 already refused draft plans (unchanged); the F-027 fix lands entirely in `plan-review/SKILL.md` preventing the upstream promotion.
+
+### Added
+
+- **4 L1 regression fixtures** under `plugins/ae/tests/{prompts,assertions}/`:
+  - `trace-no-agent-teams-check` — regression-proofs Cliff 2 (trace Pre-check section must stay clean of env var string)
+  - `test-plugin-layer1-solo-carve-out` — regression-proofs Cliff 4 (carve-out clause present + Layer 2 refusal preserved)
+  - `plan-review-solo-preserves-draft` — regression-proofs Cliff 1+3 (Apply and Confirm split branches + solo mode preserves draft)
+  - `work-refuses-draft-plan` — locks in `/ae:work` Check 1's existing draft-refuse invariant (no new code, just regression coverage)
+
+### Deferred to v0.11.x (filed as follow-up backlog)
+
+- `reviewed_by: agent-teams` frontmatter enforcement — mechanical guard for Solo mode contract (today the contract is convention-only; the v0.11.x work makes `/ae:work` Check 1 require a marker that only Agent-Teams-mode `/ae:plan-review` writes).
+- Policy-doc refinement — add a Pattern column to the 12-skill matrix (true-fallback / constrained-fallback / hard-refuse / carve-out-refuse) per Gemini's "constrained fallback" finding; add explicit "default Framing A for protocol-required skills" rule per Codex's interpretation-creep finding.
+- Fixture-creation preflight check in `/ae:plan` or `/ae:work` — validates that hand-authored regression fixtures use `source: regression` not `source: generated` (caught by accumulated Doodlestein on this very release; without preflight the same class of bug recurs on future plans).
+
+**Process note**: this is the first release where `/ae:review`'s feature-completion gate caught defects that the 8 reviewers in `/ae:plan` Round 1 + Doodlestein Round 2 missed — specifically 2 P2 defects (broken markdown relative-link paths in `setup/SKILL.md` + `test-plugin/SKILL.md` cross-links; assertion-tag-vs-prose polarity inversion in one fixture). Both fixed in fixup ae7462d before review verdict. Validates Plan 056 prior art: `/ae:review` reads SHIPPED files; plan-review reads plan PROSE. Different surfaces; complementary catches.
+
+---
+
 ## v0.10.3 — 2026-05-22
 
 **Release theme**: Proxy reasoning-effort fix. Third patch in the v0.10.x proxy-hardening line — addresses the recurring `codex-proxy` silent failure observed across multiple `/ae:review` cycles.
