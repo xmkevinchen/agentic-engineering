@@ -6,6 +6,16 @@
 
 ---
 
+## v0.10.1 — 2026-05-22
+
+**Release theme**: Proxy cross-family routing guard. Patch fix for a bug observed in a downstream project where the `codex-proxy` agent's LLM reasoning trace said "I'll use `mcp__plugin_ae_gemini__chat` to invoke Codex" — crossing the family boundary.
+
+### Fixed
+
+- **`codex-proxy` + `gemini-proxy`: explicit Tool routing HARD restriction.** Both agents now name the forbidden tools explicitly (`codex-proxy` MUST NOT call `mcp__plugin_ae_gemini__*`; `gemini-proxy` MUST NOT call `mcp__plugin_ae_codex__*`) and document the failure mode (cross-family contamination + output mislabeled as the wrong family). Without this guard, an LLM running a proxy could hallucinate a same-shaped tool from the opposing family when its own MCP was unavailable or its reasoning drifted. The `tools:` frontmatter field is still the primary defense, but the prompt-level guard now backs it up so an LLM never mentally "considers" the wrong tool.
+
+---
+
 ## v0.10.0 — 2026-05-21
 
 **Release theme**: Observability & self-bootstrap safety. Execution observability via NDJSON traces, formalized AE↔Claude Code contract surface, and a verdict-blocking protocol-invariant gate that catches plugin regressions before review pass.
