@@ -22,7 +22,7 @@ In Claude Code:
 
 ```
 /plugin marketplace add xmkevinchen/agentic-engineering
-/plugin install ae@xmkevinchen-agentic-engineering
+/plugin install ae@agentic-engineering
 ```
 
 You should see: `Plugin "ae" installed successfully.`

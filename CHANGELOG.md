@@ -12,7 +12,7 @@
 
 ### New
 
-- **`/ae:trace` skill** — emits a per-skill-invocation NDJSON record (metadata only; no LLM content) to `~/.ae/traces/<session-id>.ndjson`. 9-field schema v1.2 capturing skill name, outcome, families invoked, verdicts, diff paths, and feature binding. Enables SRE-style visibility into how AE skills run across sessions.
+- **NDJSON execution traces** — per-skill-invocation records (metadata only; no LLM content) written to `~/.ae/traces/<session-id>.ndjson` by 7 existing skills (`work`, `review`, `discuss`, `plan`, `analyze`, `retrospect`, `plugin-stats`) via a new `## Trace emission (final step)` section. 9-field schema v1.2 captures skill name, outcome, families invoked, verdicts, diff paths, and feature binding. Enables SRE-style visibility into how AE skills run across sessions.
 - **`docs/references/cc-plugin-contract.md`** — canonical AE→Claude Code dependency surface (12 live dependencies, 4-tier failure-class taxonomy: `hard` / `silent-degrade` / `fast-fail` / `empirical`). Each dependency carries a documented mitigation path. Cross-references AWS Well-Architected REL05-BP01 (hard vs soft dependencies).
 - **`docs/L-feature-gate.md`** — project-level policy for pacing large (L-size) AE-on-AE features. A 2-week dog-food window between L-size adoptions, calibrated as conservative heuristic against the measured ≈2% revert rate. Currently human-discipline enforced; mechanical enforcement deferred.
 
@@ -31,7 +31,7 @@
 
 ### Component counts
 
-23 skills (added `/ae:trace`), 17 agents, 1 bundled MCP server (Gemini), 2 hooks (SessionStart + SessionEnd).
+23 skills, 17 agents, 1 bundled MCP server (Gemini), 2 hooks (SessionStart + SessionEnd). No new slash commands in this release; the trace infrastructure ships as scripts + protocol docs + 7 existing-skill emission sections.
 
 ### Install
 

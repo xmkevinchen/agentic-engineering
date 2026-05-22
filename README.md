@@ -32,7 +32,7 @@ Solo developers and small teams who want:
 
 # 2. Install the plugin
 /plugin marketplace add xmkevinchen/agentic-engineering
-/plugin install ae@xmkevinchen-agentic-engineering
+/plugin install ae@agentic-engineering
 
 # 3. In your project
 /ae:setup          # creates .claude/pipeline.yml
@@ -56,12 +56,21 @@ If you use `/ae:setup agents --library <path>` to wire an external agent library
 
 ## The Pipeline
 
+ae's project model maps to [Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done) phases:
+
 ```
-/ae:analyze  →  /ae:discuss  →  /ae:plan  →  /ae:work       →  /ae:review
- (optional)      (optional)     (required)   (step by step)    (feature gate)
+                          GTD phase                Skill
+─────────────────────────────────────────────────────────────────
+Capture an idea         → Capture          →  /ae:backlog
+Decide what's next      → Clarify          →  /ae:roadmap
+Promote to a feature    → Organize         →  /ae:analyze
+Where do I stand?       → Reflect (short)  →  /ae:dashboard, /ae:next
+Execute                 → Engage           →  /ae:discuss  →  /ae:plan
+                                              /ae:work     →  /ae:review
+Look back on shipped    → Reflect (long)   →  /ae:retrospect
 ```
 
-Each stage produces artifacts that feed the next. Plans reference analysis docs. Work follows plan steps. Reviews validate against acceptance criteria. Everything persists to disk.
+Each Engage stage produces artifacts that feed the next. Plans reference analysis docs. Work follows plan steps. Reviews validate against acceptance criteria. Everything persists to disk under `.ae/features/F-NNN-<slug>/`.
 
 ## Commands
 
@@ -78,8 +87,10 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 
 | Command | What it does |
 |---------|-------------|
+| `/ae:backlog` | Capture an idea — one-line description lands in the inbox as `BL-NNN` |
 | `/ae:dashboard` | See where your features stand — pipeline progress at a glance |
 | `/ae:next` | "What should I do next?" — suggests the next pipeline step |
+| `/ae:status` | Session readout — git context, active features, in-flight teams, recent verdicts |
 | `/ae:code-review` | Quick pre-commit review (Claude + Codex + Gemini + Doodlestein) |
 | `/ae:team` | Spin up an ad-hoc agent team — auto-selects agents for your task |
 | `/ae:testgen` | Generate test suites with edge case coverage |
@@ -88,12 +99,12 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 
 | Command | What it does |
 |---------|-------------|
-| `/ae:analyze` | Research a codebase topic with agent teams |
+| `/ae:analyze` | GTD Organize — promote a backlog item to a feature directory (or analyze a free-text topic) |
+| `/ae:roadmap` | GTD Clarify — promote candidates from the backlog, surface feature dependencies, archive done roadmaps |
 | `/ae:discuss` | Structured design discussion with decision persistence |
 | `/ae:think` | Deep reasoning for hard architecture decisions or complex bugs |
 | `/ae:consensus` | Multi-round debate (for/against/neutral) with cross-examination |
 | `/ae:trace` | Trace execution flow or map dependency chains |
-| `/ae:roadmap` | Feature clustering and roadmap analysis |
 
 ### Ops & Meta
 
@@ -101,7 +112,8 @@ Each stage produces artifacts that feed the next. Plans reference analysis docs.
 |---------|-------------|
 | `/ae:plan-review` | Re-review an existing plan (standalone, without regenerating) |
 | `/ae:test-plugin` | Adversarial behavioral testing — blind execution, LLM-as-judge |
-| `/ae:retrospect` | Pipeline execution history — trends, rework rates, insights |
+| `/ae:retrospect` | Project-level long-cycle Reflect — review what shipped, what worked, what to change |
+| `/ae:plugin-stats` | AE plugin self-development stats — rework rates, P1 escape rate, drift events (separate from project retrospect) |
 | `/ae:agent-teams` | Protocol reference: Agent Teams base layer + modes |
 | `/ae:agent-selection` | Protocol reference: team composition and cross-family roles |
 
@@ -191,13 +203,11 @@ lint:
 
 ceremony: full                     # full (default) | light | minimal — see "Ceremony level" below
 
-output:
-  discussions: "docs/discussions/"
-  plans: "docs/plans/"
-  milestones: "docs/milestones/"
-  backlog: "docs/backlog/"
-  reviews: "docs/reviews/"
-  analyses: "docs/analyses/"
+# Feature artifacts live at .ae/features/F-NNN-<slug>/ by default (no config needed).
+# Add an `output:` block only to override legacy / free-text artifact paths
+# (defaults: .ae/discussions/, .ae/plans/, .ae/reviews/, .ae/milestones/,
+# .ae/backlog/, .ae/analyses/). See plugins/ae/templates/pipeline.template.yml
+# for the canonical reference.
 
 cross_family:
   codex: true
@@ -217,9 +227,9 @@ ceremony: light  # full (default) | light | minimal
 - `light` — skips accumulated Doodlestein + plan Doodlestein + sets `work.review_mode: light`
 - `minimal` — `light` plus skips plan review
 
-**Per-stage asymmetry note**: `light` reduces only background-execution stages (Doodlestein checkpoints + code-review tracks) — it does NOT skip the upfront plan review. Use `minimal` if you also want to bypass plan review. `discuss` and `review` skills are not currently controlled by ceremony preset (deferred to future Phase 2 BLs on demand).
+**Per-stage asymmetry note**: `light` reduces only background-execution stages (Doodlestein checkpoints + code-review tracks) — it does NOT skip the upfront plan review. Use `minimal` if you also want to bypass plan review. The `discuss` and `review` skills are not currently controlled by the ceremony preset.
 
-Controls 5 stages with existing solo paths: `work.agent_teams`, `work.review_mode`, `work.accumulated_doodlestein`, `plan.plan_review`, `plan.doodlestein`. Three additional stages (`discuss.framing_review`, `discuss.doodlestein`, `review.cross_family`) are deferred to future Phase 2 BLs on demand. See [`plugins/ae/templates/pipeline.template.yml`](plugins/ae/templates/pipeline.template.yml) for the canonical bundling rules.
+The preset bundles 5 stages: `work.agent_teams`, `work.review_mode`, `work.accumulated_doodlestein`, `plan.plan_review`, `plan.doodlestein`. See [`plugins/ae/templates/pipeline.template.yml`](plugins/ae/templates/pipeline.template.yml) for the canonical bundling rules.
 
 **Precedence**: env var `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=0` (global solo mode, see [Cross-machine setup](#cross-machine-setup)) overrides the ceremony preset. Use the env var for CI/CD or per-machine override; use `ceremony:` for per-project default.
 
