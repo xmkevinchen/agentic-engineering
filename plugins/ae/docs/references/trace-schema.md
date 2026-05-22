@@ -4,7 +4,55 @@
 
 ## TL;DR
 
-`~/.ae/traces/<session-id>.ndjson` — append-only, 1 record per AE skill invocation, 9 fields metadata (no LLM content). Filename = CC session id (1:1 join with `~/.claude/projects/<encoded>/<same-id>.jsonl`). 90d active, 6m archive (`archive/<YYYY-MM>.tar.zst`). Schema v1.2 (header line `# schema_version: 1.2`).
+`~/.ae/traces/<session-id>.ndjson` — append-only, **multiple emitter shapes coexist in the same file**: the 9-field protocol record (1 per skill invocation, schema v1.2), the Check 6 review-invariant record (1 per `/ae:review` invocation), and the synthesis-gate per-round record (N per `/ae:discuss` invocation). Filename = CC session id (1:1 join with `~/.claude/projects/<encoded>/<same-id>.jsonl`). 90d active, 6m archive (`archive/<YYYY-MM>.tar.zst`). The 9-field protocol record version header (`# schema_version: 1.2`) governs only the 9-field shape; sibling emitters are versioned via this doc's registry below.
+
+## Multi-emitter contract
+
+`~/.ae/traces/<session-id>.ndjson` is an append-only log written by multiple producers with **different record shapes**. Consumers route by record shape using the `record_type:` field; the registry below is the authoritative list of known shapes at v0.10.x.
+
+### Emitter registry
+
+| # | record_type | Producer | Cardinality | Full field list |
+|---|---|---|---|---|
+| 1 | _(absent — legacy implicit)_ | 7 SKILL.md `## Trace emission (final step)` via `write-trace.sh` | 1 per skill invocation | `timestamp`, `project_root`, `skill`, `feature_id`, `diff_paths`, `families_invoked`, `verdicts`, `outcome`, `session_id_source` |
+| 2 | `review-check-6` | `plugins/ae/skills/review/SKILL.md` Check 6 (inline append) | 1 per `/ae:review` invocation (both fire-path and no-scope-path) | `record_type`, `skill`, `check`, `outcome`, `files_checked` |
+| 3 | `synthesis-gate` | `plugins/ae/scripts/append-synthesis-trace.sh` (called from `/ae:discuss`) | N per `/ae:discuss` invocation (one per round) | `ts`, `record_type`, `skill`, `discussion_id`, `round`, `n_mechanisms`, `n_pruned`, `n_retained_with_rationale`, `n_retained_without_rationale`, `n_strictly_needed_estimate` |
+
+### Canonical discriminator rule
+
+Consumers identify emitter via the `record_type:` field:
+
+- **Field absent** → legacy 9-field protocol record (per-invocation; row 1 above). The absence is itself the discriminator for backward compatibility with all records emitted before F-024.
+- **Field present** → route by value; treat the value as the entity key into the registry table above.
+
+Future emitters MUST:
+
+1. Add a `record_type:` discriminator field with an **entity-specific value** (e.g., `"review-check-6"`, `"synthesis-gate"`). Category-name values like `"check"` are forbidden — they create latent collisions when a second entity in the same category appears (the rename `"check"` → `"review-check-6"` in F-024 happened exactly because of this concern).
+2. Add a row to the emitter registry table above in the **same PR** that introduces the emitter. Discipline-only at this scale; CI grep enforcement is a v0.12.x candidate.
+
+### Known field-name asymmetries (intentional documentation of warts)
+
+The registry deliberately captures actual field names — including divergences — rather than presenting an aspirational schema:
+
+- **Timestamp field name differs across emitters**: the 9-field protocol record uses `timestamp` (ISO 8601). The Check 6 record currently has **no timestamp field** (consumers fall back to NDJSON line position within the session file). The synthesis-gate record uses `ts` (NOT `timestamp`). v0.11.x candidate to add `timestamp` to the Check 6 record for parity; F-024 does not address this gap (would expand scope beyond XS).
+- **Record-shape size divergence** is by design: the 9-field protocol record is one-per-invocation metadata; the 5-field Check 6 record is per-gate-firing observability; the 9-field synthesis-gate record is per-round measurement. Different cardinalities and different purposes warrant different shapes — uniformity would be over-engineering.
+- **Why `ts`/`timestamp` divergence is preserved, not fixed**: renaming `ts` → `timestamp` in `append-synthesis-trace.sh` would be one source-line edit, but historical synthesis-gate records already in `~/.ae/traces/<session>.ndjson` use the `ts` field name. A unilateral emitter rename would create a two-field-name situation **across time** (old records use `ts`, new records use `timestamp`) which is strictly worse for any consumer joining old + new records by timestamp than the current asymmetry **across emitters** (synthesis-gate uses `ts`, others use `timestamp`). The asymmetry is therefore intentionally preserved at v0.10.x; cross-emitter time-join is handled by consumer obligation 5.
+
+### Consumer contract (5 obligations)
+
+Consumers (BL-029 cross-family measurement / BL-087 GTD cycle-time / future tools) MUST honor:
+
+1. **Header skip**: parse-skip lines starting with `#` (file may include `# schema_version:` header).
+2. **Discriminator routing**: identify emitter via `record_type:` field presence and value per the canonical rule above; fall through to registry table for field expectations.
+3. **Forward-compat tolerance**: tolerate unknown fields on known emitters AND unknown `record_type:` values (treat unknown record types as opaque — skip rather than error). This enables registry additions without breaking deployed consumers.
+4. **Registry-update discipline**: when implementing a new emitter, update this registry table in the same PR. Out-of-band emitter additions are protocol violations.
+5. **Timestamp normalization across emitters**: when joining records by time across emitters (e.g., aggregating a session timeline), normalize the timestamp field name — `ts` (synthesis-gate) and `timestamp` (9-field protocol) refer to the same logical field. Check 6 records have no timestamp today; fall back to file line position for ordering within a session.
+
+### Validator scope clarification
+
+`plugins/ae/scripts/validate-trace.sh` validates **only the 9-field protocol record** (row 1 of the registry — `record_type:` absent). Records with a `record_type:` field (rows 2 and 3) are out of scope at v0.10.x and will be flagged invalid by `validate-trace.sh` even though they are correctly formed per this multi-emitter contract.
+
+**Expected false-positive count when running on a real session file**: equal to the count of sibling-emitter records in that file. For a `/ae:review`-completed session that emitted 1 Check 6 record, expect `N of M records invalid` where N = 1. For a `/ae:discuss` session with R rounds, expect N = R synthesis-gate records flagged. This is by design and does NOT indicate corrupt traces — the validator is enforcing the protocol-record contract only, and sibling-emitter records correctly fall outside that contract. A multi-emitter validator that routes by `record_type:` is a v0.11.x candidate — see the Cross-references section.
 
 ## 9 fields
 
@@ -111,9 +159,11 @@ These were considered in plan review (Consider items) but deferred to consumer-s
 ## Cross-references
 
 - [Trace Emission Protocol](trace-emission-protocol.md) — producer wiring (called from 7 SKILL.md `## Trace emission (final step)` sections)
-- `plugins/ae/scripts/write-trace.sh` — producer script
+- `plugins/ae/scripts/write-trace.sh` — producer script (9-field protocol record, registry row 1)
+- `plugins/ae/scripts/append-synthesis-trace.sh` — producer script (`synthesis-gate` record, registry row 3) — called from `/ae:discuss`
+- `plugins/ae/skills/review/SKILL.md` Check 6 — inline producer (`review-check-6` record, registry row 2)
 - `plugins/ae/scripts/trace-rotate.sh` — lifecycle script
-- `plugins/ae/scripts/validate-trace.sh` — schema validator
+- `plugins/ae/scripts/validate-trace.sh` — schema validator (protocol-record-only at v0.10.x; multi-emitter validation deferred to v0.11.x)
 - 054 conclusion `.ae/discussions/054-ae-harness-engineering-roadmap/conclusion.md` (T1 row)
 - 055 conclusion `.ae/discussions/055-t1-trace-specification/conclusion.md`
 - Plan 054 `.ae/plans/054-t1-trace-ndjson-instrument.md`
