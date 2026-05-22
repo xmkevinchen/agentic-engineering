@@ -8,75 +8,37 @@
 
 ## v0.10.0 — 2026-05-21
 
-**Release theme**: Harness Engineering infrastructure-layer build-out (Discussion 054 v0.10.x roadmap — 4 sub-topics + 1 cleanup wave). AE crosses from process-layer maturity into infrastructure-layer self-awareness: trace observability, schema discipline, AE↔CC contract surface documented, self-bootstrap safety floor lifted. Minor bump because new components shipped (1 new skill, 1 new hook, 2 new scripts, 3 new docs, 2 new L1 fixtures).
+**Release theme**: Observability & self-bootstrap safety. Execution observability via NDJSON traces, formalized AE↔Claude Code contract surface, and a verdict-blocking protocol-invariant gate that catches plugin regressions before review pass.
 
-### T1 — Observability + execution trace (Plan 054, done + verdict pass 2026-05-20)
+### New
 
-Adds NDJSON trace infrastructure for SRE-level visibility into per-skill executions:
+- **`/ae:trace` skill** — emits a per-skill-invocation NDJSON record (metadata only; no LLM content) to `~/.ae/traces/<session-id>.ndjson`. 9-field schema v1.2 capturing skill name, outcome, families invoked, verdicts, diff paths, and feature binding. Enables SRE-style visibility into how AE skills run across sessions.
+- **`docs/references/cc-plugin-contract.md`** — canonical AE→Claude Code dependency surface (12 live dependencies, 4-tier failure-class taxonomy: `hard` / `silent-degrade` / `fast-fail` / `empirical`). Each dependency carries a documented mitigation path. Cross-references AWS Well-Architected REL05-BP01 (hard vs soft dependencies).
+- **`docs/L-feature-gate.md`** — project-level policy for pacing large (L-size) AE-on-AE features. A 2-week dog-food window between L-size adoptions, calibrated as conservative heuristic against the measured ≈2% revert rate. Currently human-discipline enforced; mechanical enforcement deferred.
 
-- New `/ae:trace` skill — emits 9-field schema v1.2 trace record per skill invocation (`skill`, `outcome`, `families_invoked`, `verdicts`, `diff_paths`, `feature_id`, etc.; no LLM content)
-- Per-CC-session trace file at `~/.ae/traces/<session-id>.ndjson` via `plugins/ae/scripts/write-trace.sh`
-- New SessionEnd hook `scripts/trace-rotate.sh` (registered in plugin.json `hooks` block)
-- Falsifiable cross-family acceptance criterion shipped with sample qualification gates (12-review window, ≥6 logic/behavioral features, full-vs-degraded call classification, full-call quota gate) — defends against bootstrap-paradox triggering Gemini permanent downgrade
-- `docs/references/trace-emission-protocol.md` + `docs/references/trace-schema.md` — canonical producer wiring + consumer field spec; 7 SKILL.md `## Trace emission (final step)` pointers reference them
+### Improvements
 
-**Files**: `plugins/ae/skills/trace/SKILL.md`, `plugins/ae/scripts/{write-trace.sh,trace-rotate.sh,validate-trace.sh}`, `plugins/ae/docs/references/{trace-emission-protocol,trace-schema}.md`, 7 SKILL.md pointer additions.
+- **`/ae:review` Check 6 — Protocol Invariant Check.** When a feature's cumulative diff touches `plugins/ae/skills/` or `plugins/ae/agents/`, `/ae:review` now runs `/ae:test-plugin --regression --layer1` as a verdict-blocking gate. Mirrors `/ae:work`'s per-commit C.5 at feature-completion granularity (cumulative across step commits). Layer 1 failure = P1.
+- **Schema discipline.** SendMessage `shutdown_response` protocol centralized in `ae:agent-teams/SKILL.md` (15 agent files dedupe to one canonical reference). CI script enforces required `📋 Cast:` block presence in skill spawn prompts. Feature `index.md` frontmatter validator script enforces required fields (`id` / `title` / `status` / `created`) + status enum.
+- **Gemini MCP install reliability.** `dist/` is now committed to the repo; no install-time TypeScript build required. `prepublishOnly: npm run build` guard prevents shipping stale `dist/` should this repo ever adopt npm publish. Contributor workflow documented (edit `src/` → rebuild `dist/` → commit both in the same PR).
+- **Two Layer-1 regression fixtures** lock in critical fallback paths: `/ae:work`'s AGENT_TEAMS_FULL=false solo-mode prose (with section-scoped proximity assertions around the `### Check 3` heading), and the new `/ae:review` Check 6 prose itself.
 
-### T2 — Contract / schema discipline triplet (Plan 055, done + verdict pass 2026-05-20)
+### Infrastructure
 
-Three XS schema-discipline fixes:
+- New SessionEnd hook `scripts/trace-rotate.sh` registered in `plugin.json` `hooks` block.
+- New scripts: `write-trace.sh`, `validate-trace.sh`, `check-cast-block.sh`, `validate-feature-frontmatter.sh`.
+- New docs: `cc-plugin-contract.md`, `trace-emission-protocol.md`, `trace-schema.md`, `L-feature-gate.md`.
 
-- (a) SendMessage `shutdown_response` protocol centralized in `ae:agent-teams` SKILL.md as canonical reference; 15 agent files updated to reference it instead of restating
-- (b) Cast-block CI grep — new `plugins/ae/scripts/check-cast-block.sh` enforces `📋 Cast:` block presence in all skill spawn prompts (BL-079 closure)
-- (c) Feature `index.md` frontmatter validator — new `plugins/ae/scripts/validate-feature-frontmatter.sh` enforces required fields (id / title / status / created) + status enum
+### Component counts
 
-**Files**: `plugins/ae/skills/agent-teams/SKILL.md`, 15 agent SendMessage refs, `plugins/ae/scripts/{check-cast-block.sh,validate-feature-frontmatter.sh}`.
+23 skills (added `/ae:trace`), 17 agents, 1 bundled MCP server (Gemini), 2 hooks (SessionStart + SessionEnd).
 
-### T3 — AE↔CC harness binding (Plan 056, done + verdict pass 2026-05-21)
+### Install
 
-Documents the AE↔CC dependency surface + closes the Gemini MCP fresh-install gap:
-
-- New `docs/references/cc-plugin-contract.md` (17.8KB) — enumerates 12 live AE→CC dependencies with 4-tier failure-class taxonomy (`hard` / `silent-degrade` / `fast-fail` / `empirical`); each dep has mitigation path documented; AWS Well-Architected REL05-BP01 cross-reference; BL-023 closure evidence embedded as verbatim T1 review quote
-- BL-023 (hooks plugin registration) closed empirically — `plugin.json hooks` block auto-registers verified at T1 ship; `.ae/backlog/done/v0.8.1/BL-023-*.md` updated with `closure_evidence:` pointer
-- Gemini MCP fresh-install fix — `dist/` committed to repo (no install-time TypeScript build); `prepublishOnly: npm run build` guard added to package.json; contributor workflow documented (`src/` edit + `dist/` rebuild + commit in same PR)
-- Stale comments in `scripts/check-cross-family.sh` cleaned up
-
-**Files**: `docs/references/cc-plugin-contract.md` + `docs/references/README.md` index, `plugins/ae/mcp-servers/gemini/{package.json,dist/}`, `plugins/ae/scripts/check-cross-family.sh`.
-
-### T4 — Self-bootstrap safety floor (Plan 057, done + verdict pass 2026-05-21)
-
-Lifts AE-on-AE safety floor — closes the manual-bypass gap + regression-proofs the documented Agent Teams fallback path:
-
-- New `### Check 6: Protocol Invariant Check` in `/ae:review` Pre-checks (mirrors `/ae:work` Check C.5 at feature-completion granularity, cumulative across step commits) — fires `/ae:test-plugin --regression --layer1` when `plugins/ae/skills/` or `plugins/ae/agents/` files in cumulative diff; Layer 1 failure = P1
-- Two new Layer 1 fixtures: `work-agent-teams-fallback-documented` (regression-proofs `/ae:work` AGENT_TEAMS_FULL=false fallback prose) and `review-check-6-protocol-invariant` (regression-proofs Check 6 prose itself); both use section-scoped `[text:regex]` proximity-bound assertions
-- New `docs/L-feature-gate.md` policy doc — 2-week dog-food window after L-size feature ships before next L candidate enters active sprint; calibrated as conservative heuristic, mechanical enforcement deferred to BL-092
-- 3 forcing-function BLs filed (BL-091 L2 dynamic test, BL-092 mechanical /ae:roadmap L-gate, BL-093 trace schema discipline) — all with explicit reopen triggers
-
-**Files**: `plugins/ae/skills/review/SKILL.md`, `plugins/ae/tests/{prompts,assertions}/{work-agent-teams-fallback-documented,review-check-6-protocol-invariant}.md`, `docs/L-feature-gate.md`.
-
-### Slot 5 — Backlog cleanup wave M (2026-05-21)
-
-8 actionable items closed in cleanup pass (target was ≥10; honest gap reported rather than manufacturing closures):
-
-- BL-026 / BL-028 / BL-031 — sprint/version roadmap model superseded by Plan 050 GTD
-- BL-052 — empty-body positioning observation absorbed into working-style memory
-- BL-054 — F-002 fixture triage absorbed by T2 `validate-feature-frontmatter.sh`
-- BL-083 — [cast] machine-parseable line propagation absorbed by T2 `check-cast-block.sh`
-- BL-admission-status-defer-until-trigger — sprint admission_status orphan; obsoleted by GTD
-- BL-053 → MERGED into BL-007 (ae:setup `.ae/features/` dir scaffolding belongs in setup extensions)
-
-**State**: 41 → 33 unscheduled BLs; 6 → 14 closed BLs.
-
-### Deferred to v0.11.x
-
-- BL-091 — Layer 2 dynamic test for /ae:work AGENT_TEAMS_FULL=false fallback (reopen by 2026-09-01 OR production bug)
-- BL-092 — Mechanical /ae:roadmap L-feature gate enforcement
-- BL-093 — Trace schema discipline + `reopen_trigger:` field naming standardization
-- BL-011 / BL-025 / BL-029 / BL-049 / BL-085 / BL-086 / BL-087 — per Discussion 054 conclusion
-
-### Commits (T1+T2+T3+T4+cleanup, in chronological order)
-
-T1: shipped under plan 054 (multiple commits). T2: shipped under plan 055. T3: `0e2e54b` (Step 1 — cc-plugin-contract.md + BL-023 closure evidence + scripts cleanup). T4: `af2c41f` (Step 1 — Check 6 in /ae:review) + `d79ddc4` (Step 2 — two L1 fixtures + BL-091) + `11bbfd8` (Step 3 — L-feature gate doc + BL-092) + review fixups `d1a626a` (`<feature-base>` clarification) + `a9529c0` (BL-076→BL-091 stale ref). Slot 5: in-place mv (`.ae/` gitignored).
+```
+/plugin marketplace add xmkevinchen/agentic-engineering
+/plugin install ae@xmkevinchen
+```
 
 ---
 
