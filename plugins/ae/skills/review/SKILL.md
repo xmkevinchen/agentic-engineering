@@ -200,7 +200,7 @@ Read plan frontmatter `discussion:` field.
 
 ### Check 6: Protocol Invariant Check
 
-If `git diff --name-only <feature-base>...HEAD` (the cumulative review scope, across all step commits in the feature) includes files under `plugins/ae/skills/` or `plugins/ae/agents/`:
+If `git diff --name-only <feature-base>...HEAD` (the cumulative review scope, across all step commits in the feature — same base as the `## Execution: Agent Teams Review` § "Review scope": feature branch → `main...HEAD`, main branch → `<feature-start>..HEAD`) includes files under `plugins/ae/skills/` or `plugins/ae/agents/`:
 
 1. Run `/ae:test-plugin --regression --layer1` targeting the changed skills/agents (Layer 1 static analysis only — do NOT execute Layer 2 during pre-verdict).
 2. **Layer 1 failure = P1** (blocks verdict pass via the standard P1 disposition path).
