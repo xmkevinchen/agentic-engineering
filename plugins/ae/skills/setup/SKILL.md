@@ -513,7 +513,7 @@ Empty does NOT block execution. Not all projects have tests, not all changes nee
 
 ## Agent Teams Setup
 
-Check if Agent Teams is enabled (required for multi-agent workflows):
+Check if Agent Teams is enabled (required for multi-agent workflows). See [`docs/agent-teams-policy.md`](../../../docs/agent-teams-policy.md) for why each skill behaves differently when the env var is unset.
 
 1. Read `~/.claude/settings.json` — look for `"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"` in the `env` object
 2. If **not enabled**:
