@@ -26,7 +26,7 @@ source: manual
 
 - This fixture's value is regression-proofing across refactors, not catching defects in the current SKILL.md (which is already shipped and operationally verified).
 - Two MUST assertions use `[text:regex:<path>]` with `[\s\S]{0,1500}` non-greedy span to bound proximity to the `### Check 3` heading. This is the closest mechanical approximation to "section-scoped" available in the current fixture framework. When the framework gains true section-scoped assertions (future BL), upgrade.
-- Layer 2 dynamic exercise of the fallback path is the complementary verification half; deferred to BL-076 with forcing-function reopen trigger.
+- Layer 2 dynamic exercise of the fallback path is the complementary verification half; deferred to BL-091 with forcing-function reopen trigger.
 
 ## Judge
 
