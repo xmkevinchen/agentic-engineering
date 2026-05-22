@@ -190,14 +190,14 @@ All agent findings must include evidence: file:line references, concrete data, s
 
 ### Doodlestein Protocol
 
-Three fresh agents that join an existing team LATE, after initial rounds converge. They bring fresh perspective because they were NOT part of prior rounds — no sunk-cost bias, no emotional investment in prior positions. Each answers ONE focused question.
+Four fresh agents that join an existing team LATE, after initial rounds converge. They bring fresh perspective because they were NOT part of prior rounds — no sunk-cost bias, no emotional investment in prior positions. Each answers ONE focused question.
 
 **When to trigger**: After main rounds converge, before final conclusion.
 - **Debate Mode**: always triggered.
 - **Discussion Mode**: always triggered (discussions produce decisions that need fresh-eyes validation).
 - **Investigation Mode**: TL discretion — trigger when investigation produced decisions or recommendations. Skip for pure observational findings (e.g., trace output, factual analysis with no design choices).
 
-**The three Doodlestein agents** (agent definitions in `plugins/ae/agents/workflow/`):
+**The four Doodlestein agents** (agent definitions in `plugins/ae/agents/workflow/`):
 
 #### doodlestein-strategic
 > "What's the single smartest and most radically innovative improvement you could make to this at this point?"
@@ -221,9 +221,16 @@ Three fresh agents that join an existing team LATE, after initial rounds converg
 - Must state concrete trigger condition (e.g., "when user count exceeds X")
 - Must suggest a low-cost hedge that can be done NOW without reversing the decision
 
+#### doodlestein-scope-reducer
+> "Of everything the conclusion/synthesis adds beyond what the framed problem strictly needs, what could be deleted such that the original problem is still solved?"
+
+- The SUBTRACT-shaped counterpart to the other three (strategic = accretive / adversarial = omissions / regret = reversal hedges). All three of those are ADD-shaped by question framing; scope-reducer is the only Doodlestein that asks "what should be cut?"
+- Output is per-mechanism `Delete | Defer | Retain` classification with verbatim AC-quote required for Retain (paraphrasing reclassifies to Defer)
+- Also emits one final-line `Strictly_needed_count: <int>` denominator estimate for downstream over-specification-ratio measurement
+
 **How Doodlestein works**:
 1. TL prepares two inputs: (a) file paths to relevant source code/artifacts, (b) lean decisions summary (decisions + rationale ONLY — no debate transcript, no full argument chains). Doodlestein agents receive file paths FIRST to form independent impressions, then the decisions summary for comparison.
-2. TL spawns all three Doodlestein agents INTO the existing team simultaneously
+2. TL spawns all four Doodlestein agents INTO the existing team simultaneously
 3. Each Doodlestein agent SendMessage findings to team-lead (not directly to team — TL moderates)
 4. TL routes challenges to ALL team members simultaneously (not Host-first — proposer's motivated defense should not be the primary input)
 5. All agents must respond — no hiding

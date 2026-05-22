@@ -51,7 +51,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Step 3 Discussion | `ae:discuss: Step 3 — Discussion Rounds` | Skill start (batch) | When Round 1 starts | When all topics converged or deferred |
 | Step 7 Sweep | `ae:discuss: Step 7 — Sweep Deferred` | Skill start (batch) | When Sweep starts | When zero deferred + zero revisit |
 | Step 8 Conclusion | `ae:discuss: Step 8 — Generate Conclusion` | Skill start (batch) | When conclusion synthesis starts | When conclusion.md written + entities extracted |
-| Step 9 Doodlestein | `ae:discuss: Step 9 — Doodlestein` | Skill start (batch) | When 3 Doodlestein agents spawned | When all 3 replies received + actions taken |
+| Step 9 Doodlestein | `ae:discuss: Step 9 — Doodlestein` | Skill start (batch) | When 4 Doodlestein agents spawned | When all 4 replies received + actions taken |
 
 At skill start, batch-create:
 
@@ -594,7 +594,7 @@ memory_ingest({
 
 **Triggered when**: Conclusion document is written. Doodlestein reviews the **written conclusion**, not the discussion in progress. No round extensions from Doodlestein findings.
 
-Per `ae:agent-teams` Doodlestein Protocol. Three fresh agents, each answering ONE focused question against the conclusion document.
+Per `ae:agent-teams` Doodlestein Protocol. Four fresh agents, each answering ONE focused question against the conclusion document.
 
 ```
 Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
@@ -627,6 +627,19 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
                   Why: surface reversibility cost before lock-in
 
                <path to conclusion.md> — which decision most likely reversed in 6mo?
+               Your answer is post-conclusion review, not a reopen signal.
+               IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
+
+Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reducer",
+      team_name: "<existing team>", run_in_background: true,
+      prompt: "📋 Cast: doodlestein-scope-reducer
+                  Role: post-conclusion reviewer (scope reduction — SUBTRACT angle)
+                  Angle: what could be deleted from the conclusion such that the original problem is still solved?
+                  Why: the other 3 Doodlestein agents are all ADD-shaped by question framing (accretive / omissions / hedges); scope-reducer is the only SUBTRACT-shaped one. F-026 root cause: every existing reviewer asks an ADD-shaped question; no one asks the SUBTRACT-shaped question.
+
+               <path to conclusion.md> — per-mechanism Delete | Defer | Retain classification.
+               Retain REQUIRES verbatim AC-quoted evidence (paraphrasing reclassifies to Defer).
+               Also emit final-line `Strictly_needed_count: <int>` denominator estimate.
                Your answer is post-conclusion review, not a reopen signal.
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 ```
@@ -696,6 +709,7 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
     strategic.md
     adversarial.md
     regret.md
+    scope-reducer.md
 ```
 
 **framing.md** (written by TL in Step 1; reviewed by the framing-review team in Step 1.5):
