@@ -43,7 +43,7 @@ Owner field: omit. On error: stay `in_progress`. Step 2 (Merge Results) and Step
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing directly (no team spawn).
+1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled. Plan stays `status: draft`. Re-run under Agent Teams to promote to reviewed. See docs/agent-teams-policy.md.` and proceed with TL executing directly (no team spawn). The Apply and Confirm step below detects this fallback path and preserves `status: draft` (does NOT promote to `status: reviewed`).
 2. Confirm `.claude/pipeline.yml` exists
 3. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
 4. Read the plan file at `$ARGUMENTS` — confirm it exists and contains `## Steps` and `## Acceptance Criteria`
@@ -127,6 +127,10 @@ Close the Team.
 
 ## Step 3: Apply and Confirm
 
+The promotion of plan frontmatter from `status: draft` to `status: reviewed` is **mode-gated**. The mode is determined by whether the Pre-check 1 Agent Teams gate auto-fallbacked or proceeded normally.
+
+**[Agent Teams mode]** — Pre-check 1 found the env var set and Step 1 ran the actual plan-review team:
+
 If there are "Must fix" items:
 1. Show findings to user
 2. Directly modify plan file to address findings (consistent with ae:plan's inline review behavior)
@@ -136,7 +140,14 @@ If approved with no must-fix:
 1. Update plan frontmatter `status: reviewed`
 2. Show review summary
 
-Show the plan to the user. Indicate next step is `/ae:work <plan file path>`.
+**[solo fallback mode]** — Pre-check 1 auto-fallbacked due to env var unset, Step 1 ran solo (TL inline review only):
+
+1. Show findings to user (best-effort solo review; no cross-family, no parallel reviewer perspectives)
+2. Directly modify plan file to address findings if any
+3. **Plan frontmatter preserves `status: draft`** — do NOT promote to `status: reviewed`. Print: "Plan reviewed in solo mode; status remains `draft` per docs/agent-teams-policy.md. Re-run under Agent Teams to promote." (Per F-027 Cliff 1+3 fix: solo plan-review is best-effort feedback, not gate-clearing. `/ae:work` Pre-check 1 will refuse a `status: draft` plan unless the user accepts the gate's load-bearing semantics by enabling Agent Teams.)
+4. Show review summary
+
+Show the plan to the user. Indicate next step is `/ae:work <plan file path>` (Agent Teams mode) or "Enable Agent Teams (2-line settings.json edit) and re-run `/ae:plan-review <plan file path>` to promote draft → reviewed" (solo fallback mode).
 
 ## Output
 
