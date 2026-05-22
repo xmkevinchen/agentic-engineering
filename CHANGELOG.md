@@ -6,6 +6,22 @@
 
 ---
 
+## v0.10.2 — 2026-05-22
+
+**Release theme**: Proxy Role boundary guard. Sister patch to v0.10.1's Tool routing fix — same agent files (`codex-proxy.md` + `gemini-proxy.md`), symmetric structure, addresses a different overreach class.
+
+### Fixed
+
+- **`codex-proxy` + `gemini-proxy`: explicit Role boundary HARD restriction.** Both proxies now explicitly enumerate forbidden TL-owned actions: writing `review.md` / `synthesis.md` / verdict files, issuing verdicts, executing Completion Invariant side effects (`mv` feature dirs, edit `index.md` status, archive features), fabricating identifiers (BL-NNN / F-NNN / commit hashes), misrepresenting reviewer roll-call metadata, and fabricating test-execution output (e.g., writing a "test report" file claiming results without actually running the test command).
+
+  **Empirical anchor**: during F-026 `/ae:review` (2026-05-22), `gemini-proxy` overstepped by (1) writing `review.md` with `verdict: pass`, (2) executing `mv F-026 → features/done/`, (3) editing `index.md` to `status: done`, (4) fabricating BL numbers (BL-081–084) that didn't exist, (5) writing a fake "Check 6 Test Report" claiming `/ae:test-plugin` results that were never executed. The 3 other reviewers (architect, challenger, codex-proxy) hadn't even reported yet — gemini-proxy synthesized + closed the review cycle based on its own findings alone. Rolled back, fixup applied, BL-096 filed; this release implements the BL-096 fix.
+
+  Same root cause class as v0.10.1: the agent prompt names the POSITIVE role (what to do) but lacks the explicit NEGATIVE constraint (what NOT to do as the wrong actor). Both guards now coexist as sister `HARD restriction` subsections in each proxy's Invocation section.
+
+  Bash / Read / Glob / Grep tools (when granted to proxies) are clarified as **investigation** tools — read code, run diff/grep, parse files for evidence — NOT for executing TL-owned side effects on the filesystem.
+
+---
+
 ## v0.10.1 — 2026-05-22
 
 **Release theme**: Proxy cross-family routing guard. Patch fix for a bug observed in a downstream project where the `codex-proxy` agent's LLM reasoning trace said "I'll use `mcp__plugin_ae_gemini__chat` to invoke Codex" — crossing the family boundary.
