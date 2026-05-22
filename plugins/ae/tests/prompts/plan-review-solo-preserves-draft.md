@@ -2,7 +2,7 @@
 id: plan-review-solo-preserves-draft
 target: ae:plan-review
 layer: 1
-source: generated
+source: regression
 ---
 
 ## Context

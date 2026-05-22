@@ -2,7 +2,7 @@
 id: test-plugin-layer1-solo-carve-out
 target: ae:test-plugin
 layer: 1
-source: generated
+source: regression
 ---
 
 ## Expected Behavior

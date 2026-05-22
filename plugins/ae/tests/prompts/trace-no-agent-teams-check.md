@@ -2,7 +2,7 @@
 id: trace-no-agent-teams-check
 target: ae:trace
 layer: 1
-source: generated
+source: regression
 ---
 
 ## Context
