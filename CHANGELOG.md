@@ -6,6 +6,22 @@
 
 ---
 
+## v0.10.3 — 2026-05-22
+
+**Release theme**: Proxy reasoning-effort fix. Third patch in the v0.10.x proxy-hardening line — addresses the recurring `codex-proxy` silent failure observed across multiple `/ae:review` cycles.
+
+### Fixed
+
+- **`codex-proxy` + `gemini-proxy`: removed `maxTurns: 15` frontmatter limit.** The agent-side turn budget was the wrong intervention layer for cross-family MCP latency. When the user's `~/.codex/config.toml` had `model_reasoning_effort = "high"` (a common default), Codex MCP calls took multiple minutes per response. The Haiku proxy would read several context files, kick off the MCP call, then exhaust its 15-turn budget waiting for the response — exiting without ever sending findings to TL. Failure mode: silent agent disappearance, no error, no quota signal, no usable output.
+
+- **`codex-proxy`: documented per-call reasoning effort override pattern.** TL spawn prompts now indicate the desired reasoning effort via a `Reasoning: <low|medium|high>` line in the agent prompt; the proxy passes that level into `mcp__plugin_ae_codex__codex(config: {"model_reasoning_effort": <level>})` on the initial call. Model selection stays user-configured (no plugin-side `model:` pin) — only effort is overridden per-task. The `-reply` MCP endpoint does not accept `config:`; the session's reasoning is locked at the initial call.
+
+- **`gemini-proxy`: documented model-choice mapping for symmetric cross-proxy spawn prompts.** Gemini MCP doesn't expose a `reasoning_effort` parameter; reasoning depth is controlled by model choice. TL's `Reasoning:` line maps `low|medium` → `gemini-2.5-flash` and `high` → `gemini-2.5-pro`. The proxy retains its flash-then-escalate-to-pro agent-side judgment as before.
+
+**Empirical anchor**: codex-proxy silently failed during F-024's plan-review AND F-024's feature-completion review (2026-05-22) — same session, two consecutive cycles. F-024 shipped without codex coverage in both review passes; cross-family redundancy held only because the angle layer (architecture / challenger / gemini) provided independent coverage. This release prevents the recurrence.
+
+---
+
 ## v0.10.2 — 2026-05-22
 
 **Release theme**: Proxy Role boundary guard. Sister patch to v0.10.1's Tool routing fix — same agent files (`codex-proxy.md` + `gemini-proxy.md`), symmetric structure, addresses a different overreach class.

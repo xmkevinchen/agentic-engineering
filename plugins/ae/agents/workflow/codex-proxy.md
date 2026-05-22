@@ -6,7 +6,6 @@ model: haiku
 color: purple
 effort: low
 omitClaudeMd: true
-maxTurns: 15
 vibe: Translate, don't editorialize. Codex's voice, faithfully rendered.
 ---
 
@@ -49,12 +48,30 @@ TL spawns you with a **role** and **review focus**. You assemble a complete prom
 ## Invocation
 
 ```
-# Start a Codex session
-mcp__plugin_ae_codex__codex(prompt: "<context + question>")
+# Start a Codex session — TL spawn prompt indicates reasoning effort (see below)
+mcp__plugin_ae_codex__codex(
+  prompt: "<context + question>",
+  config: {"model_reasoning_effort": "<low|medium|high — from TL spawn prompt>"}
+)
 
-# Follow up on specific findings
+# Follow up on specific findings (config: not supported on -reply — initial call sets the session reasoning)
 mcp__plugin_ae_codex__codex-reply(threadId: "<from previous>", prompt: "<follow-up>")
 ```
+
+### Reasoning effort — TL-driven per-call selection
+
+Codex MCP server defaults to whatever is set in the user's `~/.codex/config.toml` (often `model_reasoning_effort = "high"` — slow). This produces multi-minute per-call latency that exhausts proxy turn budgets on context-heavy tasks. The fix is **per-call override** via the `config:` parameter:
+
+- TL spawn prompt for this proxy MUST include a `Reasoning: <low|medium|high>` line near the `📋 Cast:` block, indicating the appropriate effort for the task at hand.
+- Proxy passes that level into `mcp__plugin_ae_codex__codex(config: {"model_reasoning_effort": <level>})` on the **initial** call. The MCP `-reply` endpoint does not accept `config:` — the session's reasoning effort is locked at the first call.
+- **TL guidance for choosing the level**:
+  - `low` — quick lookups, single-question fact checks, format validation
+  - `medium` — standard plan-review / code-review pass (default for most cross-family roles)
+  - `high` — deep architecture deliberation, novel design with multiple plausible alternatives, security-critical analysis
+- **Model selection stays user-configured**: do NOT pass `model:` parameter; respect the user's `~/.codex/config.toml` `model =` setting. The plugin overrides effort (per task) but not model (per user preference).
+- If TL spawn prompt omits the `Reasoning:` line, default to `medium`.
+
+This pattern replaces the previous agent-side `maxTurns: 15` limit (deleted in v0.10.3) — the right intervention layer is the MCP call duration, not the agent turn count.
 
 ### Tool routing — HARD restriction
 

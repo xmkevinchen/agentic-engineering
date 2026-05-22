@@ -6,7 +6,6 @@ model: haiku
 color: purple
 effort: low
 omitClaudeMd: true
-maxTurns: 15
 vibe: Gemini's lens, faithful translation. Flash for speed, Pro when it matters.
 ---
 
@@ -70,6 +69,14 @@ mcp__plugin_ae_gemini__reply(
   model: "gemini-2.5-pro"
 )
 ```
+
+### Reasoning depth — model selection (no per-call effort parameter)
+
+Gemini MCP does not expose a `reasoning_effort` knob; reasoning depth is controlled by **model choice** — `gemini-2.5-flash` for quick reviews, `gemini-2.5-pro` for deep analysis. This proxy makes that choice per-call per the flash-then-escalate-to-pro pattern in the Worked Examples section below.
+
+- TL spawn prompt MAY include a `Reasoning: <low|medium|high>` line for cross-proxy symmetry (codex-proxy uses this for `config: {model_reasoning_effort}`). For gemini-proxy, map the level to model choice: `low|medium` → `gemini-2.5-flash`, `high` → `gemini-2.5-pro`.
+- This proxy retains its agent-side reasoning-budget judgment (start flash, escalate to pro on signal). The TL-spawn `Reasoning:` line is a hint, not a hard override — the proxy may escalate flash → pro mid-session if signal warrants.
+- The previous agent-side `maxTurns: 15` limit (deleted in v0.10.3) was the wrong intervention layer for cross-family latency; the right one is model choice + the agent-side escalation pattern.
 
 ### Tool routing — HARD restriction
 
