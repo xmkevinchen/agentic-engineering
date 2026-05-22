@@ -204,11 +204,13 @@ If `git diff --name-only <feature-base>...HEAD` (the cumulative review scope, ac
 
 1. Run `/ae:test-plugin --regression --layer1` targeting the changed skills/agents (Layer 1 static analysis only — do NOT execute Layer 2 during pre-verdict).
 2. **Layer 1 failure = P1** (blocks verdict pass via the standard P1 disposition path).
-3. **Trace emission**: when Check 6 fires, append one line to `~/.ae/traces/<session-id>.ndjson` with fields `{skill: "ae:review", check: "C6", outcome: "pass|fail|skip", files_checked: <count>}`. Provides SRE-level observability into when the cumulative-diff protocol invariant fires and what it catches.
+3. **Trace emission** (per trace-schema.md multi-emitter contract): append `{record_type: "review-check-6", skill: "ae:review", check: "C6", outcome, files_checked}` to `~/.ae/traces/<session-id>.ndjson`. Emitted in **both** paths (fire + no-scope below) for firing-rate observability. Outcome: `pass` (Layer 1 clean), `fail` (P1 path above), `skipped_no_scope` (`files_checked: 0`). `files_checked` = count of changed files under `plugins/ae/skills/` or `plugins/ae/agents/` in cumulative diff. `record_type` value MUST be entity-specific (`"review-check-6"`) — generic values like `"check"` are forbidden (future check-type collisions).
 
-If no plugin files in cumulative diff → skip with "No plugin skill/agent files changed across feature commits, skipping protocol check."
+If no plugin files in cumulative diff → skip the gate execution (log "No plugin skill/agent files changed across feature commits, skipping protocol check.") but **still emit the trace record** with `outcome: "skipped_no_scope"` per item 3 above.
 
 **Mirrors `plugins/ae/skills/work/SKILL.md` Check C.5** (per-commit pre-commit) at feature-completion-review granularity (cumulative across commits). The two checks are deliberately layered: C.5 catches step-local drift incrementally; Check 6 catches multi-step interaction drift cumulatively. For features with a single plugin-touching commit the two checks fully overlap; for features with multiple plugin-touching commits Check 6's cumulative scope can find issues that per-commit C.5 didn't surface in isolation.
+
+**Validator scope note**: Check 6 records (record_type: `"review-check-6"`) are out of scope for `validate-trace.sh` at v0.10.x — see [trace-schema.md "Validator scope clarification"](../../docs/references/trace-schema.md). Running the validator on a session file will produce one expected false-positive per Check 6 record. This is by design until multi-emitter validation lands.
 
 ### Prior Context (from Mengdie)
 

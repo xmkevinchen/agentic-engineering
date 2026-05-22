@@ -15,7 +15,7 @@
 | # | record_type | Producer | Cardinality | Full field list |
 |---|---|---|---|---|
 | 1 | _(absent — legacy implicit)_ | 7 SKILL.md `## Trace emission (final step)` via `write-trace.sh` | 1 per skill invocation | `timestamp`, `project_root`, `skill`, `feature_id`, `diff_paths`, `families_invoked`, `verdicts`, `outcome`, `session_id_source` |
-| 2 | `review-check-6` | `plugins/ae/skills/review/SKILL.md` Check 6 (inline append) | 1 per `/ae:review` invocation (both fire-path and no-scope-path) | `record_type`, `skill`, `check`, `outcome`, `files_checked` |
+| 2 | `review-check-6` | `plugins/ae/skills/review/SKILL.md` Check 6 (inline append) | 1 per `/ae:review` invocation (both fire-path and no-scope-path) | `record_type`, `skill`, `check`, `outcome` (`pass\|fail\|skipped_no_scope`), `files_checked` (count of changed plugin files in cumulative diff; 0 in no-scope path) |
 | 3 | `synthesis-gate` | `plugins/ae/scripts/append-synthesis-trace.sh` (called from `/ae:discuss`) | N per `/ae:discuss` invocation (one per round) | `ts`, `record_type`, `skill`, `discussion_id`, `round`, `n_mechanisms`, `n_pruned`, `n_retained_with_rationale`, `n_retained_without_rationale`, `n_strictly_needed_estimate` |
 
 ### Canonical discriminator rule
