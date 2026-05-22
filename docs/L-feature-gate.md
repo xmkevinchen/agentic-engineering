@@ -2,7 +2,7 @@
 title: "L-feature gate policy"
 type: policy
 created: 2026-05-21
-backlog_reopen_trigger: "BL-092-l-gate-mechanical (v0.11.x mechanical /ae:roadmap enforcement)"
+followup_bl: "BL-092-l-gate-mechanical (v0.11.x mechanical /ae:roadmap enforcement)"
 ---
 
 # L-feature gate policy
@@ -13,7 +13,7 @@ AE's measured historical revert rate is approximately 2% (1 revert across 50 rec
 
 ## Window calibration note
 
-The 2-week dog-food window is a **conservative heuristic**, not a derivation from the 2% revert rate. Revert-rate measures defect *density*; the 2-week window measures defect-discovery *latency*. The two are related (more defects → longer time-to-discover at constant attention) but distinct. Until per-L-feature revert-latency data exists, 2 weeks errs on the side of caution — long enough for routine dog-fooding to surface most issues; short enough not to stall the roadmap. A v0.11.x candidate (see `backlog_reopen_trigger:` frontmatter) replaces this heuristic with a data-driven window derived from historical L-feature revert-latency distribution.
+The 2-week dog-food window is a **conservative heuristic**, not a derivation from the 2% revert rate. Revert-rate measures defect *density*; the 2-week window measures defect-discovery *latency*. The two are related (more defects → longer time-to-discover at constant attention) but distinct. Until per-L-feature revert-latency data exists, 2 weeks errs on the side of caution — long enough for routine dog-fooding to surface most issues; short enough not to stall the roadmap. A v0.11.x candidate (see `followup_bl:` frontmatter) replaces this heuristic with a data-driven window derived from historical L-feature revert-latency distribution.
 
 ## Rule
 
@@ -39,7 +39,7 @@ This gate applies to **AE-self-development** (AE-on-AE workflows). External proj
 
 ## Enforcement
 
-Currently **human-discipline reinforced** by `/ae:roadmap` reviewer attention. The `backlog_reopen_trigger:` frontmatter field references **BL-092-l-gate-mechanical**, a v0.11.x candidate to convert this policy into a mechanical check in `/ae:roadmap` Clarify (the check would scan `.ae/features/done/F-*/index.md` for size=L features with `done:` dates within the past 2 weeks and emit a blocking warning if a new L candidate is being considered).
+Currently **human-discipline reinforced** by `/ae:roadmap` reviewer attention. The `followup_bl:` frontmatter field references **BL-092-l-gate-mechanical**, a v0.11.x candidate to convert this policy into a mechanical check in `/ae:roadmap` Clarify (the check would scan `.ae/features/done/F-*/index.md` for size=L features with `done:` dates within the past 2 weeks and emit a blocking warning if a new L candidate is being considered).
 
 If you notice the gate has been bypassed without a documented reason, raise the concern at the next `/ae:roadmap` invocation rather than retroactively.
 
