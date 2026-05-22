@@ -56,7 +56,7 @@ This is a **behavioral contract** (prompt-level separation of concerns), not a t
 - `--verbose` — Session TL can see full test case content during execution (debug mode). Combinable with any other flag.
 - `--regression` — skip Phase 1 generation, execute only existing `source: manual|regression` cases. If no matching cases exist for the target, warn and exit: `"No manual/regression cases found for [target]. Nothing to run."`
 - `--refresh` — regenerate only `source: generated` cases, preserve `manual` and `regression`.
-- `--layer1` — execute only Layer 1 (static analysis) cases. Skip all Layer 2 cases. Used by C.5 pre-commit check to avoid live execution side effects.
+- `--layer1` — execute only Layer 1 (static analysis) cases. Skip all Layer 2 cases. Used by C.5 pre-commit check to avoid live execution side effects. **Solo carve-out**: when both `--regression` and `--layer1` are passed (no Phase 1 generation, no Layer 2 execution — pure static analysis of existing manual/regression cases), the Pre-check 1 Agent Teams gate is bypassed and Session TL runs the checks directly without spawning a team. See [Agent Teams Policy](../../../docs/agent-teams-policy.md) for the rationale.
 
 **`source` lifecycle**: test cases start as `source: generated` (Phase 1) or `source: manual` (hand-written). A user can manually change a generated case to `source: regression` after it catches a real bug, marking it as a permanent regression guard.
 - `--regression` and `--refresh` are **mutually exclusive** (error if both provided).
@@ -64,7 +64,7 @@ This is a **behavioral contract** (prompt-level separation of concerns), not a t
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required for ae:test-plugin (blind protocol requires TeamCreate + test-lead). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
+1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled, apply the solo carve-out: if both `--regression` and `--layer1` flags are present, skip the Agent Teams refuse and proceed with Session TL executing Layer 1 checks directly (no TeamCreate, no Phase 1 generation, no Layer 2). Otherwise (env var unset AND not the `--regression --layer1` combination) → **refuse to execute** and tell user: "Agent Teams is required for ae:test-plugin (blind protocol requires TeamCreate + test-lead). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code." Layer 2 path still requires Agent Teams (blind protocol cannot be solo).
 2. **Target resolution**: resolve input to file paths. If skill name → find `plugins/ae/skills/<name>/SKILL.md`. If not found → refuse with suggestion.
 3. **Judge health check**: read `pipeline.yml` → `test_plugin.judge` (default: `codex`). Verify the judge is reachable:
    - `codex` → check `mcp__plugin_ae_codex__codex` tool is available
