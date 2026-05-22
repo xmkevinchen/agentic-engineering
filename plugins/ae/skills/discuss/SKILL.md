@@ -399,7 +399,35 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 
 **TL synthesis format (mandatory 4 fields, written in each round's `round-NN/synthesis.md`)**:
 
-1. **Pruned section**: explicit "Pruned: [what], reason: [why]" per item. If nothing pruned this round, write "Pruned: nothing; all inputs advanced" — **empty or missing Pruned section is a protocol violation**.
+1. **Pruned section** (attempt-before-record + AC-quote required for Retain — per F-026):
+
+   BEFORE writing the synthesis, list every mechanism in the merged Round N output (where "mechanism" = a discrete rule, signal, gate, parameter, step, or assertion that the synthesis introduces or carries forward). For each mechanism, ask: "does removing this break a stated AC or a framing-section constraint?" Then record either:
+
+   - **Pruned: [mechanism]** — reason: [which lower-tier need it served; why that need can be dropped]
+   - **Retained: [mechanism]** — verbatim AC# `<num>` or framing-section clause that breaks if removed: `"<quoted text>"`. Paraphrasing is INVALID — if you cannot quote a specific clause, reclassify the mechanism as `Pruned:` with reason "no AC-anchored justification."
+
+   The legacy `"Pruned: nothing; all inputs advanced"` shortcut is **NO LONGER VALID**. A synthesis with zero Pruned entries is acceptable ONLY if accompanied by the full per-mechanism Retained list with verbatim quotes. Missing the Retained list when zero pruned = protocol violation. Missing the verbatim quote on any Retained entry = `n_retained_without_rationale++` and synthesis-gate rejection (see below).
+
+   **F-026 background**: prior version placed quote requirement only on `doodlestein-scope-reducer` (post-conclusion). That left per-round TL synthesis at format-only enforcement — TL could write unquoted Retained entries and the gate (counting lines only) would pass. Per-round accretion happens BEFORE scope-reducer sees it. Quote requirement now lives at the synthesis layer where it's effective; scope-reducer's quote requirement remains as a confirmatory layer at post-conclusion phase.
+
+   **Runtime enforcement** (synthesis-gate): /ae:discuss verifies at `round-NN/synthesis.md` write time that either ≥ 1 `Pruned:` entry exists OR ≥ 1 `Retained:` entry with AC-anchored verbatim quote exists. A synthesis with zero of both is rejected with `[SYNTH-GATE] empty Pruned/Retained — rewrite required`. A Retained entry without a verbatim quote increments `n_retained_without_rationale` (which MUST stay 0 in healthy runs) and the gate also rejects. TL is forced to rewrite the synthesis section before the round closes.
+
+   **Trace emission**: after the synthesis section is written + gate passes, /ae:discuss invokes `${CLAUDE_PLUGIN_ROOT}/scripts/append-synthesis-trace.sh` with 6 positional integer args:
+
+   ```sh
+   ${CLAUDE_PLUGIN_ROOT}/scripts/append-synthesis-trace.sh \
+     <round> <n_mechanisms> <n_pruned> <n_retained_with_rationale> <n_retained_without_rationale> <n_strictly_needed_estimate>
+   ```
+
+   The helper emits one NDJSON record per round to `~/.ae/traces/${AE_SESSION_ID}.ndjson` with shape:
+
+   ```json
+   {"ts":"<ISO8601>","record_type":"synthesis-gate","skill":"ae:discuss","round":N,"n_mechanisms":...,"n_pruned":...,"n_retained_with_rationale":...,"n_retained_without_rationale":...,"n_strictly_needed_estimate":...}
+   ```
+
+   `n_strictly_needed_estimate` comes from `doodlestein-scope-reducer`'s post-conclusion denominator estimate when scope-reducer has run for this discussion; -1 when unavailable (e.g., this is a Round 1 synthesis and scope-reducer hasn't fired yet — scope-reducer is post-conclusion). The 9-field shape uses `record_type: "synthesis-gate"` as a discriminator so this per-round record can coexist with T1's per-skill-invocation 9-field record in the same `<session-id>.ndjson` stream without consumer confusion.
+
+   Per-round bounded scope: per-mechanism list is capped at the synthesis's actual mechanism count. No minimum prune quota — some Round 1+ work genuinely adds nothing prunable. The forcing function is the WORK of attempting + the runtime gate, not the result count.
 2. **Of-framing disposition**: list every of-framing challenge raised this round + TL's disposition (integrate / reject-with-reason / defer-to-followup-BL). TL fills this; do NOT rely on agent self-tagging of challenges.
 3. **Verification artifact**: any claim of "verified / computed / checked" must cite a concrete artifact (file path, script output, document section). No artifact → mark `unvalidated`; do not mark such claims converged.
 4. **Frame-challenge disappearance self-check**: before writing synthesis, compare Round N-1's of-framing markers against Round N — did any silently disappear without explicit resolution? regex / keyword comparison is acceptable tooling. Record the check outcome in synthesis.
