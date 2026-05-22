@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # append-synthesis-trace.sh — F-026 Step 4: /ae:discuss per-round synthesis-gate trace emitter
 #
 # Emits 1 NDJSON record per Round N synthesis write to ~/.ae/traces/<session-id>.ndjson.
@@ -24,7 +24,7 @@
 #
 # Behavior: POSIX shell, graceful skip on missing session id or arg-count error, never fails the caller.
 
-set -u
+set -euo pipefail
 
 # ---- Resolve session id via the canonical adapter chain ----
 : "${AE_SESSION_ID:=${CLAUDE_CODE_SESSION_ID:-${CC_SESSION_ID:-}}}"
@@ -45,6 +45,20 @@ n_pruned=$3
 n_retained_with_rationale=$4
 n_retained_without_rationale=$5
 n_strictly_needed_estimate=$6
+
+# ---- Arg type validation (regex) — per F-026 /ae:review Codex P2 + Challenger C1 fix ----
+# Prevents JSON-schema injection via malformed string args (e.g., '1,"injected":"x"').
+# Args 1-5 MUST be non-negative integers; arg 6 allows -1 as "unavailable" sentinel.
+for arg in "$round" "$n_mechanisms" "$n_pruned" "$n_retained_with_rationale" "$n_retained_without_rationale"; do
+  if ! [[ "$arg" =~ ^[0-9]+$ ]]; then
+    echo "[append-synthesis-trace] skip: arg '$arg' is not a non-negative integer" >&2
+    exit 0
+  fi
+done
+if ! [[ "$n_strictly_needed_estimate" =~ ^-?[0-9]+$ ]]; then
+  echo "[append-synthesis-trace] skip: n_strictly_needed_estimate '$n_strictly_needed_estimate' is not an integer" >&2
+  exit 0
+fi
 
 # ---- Resolve trace dir + ensure it exists ----
 trace_dir="${HOME}/.ae/traces"

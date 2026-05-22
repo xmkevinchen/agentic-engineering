@@ -152,6 +152,7 @@ Each Engage stage produces artifacts that feed the next. Plans reference analysi
 | `doodlestein-strategic` | "What's the smartest alternative that makes this unnecessary?" |
 | `doodlestein-adversarial` | "Which part solves a problem that doesn't exist?" |
 | `doodlestein-regret` | "Which decision will be reversed within 2 weeks?" |
+| `doodlestein-scope-reducer` | "Of everything this adds, what could be deleted such that the original problem is still solved?" |
 
 Agent teams form dynamically — `/ae:team` picks the right combination for your task. TL (Session Lead) always synthesizes: agents research, challenge, and report; TL merges findings into final output.
 
@@ -243,7 +244,7 @@ plugins/ae/
     review/                       #   4 review agents
     research/                     #   3 research agents
     workflow/                     #   6 workflow agents (incl. test-lead)
-    workflow/doodlestein-*        #   3 Doodlestein challenge agents
+    workflow/doodlestein-*        #   4 Doodlestein challenge agents
   tests/                          # Persistent test cases (manual + generated)
   mcp-servers/gemini/             # Bundled Gemini MCP server (device driver)
   templates/pipeline.template.yml # Template for /ae:setup

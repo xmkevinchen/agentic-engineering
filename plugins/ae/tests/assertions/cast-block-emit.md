@@ -18,7 +18,7 @@ source: manual
 ### MUST (per-skill cast block presence — 13 spawning skills)
 
 - [file:contains:plugins/ae/skills/analyze/SKILL.md] `📋 Cast:` (≥ 4 occurrences expected — analyze has 4 spawn sites)
-- [file:contains:plugins/ae/skills/discuss/SKILL.md] `📋 Cast:` (≥ 9 occurrences expected — Round 0 framing 5 + council placeholder + 3 Doodlestein)
+- [file:contains:plugins/ae/skills/discuss/SKILL.md] `📋 Cast:` (≥ 10 occurrences expected — Round 0 framing 5 + council placeholder + 4 Doodlestein, after F-026 scope-reducer addition)
 - [file:contains:plugins/ae/skills/plan/SKILL.md] `📋 Cast:` (≥ 6 occurrences expected)
 - [file:contains:plugins/ae/skills/work/SKILL.md] `📋 Cast:` (≥ 3 occurrences expected)
 - [file:contains:plugins/ae/skills/review/SKILL.md] `📋 Cast:` (≥ 3 occurrences expected)
