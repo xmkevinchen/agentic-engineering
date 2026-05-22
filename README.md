@@ -228,7 +228,7 @@ Controls 5 stages with existing solo paths: `work.agent_teams`, `work.review_mod
 ```
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest
-  skills/                         # 20 slash commands (the shell)
+  skills/                         # 23 slash commands (the shell)
   agents/                         # 17 specialized agents (the processes)
     review/                       #   4 review agents
     research/                     #   3 research agents
