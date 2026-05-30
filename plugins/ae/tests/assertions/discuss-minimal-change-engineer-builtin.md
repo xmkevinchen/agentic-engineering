@@ -29,7 +29,7 @@ source: regression
 
 - [text:contains] `plugins/ae/skills/discuss/SKILL.md` contains `subagent_type: "ae:engineering:minimal-change-engineer"`
 - [text:contains] §1.5.1 preflight discovery list references `plugins/ae/agents/engineering/minimal-change-engineer.md`
-- [text:contains] §1.5.1 preflight warning text contains `fires only in incomplete plugin installs` (time-invariant wording per strategic Doodlestein finding)
+- [text:contains] §1.5.1 preflight NOT-FOUND handling uses time-invariant wording (e.g. `not found in any location` / `NOT FOUND` — generic presence-check phrasing) rather than a historical-time-anchored phrase (pairs with the MUST_NOT below; strategic Doodlestein: time-invariant warning)
 
 ### MUST_NOT
 

@@ -74,7 +74,7 @@ source: regression
 - [text:contains] Ad-hoc mode frontmatter shows `reviewers:` list field
 - [text:contains] Ad-hoc mode states verdict `MUST be omitted` OR `omitted in ad-hoc mode`
 - [text:contains] `reviewers:` field is `always required in ad-hoc mode` (regardless of `--reviewer` flag presence)
-- [text:contains] Filesystem-safe timestamp `YYYY-MM-DDTHH-MM-SS` (colons → dashes) specified
+- [text:contains] Filesystem-safe compact timestamp `YYYYMMDDTHHMMSSsssZ` (UTC, ms precision, no colons/dashes inside time portion — matches Track 4 staging convention) specified
 - [text:contains] `<id>` derivation rules state `first match wins` OR `more specific rules listed first` (precedence rule)
 - [text:contains] Rule 1 (`--reviewer` flag with pipeline target) wins over rule 2 (re-review on plan) — explicit precedence note
 

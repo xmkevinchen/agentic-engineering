@@ -27,18 +27,18 @@ source: regression
 - [text:contains] Marker `{{ TARGET_DIFF_CMD }}` defined
 - [text:contains] Marker `{{ TARGET_DIFF_OUTPUT }}` defined
 - [text:contains] Substitution table contains rows for Form 1, Form 2 range, Form 2 single SHA, Form 3
-- [text:contains] Form 1 substitution: `git diff -- <P>; git diff --cached -- <P>` (both staged AND unstaged)
-- [text:contains] Form 2 range substitution: `git diff <R>` (no `--cached`)
-- [text:contains] Form 2 single SHA substitution: `git diff <S>~1..<S>`
+- [text:contains] Form 1 substitution: argv arrays `[["git","diff","--",P], ["git","diff","--cached","--",P]]` (both staged AND unstaged; argv-array form, NOT shell-string — defense against shell injection)
+- [text:contains] Form 2 range substitution: argv array `[["git","diff",R]]` (no `--cached`)
+- [text:contains] Form 2 single SHA substitution: argv array resolving `<S>~1..<S>` (single commit → range)
 - [text:contains] Form 3 substitution: `git diff` AND `git diff --cached`
 
 #### Substitution discipline (AC1 enforcement)
 
 - [text:contains] `### TL execution discipline (substitution marker)` heading OR equivalent strict-substitute discipline subsection
-- [text:contains] TL `MUST replace these markers` OR `MUST replace tokens` OR `MUST not leave raw` `{{ TARGET_DIFF_CMD }}` token
+- [text:contains] TL `MUST replace` the `{{ TARGET_DIFF_OUTPUT }}` token with captured stdout before spawning AND `MUST not leave raw {{ TARGET_DIFF_OUTPUT }}` token — `{{ TARGET_DIFF_CMD }}` is a display-label only, never the must-replace target
 - [text:contains] Reason for substitute discipline: agents reading literal token would `treat it as quoted string and fail silently`
 - [text:contains] Observability trace line `[AE-CODE-REVIEW] Argument inference:` present
-- [text:contains] Trace fields include `target=` AND `form=` AND `diff_cmd=`
+- [text:contains] Trace fields include `target=` AND `form=` AND `diff_argv=` (argv-array form; NOT `diff_cmd=`)
 
 #### Track 1 + Track 4 wiring (AC2)
 
@@ -51,8 +51,7 @@ source: regression
 
 #### --reviewer flag scope exclusion (AC3)
 
-- [text:contains] ae:code-review explicitly DOES NOT add `--reviewer` flag (or equivalent statement that --reviewer routes through ae:review)
-- [text:contains] Reason: `4-track structure is already multi-reviewer` OR `4-track structure is multi-reviewer by design`
+- [text:not_contains] ae:code-review SKILL.md defines its own `--reviewer <name>` flag (`--reviewer` is an ae:review-only concern; code-review's 4-track structure is inherently multi-reviewer, so it does not add the flag)
 
 ### MUST_NOT
 
