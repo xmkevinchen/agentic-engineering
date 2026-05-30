@@ -253,8 +253,11 @@ All skills that launch proxy agents MUST include timeout protection and fallback
 ```
 If MCP connection fails, times out (120s), is rate-limited, or quota is exhausted:
 SendMessage to team-lead: "unavailable: [reason]" (reason = timeout | connection | rate_limit | quota_exhausted).
-Then exit immediately. Do not retry.
+Then write the durable-failure record (one line), then exit immediately. Do not retry:
+mkdir -p "$HOME/.ae/traces" || true; bash "${CLAUDE_PLUGIN_ROOT:-}/scripts/append-cross-family-trace.sh" failure "<skill>" "<feature_id>" "<angle>" "<family>" "[reason]" 2>>"$HOME/.ae/traces/append-cross-family.log" || true
 ```
+
+**Spawn-time literal inlining (F-031).** The TL spawning the proxy MUST substitute `<skill>`, `<feature_id>`, `<angle>`, `<family>` as **literals** in the suffix above at spawn time — the TL knows all four (it is choosing the skill, feature, angle, and family). The proxy fills only `[reason]` (the same token it already picks for its `unavailable:` message). This keeps the WAL join key populated by construction rather than asking a haiku proxy to derive values from its Cast block. `<feature_id>` may be empty — pass `""`. The `${CLAUDE_PLUGIN_ROOT:-}` guard + `|| true` make an unset plugin-root (e.g. dev-from-source) a graceful no-op; stderr appends to a log (NOT `/dev/null`) so a missing-record diagnosis stays possible. The leading `mkdir -p "$HOME/.ae/traces"` is load-bearing: the shell opens the `2>>…/append-cross-family.log` redirect target BEFORE the script runs, so on a fresh `~/.ae/traces/` (first write of a session, before any `write-trace.sh` call created the dir) the open fails, `|| true` swallows it, and the record vanishes silently — exactly the durability case the WAL exists for. Do not remove the `mkdir`. This is the durable half of the cross-family WAL: it survives a detached/compacted TL because the **proxy**, not the TL, writes it. See `docs/references/trace-schema.md` rows 4+5.
 
 ### TL fallback logic (TL executes this, not subagent leads)
 ```
@@ -265,15 +268,24 @@ On proxy "unavailable" message:
 3. Angle NOT covered → try other proxy family first:
    a. Other family enabled and not also failed?
       → Spawn replacement proxy from other family with that angle.
+        On success (angle now covered by a NON-Claude family), write the resolution
+        half of the cross-family WAL (F-031):
+        mkdir -p "$HOME/.ae/traces" || true; bash "${CLAUDE_PLUGIN_ROOT:-}/scripts/append-cross-family-trace.sh" covered "<skill>" "<feature_id>" "<angle>" "<resolution_family>" 2>>"$HOME/.ae/traces/append-cross-family.log" || true
    b. Other family also failed or not enabled?
       → Spawn a Claude agent (model by task complexity: opus/sonnet/haiku) with that angle.
 4. All proxies failed?
    → Spawn Claude agent(s) for uncovered angles, or mark cross_family_degraded if
      all angles are already covered by Claude agents.
+   → Claude-family coverage IS the degraded state, so do NOT write a `covered`
+     resolution record here (F-031). The proxy's unmatched `cross-family-proxy-failure`
+     record is the durable degraded signal; `covered` is reserved for NON-Claude
+     fallback (step 3a) only.
 TL must actually spawn and prompt the replacement, not just announce it.
 TL tracks proxy availability within the current Agent Team — do not re-spawn
 a proxy that already reported unavailable in this team.
 ```
+
+**F-031 cross-family WAL.** The two `append-cross-family-trace.sh` calls above form a paired tombstone-via-omission record. A `cross-family-proxy-failure` (written by the proxy, see "Proxy prompt suffix") with a matching `cross-family-angle-covered` (written here by the TL on non-Claude fallback) = routine fallback, angle covered, NOT degraded. A failure record with NO matching covered record = genuine degradation (uncovered angle, OR the TL never reached this fallback because it was detached/compacted). Consumers join on `(skill, feature_id, angle)` — the failure record names the angle `angle_lost` and the covered record names it `angle`, so normalize `failure.angle_lost == covered.angle` at join time (full reader contract: `docs/references/trace-schema.md` consumer obligation 6). The TL inlines `<skill>`/`<feature_id>`/`<angle>`/`<resolution_family>` as literals (it knows all four). "Tier" (advisory vs gating) is a property of the *consumer* that reads these records, not of the emitter — today the only gating consumer is `ae:work` autopass. See `docs/references/trace-schema.md` rows 4+5.
 
 ### Lead/challenger prompt suffix (when proxies are in team)
 ```
