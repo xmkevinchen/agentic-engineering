@@ -48,6 +48,7 @@ For each feature, determine the **current stage**:
 | `awaiting review` | linked plan has all `- [x]` AND no review with `verdict: pass` |
 | `review failed` | linked plan has all `- [x]` AND linked review with `verdict: fail` |
 | `done` | feature `index.md` frontmatter `status: done` (i.e., already in `features/done/`, only shown under `--all`) |
+| `paused` | feature `index.md` frontmatter `status: paused` (in `features/paused/`; EXCLUDED from the active stage table — surfaced as the default-footer `⏸ N paused` count and listed under `--all`; F-032 D3/D8) |
 
 ### Plan linkage
 
@@ -178,7 +179,7 @@ Sort the active table by stage priority, then by `created:` ascending (oldest fi
 ### Summary Footer
 
 ```
-📋 Features: N active (use --all to include done + abandoned)
+📋 Features: N active · ⏸ P paused (use --all to include paused + done + abandoned)
 📝 Backlog: M open items in .ae/backlog/unscheduled/
 🔗 Cross-family: Codex ✓ | Gemini ✓
 🗺️ Run /ae:roadmap for promote candidates + dependency analysis
@@ -193,19 +194,24 @@ This is a positive guide rather than a dead end — the dashboard's job is orien
 
 ### `--all` expansion
 
-When `--all` is passed, append two additional tables:
+When `--all` is passed, append these sections:
 
 ```
 ✓ Done features (N)
 | F-XXX | Title | Done date | Origin BL |
 | ...
 
+⏸ Paused features (N)
+- F-XXX | Title | paused <date> | <paused_reason one-liner>
+  (F-032 v1: a compact one-line-per-feature list, NOT a bordered table; a
+   dedicated Paused table matching the Done/Abandoned style is deferred to BL-114)
+
 ⊘ Abandoned features (N)
 | F-XXX | Title | Abandoned date | Reason |
 | ...
 ```
 
-Without `--all`, done features collapse to a single line: `N features completed (use /ae:dashboard --all to show).` Abandoned features are silent without `--all` (no count line — they are intentionally out-of-scope by default).
+Without `--all`, done features collapse to a single line: `N features completed (use /ae:dashboard --all to show).` Paused features collapse to the footer `⏸ P paused` count, which is ALWAYS shown (F-032 D3 — so paused work is never silently forgotten). Abandoned features are silent without `--all` (no count line — they are intentionally out-of-scope by default).
 
 ### `--legacy` expansion
 
