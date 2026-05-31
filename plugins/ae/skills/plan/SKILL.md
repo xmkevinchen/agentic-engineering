@@ -28,7 +28,7 @@ Example: `/ae:plan .ae/discussions/047-pipeline-quality-wave-cluster/`
 If `$ARGUMENTS` matches regex `^BL-\d{3}$` (e.g., `BL-033`):
 
 1. Locate the BL file across BOTH locations (Plan 051+ — promoted BLs live inside feature dirs):
-   - **Promoted (primary)**: `.ae/features/{active,done,abandoned}/F-*/BL-NNN.md` — when `/ae:analyze` promoted the BL, the file moved into the feature dir.
+   - **Promoted (primary)**: `.ae/features/{active,done,abandoned,paused}/F-*/BL-NNN.md` — when `/ae:analyze` promoted the BL, the file moved into the feature dir.
    - **Backlog (fallback)**: `<output.backlog>/**/BL-NNN*.md` glob, where `<output.backlog>` is read from `pipeline.yml` (default: `.ae/backlog/`; projects with custom paths use their configured value). Traverse `unscheduled/`, `v*/`, `done/v*/` subdirs; exclude `closed/`.
 
    When the BL is found in a feature dir, Form 2 resolves to that feature dir directly (Form 2 promoted-BL branch of the **Feature context resolution** rule in Step 2). When found only in backlog, the BL is unpromoted; the resolution rule's fall-through branch routes to legacy `output.plans`.
@@ -130,7 +130,7 @@ Apply **Feature context resolution** to determine the write target. This resolut
 
 Given `$ARGUMENTS` (already classified into Form 1/2/3 by Argument Inference), resolve against existing feature directories:
 
-1. **Form 2 (BL-NNN) — promoted BL**: BL file lives in `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` → resolve to that feature dir.
+1. **Form 2 (BL-NNN) — promoted BL**: BL file lives in `.ae/features/{active,done,abandoned,paused}/F-NNN-<slug>/` → resolve to that feature dir.
 2. **Form 1 (discussion-dir path)**:
    - Discussion path matches `.ae/features/<state>/F-NNN-<slug>/discussions/...` (path-derived) → resolve to that feature dir.
    - Discussion `index.md` carries `feature: F-NNN` (legacy discussion location) → resolve to that feature dir.

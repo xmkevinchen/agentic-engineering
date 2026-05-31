@@ -56,7 +56,7 @@ If no in-flight teams (or all filtered as stale): `(no in-flight teams in the la
 ### 4. Recent review verdicts
 
 Scan BOTH locations (union):
-- `.ae/features/done/F-*/review.md` (feature-resident reviews, Plan 051+)
+- `.ae/features/{done,paused}/F-*/review.md` (feature-resident reviews, Plan 051+; paused included so a feature paused mid-review still surfaces its verdict — F-032 D8)
 - `.ae/reviews/*.md` (legacy reviews; non-recursive — naturally excludes `adhoc/`)
 
 For each file, read frontmatter `verdict` + `created` + the feature/plan title from `target`. **Sort by `created:` descending — NOT by filesystem mtime.** Filesystem mtime is unreliable (archive `mv` operations + later edits change mtime independently of the review's original creation date); `created:` is the canonical ordering field.
@@ -66,7 +66,7 @@ Implementation outline (the actual sort step that section 4 must perform):
 ```bash
 # Pseudo: for each candidate file, extract `created:` value, sort numerically/lexically descending, take top 5
 {
-  for f in .ae/features/done/F-*/review.md .ae/reviews/*.md; do
+  for f in .ae/features/done/F-*/review.md .ae/features/paused/F-*/review.md .ae/reviews/*.md; do
     [ -f "$f" ] || continue
     case "$f" in *adhoc*) continue ;; esac # defense-in-depth against future glob change
     created=$(grep -E '^created:' "$f" | head -1 | sed 's/^created: *//; s/"//g')

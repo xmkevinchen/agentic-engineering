@@ -76,7 +76,7 @@ Owner field: omit. On error: stay `in_progress`. Steps 4-6 and 10 are sub-action
 
 1. **Resolve discussion directory** — apply the **Feature context resolution** rule defined in `plugins/ae/skills/plan/SKILL.md` Step 2. Both skills MUST use identical resolution semantics; do NOT restate the rule here in different words. Resolution outcomes:
    - `$ARGUMENTS` points to an existing directory → load its `index.md`.
-   - `$ARGUMENTS` resolves to a feature dir (BL-NNN promoted, feature dir path, or unambiguous title-overlap with `.ae/features/active/F-NNN-<slug>/`) → write target = `<feature-dir>/discussions/<NNN>-<slug>/` (one discussion per topic family inside the feature). Existing topic dir under that feature → add topics to it; otherwise create a new one.
+   - `$ARGUMENTS` resolves to a feature dir (BL-NNN promoted, feature dir path, or unambiguous title-overlap with `.ae/features/{active,paused}/F-NNN-<slug>/`) → write target = `<feature-dir>/discussions/<NNN>-<slug>/` (one discussion per topic family inside the feature). Existing topic dir under that feature → add topics to it; otherwise create a new one.
    - `$ARGUMENTS` does NOT resolve to a feature (free-text discussion not tied to a feature) → write target = `<output.discussions>/NNN-slug/` per existing convention (legacy fallback).
 2. **If new discussion**: create two files in the directory:
    - `index.md` — minimal scaffolding (title, pipeline status, topic list placeholder, links). On feature-internal discussions, the `index.md` frontmatter MAY include optional `feature: F-NNN` (path-derived; validation-only — `ae:dashboard` reading discussion state flags mismatch when frontmatter conflicts with parent dir path; no automatic relocation).

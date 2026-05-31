@@ -56,7 +56,7 @@ The default invocation produces four sections in this order. Sections that have 
 
 Before LLM judgment runs, mechanically filter out:
 
-- **Already-promoted BLs**: scan `origin_bl:` across `.ae/features/{active,done,abandoned}/*/index.md`. Treat both scalar (`origin_bl: BL-042`) and list (`origin_bl: [BL-042, BL-051]`) forms — any BL-ID appearing in any feature's `origin_bl` is excluded. Multi-BL consolidation: even if a BL is only one of several IDs in a feature's `origin_bl` list, it is considered promoted and must be suppressed (no zombie partial-promotion suggestions).
+- **Already-promoted BLs**: scan `origin_bl:` across `.ae/features/{active,done,abandoned,paused}/*/index.md`. Treat both scalar (`origin_bl: BL-042`) and list (`origin_bl: [BL-042, BL-051]`) forms — any BL-ID appearing in any feature's `origin_bl` is excluded. Multi-BL consolidation: even if a BL is only one of several IDs in a feature's `origin_bl` list, it is considered promoted and must be suppressed (no zombie partial-promotion suggestions).
 - **Terminal BLs**: status in `{promoted, done, closed}` per State Reading.
 
 The remaining set (`status: open` or `unscheduled`, not in any `origin_bl`) is the candidate pool.
@@ -247,7 +247,7 @@ Authoritative values stay authoritative; `--resize` is the explicit accept path.
 
 For each `.ae/roadmaps/active/<name>.md`:
 
-1. Find features that link to this roadmap: scan `features/{active,done,abandoned}/*/index.md` with frontmatter `roadmap: <name>` (string match). All three subdirs are inspected — abandoned features are still linked features, just terminal-state.
+1. Find features that link to this roadmap: scan `features/{active,done,abandoned,paused}/*/index.md` with frontmatter `roadmap: <name>` (string match). All four subdirs are inspected — abandoned + paused features are still linked features (terminal / suspended). A paused linked feature does NOT block roadmap archive, but the archive summary reports it, flagging any paused feature that blocks an active feature (F-032 D5).
 2. **Archive-ready** condition (all must hold):
    - At least one linked feature exists in `features/done/` (otherwise there's nothing actually shipped — don't archive a roadmap that produced no completed work).
    - No linked feature is in `features/active/` (i.e., no still-active work).

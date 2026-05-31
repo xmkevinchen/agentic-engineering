@@ -72,7 +72,7 @@ Scan each output directory. Handle gracefully:
 ### Discussions
 
 Scan BOTH locations (union — Plan 051+):
-- **Feature-internal discussions (primary)**: each subdir under `.ae/features/{active,done,abandoned}/F-*/discussions/`
+- **Feature-internal discussions (primary)**: each subdir under `.ae/features/{active,done,abandoned,paused}/F-*/discussions/`
 - **Legacy discussions (fallback)**: each subdir under `output.discussions`
 
 For each discussion subdirectory:
@@ -111,7 +111,7 @@ TWO frontmatter fields must be checked (they are distinct):
 ### Plans
 
 Scan BOTH locations (union — Plan 051+):
-- **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
+- **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned,paused}/F-*/plan.md`
 - **Legacy plans (fallback)**: `output.plans/*.md`
 
 For each plan file:
@@ -127,7 +127,7 @@ For each plan file:
 ### Reviews
 
 Scan BOTH locations (union — Plan 051+):
-- **Feature-dir reviews (primary)**: `.ae/features/{active,done}/F-*/review.md`
+- **Feature-dir reviews (primary)**: `.ae/features/{active,done,paused}/F-*/review.md`
 - **Legacy reviews (fallback)**: `output.reviews/*.md` with `type: review` in frontmatter
 
 For each review file:
@@ -209,7 +209,7 @@ Without `--all`, done features collapse to a single line: `N features completed 
 
 ### `--legacy` expansion
 
-When `--legacy` is passed, append a Legacy Artifacts section showing items from `.ae/discussions/`, `.ae/plans/`, and `.ae/reviews/` that are NOT linked to any feature in `features/{active,done,abandoned}/`. Use the existing State Reading + stage-derivation logic in the "Legacy State Reading" section above. This section is intentionally below the Feature Table — features are the live work; legacy artifacts are historical context.
+When `--legacy` is passed, append a Legacy Artifacts section showing items from `.ae/discussions/`, `.ae/plans/`, and `.ae/reviews/` that are NOT linked to any feature in `features/{active,done,abandoned,paused}/`. Use the existing State Reading + stage-derivation logic in the "Legacy State Reading" section above. This section is intentionally below the Feature Table — features are the live work; legacy artifacts are historical context.
 
 Without `--legacy`, the Legacy Artifacts section is omitted entirely (not even a count line). Most legacy items are terminal-state; mixing them with live features creates permanent noise. A user who wants to find them should grep or pass `--legacy`.
 

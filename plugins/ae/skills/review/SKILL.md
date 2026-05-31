@@ -70,7 +70,7 @@ Treat as commit-range review target. **Diff scope binding**: when reviewer agent
 `$ARGUMENTS` is empty OR is free-text that matches none of Form 1/2 (not a valid path, not a commit ref pattern):
 
 - **Empty** → existing behavior: scan for the most recent plan with all steps completed (`- [x]`) and `status` not `done` across BOTH plan locations:
-  1. **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned}/F-*/plan.md`
+  1. **Feature-dir plans (primary)**: `.ae/features/{active,done,abandoned,paused}/F-*/plan.md`
   2. **Legacy plans (fallback)**: `output.plans/*.md` (default `.ae/plans/`, configurable via `pipeline.yml`)
   3. Apply tiebreaker rules across the union of both locations (mirrors `/ae:work` argument-inference union scan).
   4. Found → use that plan file path.
@@ -511,7 +511,7 @@ Include this in the review report. This data accumulates naturally across featur
 
   **`<id>` normalization** (applied to all rules above): lowercase; collapse repeated `-`; trim leading/trailing `-`; max length 80 chars; if longer, truncate to 72 chars + `-<8-char-hash>` derived from the canonical pre-truncation string + reviewer list. Final filename: `<id>-<YYYYMMDDTHHMMSSsssZ>.md`.
 
-**No surface-index pointer file is written.** Discoverability for `/ae:dashboard` and `/ae:next` is preserved via non-recursive glob scan over `output.reviews/*.md` (excluding `adhoc/` subdir naturally — non-recursive glob does not descend) and `.ae/features/{active,done}/F-*/review.md` — see those skills' Reviews scanning rule. This eliminates dual-write debt; readers, not writers, bridge the two locations. Ad-hoc reviews under `output.reviews/adhoc/` are NOT scanned by dashboard/next/plugin-stats/retrospect (cross-skill contract; verified across all 4 review-reading skills as of F-012).
+**No surface-index pointer file is written.** Discoverability for `/ae:dashboard` and `/ae:next` is preserved via non-recursive glob scan over `output.reviews/*.md` (excluding `adhoc/` subdir naturally — non-recursive glob does not descend) and `.ae/features/{active,done,paused}/F-*/review.md` — see those skills' Reviews scanning rule. This eliminates dual-write debt; readers, not writers, bridge the two locations. Ad-hoc reviews under `output.reviews/adhoc/` are NOT scanned by dashboard/next/plugin-stats/retrospect (cross-skill contract; verified across all 4 review-reading skills as of F-012).
 
 Review file frontmatter:
 
@@ -637,7 +637,7 @@ When `verdict: fail` → **do NOT mv**. The feature stays in `features/active/`.
 
 The feature-dir path migration moves NEW work into feature directories but deliberately leaves pre-existing legacy artifacts in `.ae/discussions/`, `.ae/plans/`, `.ae/reviews/` untouched (known limit: existing legacy artifacts are not migrated; they age out naturally as new work supersedes them). The audit chain is therefore split based on each artifact's birth date:
 
-- **Feature-dir features (post-migration)**: `features/{active,done,abandoned}/F-NNN-<slug>/` contains origin-BL + feature frontmatter + analysis + plan.md + review.md + discussions/.
+- **Feature-dir features (post-migration)**: `features/{active,done,abandoned,paused}/F-NNN-<slug>/` contains origin-BL + feature frontmatter + analysis + plan.md + review.md + discussions/.
 - **Pre-migration features**: feature dir contains origin-BL + index + analysis only; plan + review files remain in legacy `.ae/plans/`, `.ae/reviews/` (linked via discussion id chain or optional `feature: F-NNN` frontmatter on legacy plans).
 
 The archive trigger **does not** attempt to collect or symlink legacy plan/review files into the feature dir for pre-migration features. Cross-references work via frontmatter `id:` (feature/plan/review IDs are stable across mv — directory location is not load-bearing for lookup). Run `/ae:roadmap` or `/ae:dashboard` to verify the feature shows up in `done/` and the linkage chain still resolves across both locations (dashboard/next union-scan both legacy and feature-dir reviews per the feature-dir migration Step 5).
@@ -646,7 +646,7 @@ The archive trigger **does not** attempt to collect or symlink legacy plan/revie
 
 AE internal cross-references use frontmatter `id:` not path strings. `mv` of the feature dir does not break:
 
-- `BL-NNN.md` `promoted_to: F-NNN` → still resolves (grep for `id: F-NNN` across `features/{active,done,abandoned}/`).
+- `BL-NNN.md` `promoted_to: F-NNN` → still resolves (grep for `id: F-NNN` across `features/{active,done,abandoned,paused}/`).
 - Plan/review path-derived feature ID: when plan.md / review.md live inside the feature dir, the dir IS the feature ID — no frontmatter required, no scan, archive trigger Phase 1 step 1 resolves directly.
 - Optional `feature: F-NNN` frontmatter (legacy bridge): readers validate against parent dir path and warn on mismatch; path always wins.
 - `ae:roadmap` section (a) `origin_bl:` dedup → already scans active+done+abandoned per Step 4 fix.
