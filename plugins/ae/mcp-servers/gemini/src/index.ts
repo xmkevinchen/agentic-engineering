@@ -101,7 +101,16 @@ async function callGeminiSDK(
     ...(systemPrompt ? { config: { systemInstruction: systemPrompt } } : {}),
   });
 
-  return response.text ?? "(empty response)";
+  const text = response.text;
+  if (text == null || text === "") {
+    // Empty/blocked output (no candidates, safety-filtered, etc.) must NOT be
+    // stored as a successful model turn — that poisons conversation history.
+    // Throw so the tool handler surfaces it as isError and leaves history clean.
+    throw new Error(
+      "Gemini returned no text (empty candidates or blocked by safety filters).",
+    );
+  }
+  return text;
 }
 
 // --- Session Management ---
@@ -212,17 +221,27 @@ server.registerTool(
       }
 
       const useModel = model ?? session.model;
-      if (model) {
-        session.model = model; // persist model switch
-      }
 
-      session.history.push({ role: "user", text: prompt });
+      // Build the candidate history locally and commit to the shared session
+      // ONLY after the API call succeeds (atomic-on-success, matching `chat`).
+      // A failed turn therefore leaves no orphan user message and no
+      // rolled-forward model switch. Note: this is replace-on-success, so two
+      // concurrent replies on one sessionId are last-writer-wins rather than
+      // corruptly interleaved; full concurrency safety would need a per-session
+      // lock (tracked separately).
+      const nextHistory: Message[] = [
+        ...session.history,
+        { role: "user", text: prompt },
+      ];
       const responseText = await callGemini(
         useModel,
-        session.history,
+        nextHistory,
         session.systemPrompt,
       );
-      session.history.push({ role: "model", text: responseText });
+      nextHistory.push({ role: "model", text: responseText });
+
+      session.history = nextHistory;
+      session.model = useModel; // persist model switch only on success
       session.lastAccessedAt = Date.now();
 
       return {
