@@ -654,7 +654,7 @@ AE internal cross-references use frontmatter `id:` not path strings. `mv` of the
 
 ### Recovery — undoing an archive
 
-Archive is `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/` plus an in-place `index.md` frontmatter edit. To undo (e.g., the user got a `verdict: pass` they later disagree with):
+Archive is `mv .ae/features/<source-state>/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/` (source = `active` or `paused`) plus an in-place `index.md` frontmatter edit. To undo (e.g., the user got a `verdict: pass` they later disagree with), restore to `active/`:
 
 1. `mv .ae/features/done/F-NNN-<slug>/ .ae/features/active/F-NNN-<slug>/`.
 2. Edit the moved `index.md` frontmatter: revert `status: done` → `status: active`, remove the `done:` field.
