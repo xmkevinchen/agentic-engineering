@@ -152,10 +152,10 @@ Render a 5-column table over `.ae/features/active/`:
 | feature_id | status | depends_on | blocked_by (active) | ready? |
 
 - `depends_on`: comma-separated list from frontmatter (normalized to list per Reader contract).
-- `blocked_by (active)`: subset of `depends_on` whose target is also still in `features/active/` (i.e., not yet `done`). Empty list = nothing blocking.
+- `blocked_by (active)`: subset of `depends_on` whose target is still in `features/active/` OR `features/paused/` (i.e., not yet `done`). A **paused** dependency BLOCKS just like an incomplete active one — its work is suspended indefinitely, so it does NOT satisfy the dependency (F-032 D1). A `done` (or `abandoned`) target is not blocking. Empty list = nothing blocking.
 - `ready?`: one of three values:
   - `YES` — `blocked_by (active)` is empty AND the feature is not in any cycle.
-  - `NO` — has active blockers, but no cycle (sequential block; will become ready when blockers complete).
+  - `NO` — has active/paused blockers, but no cycle (sequential block; will become ready when blockers complete — note a paused blocker won't complete until resumed).
   - `CYCLE` — feature participates in a `depends_on` cycle (deterministic detection: SCC size > 1 in the active-features subgraph, or self-dependency). Distinct from `NO` because cycles never resolve without intervention; the user must edit `depends_on` to break them.
 
 Below the table, surface three derived signals — emit only when non-empty:

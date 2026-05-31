@@ -618,11 +618,11 @@ Try in order. The first match resolves; on no match emit the manual-archive mess
 
 #### Phase 2 — Execute archive (only when Phase 1 resolved a single feature dir)
 
-1. **Move the feature dir**: `mv .ae/features/active/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/`. Plain `mv` — `.ae/` is gitignored. Atomic on the same filesystem.
+1. **Move the feature dir**: `mv .ae/features/<source-state>/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/`, where `<source-state>` is the state segment of the plan path resolved in Phase 1 — normally `active`, or `paused` when reviewing a paused feature that passed (F-032 D7: a reviewed-and-passed paused feature is complete → goes to `done/`, not back to paused). Plain `mv` — `.ae/` is gitignored. Atomic on the same filesystem.
 
 2. **Update the feature `index.md` frontmatter** in place:
    ```yaml
-   status: done # was: active
+   status: done # was: active (or paused — writeback to done either way)
    done: YYYY-MM-DD # today
    ```
    Preserve all other fields. Do NOT remove `origin_bl:` or any optional field — they remain part of the audit trail.
@@ -631,7 +631,7 @@ Try in order. The first match resolves; on no match emit the manual-archive mess
 
 4. **Log success**: `[ARCHIVE] Feature F-NNN-<slug> moved to features/done/.`
 
-When `verdict: fail` → **do NOT mv**. The feature stays in `features/active/`. The user may, after fixup, re-run `/ae:work` and `/ae:review` for another verdict, OR manually `mv .ae/features/active/F-NNN-<slug>/ .ae/features/abandoned/F-NNN-<slug>/` if the feature is being dropped.
+When `verdict: fail` → **do NOT mv**. The feature stays in its current state dir (`features/active/` or `features/paused/`). The user may, after fixup, re-run `/ae:work` and `/ae:review` for another verdict, OR manually `mv .ae/features/<state>/F-NNN-<slug>/ .ae/features/abandoned/F-NNN-<slug>/` if the feature is being dropped.
 
 ### Legacy artifact preservation — known limit
 
