@@ -44,7 +44,7 @@ Owner field: omit. On error: stay `in_progress`.
 ## Pre-check
 
 1. Confirm `.claude/pipeline.yml` exists. Missing → `Run /ae:setup first.` Stop.
-2. Confirm `.ae/features/active/`, `.ae/features/done/`, `.ae/features/abandoned/` exist. Missing → `Project hasn't bootstrapped GTD; run Plan 050 setup first.` Stop. (Defensive — should be rare once Plan 050 ships.)
+2. Confirm `.ae/features/active/`, `.ae/features/done/`, `.ae/features/abandoned/` exist. Missing → `Project hasn't bootstrapped GTD; run Plan 050 setup first.` Stop. (Defensive — should be rare once Plan 050 ships.) Also ensure `.ae/features/paused/` exists — `mkdir -p` it if absent (F-032 newest state dir, created on demand; do NOT Stop on its absence).
 3. **Agent Teams**: read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing the analysis directly. Output is lower confidence but structurally identical.
 
 ## Mode selection
@@ -84,7 +84,7 @@ These fallbacks are intentionally LOUD (warning logs) so a malformed-block silen
 
 1. **Locate the BL file.** Search recursively under `<output.backlog>` (default `.ae/backlog/`) for `BL-<NNN>-*.md`. Files may live in `unscheduled/`, `closed/`, `done/`, or any sprint subdir. Not found → **refuse**: `BL-<NNN> not found in any backlog scope.`
 
-2. **Already-promoted check.** Grep `origin_bl:` across `.ae/features/{active,done,abandoned}/*/index.md`. Match BOTH scalar and list forms — `origin_bl: BL-042` AND `origin_bl: [BL-042, BL-051]` both count as promoted.
+2. **Already-promoted check.** Grep `origin_bl:` across `.ae/features/{active,done,abandoned,paused}/*/index.md`. Match BOTH scalar and list forms — `origin_bl: BL-042` AND `origin_bl: [BL-042, BL-051]` both count as promoted.
    - **Already in `active/` or `done/`** → **hard refuse**:
      ```
      BL-<NNN> is already promoted to F-XXX (status: <active|done>).
@@ -97,12 +97,19 @@ These fallbacks are intentionally LOUD (warning logs) so a malformed-block silen
      and edit index.md status back to active. (Going through /ae:analyze again
      would create a second feature — refused to keep the audit trail clean.)
      ```
+   - **Already in `paused/`** → **soft refuse** (F-032):
+     ```
+     BL-<NNN> was promoted to F-XXX, now paused (deferred-but-not-abandoned).
+     To resume it: mv .ae/features/paused/F-XXX/ → .ae/features/active/F-XXX/
+     and edit index.md status back to active (remove paused:/paused_reason:).
+     (Going through /ae:analyze again would create a second feature.)
+     ```
 
 ### Promote steps
 
 Execute in order; each step's success is required for the next.
 
-1. **Allocate next F-NNN.** Scan `.ae/features/{active,done,abandoned}/F-*/index.md` recursively, parse the `F-NNN` digits from each dir name, take `max(NNN) + 1`. Zero-pad to 3 digits. Empty state → start at `F-001`. Feature IDs are independent of BL IDs (do not reuse the BL's number).
+1. **Allocate next F-NNN.** Scan `.ae/features/{active,done,abandoned,paused}/F-*/index.md` recursively, parse the `F-NNN` digits from each dir name, take `max(NNN) + 1`. Zero-pad to 3 digits. Empty state → start at `F-001`. Feature IDs are independent of BL IDs (do not reuse the BL's number).
 
 2. **Slugify the BL title** deterministically. Apply the **same step-by-step rule as `/ae:backlog`** (lowercase → strip non-ASCII → non-alphanum runs → `-` → trim leading/trailing `-` → truncate to 40 chars by right-side cut → re-trim trailing `-` → empty fallback to bare `F-NNN`). See `plugins/ae/skills/backlog/SKILL.md` step 3 for the canonical sequence; the order is load-bearing — do not reorder steps.
 
