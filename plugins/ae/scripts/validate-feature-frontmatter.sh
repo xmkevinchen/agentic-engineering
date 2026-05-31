@@ -74,7 +74,7 @@ is_grandfathered() {
 # ----- Feature index.md validation -----
 
 if [ -d "$FEATURES_DIR" ]; then
-  for state_dir in active done abandoned; do
+  for state_dir in active done abandoned paused; do
     [ -d "$FEATURES_DIR/$state_dir" ] || continue
     for feature_dir in "$FEATURES_DIR/$state_dir"/F-*/; do
       [ -d "$feature_dir" ] || continue
@@ -83,8 +83,10 @@ if [ -d "$FEATURES_DIR" ]; then
 
       relpath="${index_file#$REPO_ROOT/}"
 
-      # Grandfather check: only done/abandoned can be grandfathered (active always validates)
-      if [ "$state_dir" != "active" ] && is_grandfathered "$index_file"; then
+      # Grandfather check: only done/abandoned can be grandfathered (active + paused always
+      # validate strictly — paused is non-terminal and will resume, so its frontmatter must
+      # stay valid; F-032 D6).
+      if [ "$state_dir" != "active" ] && [ "$state_dir" != "paused" ] && is_grandfathered "$index_file"; then
         grandfathered_features=$((grandfathered_features + 1))
         continue
       fi
@@ -108,9 +110,9 @@ if [ -d "$FEATURES_DIR" ]; then
 
       # status enum
       case "$status" in
-        active|done|abandoned|"") ;;  # empty already reported above
+        active|done|abandoned|paused|"") ;;  # empty already reported above
         *)
-          echo "[validate-frontmatter] FAIL: invalid status '$status' in $relpath (expected: active|done|abandoned)" >&2
+          echo "[validate-frontmatter] FAIL: invalid status '$status' in $relpath (expected: active|done|abandoned|paused)" >&2
           failures=$((failures + 1))
           ;;
       esac
