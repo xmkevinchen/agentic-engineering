@@ -252,12 +252,15 @@ For each `.ae/roadmaps/active/<name>.md`:
    - At least one linked feature exists in `features/done/` (otherwise there's nothing actually shipped — don't archive a roadmap that produced no completed work).
    - No linked feature is in `features/active/` (i.e., no still-active work).
    - Linked features in `features/abandoned/` are tolerated (terminal state — they don't block archive). Their count is reported alongside done count for transparency.
+   - Linked features in `features/paused/` are tolerated (non-terminal, suspended — they don't block archive, per F-032 D5). Their count is reported, AND any paused feature that blocks an active feature's `depends_on` is flagged with a `⚠` line (see template).
 
    When both hold, surface:
 
    ```
-   📦 Roadmap "<name>" — <D> features done, <A> abandoned, 0 active. Archive to roadmaps/done/?
+   📦 Roadmap "<name>" — <D> features done, <A> abandoned, <P> paused, 0 active. Archive to roadmaps/done/?
+   ⚠ Paused blocker: F-NNN (paused) blocks F-MMM (active) — resume or reassign deps before the blocked feature can proceed.
    ```
+   The `⚠ Paused blocker:` line is emitted once per (paused feature, blocked active feature) pair, ONLY when `<P> > 0` AND some paused feature appears in an active feature's `depends_on` (F-032 D5 orphaned-blocker flag). Omit the `⚠` line entirely when no paused feature blocks an active one; `<P>` is still reported in the `📦` line whenever paused linked features exist.
 
 3. On user confirmation: `mv .ae/roadmaps/active/<name>.md .ae/roadmaps/done/<name>.md`, prepend `archived: YYYY-MM-DD` to the file's frontmatter, leave body untouched.
 

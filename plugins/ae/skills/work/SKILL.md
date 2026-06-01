@@ -81,7 +81,7 @@ When the helper is referenced below as `<milestone-dir>` it expands per the rule
 - **Paused-feature guard (F-032 D4 — keystone)**: if the resolved plan path is under `.ae/features/paused/F-NNN-<slug>/plan.md`, print the note below and **STOP — do NOT proceed** (running a paused plan in place would leave the feature live-but-classified-paused, the "phantom state" F-032 D4 exists to prevent):
   ```
   [note] F-NNN is paused. Running its plan would implicitly resume it. To resume explicitly:
-    mv .ae/features/paused/F-NNN-<slug> .ae/features/active/ && edit index.md (status: active, remove paused:/paused_reason:)
+    mv .ae/features/paused/F-NNN-<slug> .ae/features/active/   # then edit index.md: status: active, remove paused:/paused_reason:
   then re-run /ae:work.
   ```
   (Empty-arg argument-inference never auto-selects a paused plan — it scans `active/` only; this guard catches an EXPLICIT paused plan path. Resume = mv to `active/` first, never run in place.)

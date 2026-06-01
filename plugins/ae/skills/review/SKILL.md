@@ -583,7 +583,7 @@ After writing the review file with `verdict:`, update pipeline state:
 
 ### Feature-level archive trigger (GTD)
 
-When `verdict: pass` AND the target plan's feature dir is in `.ae/features/active/F-NNN-slug/`, archive the feature.
+When `verdict: pass` AND the target plan's feature dir is in `.ae/features/{active,paused}/F-NNN-slug/`, archive the feature (a reviewed-and-passed paused feature is complete → `done/`, per F-032 D7).
 
 **Path-derived archive trigger**: feature-dir plans live at `.ae/features/<state>/F-NNN-<slug>/plan.md`. The archive trigger derives the feature dir directly from the plan path — no frontmatter required, no scan, no ambiguous-match flow. Legacy plans (under `output.plans/`) retain a single explicit-fallback path emitting the manual-archive message.
 

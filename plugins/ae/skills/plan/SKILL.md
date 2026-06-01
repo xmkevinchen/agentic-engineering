@@ -134,7 +134,7 @@ Given `$ARGUMENTS` (already classified into Form 1/2/3 by Argument Inference), r
 2. **Form 1 (discussion-dir path)**:
    - Discussion path matches `.ae/features/<state>/F-NNN-<slug>/discussions/...` (path-derived) → resolve to that feature dir.
    - Discussion `index.md` carries `feature: F-NNN` (legacy discussion location) → resolve to that feature dir.
-3. **Form 3 (free text)**: topic clearly maps to a single existing `.ae/features/active/F-NNN-<slug>/` via LLM title-overlap judgment → resolve to that dir. Multiple matches or no match → fall through.
+3. **Form 3 (free text)**: topic clearly maps to a single existing `.ae/features/{active,paused}/F-NNN-<slug>/` via LLM title-overlap judgment → resolve to that dir (paused features are findable by title — F-032; `discuss`'s delegated restatement mirrors this set). Multiple matches or no match → fall through.
 4. **Otherwise** (Form 2 unpromoted BL, Form 3 with no clear match, Form 1 with neither path-derive nor frontmatter resolution) → no feature dir resolved.
 
 ### Write target
