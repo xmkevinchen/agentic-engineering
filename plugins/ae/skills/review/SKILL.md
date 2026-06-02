@@ -492,9 +492,12 @@ After all fixups are done, compile outcome data for this feature cycle:
 - Drift events: D contract violations during /ae:work (approved: A, fixed: F, rolled back: R, unknown: U)
 - Fix loop triggers: N circuit breaker activations during /ae:work (same test file failed max_fix_loops times)
 - Auto-pass rate: P steps auto-continued / N total steps (only if auto_pass was enabled)
+- Cross-family participation: <verbatim output line from plugins/ae/scripts/cross-family-counter.sh>
 ```
 
 Include this in the review report. This data accumulates naturally across features, providing evidence for tuning checklists and gate conditions over time.
+
+**Cross-family participation line (F-033)**: run `plugins/ae/scripts/cross-family-counter.sh` and emit its output line verbatim as the `Cross-family participation:` entry above. It is a raw **descriptive** counter — how many `/ae:review` invocations ran ≥2 model families at `state==full`, over the reviews that carry family-tracking data — **NOT a quality metric and NOT a rate framed as quality**. The script's own output carries the `flip-rate deferred → BL-115` note and the `<known>/<total> reviews have family-tracking data` coverage disclosure, so reviews with no `families_invoked` data are never read as cross-family failures (the participation-rate-as-quality / vanity-metric trap rejected in the F-033 discussion). The principled flip-rate quality metric is deferred to **BL-115**. **Single emit point** — do NOT add this line to `/ae:retrospect` or `/ae:plugin-stats` in v1 (cross-skill coupling deferred per the F-033 conclusion).
 
 ## Output
 
