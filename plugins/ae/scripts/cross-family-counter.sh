@@ -37,11 +37,14 @@ counts="$(cat "${files[@]}" 2>/dev/null | jq -R -s -r '
   | ($r | length) as $total
   | ( $r | map(
         .families_invoked as $fi
-        | if   $fi == null then {kind:"nodata"}
-          elif ($fi | type) == "array" and ($fi | length) > 0 and ($fi[0] | type) == "object"
+        # null, missing key, OR empty array all = no family data (excluded from `known`).
+        | if   ($fi == null) or (($fi | type) == "array" and ($fi | length) == 0) then {kind:"nodata"}
+          elif ($fi | type) == "array" and ($fi[0] | type) == "object"
             then { kind:"object",
-                   noncl: ([ $fi[] | .family ] | map(select(. != "claude")) | length),
-                   full:  ([ $fi[] | select(.state == "full") ] | length) }
+                   noncl:     ([ $fi[] | .family ] | map(select(. != "claude")) | length),
+                   full:      ([ $fi[] | select(.state == "full") ] | length),
+                   # full families that are NOT claude — i.e. a genuine cross-family full run.
+                   fullnoncl: ([ $fi[] | select(.state == "full" and .family != "claude") ] | length) }
           elif ($fi | type) == "array"
             then { kind:"string",
                    noncl: ([ $fi[] | select(. != "claude") ] | length) }
@@ -50,7 +53,9 @@ counts="$(cat "${files[@]}" 2>/dev/null | jq -R -s -r '
   | ($c | map(select(.kind == "nodata")) | length)  as $nodata
   | ($c | map(select(.kind == "string")) | length)  as $degraded
   | ($c | map(select(.kind != "nodata" and .noncl > 0)) | length) as $ran
-  | ($c | map(select(.kind == "object" and .full >= 2)) | length) as $full
+  # `full` requires >=2 families at full AND >=1 of them non-claude (a real cross-family
+  # comparison) — an all-claude record must NOT qualify as "ran a cross-family comparison".
+  | ($c | map(select(.kind == "object" and .full >= 2 and .fullnoncl >= 1)) | length) as $full
   | "\($total) \($total - $nodata) \($ran) \($full) \($degraded)"
 ')"
 
@@ -63,7 +68,7 @@ if [ "${known:-0}" -eq 0 ]; then
   exit 0
 fi
 
-line="cross-family: ${full}/${known} reviews ran ≥2 families full (${ran} ran ≥1 cross-family; ${known}/${total} reviews have family-tracking data; flip-rate deferred → BL-115)"
+line="cross-family: ${full} reviews ran a full cross-family comparison (≥2 families incl. a non-Claude family at full state), of ${known} reviews with family-tracking data; ${ran} ran ≥1 non-Claude family; ${known}/${total} reviews tracked; flip-rate quality metric deferred → BL-115"
 if [ "${degraded:-0}" -gt 0 ]; then
   line="${line} [degraded: ${degraded} state-unknown]"
 fi
