@@ -365,6 +365,7 @@ Read the code-review SKILL.md and follow its instructions within the current con
 `/ae:code-review` MUST use these values to compute the Track 4 staging path. Falling back to manual-mode is NOT permitted when invoked from `/ae:work` — the parameters are always present in this call site.
 
 ### E. Disposition
+Check E dispositions **every** finding accumulated across the pre-commit chain — the Check C.1 (lint) / C.2 (typecheck) P2-logic findings labeled `[C.1 Lint]` / `[C.2 Typecheck]`, the C.5 protocol-invariant result, AND Check D code-review findings — not only code-review output. Findings raised before Check D (i.e., C.1/C.2) are carried forward into this disposition set so they cannot silently drop when Check D produced nothing. Greenfield projects (zero pre-existing violations) should disposition a C.1/C.2 finding as **fix-now** rather than defer (see C.1 rationale).
 - **P1 (blocker)**: always show, fix now
 - **P2 logic/security**: show, human disposition (fix / defer / backlog)
 - **P2 style/naming**: auto-skip
