@@ -44,14 +44,15 @@ If `.claude/pipeline.yml` does not exist:
 
 1. Read the pipeline template from this plugin's `templates/pipeline.template.yml`
 2. Auto-detect project type and fill in config:
-   - `pyproject.toml` / `setup.py` → Python (pytest + ruff)
-   - `package.json` → Node/TS (jest/vitest + eslint)
-   - `pubspec.yaml` → Flutter (flutter test + dart analyze)
-   - `go.mod` → Go (go test + golangci-lint)
-   - `Cargo.toml` → Rust (cargo test + cargo clippy)
-   - `Gemfile` → Ruby (rspec/minitest + rubocop)
-   - `justfile` / `Makefile` → read existing test/lint commands
+   - `pyproject.toml` / `setup.py` → Python (pytest + ruff; typecheck: `mypy` / `pyright` only if configured)
+   - `package.json` → Node/TS (jest/vitest + eslint; typecheck: `tsc --noEmit` if a `tsconfig.json` is present)
+   - `pubspec.yaml` → Flutter (flutter test + dart analyze; `dart analyze` already covers typecheck — leave `typecheck.command` empty)
+   - `go.mod` → Go (go test + golangci-lint; typecheck: `go vet`)
+   - `Cargo.toml` → Rust (cargo test + cargo clippy; typecheck: `cargo check`)
+   - `Gemfile` → Ruby (rspec/minitest + rubocop; typecheck: leave empty unless `sorbet` is configured)
+   - `justfile` / `Makefile` → read existing test/lint/typecheck commands (do NOT infer a tool — only fill `typecheck.command` if a recipe exists)
    - Multi-language → split backend/frontend config
+   - Typecheck is detected only where a clear canonical tool exists; leave `typecheck.command: ""` when ambiguous (do NOT hardcode tools the project hasn't adopted)
 3. **Skip writing `output:` block on fresh init** (Plan 050+ GTD-first canonical). New projects rely on reader skills' default fallbacks (`.ae/<slot>/` per the Output Defaults table below). Only write a slot when Step 4's directory scan finds a non-default existing directory for that slot — see Step 4 below.
 4. **Slot-by-slot directory scan** — gate for whether to write each `output.*` slot. For each of the 6 slots (`discussions`, `plans`, `milestones`, `backlog`, `reviews`, `analyses`):
    - Scan for legacy directory `docs/<slot>/` AND any other plausible non-default location (e.g., `results/<slot>/`, `<slot>/` at project root, etc.) that contains content (≥ 1 `.md` file).
@@ -502,14 +503,14 @@ Defaults are GTD-first canonical. External projects with `docs/*` legacy layouts
 
 Skills MUST read from `pipeline.yml → output.<slot>` first. If the key is missing or pipeline.yml doesn't exist, fall back to the default above. This ensures zero-config works for new projects.
 
-## Test & Lint Fallback
+## Test, Lint & Typecheck Fallback
 
-`test.command` and `lint.command` may be empty. Skills that use them (ae:work, ae:code-review) MUST handle empty values gracefully:
+`test.command`, `lint.command`, and `typecheck.command` may be empty. `ae:work` consumes all three in its pre-commit chain (test = Check C, lint = Check C.1, typecheck = Check C.2); any skill that reads these commands MUST handle empty values gracefully:
 
 - **Has value** → run the command
-- **Empty** → skip, show `"⚠️ No test/lint command configured, skipping"`
+- **Empty** → skip, show `"⚠️ No test/lint/typecheck command configured, skipping"`
 
-Empty does NOT block execution. Not all projects have tests, not all changes need testing.
+Empty does NOT block execution. Not all projects have tests, linters, or type checkers.
 
 ## Agent Teams Setup
 
