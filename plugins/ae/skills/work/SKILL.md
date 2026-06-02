@@ -325,6 +325,22 @@ Read the current plan step's "Expected files:" line:
 ### C. Tests Green
 Run `test.command` from pipeline.yml. Empty → skip with "⚠️ No test command configured".
 
+### C.1 Lint
+Run `lint.command` from pipeline.yml.
+- **Empty** → soft-skip with `⚠️ No lint command configured, skipping`. This is a *plain* soft-skip (continue the chain) — NOT the UNVERIFIED gate-pause that empty `test.command` triggers in the auto-pass gate (see "No test command" at the gate). Lint is a secondary check, not a verification gate; its absence is non-blocking.
+- **Exit 0** → pass, continue.
+- **Non-zero exit** → record a **P2-logic finding labeled `[C.1 Lint]`** and add it to the same finding set the Check E disposition step processes (shown; human chooses fix / defer / backlog per E's vocabulary). The `[C.1 Lint]` origin label ensures the finding reliably enters Check E's disposition set even when Check D code-review produced no findings — it must not be left implicit and must not silently drop, and it is NOT emitted via a separate disposition mechanism. It does **NOT** set `no_p1 = false`, and lint is **NOT** a term in the auto-pass gate expression (see Auto-pass gate below).
+
+**Why P2-not-P1 (brownfield-safe, F-034)**: a non-zero lint exit is a *shown-but-non-gating* P2 finding, so pre-existing lint debt never halts the auto-pass gate on day one (an unconditional P1-block would halt brownfield adoption immediately). The gating baseline/regression mechanism (record violation count, block only on regression above baseline) is deliberately deferred — see the F-034 baseline BL. **Greenfield guidance**: a project starting from zero violations should disposition any C.1/C.2 finding as **fix-now**, not defer — with no pre-existing debt to baseline against, deferring would let new debt accrue silently.
+
+### C.2 Typecheck
+Run `typecheck.command` from pipeline.yml. Semantics identical to C.1:
+- **Empty** → soft-skip with `⚠️ No typecheck command configured, skipping` (plain soft-skip, non-blocking).
+- **Exit 0** → pass, continue.
+- **Non-zero exit** → P2-logic finding labeled `[C.2 Typecheck]` added to Check E's disposition set; non-gating; does **NOT** set `no_p1 = false`; not a term in the auto-pass gate expression.
+
+**AE-on-AE note**: AE's own `.claude/pipeline.yml` leaves `lint.command` and `typecheck.command` empty (it is a prompt/markdown repo with no linter or type checker), so C.1/C.2 *correctly* soft-skip for AE-on-AE — this is intended behavior, not inert plumbing. The checks are live for any external project that configures the commands.
+
 ### C.5 Protocol Invariant Check
 If `git diff --name-only` includes files under `plugins/ae/skills/` or `plugins/ae/agents/`:
 1. Run `/ae:test-plugin --regression --layer1` targeting the changed skills/agents (Layer 1 static analysis only — do NOT execute Layer 2 during pre-commit)
