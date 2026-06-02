@@ -1,0 +1,8 @@
+{"timestamp":"2026-05-20T10:00:00Z","skill":"ae:review","feature_id":"F-100","families_invoked":[{"family":"claude","state":"full"},{"family":"codex","state":"full"},{"family":"gemini","state":"full"}],"verdicts":{"tl":"pass"},"outcome":"pass"}
+{"timestamp":"2026-05-20T11:00:00Z","skill":"ae:review","feature_id":"F-101","families_invoked":[{"family":"claude","state":"full"},{"family":"codex","state":"full"}],"verdicts":{"tl":"pass"},"outcome":"pass"}
+{"timestamp":"2026-05-20T12:00:00Z","skill":"ae:review","feature_id":"F-102","families_invoked":["claude","codex","gemini"],"verdicts":{"tl":"pass"},"outcome":"pass"}
+{"timestamp":"2026-05-20T13:00:00Z","skill":"ae:review","feature_id":"F-103","families_invoked":null,"outcome":"pass"}
+{"timestamp":"2026-05-20T14:00:00Z","skill":"ae:review","feature_id":"F-104","outcome":"skipped_no_scope"}
+{"timestamp":"2026-05-20T15:00:00Z","skill":"ae:review","feature_id":"F-105","families_invoked":null,"outcome":"pass"}
+{"timestamp":"2026-05-20T16:00:00Z","skill":"ae:review","feature_id":"F-106","outcome":null}
+{"timestamp":"2026-05-20T17:00:00Z","skill":"ae:work","feature_id":"F-107","families_invoked":[{"family":"claude","state":"full"}],"outcome":"pass"}
