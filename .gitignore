@@ -7,6 +7,7 @@ node_modules/
 .claude/settings.local.json
 .claude/cross-family-status.json
 .claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # Embedding model cache (from mengdie/second-brain MCP)
 .fastembed_cache/
