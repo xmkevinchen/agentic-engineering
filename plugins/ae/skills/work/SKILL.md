@@ -480,8 +480,8 @@ Fix findings, re-run from Check D until clean pass.
    ```
    `no_accumulated_p1` defaults to `true`. Set to `false` only when accumulated checkpoint runs and finds P1.
    `deferred_resolved` defaults to `true`. Set to `false` when Check 4 found DEFERRED items matching current step but TL did not write dispositions for all of them.
-   - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no accumulated P1, no drift, review complete. Continuing to Step N+1.`
-   - Any failed → **pause for user confirmation**
+   - All met → auto-continue: `✅ Ready to continue: tests pass, no blockers, no unresolved drift. Continuing to Step N+1.` (user-facing line is plain language — the gate's internal variables above are spec, not display; output-standards.md Rule A)
+   - Any failed → **pause for user confirmation** — lead the pause message with the blocker list in plain language, codes in parentheses (e.g. `Pausing: 1 blocker finding (P1) needs a fix before continuing.`)
    - Drift detected (not approved) → always pause
    - Security pattern matched → always pause
    - No test command → `tests_green` = UNVERIFIED — **pause for user confirmation** (do not treat as true)
