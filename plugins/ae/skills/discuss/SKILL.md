@@ -374,7 +374,7 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 
 ### 3. Discussion Rounds (TL moderates)
 
-**TL is the moderator.** TL drives rounds, routes messages, highlights disagreements, identifies convergence. Per `ae:agent-teams` Discussion Mode.
+**TL is the moderator.** TL drives rounds, routes messages, highlights disagreements, identifies convergence. Per `ae:agent-teams` Discussion Mode. After exploration, TL triages points by stakes × reversibility (cut noise, merge small points) and surfaces the result in the Step 6 Steering Readout — discussion budget goes to high-weight points, not every point round-robin; not every point earns an operation.
 
 **Per-agent files are the primary artifact.** Each agent writes `round-NN/<agent-name>.md` themselves in every round. TL does NOT author these files and does NOT paraphrase their content into synthesis. Synthesis is an index/orientation layer on top of the per-agent files, not a replacement for them.
 
@@ -393,7 +393,7 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 **Round 3+ — Convergence**:
 - Same per-agent file pattern continues
 - TL pushes converging topics toward conclusion
-- **Unanimous Agreement Gate**: when all agents agree on a topic direction, TL runs UAG per `ae:agent-teams` Discussion Mode — structured falsification question, agents must search for counterexamples. Passed UAG = genuine convergence.
+- **Unanimous Agreement Gate**: when all agents agree on a topic direction, TL runs UAG per `ae:agent-teams` Discussion Mode — structured falsification question, agents must search for counterexamples. Passed UAG = genuine convergence. **The 1-round fast-track (see Principles → "Discussion before user") does NOT waive UAG**: a fast-tracked topic where all agents agree on Round 1 is exactly the groupthink case UAG exists to catch — run UAG before converging it.
 - Sub-questions resolved in-team — do NOT bubble up to user
 - Continue until all topics have either clear direction (UAG passed) or genuine disagreement
 
@@ -489,6 +489,19 @@ Present the batch result **with team evidence**:
 - Topic 3: [title] → revisit: [what info team couldn't find].
 ```
 
+**REQUIRED — Steering Readout (every round, user-facing, plain language).** After the batch result above, TL MUST emit a plain-language `## Steering Readout — Round N` block so the user keeps a live correction window. Three parts, **decision-first** (TL's judgment leads — never an A/B/C options dump, never hands the decision back):
+1. **Triage** (the judgment, leads): `deep-diving: <topic + one-line why> | shallow: <topic> | parked: <noise points, listed>`
+2. **Status**: one line per topic
+3. **Redirect?** (secondary): a correction-window CTA only — does NOT replace the judgment above
+
+**Triage = the judgment, not decoration.** TL ranks points by **stakes × reversibility**, cuts noise, merges small points, and writes the result into the Triage line — surfacing it to the user AND driving TL's own attention budget. Not every point earns an operation.
+
+**No silence.** The readout is mandatory every round: if there was nothing to triage, write `Triage: no triage (all points already weighted)` explicitly — never omit the block. The first readout after the exploration round MUST carry a non-empty `parked:` list when noise was cut.
+
+**Detail scales with contention** (not all-or-nothing). The whole-readout one-line form (e.g. `Steering: all topics converging, closing Round N`) is legal ONLY when every topic is converging/simple. If any topic is being deep-dived or has an **open disagreement**, the readout MUST carry a substantive Triage entry for each such topic (**no boilerplate** like "deep-dive X because complex"); converging topics may be one line within the same readout.
+
+Keep the readout in plain language — no internal bookkeeping terms (Round 0 / §1.5.3 / synthesis-gate / UAG / etc.) in this user-facing block.
+
 For escalated topics: use `AskUserQuestion` with team findings + genuine dilemma + YOUR leaning.
 
 **Record** for each topic decided:
@@ -555,9 +568,6 @@ entities: []
 |---|-------|----------|-----------|---------------|
 | 1 | [topic] | [decision] | [evidence-based reason] | high/medium/low |
 
-## Doodlestein Review
-[Challenges raised, how each was resolved, any topics reopened]
-
 ## Spawned Discussions
 | # | Topic | New Discussion | Reason |
 |---|-------|----------------|--------|
@@ -568,24 +578,23 @@ entities: []
 |---|-------|------------|--------|
 | (only if Sweep resolved deferred items) |
 
-## Team Composition
-| Agent | Role | Backend | Joined |
-|-------|------|---------|--------|
-| host | TL (moderator) | Claude | Start |
-| <name> | <role> | codex/gemini/claude | Start/Round N/Doodlestein |
-
 ## Process Metadata
-- Discussion rounds: N (team-internal rounds not counted)
-- Topics: X total (Y converged, Z spawned, W explained)
+<!-- KEEP this header AND the two fields below: /ae:plan reads them as dual sentinels
+     (plan/SKILL.md ~:106 requires the heading; ~:110 reads these two field VALUES).
+     Deleting either the header or these fields makes /ae:plan refuse or false-warn.
+     Other per-discussion counts are intentionally omitted (machine bookkeeping, not user-facing). -->
 - Autonomous decisions: N
 - User escalations: N
-- Doodlestein challenges: N raised, M resolved, K reopened topics
-- Deferred resolved in Sweep: N
 
 ## Next Steps
 → `/ae:plan` for converged decisions
 → Resolve spawned discussions first if any
+
+## Doodlestein Review
+[Challenges raised, how each was resolved, any topics reopened — audit trail, kept below Next Steps]
 ```
+
+**Conclusion prose follows [AE Output Standards](../../output-standards.md)** (same as `analyze`): lead with the single most important decision (no preamble); rationale concise and directly supporting the decision; risks explicit; rejected alternatives + round-by-round detail belong in the lower-layer audit trail, not the pyramid tip.
 
 **Entity extraction (required)**: Before writing the conclusion, extract entities from the Decision Summary Topic column for the `entities:` frontmatter field. For each topic: produce the full compound form (kebab-case) + individual tokens. Single-word topics → one entity. Multi-word → tokens + full compound only (no partial compounds). Filter stopwords and pure numbers. Lowercase, deduplicate. Example: "Auth middleware" → `[auth, middleware, auth-middleware]`.
 
@@ -698,7 +707,7 @@ Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reduc
 - **One team, one lifecycle**: Spawn once, add agents as needed, never remove. Shutdown only after Doodlestein post-conclusion review completes.
 - **Strong opinions welcome**: Agents with dissenting views are assets. Genuine disagreement is valuable signal.
 - **Dynamic composition**: Agent roles determined by discussion content via `ae:agent-selection`. Multiple instances of same backend with different roles encouraged.
-- **Discussion before user**: Team runs minimum 2 rounds (research → explore). Sub-questions resolved internally. Only genuine dilemmas reach the user.
+- **Discussion before user**: pace by complexity. Simple / high-reversibility topics may converge in **1 round** (invoking the existing high-reversibility fast-track); complex topics — genuinely contested AND consequential — run the full research → explore. **A 1-round fast-track topic MUST still run the Unanimous Agreement Gate (UAG)**; only purely informational (non-decision) topics skip the explore round. Sub-questions resolved internally. Only genuine dilemmas reach the user.
 - **Batch, don't serialize**: All topics discussed together, not one by one
 - **Decide, don't ask**: TL resolves autonomously by default, escalates only when genuinely stuck
 - **No deferred survives**: every item must have a result before Conclusion
