@@ -12,7 +12,7 @@ source: regression
 #### Fast path present with all guards (AC1)
 - [text:contains] Rule 2 opens with `**Any REVISE** (after Rule 1.5 filtering)` (label preserved) and routes to two branches
 - [text:contains] `Convergent-REVISE fast path` branch exists with the three conditions: `方向收敛互不冲突`, `无需用户独有判断`, `不实质改动框架结构`
-- [text:contains] Structural diff gate present: demotion on `more than 1 top-level section header` OR `>30% in line count`, logging `[FAST-PATH DEMOTED: diff exceeded structural bound]`
+- [text:contains] Structural diff gate present: demotion on heading add/remove/rename OR `>30% in line count AND by more than 5 lines absolute`, logging `[FAST-PATH DEMOTED: diff exceeded structural bound]`
 - [text:contains] `round_0: integrated_no_rerun` set on fast-path pass; framing template enum comment includes `integrated_no_rerun`
 - [text:contains] Structured three-condition record in `round_0_notes` with labeled entries `convergent:`, `no_user_call:`, `not_structural:`
 - [text:contains] Standard-2 three-line announcement template opening `## Round 0: convergent revisions integrated`, listing the integrated items, ending with the correction-window line (有异议现在说)
@@ -21,7 +21,8 @@ source: regression
 #### Old machinery intact (over-delete guard)
 - [text:contains] Contested path retains all three options: `Revise` (rewrites framing.md + re-runs Round 0), `Override` (skip Round 0 outcome), `Cancel` (abort discussion)
 - [text:contains] `Rerun limit` paragraph still present (3 consecutive reruns → escalate)
-- [text:contains] `byte-for-byte preserved across re-runs` still in the contested Revise option AND the fast path states Frozen is byte-for-byte preserved
+- [text:contains] `byte-for-byte preserved across re-runs` still in the contested Revise option
+- [text:contains] The fast path states Frozen is `byte-for-byte preserved` (the `as in every rewrite` clause)
 - [text:contains] Rationale paragraph reads `dispositioned cleanly (fast-path integration or contested halt)`
 
 ### MUST_NOT

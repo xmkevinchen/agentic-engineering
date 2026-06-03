@@ -269,7 +269,7 @@ The `target:` field is required on REVISE verdicts and MUST be one of the 3 muta
 2. **Any REVISE** (after Rule 1.5 filtering) → TL first classifies the valid REVISE set, then routes to one of two branches (this classification is internal to Rule 2 — the rule-ordering and first-match-wins semantics of Rules 1–4 are unchanged):
 
    **(a) Convergent-REVISE fast path** — fires only when ALL three conditions hold: ① 方向收敛互不冲突 (all suggested edits point the same direction, none contradict another); ② 无需用户独有判断 (no REVISE requires a business/preference call only the user can make); ③ 不实质改动框架结构 (TL can integrate each edit faithfully; the integration is wording/supplement-level, not structural — calibration evidence: F-036/F-037 reruns where deltas had shrunk to wording level were pure churn, while F-037's FIRST run had substantive REVISEs that merited a rerun).
-   - **Structural diff gate** (mechanical pre-commit check, after the three-condition judgment, before announcing): diff the integrated framing against the pre-integration version. If the diff spans **more than 1 top-level section header** OR **any section grows >30% in line count** → demote to the contested path automatically (no override, no user prompt); log `[FAST-PATH DEMOTED: diff exceeded structural bound]`. This makes the `not_structural:` record evidence, not assertion.
+   - **Structural diff gate** (mechanical pre-commit check, after the three-condition judgment, before announcing): diff the integrated framing against the pre-integration version. Demote to the contested path automatically (no override, no user prompt) if **the diff adds, removes, or renames any section heading** (structural = the section structure itself changed) OR **any section grows >30% in line count AND by more than 5 lines absolute** (the absolute floor keeps single-sentence additions to short sections inside the fast path); log `[FAST-PATH DEMOTED: diff exceeded structural bound]`. This makes the `not_structural:` record evidence, not assertion. (Bounds recalibrated at F-038 review: a section-count bound would demote legitimate multi-section wording integrations — the F-037 case this fast path exists to serve.)
    - On pass: TL integrates the edits (`## User Question (Frozen)` byte-for-byte preserved, as in every rewrite), sets `round_0: integrated_no_rerun`, and writes a structured three-condition record into `round_0_notes` with three labeled entries: `convergent:` (each REVISE theme + why they coexist), `no_user_call:` (why no user judgment was needed), `not_structural:` (which integrations were wording/supplement-level; cite the diff-gate numbers).
    - Announce to the user (Standard 2 three-line form — the user's correction window needs the delta visible):
      ```
@@ -278,7 +278,7 @@ The `target:` field is required on REVISE verdicts and MUST be one of the 3 muta
      - 快速通过依据:方向一致、无需你裁决、不动框架结构
      - 即将进入下一步——有异议现在说。
      ```
-     Then proceed to Step 1.6. No mandatory rerun.
+     Then proceed to Step 1.6 — but do NOT spawn the Step 2 council in the same turn as this announcement: the council spawn waits for the next turn boundary, so the announcement reaches the user before the discussion goes live. An objection arriving before the council spawn reroutes to the contested path. No mandatory rerun.
    - **auto-revert**: if during Round 1 ≥2 agents re-raise a framing objection on a fast-path-integrated point (sign of a mis-classified substantive disagreement), TL immediately re-runs Round 0 via the contested path and files a BL to tighten the three conditions.
 
    **(b) Contested path** — REVISEs conflict with each other, OR any requires a user-owned decision, OR integration would materially reshape the framing (or the diff gate demoted): halt. Set `round_0: revise_requested` in `framing.md` frontmatter, populate `round_0_notes` with consolidated REVISE feedback across all responding agents (only valid REVISE verdicts that survived Rule 1.5). Present consolidated list to user with options:
@@ -443,7 +443,7 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
    `n_strictly_needed_estimate` comes from `doodlestein-scope-reducer`'s post-conclusion denominator estimate when scope-reducer has run for this discussion; -1 when unavailable (e.g., this is a Round 1 synthesis and scope-reducer hasn't fired yet — scope-reducer is post-conclusion). The 9-field shape uses `record_type: "synthesis-gate"` as a discriminator so this per-round record can coexist with T1's per-skill-invocation 9-field record in the same `<session-id>.ndjson` stream without consumer confusion.
 
    Per-round bounded scope: per-mechanism list is capped at the synthesis's actual mechanism count. No minimum prune quota — some Round 1+ work genuinely adds nothing prunable. The forcing function is the WORK of attempting + the runtime gate, not the result count.
-2. **Of-framing disposition**: list every of-framing challenge raised this round + TL's disposition (integrate / reject-with-reason / defer-to-followup-BL). TL fills this; do NOT rely on agent self-tagging of challenges.
+2. **Of-framing disposition**: list every of-framing challenge raised this round + TL's disposition (integrate / reject-with-reason / defer-to-followup-BL). TL fills this; do NOT rely on agent self-tagging of challenges. **When `round_0: integrated_no_rerun`**: additionally cross-check each of-framing challenge against the fast-path-integrated points — ≥2 agents re-raising an integrated point triggers the auto-revert (§1.5.3 Rule 2a: contested-path rerun + BL).
 3. **Verification artifact**: any claim of "verified / computed / checked" must cite a concrete artifact (file path, script output, document section). No artifact → mark `unvalidated`; do not mark such claims converged.
 4. **Frame-challenge disappearance self-check**: before writing synthesis, compare Round N-1's of-framing markers against Round N — did any silently disappear without explicit resolution? regex / keyword comparison is acceptable tooling. Record the check outcome in synthesis.
 
@@ -773,7 +773,7 @@ stage: framing
 created: YYYY-MM-DD
 round_0: pending # pending → approved | approved (cross-family-degraded) | integrated_no_rerun | revise_requested | overridden
 round_0_reviewers: [] # populated by Step 1.5 after aggregation; list of reviewer names
-round_0_notes: "" # human-readable rationale for override, or aggregation notes
+round_0_notes: "" # human-readable rationale for override, aggregation notes — or on integrated_no_rerun: the structured three-condition record (convergent: / no_user_call: / not_structural:)
 ---
 
 # Framing — [title]
