@@ -93,9 +93,9 @@ After the per-BL verdicts, group active features below by `theme:` tag — situa
 
 When backlog is empty (or all candidates filter out): `(a) Promote candidates: inbox is empty. Run /ae:backlog "<one-line idea>" to capture something — frictionless inbox drop, classification later.`
 
-#### Batch-approval block (when ≥ 1 PROMOTE verdict was emitted)
+#### Batch-approval block (when ≥ 1 PROMOTE verdict OR ≥ 1 Tier-1 CLOSE candidate)
 
-When the verdict pass produced one or more PROMOTE verdicts, append a structured approval block after the verdicts and run a 2-step interactive approval flow before continuing to section (b). This bridges `/ae:roadmap` Clarify-output to `/ae:analyze` Organize-execution without the user having to manually copy BL-IDs.
+When the verdict pass produced one or more PROMOTE verdicts **OR** one or more Tier-1 CLOSE candidates, append a structured approval block after the verdicts and run the interactive approval flow before continuing to section (b). This bridges `/ae:roadmap` Clarify-output to `/ae:analyze` Organize-execution (PROMOTE) and to the scoped CLOSE move (Tier-1 CLOSE), without the user having to manually copy BL-IDs. The zero-PROMOTE-but-≥1-Tier-1-CLOSE case MUST still render the block (the CLOSE confirmation below fires on its own).
 
 **Per-BL field collection** (mechanical pre-LLM step): for each PROMOTE BL, read its body. Pull `size:` if frontmatter has it (mark `[frontmatter]`); else prepare a placeholder for LLM inference (mark `[inferred]`). Pull explicit `depends_on:` if present (mark `[frontmatter]`). LLM-infer order + missing size + missing deps from BL bodies. *(Implementation note, not a spec constraint: typical small N — 2–5 PROMOTE candidates — fits comfortably in a single LLM pass; if N grows large or BL bodies are dense, fallback to per-BL inference is acceptable. The block format below is the contract; batching shape is not.)*
 
@@ -128,6 +128,36 @@ Title column truncated to ~55 chars (use `…` ellipsis if longer). Size on the 
 2. After the multi-select returns a (possibly reduced) list, render the revised list in the same approval-block format above and call `AskUserQuestion` with two options:
    - `Approve [N kept]` — proceed with the kept subset
    - `Cancel (nothing will be promoted)` — exit with zero `/ae:analyze` invocations
+
+##### CLOSE confirmation + Apply CLOSEs (F-035 — independent of the PROMOTE flow above)
+
+Runs AFTER the PROMOTE Step A/B flow resolves (and after the Supersession scan), as a **separate, independently-selectable** confirmation — the user may approve PROMOTEs and decline CLOSEs, or vice versa. CLOSE confirmation MUST NOT be bundled into the PROMOTE `AskUserQuestion`.
+
+**Actionable set = Tier-1 ONLY.** Render the Tier-1 CLOSE candidates (done/abandoned-origin_bl zombies) as the actionable list. **Tier-2 advisory-grep CLOSEs are NOT actionable** — render them as surface-only informational lines BELOW the actionable block and give them no batch action:
+
+```
+/ae:roadmap → CLOSE candidates (N Tier-1, actionable)
+─────────────────────────────────────────────────────────────────────
+ 1. BL-NNN Title — promoted into F-MMM (done/abandoned); confirm no valid remainder
+ 2. ...
+─────────────────────────────────────────────────────────────────────
+Advisory — review manually (NOT auto-closable):
+ • BL-PPP [advisory grep match F-QQQ] — read the cited feature/plan before deciding
+```
+
+This structurally enforces HARD CONSTRAINT 1: a bulk-confirm cannot move a Tier-2 false-positive because Tier-2 is never in the actionable set.
+
+**CLOSE confirmation prompt** (only when ≥ 1 Tier-1 CLOSE): call `AskUserQuestion` (single-select), separate from the PROMOTE prompt:
+- `Apply CLOSEs (moves N BLs to .ae/backlog/closed/)` — proceed to the move
+- `Remove some` — `multiSelect` drop-flow mirroring Step B (all pre-checked; uncheck to skip a BL)
+- `Cancel (nothing will be closed)` — exit with zero moves
+
+The move runs ONLY on explicit `Apply CLOSEs` selection; it MUST NOT auto-run.
+
+**Apply CLOSEs** — for each confirmed Tier-1 CLOSE BL, in order:
+1. **Append an undo-log line** to `.ae/backlog/.close-undo-log.md` BEFORE moving (`.ae/` is gitignored — no git undo): `<date> CLOSE BL-NNN "<title>" — .ae/backlog/unscheduled/BL-NNN-*.md → closed/ (superseded_by <ref>)`.
+2. `mv .ae/backlog/unscheduled/BL-NNN-*.md .ae/backlog/closed/`.
+3. Write closure metadata into the moved file's frontmatter (self-documenting — all fields): `status: closed`, `closed: <date>`, `closed_reason: "<verdict reason>"`, and `superseded_by: <F-NNN | plan-NNN>` (**optional** — present for Tier-1 origin_bl matches; may be absent where no clean reference exists). Mirrors the manual `closed/` convention (e.g. BL-015/BL-044).
 
 **Post-approval execution** (the "loop" — produces no new TUI; just streams completion lines): for each accepted BL in displayed order, invoke `/ae:analyze BL-NNN` with the spawn-prompt augmented by a `PRE_APPROVED_VALUES` block. The block format defined here is canonical; `/ae:analyze` consumes it per its `analyze/SKILL.md` "Pre-approved values input" subsection (parser side, references this format, does not redefine it).
 
@@ -320,7 +350,7 @@ Archive a roadmap by name without going through the prompt. Refuses if any linke
 
 ## Non-goals
 
-- **No promote action.** Surfacing candidates is Clarify; the actual BL → feature promotion is `/ae:analyze BL-NNN` (Organize). `ae:roadmap` never moves files in the backlog or creates feature dirs.
+- **No promote action.** Surfacing candidates is Clarify; the actual BL → feature promotion is `/ae:analyze BL-NNN` (Organize). `ae:roadmap` never creates feature dirs. **Scoped exception (F-035)**: the one file mutation `ae:roadmap` may perform is the **human-confirmed, Tier-1-only CLOSE move** — `mv` a superseded BL from `unscheduled/` to `.ae/backlog/closed/` after explicit `Apply CLOSEs` selection. Promotion and feature-dir creation remain prohibited; Tier-2 advisory CLOSEs are never moved.
 - **No sprint primitive.** No `plan` / `close` / `move` / `add` / `remove` subcommands, no `v<X>.<Y>.<Z>` directories. The legacy version-grouped model was superseded by GTD; legacy files stay in place but aren't read by default.
 - **Default-read auto-eval is display-only** (BL-062). Default invocation aggregates existing `size:` AND auto-evaluates unsized features for display, but never writes to feature `index.md` `size:` automatically. `--resize` is the explicit persist path. Cache state lives in `.ae/cache/auto-size.yml` (gitignored, transient) — not user state.
 - **No retrospective analysis.** That's `/ae:retrospect` (project-level long-cycle Reflect). `ae:roadmap` is short-cycle orientation.
