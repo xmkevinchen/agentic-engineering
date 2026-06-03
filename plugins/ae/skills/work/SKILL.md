@@ -368,8 +368,8 @@ Read the code-review SKILL.md and follow its instructions within the current con
 Check E dispositions **every** finding accumulated across the pre-commit chain — the Check C.1 (lint) / C.2 (typecheck) P2-logic findings labeled `[C.1 Lint]` / `[C.2 Typecheck]`, the C.5 protocol-invariant result, AND Check D code-review findings — not only code-review output. Findings raised before Check D (i.e., C.1/C.2) are carried forward into this disposition set so they cannot silently drop when Check D produced nothing. Greenfield projects (zero pre-existing violations) should disposition a C.1/C.2 finding as **fix-now** rather than defer (see C.1 rationale).
 - **P1 (blocker)**: always show, fix now
 - **P2 logic/security**: show, human disposition (fix / defer / backlog)
-- **P2 style/naming**: auto-skip
-- **P3 (minor)**: auto-skip
+- **P2 style/naming**: auto-skip — announce in one sentence (e.g. `Skipped 2 style/naming findings (minor; fix optional).`; output-standards.md Rule B)
+- **P3 (minor)**: auto-skip — included in the same one-sentence announcement
 - **Defer** — MUST write structured entry to `<milestone-dir>/notes.md` (resolved per **Milestone path resolution** helper; create directory and file if needed). Format:
     ```
     DEFERRED [Step N]: <one-line finding description>
@@ -472,7 +472,7 @@ Fix findings, re-run from Check D until clean pass.
    3. Write findings to `<milestone-dir>/notes.md` (resolved per **Milestone path resolution** helper) using `CHECKPOINT:` prefix (not `DEFERRED` — avoids triggering Check 4 parsing)
    4. P1 findings set `no_accumulated_p1 = false`
 
-   If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`.
+   If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`. (Not a Rule B announcement case: the checkpoint is promised at midpoint/final only — a non-matching step count means it is not yet due, nothing is suppressed; per-step "not due" notices would be noise.)
 
 4. **Auto-pass gate** (default: ON) — evaluate after every step:
    ```
@@ -480,8 +480,8 @@ Fix findings, re-run from Check D until clean pass.
    ```
    `no_accumulated_p1` defaults to `true`. Set to `false` only when accumulated checkpoint runs and finds P1.
    `deferred_resolved` defaults to `true`. Set to `false` when Check 4 found DEFERRED items matching current step but TL did not write dispositions for all of them.
-   - All met → auto-continue: `✅ Auto-pass: tests green, no P1, no accumulated P1, no drift, review complete. Continuing to Step N+1.`
-   - Any failed → **pause for user confirmation**
+   - All met → auto-continue: `✅ Ready to continue: tests pass, no blockers, no unresolved drift. Continuing to Step N+1.` (user-facing line is plain language — the gate's internal variables above are spec, not display; output-standards.md Rule A)
+   - Any failed → **pause for user confirmation** — lead the pause message with the blocker list in plain language, codes in parentheses (e.g. `Pausing: 1 blocker finding (P1) needs a fix before continuing.`)
    - Drift detected (not approved) → always pause
    - Security pattern matched → always pause
    - No test command → `tests_green` = UNVERIFIED — **pause for user confirmation** (do not treat as true)
