@@ -393,7 +393,7 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 **Round 3+ — Convergence**:
 - Same per-agent file pattern continues
 - TL pushes converging topics toward conclusion
-- **Unanimous Agreement Gate**: when all agents agree on a topic direction, TL runs UAG per `ae:agent-teams` Discussion Mode — structured falsification question, agents must search for counterexamples. Passed UAG = genuine convergence.
+- **Unanimous Agreement Gate**: when all agents agree on a topic direction, TL runs UAG per `ae:agent-teams` Discussion Mode — structured falsification question, agents must search for counterexamples. Passed UAG = genuine convergence. **The 1-round fast-track (see Principles → "Discussion before user") does NOT waive UAG**: a fast-tracked topic where all agents agree on Round 1 is exactly the groupthink case UAG exists to catch — run UAG before converging it.
 - Sub-questions resolved in-team — do NOT bubble up to user
 - Continue until all topics have either clear direction (UAG passed) or genuine disagreement
 
@@ -711,7 +711,7 @@ Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reduc
 - **One team, one lifecycle**: Spawn once, add agents as needed, never remove. Shutdown only after Doodlestein post-conclusion review completes.
 - **Strong opinions welcome**: Agents with dissenting views are assets. Genuine disagreement is valuable signal.
 - **Dynamic composition**: Agent roles determined by discussion content via `ae:agent-selection`. Multiple instances of same backend with different roles encouraged.
-- **Discussion before user**: Team runs minimum 2 rounds (research → explore). Sub-questions resolved internally. Only genuine dilemmas reach the user.
+- **Discussion before user**: pace by complexity. Simple / high-reversibility topics may converge in **1 round** (invoking the existing high-reversibility fast-track); complex topics — genuinely contested AND consequential — run the full research → explore. **A 1-round fast-track topic MUST still run the Unanimous Agreement Gate (UAG)**; only purely informational (non-decision) topics skip the explore round. Sub-questions resolved internally. Only genuine dilemmas reach the user.
 - **Batch, don't serialize**: All topics discussed together, not one by one
 - **Decide, don't ask**: TL resolves autonomously by default, escalates only when genuinely stuck
 - **No deferred survives**: every item must have a result before Conclusion
