@@ -568,9 +568,6 @@ entities: []
 |---|-------|----------|-----------|---------------|
 | 1 | [topic] | [decision] | [evidence-based reason] | high/medium/low |
 
-## Doodlestein Review
-[Challenges raised, how each was resolved, any topics reopened]
-
 ## Spawned Discussions
 | # | Topic | New Discussion | Reason |
 |---|-------|----------------|--------|
@@ -581,24 +578,23 @@ entities: []
 |---|-------|------------|--------|
 | (only if Sweep resolved deferred items) |
 
-## Team Composition
-| Agent | Role | Backend | Joined |
-|-------|------|---------|--------|
-| host | TL (moderator) | Claude | Start |
-| <name> | <role> | codex/gemini/claude | Start/Round N/Doodlestein |
-
 ## Process Metadata
-- Discussion rounds: N (team-internal rounds not counted)
-- Topics: X total (Y converged, Z spawned, W explained)
+<!-- KEEP this header AND the two fields below: /ae:plan reads them as dual sentinels
+     (plan/SKILL.md ~:106 requires the heading; ~:110 reads these two field VALUES).
+     Deleting either the header or these fields makes /ae:plan refuse or false-warn.
+     Other per-discussion counts are intentionally omitted (machine bookkeeping, not user-facing). -->
 - Autonomous decisions: N
 - User escalations: N
-- Doodlestein challenges: N raised, M resolved, K reopened topics
-- Deferred resolved in Sweep: N
 
 ## Next Steps
 → `/ae:plan` for converged decisions
 → Resolve spawned discussions first if any
+
+## Doodlestein Review
+[Challenges raised, how each was resolved, any topics reopened — audit trail, kept below Next Steps]
 ```
+
+**Conclusion prose follows [AE Output Standards](../../output-standards.md)** (same as `analyze`): lead with the single most important decision (no preamble); rationale concise and directly supporting the decision; risks explicit; rejected alternatives + round-by-round detail belong in the lower-layer audit trail, not the pyramid tip.
 
 **Entity extraction (required)**: Before writing the conclusion, extract entities from the Decision Summary Topic column for the `entities:` frontmatter field. For each topic: produce the full compound form (kebab-case) + individual tokens. Single-word topics → one entity. Multi-word → tokens + full compound only (no partial compounds). Filter stopwords and pure numbers. Lowercase, deduplicate. Example: "Auth middleware" → `[auth, middleware, auth-middleware]`.
 
