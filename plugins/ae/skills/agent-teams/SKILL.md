@@ -480,7 +480,7 @@ Beyond the env var check, auto-fallback skills can verify `run_in_background` pa
 
 ## Skill step progress tracking
 
-Multi-step skills proactively use the Claude Code Task APIs (`TaskCreate` / `TaskUpdate`) to surface execution progress in the persistent task panel above the prompt. This complements (does NOT replace) the durable per-step disk artifact (`step-summaries.md` written by `/ae:work` post-commit). Tasks live for the conversation; step-summaries live across sessions.
+Multi-step skills proactively use the Claude Code Task APIs (`TaskCreate` / `TaskUpdate`) to surface execution progress in the persistent task panel above the prompt. This complements (does NOT replace) the durable per-step disk artifact (`step-summaries.md` written by `/ae:work` post-commit). Tasks live for the conversation; step-summaries live across sessions. Task lists interact with team lifecycles — see §H before choosing task-creation timing.
 
 ### A. Canonical phase IDs
 
@@ -534,7 +534,7 @@ The per-skill task list is **static and design-time** — agents do NOT estimate
 
 ### C. Lifecycle
 
-1. **At skill start**: batch-create all known tasks via one `TaskCreate` per row in the per-skill list above. For ae:work specifically, the `Step N` rows are plan-dependent — defer the per-step `TaskCreate` calls until after Pre-check Check 2 reads the plan body, then create one task per `### Step N` heading found.
+1. **At skill start**: batch-create all known tasks via one `TaskCreate` per row in the per-skill list above. For ae:work specifically, the `Step N` rows are plan-dependent — defer the per-step `TaskCreate` calls until after Pre-check Check 2 reads the plan body, then create one task per `### Step N` heading found. (Timing nuance: "at skill start" is the default for multi-team skills; single-team skills create AFTER `TeamCreate` instead — see §H rule 2.)
 
 2. **Mid-plan resumes** (ae:work entering on step 3 of 5 because steps 1-2 are `[x]`): create tasks for ALL plan steps; immediately call `TaskUpdate(taskId, status: "completed")` for already-`[x]` steps; leave pending steps at default `pending` status. Panel reflects accurate state on resume.
 
@@ -579,6 +579,14 @@ Tasks and step-summaries serve different time horizons:
 - **`step-summaries.md`**: durable, written post-commit by ae:work, readable across sessions, consumed by the Context Overlap Heuristic in subsequent ae:work runs.
 
 They are complementary, not redundant. A skill execution that completes successfully will produce both (tasks visible during the run; step-summaries persisted to `<output.milestones>/<plan-id>/step-summaries.md` after each commit).
+
+### H. Team-context interaction (tasks vs teams)
+
+`Team = TaskList 1:1` — `TeamCreate` switches the active task list, and `TeamDelete` switches it back. Consequence: **step tasks created BEFORE `TeamCreate` return `Task not found` for the entire lifetime of the team** — the tasks are not lost, they live on the previous (session) list and become accessible again after `TeamDelete`. This is harness behavior (Team=TaskList is a Claude Code design), not an AE bug — do not fight it in SKILL.md flows.
+
+- **Rule 1 — do not retry mid-team**: while a team is active, do NOT retry `TaskUpdate` against an orphaned task (the retries fail identically and read as a stuck panel). Hold the status change and **reconcile after TeamDelete** in one batch.
+- **Rule 2 — batch-create AFTER TeamCreate** (MUST for new skills, SHOULD-retrofit for existing ones): a skill whose whole flow runs inside ONE team creates its step tasks after `TeamCreate`, so the tasks live on the team list and stay accessible throughout. Skills with multiple sequential teams (e.g. ae:discuss: framing-review → council) accept the orphan windows and apply Rule 1.
+- **Precedence**: this canonical rule wins; existing per-skill tables that still say "At skill start, batch-create" (9 skills as of F-039) update opportunistically the next time each skill is modified — no big-bang rewrite.
 
 ### Auto-compact panel freeze (known limit)
 

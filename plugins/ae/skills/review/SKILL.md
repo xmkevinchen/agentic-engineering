@@ -254,7 +254,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Phase | When created | When `in_progress` | When `completed` |
 |---|---|---|---|
 | `ae:review: Pre-check` | At skill start (before Check 1) | Immediately before Check 1 | After Check 5 passes |
-| `ae:review: Security review` | At skill start (with Pre-check, even though spawn happens later — batch-create per agent-teams §C.1) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
+| `ae:review: Security review` | After `TeamCreate` (Step 2 batch-create — single-team skill, per agent-teams §H rule 2) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
 | `ae:review: Performance review` | (same) | (same) | (same) |
 | `ae:review: Architecture review` | (same) | (same) | (same) |
 | `ae:review: Cross-family challenge + synthesis` | (same) | (same) | (same) |
