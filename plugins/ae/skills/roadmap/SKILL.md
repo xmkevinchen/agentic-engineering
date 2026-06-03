@@ -56,10 +56,11 @@ The default invocation produces four sections in this order. Sections that have 
 
 Before LLM judgment runs, mechanically filter — in this order:
 
-1. **Terminal BLs** (runs FIRST): status in `{promoted, done, closed}` per State Reading — excluded outright, never reach origin_bl routing or CLOSE evaluation. This ordering is load-bearing: a BL already carrying `status: promoted`/`closed` (e.g. an in-flight feature's own origin BL) is dropped here before any CLOSE logic, which is the first-line protection against mis-CLOSEing a live origin BL.
+1. **Terminal BLs** (runs FIRST): status in `{promoted, done, closed}` per State Reading — excluded outright, never reach origin_bl routing or CLOSE evaluation. This ordering is load-bearing: a BL already carrying `status: promoted`/`closed` (e.g. an in-flight feature's own origin BL) is dropped here before any CLOSE logic. This is the **first of two layers** protecting a live origin BL from mis-CLOSE; the active/paused-origin_bl exclusion in step 2 is the second layer (it catches a live-feature origin BL even if its `status:` was never written).
 2. **Already-promoted BLs (state-split for CLOSE routing — F-035)**: scan `origin_bl:` across `.ae/features/{active,done,abandoned,paused}/*/index.md`. Treat both scalar (`origin_bl: BL-042`) and list (`origin_bl: [BL-042, BL-051]`) forms; multi-BL consolidation counts (a BL that is only one of several IDs in a feature's list is still matched). Route by the matched feature's **state**:
    - BL-ID in an **active** or **paused** feature's `origin_bl` → **exclude** (genuinely in-progress; unchanged — no zombie partial-promotion PROMOTE suggestion).
    - BL-ID still present in `unscheduled/` whose ID is in a **done-** or **abandoned-**state feature's `origin_bl` → route to the **Tier-1 CLOSE candidate set** (zombie partial-promotion: the work shipped or was dropped but the BL was left behind). Previously these were silently excluded; CLOSE surfaces them.
+   - **Multi-state conflict — active/paused PREEMPTS done/abandoned (precedence rule, per review F5)**: if the same BL-ID appears in BOTH an active/paused feature's `origin_bl` AND a done/abandoned feature's `origin_bl` (e.g. partially addressed by a shipped feature, then re-promoted into an in-flight one), the **active/paused match WINS → exclude, NEVER CLOSE**. A BL that is live in any in-flight feature must never be routed to CLOSE, regardless of an additional done/abandoned match. Evaluate the active/paused exclusion across ALL features before concluding a BL is a done/abandoned-only zombie.
 
 The remaining set (`status: open` or `unscheduled`, not in any active/paused feature's `origin_bl`) is the PROMOTE/WAIT candidate pool; the done/abandoned-origin_bl zombies form the Tier-1 CLOSE candidate set.
 
@@ -84,7 +85,7 @@ BL-NNN: CLOSE — <stale / superseded / direction-rejected, one line>
 Discipline:
 
 - **Default to WAIT.** Only emit `PROMOTE` if the BL has a clear actionable shape. Vague, exploratory, duplicative, or already-blocked BLs are `WAIT`.
-- **CLOSE only on evidence (F-035).** Tier-1 origin_bl match → reliable CLOSE; phrase it as "promoted into F-NNN (done/abandoned) — confirm no valid remainder before closing" (a Tier-1 match means the work was promoted, NOT that the BL is necessarily fully addressed — a partial promotion may leave a valid remainder the human must check). Tier-2 grep alone → the LLM MUST read the cited feature/plan to confirm and tag the evidence `[advisory]`; if confirmation is insufficient → fall back to `WAIT`, NEVER CLOSE on grep-alone.
+- **CLOSE only on evidence (F-035).** A **Tier-1 origin_bl match yields CLOSE deterministically** — it is a mechanical, zero-false-positive classification, NOT subject to the "Default to WAIT" rule above (that default governs only the PROMOTE/WAIT candidate pool). For a Tier-1 zombie the LLM does not decide CLOSE-vs-WAIT; it only writes the reason + the "confirm no valid remainder" caveat. Phrase it as "promoted into F-NNN (done/abandoned) — confirm no valid remainder before closing" (a Tier-1 match means the work was promoted, NOT that the BL is necessarily fully addressed — a partial promotion may leave a valid remainder the human must check). Tier-2 grep alone → the LLM MUST read the cited feature/plan to confirm and tag the evidence `[advisory]`; if confirmation is insufficient → fall back to `WAIT`, NEVER CLOSE on grep-alone.
 - **Thin-BL fallback**: if a BL has empty body or fewer than ~20 words of substance below the frontmatter, emit `BL-NNN: WAIT — insufficient info; flesh out before promoting`. This prevents LLM judgment from degenerating into noise on stub BLs.
 - **No middle states.** No "MAYBE", no "INTERESTING", no rankings. Two outcomes, deterministic phrasing.
 - **Stable sort**: order candidates by `created` ascending (oldest first), tie-break by `id` ascending. Output stays stable across runs at scale.
@@ -131,7 +132,7 @@ Title column truncated to ~55 chars (use `…` ellipsis if longer). Size on the 
 
 ##### CLOSE confirmation + Apply CLOSEs (F-035 — independent of the PROMOTE flow above)
 
-Runs AFTER the PROMOTE Step A/B flow resolves (and after the Supersession scan), as a **separate, independently-selectable** confirmation — the user may approve PROMOTEs and decline CLOSEs, or vice versa. CLOSE confirmation MUST NOT be bundled into the PROMOTE `AskUserQuestion`.
+Runs AFTER the PROMOTE Step A/B flow resolves (and after the Supersession scan), as a **separate, independently-selectable** confirmation — the user may approve PROMOTEs and decline CLOSEs, or vice versa. CLOSE confirmation MUST NOT be bundled into the PROMOTE `AskUserQuestion`. **Zero-PROMOTE skip (per review)**: when the run produced zero PROMOTE verdicts but ≥ 1 Tier-1 CLOSE, SKIP the PROMOTE Step A/B entirely (do NOT render an empty PROMOTE list or emit the PROMOTE `AskUserQuestion`) and go straight to the CLOSE confirmation below. (Format note: this block renders a **condensed** form of the LLM-judgment CLOSE verdict — the `Supersession evidence:` line from the verdict output is not repeated here.)
 
 **Actionable set = Tier-1 ONLY.** Render the Tier-1 CLOSE candidates (done/abandoned-origin_bl zombies) as the actionable list. **Tier-2 advisory-grep CLOSEs are NOT actionable** — render them as surface-only informational lines BELOW the actionable block and give them no batch action:
 
@@ -149,7 +150,7 @@ This structurally enforces HARD CONSTRAINT 1: a bulk-confirm cannot move a Tier-
 
 **CLOSE confirmation prompt** (only when ≥ 1 Tier-1 CLOSE): call `AskUserQuestion` (single-select), separate from the PROMOTE prompt:
 - `Apply CLOSEs (moves N BLs to .ae/backlog/closed/)` — proceed to the move
-- `Remove some` — `multiSelect` drop-flow mirroring Step B (all pre-checked; uncheck to skip a BL)
+- `Remove some` — `multiSelect` drop-flow mirroring PROMOTE Step B: the multiSelect list contains **ONLY the Tier-1 actionable CLOSEs** (Tier-2 advisory lines are NEVER in it), all pre-checked; uncheck to skip a BL. After the multiSelect returns the reduced set, **re-render the kept list and call a second `AskUserQuestion`** with `Apply CLOSEs [N kept]` / `Cancel (nothing will be closed)` (mirrors Step B's re-render+confirm — do not move on the multiSelect alone).
 - `Cancel (nothing will be closed)` — exit with zero moves
 
 The move runs ONLY on explicit `Apply CLOSEs` selection; it MUST NOT auto-run.
