@@ -34,7 +34,7 @@ source: regression
 - [text:contains] §1.5.3 verdict format contains `target: <Problem Statement | Scope | Reference Material>` (the 3 mutable section names listed as enum)
 - [text:not_contains_in_block] verdict format's `target:` enum does NOT include `User Question (Frozen)` (sacred section is not a valid target)
 - [text:contains] §1.5.3 contains `Frozen-section integrity check` heading (Rule 1.5 name)
-- [structure:order] Rule 1.5 (Frozen-section integrity check) appears AFTER Rule 1 (Quorum check) AND BEFORE Rule 2 (Any REVISE → halt)
+- [structure:order] Rule 1.5 (Frozen-section integrity check) appears AFTER Rule 1 (Quorum check) AND BEFORE Rule 2 (Any REVISE → classify & route; F-038 split it into fast-path/contested branches)
 - [text:contains] Rule 1.5 contains `byte-for-byte` or `byte-exact` (spec text — instructs TL to do mechanical comparison; not requiring fixture to execute byte comparison)
 - [text:contains] Rule 1.5 contains `Do not judge semantic equivalence` or equivalent
 - [text:contains] Rule 1.5 contains `wording-only changes are still invalid` or equivalent
