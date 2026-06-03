@@ -266,7 +266,22 @@ The `target:` field is required on REVISE verdicts and MUST be one of the 3 muta
 
    If after this filter all REVISE verdicts are invalidated, treat as zero REVISE; proceed to Rules 3-4 (cross-family degraded check / unanimous APPROVED).
 
-2. **Any REVISE** (after Rule 1.5 filtering) → halt. Set `round_0: revise_requested` in `framing.md` frontmatter, populate `round_0_notes` with consolidated REVISE feedback across all responding agents (only valid REVISE verdicts that survived Rule 1.5). Present consolidated list to user with options:
+2. **Any REVISE** (after Rule 1.5 filtering) → TL first classifies the valid REVISE set, then routes to one of two branches (this classification is internal to Rule 2 — the rule-ordering and first-match-wins semantics of Rules 1–4 are unchanged):
+
+   **(a) Convergent-REVISE fast path** — fires only when ALL three conditions hold: ① 方向收敛互不冲突 (all suggested edits point the same direction, none contradict another); ② 无需用户独有判断 (no REVISE requires a business/preference call only the user can make); ③ 不实质改动框架结构 (TL can integrate each edit faithfully; the integration is wording/supplement-level, not structural — calibration evidence: F-036/F-037 reruns where deltas had shrunk to wording level were pure churn, while F-037's FIRST run had substantive REVISEs that merited a rerun).
+   - **Structural diff gate** (mechanical pre-commit check, after the three-condition judgment, before announcing): diff the integrated framing against the pre-integration version. If the diff spans **more than 1 top-level section header** OR **any section grows >30% in line count** → demote to the contested path automatically (no override, no user prompt); log `[FAST-PATH DEMOTED: diff exceeded structural bound]`. This makes the `not_structural:` record evidence, not assertion.
+   - On pass: TL integrates the edits (`## User Question (Frozen)` byte-for-byte preserved, as in every rewrite), sets `round_0: integrated_no_rerun`, and writes a structured three-condition record into `round_0_notes` with three labeled entries: `convergent:` (each REVISE theme + why they coexist), `no_user_call:` (why no user judgment was needed), `not_structural:` (which integrations were wording/supplement-level; cite the diff-gate numbers).
+   - Announce to the user (Standard 2 three-line form — the user's correction window needs the delta visible):
+     ```
+     ## Round 0: convergent revisions integrated
+     - [N] 条收敛修订已整合:<逐条一行清单>
+     - 快速通过依据:方向一致、无需你裁决、不动框架结构
+     - 即将进入下一步——有异议现在说。
+     ```
+     Then proceed to Step 1.6. No mandatory rerun.
+   - **auto-revert**: if during Round 1 ≥2 agents re-raise a framing objection on a fast-path-integrated point (sign of a mis-classified substantive disagreement), TL immediately re-runs Round 0 via the contested path and files a BL to tighten the three conditions.
+
+   **(b) Contested path** — REVISEs conflict with each other, OR any requires a user-owned decision, OR integration would materially reshape the framing (or the diff gate demoted): halt. Set `round_0: revise_requested` in `framing.md` frontmatter, populate `round_0_notes` with consolidated REVISE feedback across all responding agents (only valid REVISE verdicts that survived Rule 1.5). Present consolidated list to user with options:
    - **Revise**: TL rewrites `framing.md` per feedback, re-runs Round 0 (will transition `round_0` to `approved` or back to `revise_requested`). TL rewrite — scope, terminology, and structure only. **MUST NOT alter `## User Question (Frozen)` section: byte-for-byte preserved across re-runs.**
    - **Override**: skip Round 0 outcome for this discussion. Log `round_0: overridden` with user-supplied reason. Proceed to Step 1.6.
    - **Cancel**: abort discussion
@@ -282,7 +297,7 @@ The `target:` field is required on REVISE verdicts and MUST be one of the 3 muta
 
 **Rerun limit** (separate from aggregation — applies to the outer loop driven by Rule 2's Revise option): if the user selects **Revise + rerun** 3 consecutive times without the framing converging to APPROVED, escalate to the user rather than looping further. This is not an aggregation rule (single-run aggregation has no loop; all verdicts arrive in one batch).
 
-Rationale for rule order (addresses review-043 P1s): rule 1.5 fires before rule 2 because the mechanical guard (target validation + frozen-section byte-diff) must filter invalid REVISE verdicts before the user-facing halt — otherwise the user sees consolidated feedback derived from invalid REVISE proposals. Rule 2 fires before rule 3/4 so any REVISE halts cleanly. Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
+Rationale for rule order (addresses review-043 P1s): rule 1.5 fires before rule 2 because the mechanical guard (target validation + frozen-section byte-diff) must filter invalid REVISE verdicts before the user-facing halt — otherwise the user sees consolidated feedback derived from invalid REVISE proposals. Rule 2 fires before rule 3/4 so any REVISE is dispositioned cleanly (fast-path integration or contested halt). Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
 
 #### 1.5.4. Per-agent verdict files + team teardown
 
@@ -756,7 +771,7 @@ Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reduc
 id: "NNN"
 stage: framing
 created: YYYY-MM-DD
-round_0: pending # pending → approved | approved (cross-family-degraded) | revise_requested | overridden
+round_0: pending # pending → approved | approved (cross-family-degraded) | integrated_no_rerun | revise_requested | overridden
 round_0_reviewers: [] # populated by Step 1.5 after aggregation; list of reviewer names
 round_0_notes: "" # human-readable rationale for override, or aggregation notes
 ---
