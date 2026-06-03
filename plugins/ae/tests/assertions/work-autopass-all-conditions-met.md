@@ -8,8 +8,8 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [behavior] When all four conditions are true (`tests_green AND no_p1 AND (no_drift OR drift_approved) AND (NOT cross_family_degraded)`), the gate auto-continues without pausing
-- [text:contains] Output includes confirmation text matching: `✅ Auto-pass: tests green, no P1, no drift, review complete. Continuing to Step`
+- [behavior] When all gate conditions hold (tests pass, no blockers, drift resolved/approved, cross-family intact), the gate auto-continues
+- [text:contains] Output includes confirmation text matching: `✅ Ready to continue: tests pass, no blockers, no unresolved drift. Continuing to Step`
 - [behavior] Execution proceeds to the next pending plan step (`- [ ]`) automatically
 
 ### MUST_NOT
