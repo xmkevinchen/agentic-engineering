@@ -374,7 +374,7 @@ Apply Proxy Timeout Protocol from Agent Selection Reference.
 
 ### 3. Discussion Rounds (TL moderates)
 
-**TL is the moderator.** TL drives rounds, routes messages, highlights disagreements, identifies convergence. Per `ae:agent-teams` Discussion Mode.
+**TL is the moderator.** TL drives rounds, routes messages, highlights disagreements, identifies convergence. Per `ae:agent-teams` Discussion Mode. After exploration, TL triages points by stakes × reversibility (cut noise, merge small points) and surfaces the result in the Step 6 Steering Readout — discussion budget goes to high-weight points, not every point round-robin; not every point earns an operation.
 
 **Per-agent files are the primary artifact.** Each agent writes `round-NN/<agent-name>.md` themselves in every round. TL does NOT author these files and does NOT paraphrase their content into synthesis. Synthesis is an index/orientation layer on top of the per-agent files, not a replacement for them.
 
@@ -488,6 +488,19 @@ Present the batch result **with team evidence**:
 
 - Topic 3: [title] → revisit: [what info team couldn't find].
 ```
+
+**REQUIRED — Steering Readout (every round, user-facing, plain language).** After the batch result above, TL MUST emit a plain-language `## Steering Readout — Round N` block so the user keeps a live correction window. Three parts, **decision-first** (TL's judgment leads — never an A/B/C options dump, never hands the decision back):
+1. **Triage** (the judgment, leads): `deep-diving: <topic + one-line why> | shallow: <topic> | parked: <noise points, listed>`
+2. **Status**: one line per topic
+3. **Redirect?** (secondary): a correction-window CTA only — does NOT replace the judgment above
+
+**Triage = the judgment, not decoration.** TL ranks points by **stakes × reversibility**, cuts noise, merges small points, and writes the result into the Triage line — surfacing it to the user AND driving TL's own attention budget. Not every point earns an operation.
+
+**No silence.** The readout is mandatory every round: if there was nothing to triage, write `Triage: no triage (all points already weighted)` explicitly — never omit the block. The first readout after the exploration round MUST carry a non-empty `parked:` list when noise was cut.
+
+**Detail scales with contention** (not all-or-nothing). The whole-readout one-line form (e.g. `Steering: all topics converging, closing Round N`) is legal ONLY when every topic is converging/simple. If any topic is being deep-dived or has an **open disagreement**, the readout MUST carry a substantive Triage entry for each such topic (**no boilerplate** like "deep-dive X because complex"); converging topics may be one line within the same readout.
+
+Keep the readout in plain language — no internal bookkeeping terms (Round 0 / §1.5.3 / synthesis-gate / UAG / etc.) in this user-facing block.
 
 For escalated topics: use `AskUserQuestion` with team findings + genuine dilemma + YOUR leaning.
 
