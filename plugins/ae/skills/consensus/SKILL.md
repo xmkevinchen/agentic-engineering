@@ -6,6 +6,10 @@ user-invocable: true
 effort: medium
 ---
 
+<!-- ae-output-standards-pointer-v1 -->
+Adhere to [AE Output Standards](../../output-standards.md) in verdict formatting and TL session responses.
+<!-- /ae-output-standards-pointer-v1 -->
+
 # /ae:consensus — Structured Debate
 
 Build multi-perspective consensus on: **$ARGUMENTS**
@@ -191,6 +195,8 @@ Once all Round 1 inputs received, produce this EXACT evaluation block. Retain it
 - ROUND_DECISION: CROSS_EXAMINE / SYNTHESIZE
 - Reason: [one line]
 
+(`ROUND_DECISION` and this evaluation block are TL-internal routing state — they MUST NOT appear in the user-facing verdict; see output-standards.md Rule C.)
+
 Decision rules:
 - MODE=quick → always SYNTHESIZE (skip this evaluation entirely, go to Phase 2)
 - MODE=full → always CROSS_EXAMINE
@@ -232,47 +238,52 @@ Maximum 3 rounds total. After Round 3, MUST proceed to Phase 2 regardless.
 
 TL produces the final verdict:
 
+The verdict is a judgment, not a process record (output-standards.md Rule C) — no mode labels, no evaluation blocks, no round bookkeeping:
+
 ```markdown
-## Verdict
+## Recommendation
 
-### Mode
-[adaptive/quick/full] — [if adaptive: ROUND_DECISION reason]
+**Recommend**: [Proceed/Reject/Modify/Deadlocked — both paths below, your call] — [one-line why]
 
-### Mediator Evaluation
-[Include the final evaluation block from Phase 1]
+[2-3 sentence rationale: what tipped the judgment, citing the strongest evidence]
 
-### Cross-examination Summary
-[If cross-examination occurred: per-claim response summary table]
-[If skipped: "Skipped — [reason from evaluation]"]
+**Verdict**: [Confirmed / Overturned / Deadlocked — the debate outcome in one word]
+**Strongest argument for**: [one paragraph]
+**Strongest argument against**: [one paragraph + how the recommendation handles it]
+**Key risks**: [what this decision accepts + mitigation]
+**Next action**: [specific step]
 
-### Consensus Assessment
-- **Consensus**: all sides agree → proceed / reject
-- **Majority**: 2/3+ agree → proceed with noted risks
-- **Split**: no clear winner → present both paths, ask user to decide
+### Supporting detail (audit trail)
+[cross-family perspective if available; per-claim cross-examination summary if it occurred;
+ Deadlocked case: present both paths with evidence + your leaning — the user decides]
 
-### Strongest argument for
-[one paragraph]
+## Agent Selection Trace
+[verbatim [layer1]/[layer2] trace lines — required appendix per ae:agent-teams persisted-report contract]
+```
 
-### Strongest argument against
-[one paragraph]
+Worked example (the shape implementers should produce — judgment first, no process bookkeeping):
 
-### Cross-family perspective
-[summary of independent evaluations, if available]
+```markdown
+## Recommendation
 
-### Final recommendation
-[clear recommendation with rationale]
+**Recommend**: Proceed — migrating to SQLite WAL mode is low-risk and removes our top contention bug.
 
+Both sides agreed the failure modes are bounded; the critic's strongest objection (WAL sidecar
+files breaking naive file-copy backups) is already handled by our `.backup`-API script.
+Adopting now removes the lock-contention class behind 3 recent incidents.
+
+**Verdict**: Confirmed — the direction survived cross-examination.
+**Strongest argument for**: WAL eliminates writer-blocks-readers, our measured top contention source.
+**Strongest argument against**: WAL sidecar files break naive file-copy backups — handled: backup script already uses the `.backup` API, and its cadence bounds worst-case data loss to one interval.
+**Key risks**: NFS mounts unsupported (we deploy on local disk only); accepted.
+**Next action**: flip the pragma in the connection factory + add a migration note.
 ```
 
 ## Step 4: Verdict & Persist
 
 Write verdict directly to `pipeline.yml` → `output.analyses` (default: `.ae/analyses/`) as `NNN-consensus-slug.md`.
 
-The verdict file includes:
-- Mode used (adaptive/quick/full)
-- Mediator evaluation block(s)
-- Cross-examination exchange summary (if occurred)
-- Final recommendation
+The verdict file = the `## Recommendation` template above (judgment-first; process bookkeeping like mode labels and evaluation blocks stays out of it — output-standards.md Rule C), PLUS the required `## Agent Selection Trace` appendix (verbatim [layer1]/[layer2] lines per the ae:agent-teams persisted-report contract). The `### Supporting detail (audit trail)` section carries the cross-examination summary and cross-family perspective when they exist.
 
 **You MUST call the Write tool to save the output file. Displaying results in conversation is not sufficient.**
 
