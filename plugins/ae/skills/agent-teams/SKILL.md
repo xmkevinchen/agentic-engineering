@@ -586,7 +586,7 @@ They are complementary, not redundant. A skill execution that completes successf
 
 - **Rule 1 — do not retry mid-team**: while a team is active, do NOT retry `TaskUpdate` against an orphaned task (the retries fail identically and read as a stuck panel). Hold the status change and **reconcile after TeamDelete** in one batch.
 - **Rule 2 — batch-create AFTER TeamCreate** (MUST for new skills, SHOULD-retrofit for existing ones): a skill whose whole flow runs inside ONE team creates its step tasks after `TeamCreate`, so the tasks live on the team list and stay accessible throughout. Skills with multiple sequential teams (e.g. ae:discuss: framing-review → council) accept the orphan windows and apply Rule 1.
-- **Precedence**: this canonical rule wins; existing per-skill tables that still say "At skill start, batch-create" (9 skills as of F-039) update opportunistically the next time each skill is modified — no big-bang rewrite.
+- **Precedence**: this canonical rule wins; existing per-skill tables that still say "At skill start, batch-create" (12 files as of F-039) update opportunistically the next time each skill is modified — no big-bang rewrite.
 
 ### Auto-compact panel freeze (known limit)
 

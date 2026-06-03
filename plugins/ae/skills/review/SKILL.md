@@ -277,7 +277,7 @@ TeamCreate(team_name: "<feature>-review")
 
 ### 2. Create Tasks
 
-Batch-create the 4 review-track tasks at this point (per agent-teams §C.1 — created at skill start phase, even though their `in_progress` transition fires later when the corresponding reviewer is spawned):
+Batch-create the 4 review-track tasks at this point — after `TeamCreate`, per agent-teams §H rule 2 (single-team skill: tasks created on the team list stay accessible throughout; their `in_progress` transition fires later when the corresponding reviewer is spawned):
 
 ```
 TaskCreate(subject: "ae:review: Security review")

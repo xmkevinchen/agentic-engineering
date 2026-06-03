@@ -15,10 +15,10 @@ source: regression
 - [text:contains] Precedence line: `canonical rule wins`; per-skill "At skill start" tables update opportunistically
 - [text:contains] §C.1 carries the timing nuance pointing to `§H rule 2`
 - [text:contains] The section intro points readers to §H before choosing task-creation timing
-- [text:contains] `plugins/ae/skills/review/SKILL.md` task table cites `agent-teams §H rule 2` for its after-TeamCreate batch-create (annotation synced to actual execution order)
+- [file:contains:plugins/ae/skills/review/SKILL.md] task table AND the `### 2. Create Tasks` body both cite `agent-teams §H rule 2` for the after-TeamCreate batch-create (annotation synced to actual execution order; explicit file marker — this fixture's target routes to agent-teams, the cross-file assertions pin their own read target)
 
 ### MUST_NOT
-- [text:not_contains] `plugins/ae/skills/review/SKILL.md` no longer claims `even though spawn happens later — batch-create per agent-teams §C.1` (the stale annotation)
+- [file:not_contains:plugins/ae/skills/review/SKILL.md] the stale annotation `created at skill start phase, even though` (both the table row and the Create-Tasks body are clean)
 
 ### SHOULD
 - [text:contains] Pre-existing subsections `### A.` through `### G.` all still present (additive change only)
