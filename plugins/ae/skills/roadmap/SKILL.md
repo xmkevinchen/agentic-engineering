@@ -72,7 +72,7 @@ Runs after Filtering Constraints, before LLM judgment. Produces CLOSE evidence i
 
 #### LLM judgment
 
-For each candidate BL, emit exactly one verdict:
+For each BL in the judgment scope — both the **PROMOTE/WAIT candidate pool** AND the **Tier-1 CLOSE candidate set** (done/abandoned-origin_bl zombies) from Filtering Constraints — emit exactly one verdict (the Tier-1 zombies resolve to `CLOSE`; do NOT silently drop them — that silent-drop is the bug F-035 fixes):
 
 ```
 BL-NNN: PROMOTE — <one-line reason>
