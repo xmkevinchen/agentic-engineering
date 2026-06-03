@@ -54,12 +54,21 @@ The default invocation produces four sections in this order. Sections that have 
 
 #### Filtering Constraints
 
-Before LLM judgment runs, mechanically filter out:
+Before LLM judgment runs, mechanically filter — in this order:
 
-- **Already-promoted BLs**: scan `origin_bl:` across `.ae/features/{active,done,abandoned,paused}/*/index.md`. Treat both scalar (`origin_bl: BL-042`) and list (`origin_bl: [BL-042, BL-051]`) forms — any BL-ID appearing in any feature's `origin_bl` is excluded. Multi-BL consolidation: even if a BL is only one of several IDs in a feature's `origin_bl` list, it is considered promoted and must be suppressed (no zombie partial-promotion suggestions).
-- **Terminal BLs**: status in `{promoted, done, closed}` per State Reading.
+1. **Terminal BLs** (runs FIRST): status in `{promoted, done, closed}` per State Reading — excluded outright, never reach origin_bl routing or CLOSE evaluation. This ordering is load-bearing: a BL already carrying `status: promoted`/`closed` (e.g. an in-flight feature's own origin BL) is dropped here before any CLOSE logic, which is the first-line protection against mis-CLOSEing a live origin BL.
+2. **Already-promoted BLs (state-split for CLOSE routing — F-035)**: scan `origin_bl:` across `.ae/features/{active,done,abandoned,paused}/*/index.md`. Treat both scalar (`origin_bl: BL-042`) and list (`origin_bl: [BL-042, BL-051]`) forms; multi-BL consolidation counts (a BL that is only one of several IDs in a feature's list is still matched). Route by the matched feature's **state**:
+   - BL-ID in an **active** or **paused** feature's `origin_bl` → **exclude** (genuinely in-progress; unchanged — no zombie partial-promotion PROMOTE suggestion).
+   - BL-ID still present in `unscheduled/` whose ID is in a **done-** or **abandoned-**state feature's `origin_bl` → route to the **Tier-1 CLOSE candidate set** (zombie partial-promotion: the work shipped or was dropped but the BL was left behind). Previously these were silently excluded; CLOSE surfaces them.
 
-The remaining set (`status: open` or `unscheduled`, not in any `origin_bl`) is the candidate pool.
+The remaining set (`status: open` or `unscheduled`, not in any active/paused feature's `origin_bl`) is the PROMOTE/WAIT candidate pool; the done/abandoned-origin_bl zombies form the Tier-1 CLOSE candidate set.
+
+#### Supersession scan (F-035)
+
+Runs after Filtering Constraints, before LLM judgment. Produces CLOSE evidence in two reliability tiers:
+
+- **Tier 1 — mechanical, zero-false-positive**: the done/abandoned-origin_bl zombie set from Filtering Constraints step 2. Exact-ID match → reliable CLOSE candidate.
+- **Tier 2 — semantic, noisy, ADVISORY ONLY**: keyword grep of each remaining candidate BL's title/body against `.ae/features/{active,done}/F-*/index.md` + **feature-resident plans `.ae/features/{active,done}/F-*/plan.md`** (canonical post-F-025) + the active roadmap doc + `git log` shipped-content. Optional supplemental: `.ae/archive/legacy/plans/*.md` (grep-only, pre-F-025 history). **Do NOT grep `.ae/plans/*.md`** — post-F-025 that dir is empty for AE-on-AE (legacy archived, active plans are feature-resident), so grepping it silently yields zero hits. Tier-2 hits are passed to LLM judgment as advisory supporting-evidence — they NEVER auto-act.
 
 #### LLM judgment
 
@@ -68,11 +77,14 @@ For each candidate BL, emit exactly one verdict:
 ```
 BL-NNN: PROMOTE — <one-line reason>
 BL-NNN: WAIT — <one-line reason>
+BL-NNN: CLOSE — <stale / superseded / direction-rejected, one line>
+                Supersession evidence: <origin_bl match F-NNN | [advisory grep] plan/F-NNN — confirm>
 ```
 
 Discipline:
 
 - **Default to WAIT.** Only emit `PROMOTE` if the BL has a clear actionable shape. Vague, exploratory, duplicative, or already-blocked BLs are `WAIT`.
+- **CLOSE only on evidence (F-035).** Tier-1 origin_bl match → reliable CLOSE; phrase it as "promoted into F-NNN (done/abandoned) — confirm no valid remainder before closing" (a Tier-1 match means the work was promoted, NOT that the BL is necessarily fully addressed — a partial promotion may leave a valid remainder the human must check). Tier-2 grep alone → the LLM MUST read the cited feature/plan to confirm and tag the evidence `[advisory]`; if confirmation is insufficient → fall back to `WAIT`, NEVER CLOSE on grep-alone.
 - **Thin-BL fallback**: if a BL has empty body or fewer than ~20 words of substance below the frontmatter, emit `BL-NNN: WAIT — insufficient info; flesh out before promoting`. This prevents LLM judgment from degenerating into noise on stub BLs.
 - **No middle states.** No "MAYBE", no "INTERESTING", no rankings. Two outcomes, deterministic phrasing.
 - **Stable sort**: order candidates by `created` ascending (oldest first), tie-break by `id` ascending. Output stays stable across runs at scale.
