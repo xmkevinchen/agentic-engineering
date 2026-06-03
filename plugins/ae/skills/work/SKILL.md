@@ -472,7 +472,7 @@ Fix findings, re-run from Check D until clean pass.
    3. Write findings to `<milestone-dir>/notes.md` (resolved per **Milestone path resolution** helper) using `CHECKPOINT:` prefix (not `DEFERRED` — avoids triggering Check 4 parsing)
    4. P1 findings set `no_accumulated_p1 = false`
 
-   If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`.
+   If not triggered (step count doesn't match condition) → skip silently, `no_accumulated_p1` stays `true`. (Not a Rule B announcement case: the checkpoint is promised at midpoint/final only — a non-matching step count means it is not yet due, nothing is suppressed; per-step "not due" notices would be noise.)
 
 4. **Auto-pass gate** (default: ON) — evaluate after every step:
    ```

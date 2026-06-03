@@ -7,18 +7,20 @@ source: regression
 
 ## Expected Behavior
 
+All assertions read `plugins/ae/output-standards.md` explicitly (it is a shared standards doc, not a SKILL.md — the `target: ae:work` frontmatter routes the fixture run, the file-scoped markers below pin the actual read target, same pattern as `work-stop-on-paused-plan`).
+
 ### MUST
-- [text:contains] `plugins/ae/output-standards.md` contains `Rule A — Internal codes must be translated`
-- [text:contains] Contains `Rule B — Silent skips must be announced`
-- [text:contains] Contains `Rule C — Conclusions are judgments, not process records`
-- [text:contains] Contains `Rule D — Sentinel four-tier taxonomy`
-- [text:contains] Rule C carries the negative list (`ROUND_DECISION`, `Mediator Evaluation`) AND a TRUE-SENTINEL exemption (load-bearing fields like the conclusion `## Process Metadata` header stay)
-- [text:contains] Rule D names all four tiers: `TRUE SENTINEL`, `QUASI-SENTINEL`, `FIXTURE-LOCKED`, `PURE JARGON`, ordered most-restrictive-first, with a first-match-wins decision tree
-- [text:contains] Rule D hybrid case: P1/P2/P3 translate the label, never change the value (example `P1 (blocker — security/data/crash)`)
-- [text:contains] The status section references `skills/analyze/SKILL.md:269`
+- [file:contains:plugins/ae/output-standards.md] `Rule A — Internal codes must be translated`
+- [file:contains:plugins/ae/output-standards.md] `Rule B — Silent skips must be announced`
+- [file:contains:plugins/ae/output-standards.md] `Rule C — Conclusions are judgments, not process records`
+- [file:contains:plugins/ae/output-standards.md] `Rule D — Sentinel four-tier taxonomy`
+- [file:contains:plugins/ae/output-standards.md] Rule C carries the negative list (`ROUND_DECISION`, `Mediator Evaluation`) AND a TRUE-SENTINEL exemption (load-bearing fields like the conclusion `## Process Metadata` header stay)
+- [file:contains:plugins/ae/output-standards.md] Rule D names all four tiers: `TRUE SENTINEL`, `QUASI-SENTINEL`, `FIXTURE-LOCKED`, `PURE JARGON`, ordered most-restrictive-first, with a first-match-wins decision tree
+- [file:contains:plugins/ae/output-standards.md] Rule D hybrid case: P1/P2/P3 translate the label, never change the value (example `P1 (blocker — security/data/crash)`)
+- [file:contains:plugins/ae/output-standards.md] The status section references `skills/analyze/SKILL.md:269`
 
 ### MUST_NOT
-- [text:not_contains] The file does NOT contain the stale reference `analyze/SKILL.md:236`
+- [file:not_contains:plugins/ae/output-standards.md] The stale reference `analyze/SKILL.md:236`
 
 ### SHOULD
-- [text:contains] The five pre-existing Standards (`Standard 1` … `Standard 5`) remain intact alongside the new section
+- [file:contains:plugins/ae/output-standards.md] The five pre-existing Standards (`Standard 1` … `Standard 5`) remain intact alongside the new section
