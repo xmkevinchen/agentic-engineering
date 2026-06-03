@@ -414,7 +414,7 @@ TL collects all findings from reviewers + challenger + cross-family proxies, the
 - Merge overlapping findings, resolve contradictions
 - Produce Disagreement Value Assessment where reviewers disagreed
 - Classify by severity (P1/P2/P3)
-- **KL #1 substitution check**: for each plan step whose checkbox claims `/ae:code-review` ran, require evidence of multi-track execution — either (a) a `milestones/code-review-step-<N>.md` file matching the step number, OR (b) a commit message from that step's commit(s) containing a `/ae:code-review` output reference. **"Multi-track execution"** = the artifact (or commit-message disclosure) names ≥ 2 distinct review tracks among {Claude inline, Codex, Gemini, Doodlestein} — TL inline prose alone counts as Track 1 only and does NOT satisfy. If evidence is absent OR the artifact/disclosure shows only Track 1 → emit `KL #1 substitution` finding. **Default severity P2.** When the same step (matched by step number) ALSO has a P1/P2-logic defect this review separately surfaced, append `[ELEVATED]` tag to the finding entry and TL MUST flag for explicit human triage in the verdict section (do NOT silently re-class to P1 — that conflicts with the P1 definition at line 414 which scopes P1 to security/data/crash). Documented substitution (commit message explicitly states `[KL#1] ... SUBSTITUTED` with rationale) still emits the finding — visibility is the goal, not absence of substitution; the disclosure itself counts as the substitution evidence the rule fires on.
+- **KL #1 substitution check**: for each plan step whose checkbox claims `/ae:code-review` ran, require evidence of multi-track execution — either (a) a `milestones/code-review-step-<N>.md` file matching the step number, OR (b) a commit message from that step's commit(s) containing a `/ae:code-review` output reference. **"Multi-track execution"** = the artifact (or commit-message disclosure) names ≥ 2 distinct review tracks among {Claude inline, Codex, Gemini, Doodlestein} — TL inline prose alone counts as Track 1 only and does NOT satisfy. If evidence is absent OR the artifact/disclosure shows only Track 1 → emit the finding in plain language first: `Substitution warning: step N claimed a multi-track code review that did not actually run (internal code KL #1)` — the human meaning leads, the code stays in parentheses as the audit anchor (output-standards.md Rule A). **Default severity P2.** When the same step (matched by step number) ALSO has a P1/P2-logic defect this review separately surfaced, append `[ELEVATED]` tag to the finding entry and TL MUST flag for explicit human triage in the verdict section (do NOT silently re-class to P1 — that conflicts with the P1 definition at line 414 which scopes P1 to security/data/crash). Documented substitution (commit message explicitly states `[KL#1] ... SUBSTITUTED` with rationale) still emits the finding — visibility is the goal, not absence of substitution; the disclosure itself counts as the substitution evidence the rule fires on.
 
 If any agent idle > 5 minutes without sending findings, SendMessage to prompt.
 
@@ -425,9 +425,11 @@ After report arrives, send shutdown_request to all teammates.
 ## Result Processing
 
 ### Severity Levels
-- **P1** — security vulnerabilities, data loss, crashes
-- **P2** — performance, maintainability, architecture issues
-- **P3** — minor improvements
+
+Display form in user-facing reports glosses the code at first occurrence (hybrid rule — output-standards.md Rule D: translate the label, never change the value):
+- **P1 (blocker — security/data/crash)** — security vulnerabilities, data loss, crashes
+- **P2 (should fix — logic/perf/maintainability)** — performance, maintainability, architecture issues
+- **P3 (minor)** — minor improvements
 
 ## Fixup Flow
 
@@ -482,10 +484,11 @@ Do NOT continue fixup indefinitely.
 
 ## Outcome Statistics
 
-After all fixups are done, compile outcome data for this feature cycle:
+Open the section with one plain-language line — the verdict before the numbers: `Bottom line: <verdict>, N findings (X fixed, Y deferred), no blockers escaped.` Then compile outcome data for this feature cycle (field labels below are parsed by plugin-stats — byte-exact, never rename; output-standards.md Rule D TRUE SENTINEL):
 
 ```
 ## Outcome Statistics
+Bottom line: <verdict>, N findings (X fixed, Y deferred), no blockers escaped.
 - Steps completed: N/M
 - Rework rate: X steps needed fixup commits (X/N = Y%)
 - P1 escape rate: Z P1 findings discovered in /ae:review (should be 0 if /ae:work pre-commit caught them all)
