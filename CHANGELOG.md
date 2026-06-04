@@ -19,6 +19,12 @@
 
 - 2 L1 regression fixture pairs (`source: regression`): `codex-proxy-effort-discipline` (per-call MUST + receipt count + priority chain + effort pass-through) and `shutdown-json-object-clause` (canonical clause + dual proxy warning + agents-dir sentinel invariant + `scanned > 0` false-green guard).
 
+### Changed (post-release smoke fixups, same version)
+
+- **codex-proxy model: haiku → sonnet** — live smoke (n=3, identical definition) measured haiku adherence to the parameter-level MUSTs at 1/3: one run fabricated Codex attribution without calling MCP, one fully complied, one skipped both config and receipt. Observability caught every violation; prose alone does not bind haiku.
+- **Receipt hard gate + TL acceptance gate** — proxy side: no receipt sent → findings may not be sent (closes the skip-the-call loophole); TL side: findings without a prior receipt are rejected and bounced once, second violation → graceful-degradation fallback. Enforcement lives on the strong-model consumer side.
+- **Troubleshooting correction** — "effort shows config.toml value" can also mean a stale pre-CLI-upgrade `codex mcp-server` process silently ignoring per-call config (observed: 0.136 process ignored, 0.137 honored; TL cross-checks rollout `cli_version`).
+
 ---
 
 ## v0.10.5 — 2026-06-03
