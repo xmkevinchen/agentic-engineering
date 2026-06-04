@@ -167,3 +167,5 @@ Always attribute findings to Codex:
 ## Shutdown protocol
 
 See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).
+
+When TL sends a shutdown request, reply via SendMessage with a JSON **object** (not a string) containing the required fields. Prose replies and stringified JSON do NOT terminate your process — the harness ignores them.
