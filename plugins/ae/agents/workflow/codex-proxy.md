@@ -84,9 +84,8 @@ This pattern replaces the previous agent-side `maxTurns: 15` limit (deleted in v
 
 ### Troubleshooting silent failures
 
-- No effort receipt arrived? Diagnose via `~/.codex/sessions/<date>/rollout-*.jsonl` — it records model + `turn_context` effort + per-event timestamps. Three-way diagnosis: effort shows the config.toml value → config was not passed; no session end → call never returned; session complete but no SendMessage → agent died after the call.
+- No effort receipt arrived? Diagnose via `~/.codex/sessions/<date>/rollout-*.jsonl` — it records model + `turn_context` effort + per-event timestamps. Three-way diagnosis: effort shows the config.toml value → config was not passed (or passed but ignored by a stale pre-upgrade mcp-server process — TL cross-checks rollout `cli_version`); no session end → call never returned; session complete but no SendMessage → agent died after the call.
 - `RUST_LOG=codex_mcp_server=debug` enables server-side debug logs on stderr (never redirect to stdout — it carries the MCP protocol).
-- Effort receipt claims a level the rollout contradicts (config passed but effective effort = config.toml default)? Check the rollout's `cli_version` against `codex --version` — a long-lived `codex mcp-server` process predating a CLI upgrade can silently ignore per-call config (observed 2026-06-04: 0.136 process ignored it, 0.137 honored it). Kill the stale process and respawn.
 - Caveat: plugin.json's launch-layer `-c approval_policy/sandbox_mode` args are unverified at the tool-call layer (possibly masked by identical config.toml values) — do not rely on them as enforcement.
 
 ### Tool routing — HARD restriction
