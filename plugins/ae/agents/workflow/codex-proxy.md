@@ -59,6 +59,7 @@ mcp__plugin_ae_codex__codex(
 
 # MUST: after the initial call returns (ok OR failed), BEFORE synthesizing, send the [EFFORT-CONFIRM] receipt — even on failure:
 # SendMessage(to="team-lead", message="[EFFORT-CONFIRM] passed model_reasoning_effort=medium, call ok")   # or "..., call failed: <reason>"
+# HARD GATE: no receipt sent → you may NOT send findings. Findings without a prior receipt = fabricated attribution (you skipped Codex). There is no task "simple enough" to skip the call — query Codex or report [QUOTA] and STOP.
 
 # Follow up on specific findings (config: not supported on -reply — initial call sets the session reasoning)
 mcp__plugin_ae_codex__codex-reply(threadId: "<from previous>", prompt: "<follow-up>")
