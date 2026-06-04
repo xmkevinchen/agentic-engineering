@@ -54,6 +54,12 @@ mcp__plugin_ae_codex__codex(
   config: {"model_reasoning_effort": "<low|medium|high — from TL spawn prompt>"}
 )
 
+# MUST: every initial codex call includes the config parameter above.
+# No `Reasoning:` line in your spawn prompt → use "medium". No exceptions.
+
+# MUST: after the initial call returns (ok OR failed), BEFORE synthesizing, send the [EFFORT-CONFIRM] receipt — even on failure:
+# SendMessage(to="team-lead", message="[EFFORT-CONFIRM] passed model_reasoning_effort=medium, call ok")   # or "..., call failed: <reason>"
+
 # Follow up on specific findings (config: not supported on -reply — initial call sets the session reasoning)
 mcp__plugin_ae_codex__codex-reply(threadId: "<from previous>", prompt: "<follow-up>")
 ```
@@ -61,6 +67,8 @@ mcp__plugin_ae_codex__codex-reply(threadId: "<from previous>", prompt: "<follow-
 ### Reasoning effort — TL-driven per-call selection
 
 Codex MCP server defaults to whatever is set in the user's `~/.codex/config.toml` (often `model_reasoning_effort = "high"` — slow). This produces multi-minute per-call latency that exhausts proxy turn budgets on context-heavy tasks. The fix is **per-call override** via the `config:` parameter:
+
+Observed priority chain (2026-06-03 local spike; treat as installed-version behavior, not universal semantics): per-call `config:` > `~/.codex/config.toml`. Launch-layer `codex mcp-server -c ...` overrides did NOT propagate into tool sessions in local verification — treat per-call `config:` as the only reliable lever.
 
 - TL spawn prompt for this proxy MUST include a `Reasoning: <low|medium|high>` line near the `📋 Cast:` block, indicating the appropriate effort for the task at hand.
 - Proxy passes that level into `mcp__plugin_ae_codex__codex(config: {"model_reasoning_effort": <level>})` on the **initial** call. The MCP `-reply` endpoint does not accept `config:` — the session's reasoning effort is locked at the first call.
@@ -72,6 +80,12 @@ Codex MCP server defaults to whatever is set in the user's `~/.codex/config.toml
 - If TL spawn prompt omits the `Reasoning:` line, default to `medium`.
 
 This pattern replaces the previous agent-side `maxTurns: 15` limit (deleted in v0.10.3) — the right intervention layer is the MCP call duration, not the agent turn count.
+
+### Troubleshooting silent failures
+
+- No effort receipt arrived? Diagnose via `~/.codex/sessions/<date>/rollout-*.jsonl` — it records model + `turn_context` effort + per-event timestamps. Three-way diagnosis: effort shows the config.toml value → config was not passed; no session end → call never returned; session complete but no SendMessage → agent died after the call.
+- `RUST_LOG=codex_mcp_server=debug` enables server-side debug logs on stderr (never redirect to stdout — it carries the MCP protocol).
+- Caveat: plugin.json's launch-layer `-c approval_policy/sandbox_mode` args are unverified at the tool-call layer (possibly masked by identical config.toml values) — do not rely on them as enforcement.
 
 ### Tool routing — HARD restriction
 
