@@ -7,7 +7,7 @@ source: regression
 
 ## Context
 
-F-043 fixes a Haiku proxy protocol failure: codex-proxy spawned without per-call reasoning-effort config inherited `~/.codex/config.toml` `effort=high`, producing multi-minute MCP calls that silently exhausted the proxy's turn budget (turn stuck, proxy unreachable). The plan-review spike (2026-06-03) additionally established that launch-layer `codex mcp-server -c model_reasoning_effort=...` did NOT propagate into tool sessions — per-call `config:` is the only reliable lever. This fixture regression-proofs the F-043 Step 1 prose: per-call MUST rule + `[EFFORT-CONFIRM]` receipt + observed priority chain, all bundled inside the Invocation section.
+F-043 fixes a Haiku proxy protocol failure: codex-proxy spawned without per-call reasoning-effort config inherited `~/.codex/config.toml` `effort=high`, producing multi-minute MCP calls that silently exhausted the proxy's turn budget (turn stuck, proxy unreachable). The plan-review spike (2026-06-03) additionally established that launch-layer `codex mcp-server -c model_reasoning_effort=...` did NOT propagate into tool sessions — per-call `config:` is the only reliable lever. This fixture regression-proofs the F-043 Step 1 prose: per-call MUST rule + `[EFFORT-CONFIRM]` receipt + observed priority chain, all bundled inside the Invocation section. (The agent was subsequently bumped haiku→sonnet in the same release — smoke measured 1/3 haiku adherence to these MUSTs; the rules themselves are model-agnostic.)
 
 ## Prompt
 

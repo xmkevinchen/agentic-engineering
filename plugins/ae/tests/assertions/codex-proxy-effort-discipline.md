@@ -14,6 +14,7 @@ source: regression
 - [behavior] `grep -c -F '[EFFORT-CONFIRM]'` on plugins/ae/agents/workflow/codex-proxy.md returns exactly 2 — once in the receipt rule, once in the inline example (count pinned by F-043 AC1(b))
 - [file:contains:plugins/ae/agents/workflow/codex-proxy.md] The receipt rule states the `[EFFORT-CONFIRM]` SendMessage to team-lead must be sent after the initial call returns — even on failure — and before any synthesis
 - [file:contains:plugins/ae/agents/workflow/codex-proxy.md] The priority-chain wording states launch-layer `-c` overrides did NOT propagate into tool sessions (per-call `config:` > `~/.codex/config.toml`), scoped as locally observed / installed-version behavior rather than universal semantics
+- [file:contains:plugins/ae/agents/workflow/codex-proxy.md] Frontmatter `model: sonnet` — the v0.10.6 F-043 decision (haiku measured 1/3 adherence to the parameter-level MUSTs); reverting to haiku requires revisiting the F-043 smoke evidence, not a silent frontmatter edit
 
 ### MUST_NOT
 - [file:not_contains:plugins/ae/agents/workflow/codex-proxy.md] Any claim — under any phrasing — that launch-layer `-c` args or plugin.json launch args reliably control or set the reasoning effort for tool-call sessions
