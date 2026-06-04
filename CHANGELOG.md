@@ -6,6 +6,30 @@
 
 ---
 
+## v0.10.5 — 2026-06-03
+
+**Release theme**: Plain-language output + moderation discipline. `/ae:discuss` gains a mandatory user-facing Steering Readout and a convergent-REVISE fast path; a generic De-jargon rule set lands in `output-standards.md` and gets applied to `consensus`/`review`/`work` user-facing surfaces; `/ae:roadmap` gains an evidence-gated CLOSE verdict; `/ae:work` gains lint/typecheck pre-commit checks; cross-family participation becomes measurable.
+
+### New
+
+- **`output-standards.md` De-jargon rules (F-037)** — four generic rules with L1 anchors: Rule A internal codes must be translated (plain meaning leads, code stays as parenthetical audit anchor); Rule B silent skips must be announced (scoped to promised-coverage suppression); Rule C conclusions are judgments, not process records (negative list + positive shape + TRUE-SENTINEL exemption); Rule D sentinel four-tier taxonomy (TRUE / QUASI / FIXTURE-LOCKED / PURE with a first-match-wins, most-restrictive-first decision tree + P1/P2/P3 hybrid case). Applied in this release: `consensus` verdict template rewritten judgment-first (`## Recommendation` + worked example; process-machine fields removed from the user-facing verdict); `review` reports lead with `Substitution warning` plain phrasing + severity gloss + `Bottom line:` verdict line before Outcome Statistics (parsed field labels byte-identical); `work` auto-pass line now plain language (gate expression untouched).
+- **`/ae:discuss` Steering Readout (F-036)** — §6 gains a REQUIRED user-facing plain-language readout every round (decision-first triage by stakes × reversibility, no-silence rule, detail scales with contention); "minimum 2 rounds" softened to pace-by-complexity with the UAG-on-fast-track guard; §8 conclusion template de-jargoned (Team Composition table + 4 low-signal counts removed; `/ae:plan` dual sentinels preserved).
+- **`/ae:discuss` Round 0 convergent-REVISE fast path (F-038)** — Rule 2 becomes classify-and-route: convergent REVISEs integrate without a mandatory rerun (three pinned conditions + mechanical structural diff gate + structured `round_0_notes` record + Standard-2 announcement with a turn-boundary correction window + Round-1 auto-revert wired into §3); contested REVISEs keep the existing halt verbatim.
+- **`/ae:roadmap` CLOSE verdict (F-035)** — third verdict besides PROMOTE/WAIT: Tier-1 mechanical zombie detection (done/abandoned-feature `origin_bl` match) + Tier-2 advisory grep; human-confirmed batch CLOSE moves BLs to `closed/` with undo log. Scoped exception to the skill's read-only contract.
+- **`/ae:work` lint + typecheck pre-commit checks (F-034)** — Check C.1/C.2 run `lint.command`/`typecheck.command` from pipeline.yml as brownfield-safe P2 findings (shown, dispositioned, non-gating); `/ae:setup` detects the commands.
+- **Cross-family participation counter (F-033)** — `plugins/ae/scripts/cross-family-counter.sh` + a descriptive `Cross-family participation:` line in `/ae:review` Outcome Statistics (absolute count framing; flip-rate quality metric deferred to BL-115).
+- **agent-teams §H Team-context interaction (F-039)** — documents the Team=TaskList 1:1 context switch ("Task not found" for pre-TeamCreate tasks while a team is active), the don't-retry-mid-team / reconcile-after-TeamDelete rule, and batch-create-AFTER-TeamCreate for single-team skills (canonical wins; 12 legacy per-skill tables update opportunistically).
+
+### Added
+
+- 12 L1 regression fixture pairs across F-033..F-039 (steering readout, fast-track UAG, conclusion de-jargon, roadmap CLOSE, lint/typecheck, de-jargon rules, consensus verdict, review report, work autopass, round-0 fast path, task-context interaction, cross-family counter); existing `work-autopass-all-conditions-met` L2 fixture synced to the new plain-language line.
+
+### Fixed
+
+- Stale `analyze/SKILL.md:236` reference in output-standards.md (actual: `:269`).
+- `review/SKILL.md` task-creation annotations synced to actual execution order (table row + Create-Tasks body both cite §H rule 2).
+- BL number allocator collision surfaced (BL-085/BL-097 dual identities renumbered to BL-131/BL-132; allocator fix tracked as BL-130).
+
 ## v0.10.4 — 2026-05-22
 
 **Release theme**: Agent Teams policy doc + 3 cliff fixes. Ships `docs/agent-teams-policy.md` documenting the criterion for when each AE skill refuses vs auto-falls-back when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is unset, fixes 3 concrete policy cliffs surfaced by a 12-skill audit, and adds 4 L1 regression fixtures.
