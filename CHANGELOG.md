@@ -6,6 +6,27 @@
 
 ---
 
+## v0.10.6 — 2026-06-04
+
+**Release theme**: Proxy protocol compliance (F-043). Two observed Haiku-proxy protocol failures become parameter-level MUSTs with inline examples and an observable receipt: codex-proxy must pass per-call reasoning effort (the only lever that actually works), and shutdown responses must be JSON objects (strings are silently ignored by the harness).
+
+### New
+
+- **codex-proxy per-call effort MUST + `[EFFORT-CONFIRM]` receipt (F-043 AC1)** — `## Invocation` now embeds two comment-style rules at the call site: every initial `mcp__plugin_ae_codex__codex` call MUST include `config: {"model_reasoning_effort": "<level>"}` (no `Reasoning:` line in spawn prompt → `medium`, no exceptions), and after the initial call returns (ok or failed) the proxy MUST send an `[EFFORT-CONFIRM]` receipt to team-lead before any synthesis. The "Reasoning effort" section documents the locally-verified priority chain: per-call `config:` > `~/.codex/config.toml`; launch-layer `-c` overrides did NOT propagate into tool sessions (2026-06-03 spike — the previous "plugin launch args control the default" assumption was wrong). New troubleshooting block: rollout logs (`~/.codex/sessions/<date>/rollout-*.jsonl`) three-way diagnosis, `RUST_LOG=codex_mcp_server=debug` on stderr, and the unverified-launch-args caveat.
+- **Shutdown JSON-object clause (F-043 AC2)** — agent-teams § Shutdown handshake (canonical) Behavior list now states the response MUST be sent as a JSON **object** in SendMessage's `message` parameter; stringified JSON (even with correct request_id and all fields) is not parsed and does NOT terminate the teammate (observed: F-037 gemini-proxy prose ×3, F-041 codex-proxy-2 stringified-JSON ×2), with inline Correct/Wrong examples. Both proxies (`codex-proxy.md`, `gemini-proxy.md`) carry a self-contained warning line under their canonical reference (reference links alone contributed ≈0 to running-Haiku compliance).
+
+### Added
+
+- 2 L1 regression fixture pairs (`source: regression`): `codex-proxy-effort-discipline` (per-call MUST + receipt count + priority chain + effort pass-through) and `shutdown-json-object-clause` (canonical clause + dual proxy warning + agents-dir sentinel invariant + `scanned > 0` false-green guard).
+
+### Changed (post-release smoke fixups, same version)
+
+- **codex-proxy model: haiku → sonnet** — live smoke (n=3, identical definition) measured haiku adherence to the parameter-level MUSTs at 1/3: one run fabricated Codex attribution without calling MCP, one fully complied, one skipped both config and receipt. Observability caught every violation; prose alone does not bind haiku.
+- **Receipt hard gate + TL acceptance gate** — proxy side: no receipt sent → findings may not be sent (closes the skip-the-call loophole); TL side: findings without a prior receipt are rejected and bounced once, second violation → graceful-degradation fallback. Enforcement lives on the strong-model consumer side.
+- **Troubleshooting correction** — "effort shows config.toml value" can also mean a stale pre-CLI-upgrade `codex mcp-server` process silently ignoring per-call config (observed: 0.136 process ignored, 0.137 honored; TL cross-checks rollout `cli_version`).
+
+---
+
 ## v0.10.5 — 2026-06-03
 
 **Release theme**: Plain-language output + moderation discipline. `/ae:discuss` gains a mandatory user-facing Steering Readout and a convergent-REVISE fast path; a generic De-jargon rule set lands in `output-standards.md` and gets applied to `consensus`/`review`/`work` user-facing surfaces; `/ae:roadmap` gains an evidence-gated CLOSE verdict; `/ae:work` gains lint/typecheck pre-commit checks; cross-family participation becomes measurable.

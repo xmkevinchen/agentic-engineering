@@ -44,8 +44,8 @@ Current model and effort assignments for all AE skills and agents.
 | doodlestein-adversarial | sonnet | medium | Blind spot detection (single question) |
 | doodlestein-regret | sonnet | medium | Regret prediction (single question) |
 | code-reviewer | haiku | low | General code review (lightweight) |
-| codex-proxy | haiku | low | Codex MCP relay |
-| gemini-proxy | haiku | low | Gemini MCP relay |
+| codex-proxy | sonnet | low | Codex MCP relay (haiku→sonnet in v0.10.6 — F-043 smoke measured 1/3 haiku adherence to parameter-level MUSTs) |
+| gemini-proxy | haiku | low | Gemini MCP relay (stays haiku: no parameter-level per-call MUSTs on the Gemini MCP surface — lower compliance risk than codex-proxy; revisit on observed protocol non-compliance, tracked BL-137) |
 
 ## Override Hierarchy
 

@@ -609,6 +609,8 @@ When TL sends `shutdown_request` to a teammate, the teammate replies `shutdown_r
 ```
 
 **Behavior**:
+- The response MUST be sent as a JSON **object** in SendMessage's `message` parameter — NOT as a text string. Stringified JSON (even with correct request_id and all fields present) is not parsed by the harness and does NOT terminate the teammate (observed twice: F-037 gemini-proxy prose ×3, F-041 codex-proxy-2 stringified-JSON ×2).
+  - Correct: `message: {"type": "shutdown_response", "request_id": "…", "approve": true}` (object) · Wrong: `message: "{\"type\": \"shutdown_response\", …}"` (string — not parsed)
 - Teammate MUST reply within 30s of request OR be force-abandoned by TL
 - `approve: false` blocks shutdown (rare — teammate has urgent in-flight work)
 - TL calls `TeamDelete()` after all approved responses OR force-abandon window expires
