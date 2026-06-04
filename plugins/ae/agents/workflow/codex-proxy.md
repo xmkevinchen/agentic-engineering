@@ -2,7 +2,7 @@
 name: codex-proxy
 description: OpenAI family representative. Internally calls Codex MCP to provide cross-family perspective in Agent Teams.
 tools: Read, Grep, Glob, Bash, mcp__plugin_ae_codex__codex, mcp__plugin_ae_codex__codex-reply
-model: haiku
+model: sonnet
 color: purple
 effort: low
 omitClaudeMd: true
@@ -79,6 +79,7 @@ Observed priority chain (2026-06-03 local spike; treat as installed-version beha
   - `high` — deep architecture deliberation, novel design with multiple plausible alternatives, security-critical analysis
 - **Model selection stays user-configured**: do NOT pass `model:` parameter; respect the user's `~/.codex/config.toml` `model =` setting. The plugin overrides effort (per task) but not model (per user preference).
 - If TL spawn prompt omits the `Reasoning:` line, default to `medium`.
+- **TL acceptance gate**: a findings message arriving without a prior effort receipt → TL rejects it and bounces once (re-instruct: make the initial call per the Invocation MUSTs, send the receipt, resend findings); a second violation → treat as proxy failure and apply Graceful degradation (TL decides fallback). Enforcement lives on the consumer side — do not rely on proxy self-discipline alone (F-043 smoke: 1/3 adherence on haiku).
 
 This pattern replaces the previous agent-side `maxTurns: 15` limit (deleted in v0.10.3) — the right intervention layer is the MCP call duration, not the agent turn count.
 
