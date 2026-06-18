@@ -13,6 +13,13 @@
 
 set -u
 
+# F-044: best-effort sweep of the BL-023 smoke-test leftover. The log write was
+# removed in Plan 054 review fixup, but /tmp/ae-session-check.log may still exist
+# (session id, world-readable, no rotation) on machines that ran the smoke build.
+# Runs BEFORE the TRACE_DIR existence check so users without a traces dir still get
+# swept; failure must never abort rotation.
+rm -f /tmp/ae-session-check.log 2>/dev/null || true
+
 TRACE_DIR="${HOME}/.ae/traces"
 ARCHIVE_DIR="${TRACE_DIR}/archive"
 

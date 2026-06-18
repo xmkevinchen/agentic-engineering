@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-(empty)
+### Fixed
+
+- **/tmp/ae-session-check.log cleanup (F-044)** — the SessionEnd `trace-rotate.sh` hook now does a best-effort `rm -f /tmp/ae-session-check.log` on every run, clearing the BL-023 smoke-test leftover (session id, world-readable, no rotation) from machines that ran the smoke build. The log write itself was already removed in the Plan 054 review fixup; this only sweeps the residual file. The sweep runs before the `~/.ae/traces` existence check, so users without a traces dir are still cleaned.
 
 ---
 
