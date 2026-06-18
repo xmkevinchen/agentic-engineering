@@ -197,6 +197,8 @@ Four fresh agents that join an existing team LATE, after initial rounds converge
 - **Discussion Mode**: always triggered (discussions produce decisions that need fresh-eyes validation).
 - **Investigation Mode**: TL discretion — trigger when investigation produced decisions or recommendations. Skip for pure observational findings (e.g., trace output, factual analysis with no design choices).
 
+**Per-skill agent-count asymmetry** (F-045): the canonical roster is four agents, spawned in full by `/ae:discuss` at its post-conclusion Doodlestein step. `/ae:plan` deliberately spawns only **three** (strategic / adversarial / regret) at its plan-review-stage Doodlestein step — `scope-reducer`'s question framing ("what should be cut from this conclusion?") is post-conclusion-specific and does not apply to plan-step decomposition review. This is an intentional subset, not an inconsistency: `/ae:discuss` = 4, `/ae:plan` = 3.
+
 **The four Doodlestein agents** (agent definitions in `plugins/ae/agents/workflow/`):
 
 #### doodlestein-strategic
@@ -222,6 +224,8 @@ Four fresh agents that join an existing team LATE, after initial rounds converge
 - Must suggest a low-cost hedge that can be done NOW without reversing the decision
 
 #### doodlestein-scope-reducer
+> **Spawned by `/ae:discuss` only** (post-conclusion). `/ae:plan`'s plan-review Doodlestein step spawns the other three — see the per-skill asymmetry note above. Future skills adding a Doodlestein step: this is the discuss-specific 4th agent, not a default.
+
 > "Of everything the conclusion/synthesis adds beyond what the framed problem strictly needs, what could be deleted such that the original problem is still solved?"
 
 - The SUBTRACT-shaped counterpart to the other three (strategic = accretive / adversarial = omissions / regret = reversal hedges). All three of those are ADD-shaped by question framing; scope-reducer is the only Doodlestein that asks "what should be cut?"

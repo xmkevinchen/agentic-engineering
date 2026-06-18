@@ -67,7 +67,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Step 1 | `ae:plan: Step 1 — Research` | Skill start (batch) | Before Research starts | After Research summary written |
 | Step 2 | `ae:plan: Step 2 — Write Plan` | Skill start (batch) | Before plan body write | After plan file persisted to disk |
 | Step 3 | `ae:plan: Step 3 — Plan Review` | Skill start (batch) | When agent-teams plan-review team spawned | When all reviewer findings received at TL |
-| Step 4 | `ae:plan: Step 4 — Doodlestein Challenge` | Skill start (batch) | When Doodlestein agents spawned | When all 3 Doodlestein replies received |
+| Step 4 | `ae:plan: Step 4 — Doodlestein Challenge` | Skill start (batch) | When Doodlestein agents spawned | When all 3 Doodlestein replies received (strategic/adversarial/regret only — `/ae:plan` spawns the 3-agent subset, not the canonical 4; see agent-teams/SKILL.md § Doodlestein Protocol per-skill asymmetry) |
 | Step 5 | `ae:plan: Step 5 — Confirm` | Skill start (batch) | When confirmation prompt prepared | When user confirmation received |
 
 Owner field: omit. On error: stay `in_progress`. With `--skip-review`: Step 3 + Step 4 transition `pending → completed` directly (no `in_progress`, no work done).
@@ -275,7 +275,7 @@ Before confirming with the user, check cross-family availability (`cross_family`
 
 - **Cross-family available** → run Doodlestein challenge on the plan:
   - Compile: plan title + step summaries + AC list + key review findings
-  - Spawn canonical Doodlestein agents INTO the existing plan-review team:
+  - Spawn the Doodlestein agents INTO the existing plan-review team. **Note**: at the plan-review stage `/ae:plan` spawns only the **3-agent subset** (strategic / adversarial / regret) shown below — NOT the canonical 4. `scope-reducer` is post-conclusion-specific and intentionally omitted here (see agent-teams/SKILL.md § Doodlestein Protocol per-skill asymmetry). "Canonical" in agent-teams context means 4; in plan-review context it means this 3-agent variant.
     ```
     Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
           team_name: "<existing team>", run_in_background: true,
