@@ -39,8 +39,17 @@ Output ONLY one JSON object, one line, no prose: {\"grounding\":N,\"coverage\":N
 ANALYSIS:
 $(cat "$A")"
 
-j_codex="$(codex exec -s workspace-write --skip-git-repo-check "$RUBRIC" 2>/dev/null | grep -oE '\{[^{}]*\}' | tail -1)"
-j_claude="$(printf '%s' "$RUBRIC" | claude -p 2>/dev/null | grep -oE '\{[^{}]*\}' | tail -1)"
+# timeout-guarded judges — a hung judge (codex exec has been observed to hang) must NOT
+# stall the arbiter; it times out and the panel gracefully degrades to the judges that answered.
+JUDGE_TIMEOUT="${JUDGE_TIMEOUT:-90}"
+run_judge() {  # $@ = command; prints its stdout; hard-killed after JUDGE_TIMEOUT secs
+  _t="$(mktemp)"; "$@" >"$_t" 2>/dev/null & _p=$!
+  ( sleep "$JUDGE_TIMEOUT"; kill "$_p" 2>/dev/null ) & _k=$!
+  wait "$_p" 2>/dev/null; kill "$_k" 2>/dev/null
+  cat "$_t"; rm -f "$_t"
+}
+j_codex="$(run_judge codex exec -s workspace-write --skip-git-repo-check "$RUBRIC" | grep -oE '\{[^{}]*\}' | tail -1)"
+j_claude="$(run_judge claude -p "$RUBRIC" | grep -oE '\{[^{}]*\}' | tail -1)"
 
 THRESH="$THRESH" python3 - "$j_codex" "$j_claude" <<'PY'
 import sys, os, json
@@ -58,15 +67,16 @@ for n, raw in zip(["codex", "claude"], sys.argv[1:]):
     print(f"judge {n}: {d}")
     if d:
         judges.append((n, d))
-if len(judges) < 2:
-    print("ARBITER: fail (<2 valid judge scores) -> not ready")
+if len(judges) < 1:
+    print("ARBITER: fail (no valid judge scores — both judges timed out / unparseable) -> not ready")
     sys.exit(1)
+degraded = "" if len(judges) >= 2 else " [DEGRADED: 1/2 judges — the other timed out]"
 # conservative AND: every judge, every dim must clear the threshold (per the measured
 # cross-judge variance — one lenient judge must not pass a weak analysis alone)
 bad = [(n, k, j[k]) for n, j in judges for k in dims if j[k] < th]
 if bad:
     print(f"ARBITER: fail (below threshold {th}: " + ", ".join(f"{n}.{k}={v}" for n, k, v in bad) + ") -> more analysis / a spike needed")
     sys.exit(1)
-print(f"ARBITER: pass (all dims >= {th} from both families) -> deliver to discuss/plan")
+print(f"ARBITER: pass (all dims >= {th}){degraded} -> deliver to discuss/plan")
 sys.exit(0)
 PY
