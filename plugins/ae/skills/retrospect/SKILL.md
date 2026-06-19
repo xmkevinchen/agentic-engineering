@@ -52,7 +52,7 @@ For each in-window feature, also read `<feature-dir>/analysis.md` (if present) a
 
 Best-effort: missing review file is OK (the lessons-learned synthesis tolerates absence).
 
-## Output — 4 conversational sections
+## Output — 5 conversational sections
 
 The skill produces a single conversational message with 4 sections. No file is written.
 
@@ -153,9 +153,28 @@ Based on this window's shipped work, these backlog items might be ready for /ae:
 
 If nothing surfaces → `No backlog items strongly tied to this window's shipped work. Check /ae:roadmap for the broader Clarify view.`
 
+### (5) Harness fixtures to promote (固化)
+
+Scan the in-window done features' `plan.md` files for ACs flagged `fixture: project` (the per-AC promotion signal from F-041). These are reusable verification harnesses the author marked project-level — surface them so harness discipline compounds across features instead of restarting each time.
+
+Render:
+
+```
+## Harness fixtures to promote
+
+These ACs were flagged `fixture: project` — reusable harnesses worth 固化 into the project:
+
+- F-NNN AC2 (verify_by: unit): <one-line> — candidate for a shared fixture/test
+- ...
+```
+
+If none → `No fixture: project ACs in this window — nothing to promote yet.`
+
+**Mengdie storage DEFERRED** (discussion 001 Decision 5): this section *surfaces* promotion candidates only — it does NOT auto-ingest a harness artifact to Mengdie. The storage substrate (a concrete Mengdie extraction criterion, or a simpler shared-fixtures location) is deferred to a follow-up BL; do not ship a vague "extract harness artifact" criterion here. Promotion stays a human decision, consistent with this skill's read-only / no-auto-ingest principle.
+
 ## Conversational delivery
 
-Render all 4 sections in a single message. The output is **prose with markdown formatting**, suitable for the user to scan in the terminal. Do NOT:
+Render all 5 sections in a single message. The output is **prose with markdown formatting**, suitable for the user to scan in the terminal. Do NOT:
 
 - Write any file.
 - Suggest the user save the output (they'll save what they want).
