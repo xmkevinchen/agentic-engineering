@@ -91,23 +91,35 @@ run_stage() {
 # ---- WORK ----
 work_out="$(run_stage "/ae:work $PLAN")"
 if ! work_done; then
+  printf '%s\n' "$work_out" | tail -8 >&2
   case "$work_out" in
     *"degraded mode"*|*"cross-family"*[Uu]navailable*)
       pause work degraded-review "cross-family unavailable after fallback during work" \
             "restore cross-family (codex/gemini) or accept Claude-only, then resume";;
-    *) printf '%s\n' "$work_out" | tail -8 >&2
-       pause work work-stalled "plan still has unchecked steps after /ae:work (see log)" \
+    *"No test command"*|*UNVERIFIED*)
+      pause work missing-verifier "no verifier: tests UNVERIFIED, auto-pass cannot confirm work" \
+            "set test.command in pipeline.yml (or add a verifier the work step runs), then resume";;
+    *[Dd]rift*|*"Expected files"*)
+      pause work unknown-drift "work paused on a drift / Expected-files issue" \
+            "review the drift in the log; fix the plan's Expected files or revert stray changes, then resume";;
+    *) pause work work-stalled "plan still has unchecked steps after /ae:work (see log)" \
              "inspect the blocker in the log; fix it (or the plan), then resume";;
   esac
 fi
 
 # ---- REVIEW <-> RE-WORK loop (bounded + stall-detected) ----
-round=0; prev_sig=""
+round=0; prev_sig=""; degraded_retries=0
+RETRY_DEGRADED="${RETRY_DEGRADED:-2}"   # auto-reactivation: re-try a transient degraded review before escalating
 while :; do
   review_out="$(run_stage "/ae:review $PLAN")"
   case "$review_out" in
     *"degraded mode"*|*"cross-family unavailable"*)
-      pause review degraded-review "review ran cross-family-degraded" \
+      degraded_retries=$((degraded_retries + 1))
+      if [ "$degraded_retries" -le "$RETRY_DEGRADED" ]; then
+        echo "[flow] review degraded → auto-retry $degraded_retries/$RETRY_DEGRADED (cross-family may recover)" >&2
+        continue
+      fi
+      pause review degraded-review "review cross-family-degraded after $RETRY_DEGRADED auto-retries" \
             "restore cross-family or accept Claude-only review, then resume";;
   esac
 
