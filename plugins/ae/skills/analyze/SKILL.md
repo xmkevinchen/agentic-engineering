@@ -300,6 +300,9 @@ Only write the sections below when the TL;DR tip is insufficient to carry the us
 ### Industry comparison (on-demand)
 <standards-expert, only when it has actionable impact on the current judgment. Otherwise omit.>
 
+### Verification considerations (on-demand)
+<What would prove this feature correct, measurably — the raw material that **feeds `/ae:plan`'s per-AC `verify_by` choices**. For each likely acceptance dimension, note whether it is deterministically checkable (→ `unit`/`integration`/`e2e`) or a judgment call (→ `judge` + a candidate rubric question). This is **input to plan's AC authoring**; `analyze` does NOT gate on it — `analyze` is pre-AC research (GTD Organize), not a verification gate. Omit if the BL's verification shape is obvious or trivial.>
+
 ### Mengdie prior art (on-demand)
 <only when there are relevant results. No results → do not write an "unavailable" placeholder.>
 ```
