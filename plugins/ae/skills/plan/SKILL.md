@@ -174,13 +174,19 @@ Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:wo
 ## Acceptance Criteria
 
 ### AC1: Reference Case — <description>
+- verify_by: unit          # unit|integration|e2e|judge|manual — see Verification Harness mapping below
+- fixture: per-feature     # per-feature|project
 <Specific known input/output pairs>
 
 ### AC2: Sanity Check — <description>
+- verify_by: integration
+- fixture: per-feature
 <Metric + reasonable range>
 
 ### AC3: Output Verification — <description>
-<Human-verifiable output>
+- verify_by: judge         # judge ACs MUST state a pass-criterion/rubric below
+- fixture: per-feature
+<Human-verifiable output — with the rubric question the reviewer answers>
 ```
 
 ### Rules
@@ -190,12 +196,30 @@ Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:wo
 - Each AC covered by at least one step
 - Each step ≤ 3 ACs
 
+### Verification Harness (per-AC `verify_by` + `fixture`)
+
+Every AC declares two fields — this is the feature's verification harness, carried in the AC section AE already has (not a parallel system):
+
+- `verify_by`: `unit` | `integration` | `e2e` | `judge` | `manual` — which proof kind enforces this AC.
+- `fixture`: `per-feature` (scaffolding, default) | `project` (reusable — surfaced for promotion at `/ae:retrospect`).
+
+**Claim→track mapping** (the deterministic-vs-LLM line sits at the *claim*, not the artifact — a prose/SKILL.md AC can still have deterministic sub-claims):
+
+| AC kind | `verify_by` | how it's enforced |
+|---|---|---|
+| Reference Case | deterministic (`unit` / `integration` / `e2e`) | test runner; hard-block at `/ae:work` when `test.command` empty |
+| Output Verification | `judge` | review-stage judge against the AC's stated rubric |
+| Sanity Check | author picks (deterministic or `judge`) | per the chosen value |
+
+- **`judge` ACs MUST state a pass-criterion (rubric question)** in the AC body — a bare `verify_by: judge` with no criterion is rejected at `/ae:plan-review` (otherwise it's vibes-as-enforcement, not a harness).
+- **Brownfield rule**: a missing `verify_by` is a plan-validity failure for plans created or revised *after* this ships; legacy in-flight plans are migrated on touch (add the fields before new work starts) — not retroactively invalid.
+
 ### Plan Quality Self-check
 
 After writing the plan, verify before proceeding to review:
 
 1. **Step completeness**: Does every step have a clear completion condition? (not just "implement X" — what specifically is done when it's done?)
-2. **AC verifiability**: Does every AC have a concrete verification method? (test command, manual check, metric threshold — not "results should be reasonable")
+2. **AC verifiability**: Does every AC have a concrete verification method AND declare `verify_by` (with a stated rubric for `judge` ACs)? (test command, manual check, metric threshold — not "results should be reasonable")
 3. **Evidence for drift detection**: Does every step list the files expected to be modified? (This enables Phase 2 contract extraction for drift detection during `/ae:work`)
 4. **Decision coverage** (discussion-referenced plans only; standalone plans skip this check as a documented exemption): for each row in `<discussion-dir>/conclusion.md`'s `## Decision Summary` table, confirm the plan body either (a) cites the Topic text, (b) maps the decision to a plan step or AC, or (c) explicitly records it under a "## Decisions not implemented" section with a stated reason. Heuristic grep: for each Decision Summary Topic, run `grep -F "<topic text>" <plan-file>` — missing match is a signal, not a proof. **Missing coverage on a discussion-referenced plan → emit P2 warning, do NOT auto-block**. Plan author disposes (fix plan body OR add "Decisions not implemented" section with reason). Prose-only heuristic; intentionally not a semantic guarantee (per failure case 2 LLM-theater bound).
 
