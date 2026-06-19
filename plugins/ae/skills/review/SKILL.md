@@ -212,6 +212,17 @@ If no plugin files in cumulative diff → skip the gate execution (log "No plugi
 
 **Validator scope note**: Check 6 records (record_type: `"review-check-6"`) are out of scope for `validate-trace.sh` at v0.10.x — see [trace-schema.md "Validator scope clarification"](../../docs/references/trace-schema.md). Running the validator on a session file will produce one expected false-positive per Check 6 record. This is by design until multi-emitter validation lands.
 
+### Check 7: Harness Satisfaction (F-041)
+
+Confirm the plan's per-AC verification harness (`verify_by`) is actually *satisfied* — this is the review-stage backstop that gives `/ae:work`'s prompt-level hard-block (`work/SKILL.md:489`) real verdict-stage teeth.
+
+For each AC in the plan:
+- **Deterministic AC** (`verify_by` ∈ `unit`/`integration`/`e2e`): its test must pass. If `/ae:work` recorded the AC as an *unverified deterministic AC* (empty `test.command` crossed the prompt-level hard-block, logged in `<milestone-dir>/notes.md`) and it is still unresolved → **block verdict pass** (P1 path). A deterministic claim shipped without a passing check is the silent-drop this backstop exists to catch.
+- **Judge AC** (`verify_by: judge`): the reviewer answers the AC's stated rubric question against the actual output; a `judge` AC with no rubric, or one whose rubric fails → **block verdict pass**. (This is the committed `judge` enforcement path — review-stage rubric-confirmation; no separate engine.)
+- **`manual` AC**: surfaced for human confirmation in the verdict section; not auto-blocking.
+
+If the plan predates F-041 (no `verify_by` fields) → skip with `Harness satisfaction: skipped (pre-F-041 plan, no verify_by fields)`. Brownfield plans are not retroactively failed.
+
 ### Prior Context (from Mengdie)
 
 Run this step after Pre-checks pass and before creating the review team.

@@ -486,7 +486,10 @@ Fix findings, re-run from Check D until clean pass.
    - Any failed → **pause for user confirmation** — lead the pause message with the blocker list in plain language, codes in parentheses (e.g. `Pausing: 1 blocker finding (P1) needs a fix before continuing.`)
    - Drift detected (not approved) → always pause
    - Security pattern matched → always pause
-   - No test command → `tests_green` = UNVERIFIED — **pause for user confirmation** (do not treat as true)
+   - No test command → `tests_green` = UNVERIFIED. **Branch on the current step's AC `verify_by` values (F-041 harness contract)**:
+     - Any AC with deterministic `verify_by` (`unit`/`integration`/`e2e`) → **prompt-level hard-block**: pause, AND record the unverified deterministic AC so `/ae:review` backstops it. (A deterministic AC with no `test.command` is genuinely unverifiable. This is *layered work+review prompt enforcement*, NOT a mechanical guarantee — a SKILL.md instruction can't compile-block.)
+     - All of the step's ACs are `judge`/`manual` → **check-only**: an empty `test.command` is expected (no deterministic claim to run); continue without the UNVERIFIED pause, leaving `judge` ACs to review-stage rubric-confirmation.
+     - (do not treat UNVERIFIED as true)
    - No "Expected files:" in plan step → `drift` = UNKNOWN — **pause for user confirmation** (do not skip)
    - `cross_family_degraded` = true (all cross-family failed after fallback, reported by code-review as `cross_family_degraded`) → **pause**:
      ```

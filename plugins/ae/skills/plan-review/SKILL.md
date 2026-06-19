@@ -119,6 +119,11 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
 
 TL collects findings from architect, dependency-analyst, and cross-family proxies, then synthesizes.
 
+**Harness soundness check (F-041 — mandatory before synthesis)**: verify the plan's verification harness is present and sound:
+- Every AC declares `verify_by` (`unit`/`integration`/`e2e`/`judge`/`manual`). Missing on a post-F-041 plan → **Must fix** (brownfield: legacy plans migrated on touch, not retroactively failed).
+- Every `judge`-typed AC states a pass-criterion/rubric question in its body. A bare `verify_by: judge` with no rubric → **Must fix** (vibes-as-enforcement, not a harness).
+- `verify_by` matches the AC kind per the claim→track mapping (Reference Case → deterministic; Output Verification → `judge`; Sanity Check → author picks). Mismatch → **Consider**.
+
 - **Must fix** — design flaws, hidden dependencies
 - **Consider** — simplification suggestions
 - **Approved**
