@@ -23,13 +23,15 @@
 # LOOP-BACK (v0.3): on review-fail the controller runs a bounded re-work<->re-review
 # loop (MAX_ROUNDS, default 2) feeding the review findings back as guidance, with a
 # STALL DETECTOR (review.md signature unchanged across a round = no progress -> escalate).
-# Caveat: /ae:work refuses all-[x] plans, so re-work currently leans on /ae:review's
-# OWN fixup across rounds (fresh fixup budget per invocation -> code changes -> sig moves);
-# a /ae:work fixup-mode that re-engages a done plan is a deferred follow-up.
+# Re-work: /ae:work has a fixup-mode (F-041) triggered by this loop's re-work directive
+# ("Review returned verdict: fail. Address these findings"), so re-work re-engages a
+# done (all-[x]) plan with findings-driven fixup commits (plus /ae:review's own fixup).
+# The stall-detector still bounds non-converging cases.
 #
-# DEFERRED to later slices: finer outcome split (missing-verifier / unknown-drift),
-# verifier-discovery, auto-reactivation watcher, /ae:work fixup-mode, per-task
-# accumulated-knowledge in the pause record.
+# DEFERRED to later slices: verifier-discovery (auto-find a verifier when test.command
+# empty), FULL auto-reactivation watcher (only the transient-degraded auto-retry is in),
+# per-task accumulated-knowledge in the pause record, and the upstream analyze->discuss
+# info-gain arbiter (this controller covers the back-half only).
 #
 # Usage:  sh ae-flow-controller.sh <reviewed-plan-path>     (DRY=1 → logic-only, no claude -p)
 #         MAX_ROUNDS=N to bound re-work rounds (default 2).
