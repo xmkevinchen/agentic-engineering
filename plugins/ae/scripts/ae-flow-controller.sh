@@ -1,5 +1,5 @@
 #!/bin/sh
-# ae-flow-controller.sh — F-041 slice 1: autonomous back-half controller (v0.2).
+# ae-flow-controller.sh — F-041: full-net controller (v0.5).
 #
 # Deterministic loop driving REAL AE skills (/ae:work, /ae:review) via `claude -p`,
 # advancing on ARTIFACT arbiters (plan [x] count; review.md `verdict:`). The human does
@@ -29,18 +29,25 @@
 # The stall-detector still bounds non-converging cases.
 #
 # DEFERRED to later slices: verifier-discovery (auto-find a verifier when test.command
-# empty), FULL auto-reactivation watcher (only the transient-degraded auto-retry is in),
-# per-task accumulated-knowledge in the pause record, and the upstream analyze->discuss
-# info-gain arbiter (this controller covers the back-half only).
+# empty), FULL auto-reactivation watcher (only transient-degraded auto-retry is in),
+# per-task accumulated-knowledge in the pause record.
 #
-# Usage:  sh ae-flow-controller.sh <reviewed-plan-path>     (DRY=1 → logic-only, no claude -p)
-#         MAX_ROUNDS=N to bound re-work rounds (default 2).
-# Outcome: pass | work-stalled | degraded-review | review-fail | review-fail-stalled | dead-end
+# FULL NET (v0.5): given a feature-dir (a NEED), the controller runs the front half
+# (analyze -> info-gain arbiter -> plan -> plan-review) THEN the back half (work <-> review).
+# The front half IS the per-need "dynamic harness design" step. Given a reviewed-plan path
+# it skips straight to the back half (front gates pass through). Front-half = human-gated more
+# (design decisions surface as pauses, front-loaded); back-half = autonomous.
+#
+# Usage:  sh ae-flow-controller.sh <feature-dir | reviewed-plan-path>   (DRY=1 → logic-only)
+#         MAX_ROUNDS=N (re-work bound, default 2).
+# Outcome: pass | analyze-incomplete | plan-not-reviewed | work-stalled | missing-verifier |
+#          unknown-drift | degraded-review | review-fail | review-fail-stalled | dead-end
 set -u
 
-PLAN="${1:?usage: ae-flow-controller.sh <reviewed-plan-path>}"
-[ -f "$PLAN" ] || { echo "OUTCOME: dead-end (plan not found: $PLAN)"; exit 2; }
-FEATURE_DIR="$(dirname "$PLAN")"
+ARG="${1:?usage: ae-flow-controller.sh <feature-dir | reviewed-plan-path>}"
+if [ -d "$ARG" ]; then FEATURE_DIR="${ARG%/}"; PLAN="$FEATURE_DIR/plan.md"
+else PLAN="$ARG"; FEATURE_DIR="$(dirname "$PLAN")"; fi
+[ -d "$FEATURE_DIR" ] || { echo "OUTCOME: dead-end (feature dir not found: $FEATURE_DIR)"; exit 2; }
 PAUSE_FILE="$FEATURE_DIR/.flow-pause.md"
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown; }
@@ -66,10 +73,7 @@ EOF
 # re-writes it if we pause again; a clean pass leaves none.
 rm -f "$PAUSE_FILE"
 
-# --- prerequisite: plan reviewed (its own arbiter already passed) ---
-grep -q '^status:[[:space:]]*reviewed' "$PLAN" || grep -q '^status:[[:space:]]*done' "$PLAN" || {
-  echo "OUTCOME: dead-end (plan not reviewed)"
-  echo "  unblock: run /ae:plan-review $PLAN, then resume"; exit 2; }
+# (FRONT HALF — analyze + plan gates — runs below, after the helpers are defined)
 
 # --- deterministic, file-based arbiters ---
 work_done()      { ! grep -q '^- \[ \]' "$PLAN"; }                                  # zero unchecked boxes
@@ -90,6 +94,29 @@ run_stage() {
   claude -p "$1" 2>&1
 }
 
+# ===== FRONT HALF (per-need dynamic design: analyze -> plan; human-gated more) =====
+# The front half IS the dynamic-harness-design step: analyze establishes what the need
+# requires, plan (incl. plan-review) emits the fit-for-purpose execution. Low-reversibility
+# design decisions surface here as front-half pauses (human-front-loaded), per the autonomy posture.
+plan_reviewed() { grep -q '^status:[[:space:]]*reviewed' "$PLAN" 2>/dev/null || grep -q '^status:[[:space:]]*done' "$PLAN" 2>/dev/null; }
+ARBITER_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
+
+# analyze gate: produce analysis if missing, then gate with the info-gain arbiter
+[ -f "$FEATURE_DIR/analysis.md" ] || run_stage "/ae:analyze $FEATURE_DIR" >/dev/null 2>&1 || true
+if [ -f "$FEATURE_DIR/analysis.md" ]; then
+  DRY="${DRY:-0}" sh "$ARBITER_DIR/ae-analyze-arbiter.sh" "$FEATURE_DIR/analysis.md" >/dev/null 2>&1 \
+    || pause analyze analyze-incomplete "analysis failed the info-gain arbiter (uncertainty high / load-bearing assumptions unflagged)" \
+          "deepen analysis or run a spike (re-run /ae:analyze); settle open design decisions via /ae:discuss; then resume"
+elif [ "${DRY:-0}" != 1 ]; then
+  pause analyze analyze-incomplete "no analysis.md produced for the need" "run /ae:analyze on the need, then resume"
+fi
+
+# plan gate: produce + review the plan if not yet reviewed (this IS the per-need design)
+plan_reviewed || run_stage "/ae:plan $FEATURE_DIR" >/dev/null 2>&1 || true
+plan_reviewed || pause plan plan-not-reviewed "no reviewed plan after /ae:plan (design decisions may remain)" \
+      "settle design via /ae:discuss or /ae:plan-review the draft, then resume"
+
+# ===== BACK HALF (autonomous: work <-> review) =====
 # ---- WORK ----
 work_out="$(run_stage "/ae:work $PLAN")"
 if ! work_done; then
