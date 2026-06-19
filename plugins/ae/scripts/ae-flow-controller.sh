@@ -20,12 +20,20 @@
 # from where it is). A clean run leaves no pause file. (Advanced: auto-reactivation
 # watcher = later slice.)
 #
-# SCOPE: single-pass (work -> review-once -> pass | pause). DEFERRED to later slices:
-# loop-back on verdict fail, finer outcome split (missing-verifier / unknown-drift),
-# verifier-discovery, auto-reactivation, per-task accumulated-knowledge in the record.
+# LOOP-BACK (v0.3): on review-fail the controller runs a bounded re-work<->re-review
+# loop (MAX_ROUNDS, default 2) feeding the review findings back as guidance, with a
+# STALL DETECTOR (review.md signature unchanged across a round = no progress -> escalate).
+# Caveat: /ae:work refuses all-[x] plans, so re-work currently leans on /ae:review's
+# OWN fixup across rounds (fresh fixup budget per invocation -> code changes -> sig moves);
+# a /ae:work fixup-mode that re-engages a done plan is a deferred follow-up.
+#
+# DEFERRED to later slices: finer outcome split (missing-verifier / unknown-drift),
+# verifier-discovery, auto-reactivation watcher, /ae:work fixup-mode, per-task
+# accumulated-knowledge in the pause record.
 #
 # Usage:  sh ae-flow-controller.sh <reviewed-plan-path>     (DRY=1 → logic-only, no claude -p)
-# Outcome: pass | work-stalled | degraded-review | review-fail | dead-end
+#         MAX_ROUNDS=N to bound re-work rounds (default 2).
+# Outcome: pass | work-stalled | degraded-review | review-fail | review-fail-stalled | dead-end
 set -u
 
 PLAN="${1:?usage: ae-flow-controller.sh <reviewed-plan-path>}"
@@ -69,6 +77,11 @@ review_verdict() {
   [ -f "$rm_path" ] || rm_path="$(printf '%s' "$FEATURE_DIR" | sed 's#/features/active/#/features/done/#')/review.md"
   grep -m1 '^verdict:' "$rm_path" 2>/dev/null | sed 's/^verdict:[[:space:]]*//'
 }
+review_sig() {  # signature of current review findings, to detect a no-progress stall
+  rm_path="$FEATURE_DIR/review.md"
+  if [ -f "$rm_path" ]; then cksum < "$rm_path"; else echo none; fi
+}
+MAX_ROUNDS="${MAX_ROUNDS:-2}"   # bounded re-work rounds after a review-fail before escalating
 run_stage() {
   if [ "${DRY:-0}" = 1 ]; then echo "[flow][dry] would dispatch: claude -p \"$1\"" >&2; return 0; fi
   echo "[flow] dispatch: claude -p \"$1\"" >&2
@@ -88,18 +101,40 @@ if ! work_done; then
   esac
 fi
 
-# ---- REVIEW ----
-review_out="$(run_stage "/ae:review $PLAN")"
-case "$review_out" in
-  *"degraded mode"*|*"cross-family unavailable"*)
-    pause review degraded-review "review ran cross-family-degraded" \
-          "restore cross-family or accept Claude-only review, then resume";;
-esac
+# ---- REVIEW <-> RE-WORK loop (bounded + stall-detected) ----
+round=0; prev_sig=""
+while :; do
+  review_out="$(run_stage "/ae:review $PLAN")"
+  case "$review_out" in
+    *"degraded mode"*|*"cross-family unavailable"*)
+      pause review degraded-review "review ran cross-family-degraded" \
+            "restore cross-family or accept Claude-only review, then resume";;
+  esac
 
-v="$(review_verdict)"
-if [ "$v" = "pass" ]; then
-  echo "OUTCOME: pass (work green + review verdict pass; archived to done/; ready for human handoff — NOT pushed/merged)"
-  exit 0
-fi
-pause review review-fail "review verdict='${v:-none}' (loop-back deferred to a later slice)" \
-      "address findings in $FEATURE_DIR/review.md, then resume"
+  v="$(review_verdict)"
+  if [ "$v" = "pass" ]; then
+    echo "OUTCOME: pass (work green + review verdict pass; archived to done/; ready for human handoff — NOT pushed/merged)"
+    exit 0
+  fi
+
+  # review failed → bounded loop-back with stall detection
+  round=$((round + 1))
+  sig="$(review_sig)"
+  if [ "$round" -gt "$MAX_ROUNDS" ]; then
+    pause review review-fail "verdict='${v:-none}' after $MAX_ROUNDS re-work rounds" \
+          "address findings in $FEATURE_DIR/review.md, then resume"
+  fi
+  if [ -n "$prev_sig" ] && [ "$sig" = "$prev_sig" ]; then
+    pause review review-fail-stalled "no progress: identical review findings across rounds (re-work not converging)" \
+          "address findings in $FEATURE_DIR/review.md manually, then resume"
+  fi
+  prev_sig="$sig"
+
+  # re-work with the review findings as guidance, then loop back to re-review
+  echo "[flow] verdict=$v → loop-back round $round/$MAX_ROUNDS (re-work with findings)" >&2
+  findings="$(cat "$FEATURE_DIR/review.md" 2>/dev/null)"
+  run_stage "/ae:work $PLAN
+
+Review returned verdict: fail. Address these findings, then re-verify:
+$findings" >/dev/null 2>&1 || true
+done
