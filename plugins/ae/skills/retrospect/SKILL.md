@@ -155,7 +155,7 @@ If nothing surfaces → `No backlog items strongly tied to this window's shipped
 
 ### (5) Harness fixtures to promote (固化)
 
-Scan the in-window done features' `plan.md` files for ACs flagged `fixture: project` (the per-AC promotion signal from F-041). These are reusable verification harnesses the author marked project-level — surface them so harness discipline compounds across features instead of restarting each time.
+Scan the in-window done features' plan files at `.ae/features/done/F-*/plan.md` (feature-dir convention; do NOT scan legacy `.ae/archive/legacy/plans/` — those predate F-041 and carry no `verify_by`/`fixture`) for ACs flagged `fixture: project` (the per-AC promotion signal from F-041). These are reusable verification harnesses the author marked project-level — surface them so harness discipline compounds across features instead of restarting each time.
 
 Render:
 
@@ -170,7 +170,7 @@ These ACs were flagged `fixture: project` — reusable harnesses worth 固化 in
 
 If none → `No fixture: project ACs in this window — nothing to promote yet.`
 
-**Mengdie storage DEFERRED** (discussion 001 Decision 5): this section *surfaces* promotion candidates only — it does NOT auto-ingest a harness artifact to Mengdie. The storage substrate (a concrete Mengdie extraction criterion, or a simpler shared-fixtures location) is deferred to a follow-up BL; do not ship a vague "extract harness artifact" criterion here. Promotion stays a human decision, consistent with this skill's read-only / no-auto-ingest principle.
+**Mengdie storage DEFERRED** (discussion 001 Decision 5): this section *surfaces* promotion candidates only — it does NOT auto-ingest a harness artifact to Mengdie. The storage substrate (a concrete Mengdie extraction criterion, or a simpler shared-fixtures location) is deferred to a follow-up BL (BL-140); do not ship a vague "extract harness artifact" criterion here. Promotion stays a human decision, consistent with this skill's read-only / no-auto-ingest principle.
 
 ## Conversational delivery
 

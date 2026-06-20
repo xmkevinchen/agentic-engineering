@@ -216,8 +216,10 @@ If no plugin files in cumulative diff → skip the gate execution (log "No plugi
 
 Confirm the plan's per-AC verification harness (`verify_by`) is actually *satisfied* — this is the review-stage backstop that gives `/ae:work`'s prompt-level hard-block (`work/SKILL.md:489`) real verdict-stage teeth.
 
+**This is reviewer judgment (LLM-driven), not a mechanical parser**: the reviewer reads the plan's `## Acceptance Criteria` section, reads each AC's `verify_by` value, and judges satisfaction against the diff/output. Pre-F-041 detection = *absence of any `verify_by` field across the plan's ACs* (a property of the text, not a date). A malformed or partial AC section degrades gracefully — judge what is present, do not error out.
+
 For each AC in the plan:
-- **Deterministic AC** (`verify_by` ∈ `unit`/`integration`/`e2e`): its test must pass. If `/ae:work` recorded the AC as an *unverified deterministic AC* (empty `test.command` crossed the prompt-level hard-block, logged in `<milestone-dir>/notes.md`) and it is still unresolved → **block verdict pass** (P1 path). A deterministic claim shipped without a passing check is the silent-drop this backstop exists to catch.
+- **Deterministic AC** (`verify_by` ∈ `unit`/`integration`/`e2e`): its test must pass. If `/ae:work` recorded the AC as an *unverified deterministic AC* — grep `<milestone-dir>/notes.md` for the `UNVERIFIED_AC [Step N]:` prefix it writes when an empty `test.command` crossed the prompt-level hard-block — and it is still unresolved → **block verdict pass** (P1 path). (With only a global `test.command`, "its test must pass" = the suite covering that AC is green; cite the AC→test link when non-obvious.) A deterministic claim shipped without a passing check is the silent-drop this backstop exists to catch.
 - **Judge AC** (`verify_by: judge`): the reviewer answers the AC's stated rubric question against the actual output; a `judge` AC with no rubric, or one whose rubric fails → **block verdict pass**. (This is the committed `judge` enforcement path — review-stage rubric-confirmation; no separate engine.)
 - **`manual` AC**: surfaced for human confirmation in the verdict section; not auto-blocking.
 
