@@ -2,7 +2,9 @@
 # Updated by /ae:setup update
 
 test:
-  command: ""
+  # F-048 D5b′: AE's deterministic L1 oracle (AE is a prose repo with no test runner).
+  # Both /ae:work's gate and /ae:test-plugin --regression --layer1 run this same script.
+  command: "sh plugins/ae/scripts/ae-test-plugin-regression-layer1.sh"
 
 lint:
   command: ""
