@@ -554,6 +554,32 @@ Based on work completion, suggest with exact executable command:
 - If steps remain → auto-continue to next step (or pause if gate failed)
 - If blockers encountered → `Blocker on Step N. Try: /ae:think <blocker description>`
 
+## `--loop` mode — back-half leash (F-048)
+
+When `/ae:work <plan> --loop` is invoked, after the plan's steps complete don't just suggest `/ae:review` — **drive `review → fixup` to `verdict: pass` or an iteration cap.** This is an **extension of `/ae:work`** (reuses the existing fixup-mode + auto-pass gate), NOT a separate skill. The front half (discuss→plan) stays human; `--loop` only runs the already-reviewed back half.
+
+**Shape (F-048 D4)**: LLM-driven driver with a deterministic skeleton — the in-session TL chains the LLM steps; the only written-down rules are two pure scripts. No `claude -p`, no judgment in shell.
+
+**Self-mod freeze**: gates run from the installed plugin (frozen mid-loop); guard = do NOT reinstall mid-loop; log the active gate-skill version (`plugin.json` version + `git rev-parse --short HEAD`) at loop-start.
+
+**The loop**:
+```
+iter = 0
+loop:
+  run /ae:review <plan>
+  verdict = sh plugins/ae/scripts/parse-review-verdict.sh <review-file>   # pass|fail|invalid
+  if pipeline.yml test.command set: run it; non-zero exit → verdict = fail   # D5b deterministic hedge
+  action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>      # cap = work.max_fix_loops (default 3)
+  case action:
+    exit_pass      → STOP, report success
+    dispatch_fixup → iter += 1; re-enter fixup-mode addressing the review findings;
+                     if work.auto_pass=false → pause for human "go" (else continue)
+    escalate_cap   → escalation (below)
+```
+Work/review are LLM skill chains (never `claude -p`); only parse/decide are deterministic. `/ae:review`'s `verdict` already aggregates cross-family — diverse-judge-AND comes free.
+
+**Escalation (cap exhausted)** — never exit silently: emit a "what failed across N iterations" diagnostic + a per-iteration failure-signature (hash of review findings). Repeated identical signature → classify **structural-plan-wrong** (surface to human for a plan revisit, NOT another fixup) vs **fixable-not-yet-converged**.
+
 ## Trace emission (final step)
 
 Before skill exit, follow [Trace Emission Protocol](../../docs/references/trace-emission-protocol.md) — emit 9-field trace record to `~/.ae/traces/<session-id>.ndjson` (no LLM content, per-skill-invocation metadata for v0.11.x consumers).
