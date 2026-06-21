@@ -5,10 +5,11 @@
 # judge-only on AE itself. This is AE's real deterministic oracle (conclusion D5b′): a pure
 # structural static analysis of the plugin's skills. NO `claude -p`, NO LLM.
 #
-# It is the single source both call (resolving the "slash command isn't shell-runnable"
-# contradiction, codex MF-2):
-#   - `pipeline.yml` `test.command` points here (so /ae:work + the /ae:loop hedge run it),
-#   - `/ae:test-plugin --regression --layer1` delegates here for its L1 static pass.
+# Intended as the single source for the L1 static pass (resolving the "slash command isn't
+# shell-runnable" contradiction, codex MF-2):
+#   - `pipeline.yml` `test.command` points here NOW (so /ae:work's gate + the harness loop run it).
+#   - Wiring `/ae:test-plugin --regression --layer1` to DELEGATE here is a follow-up —
+#     test-plugin/SKILL.md is not yet updated (honest: not yet the single source for BOTH).
 #
 # Usage: ae-test-plugin-regression-layer1.sh [skills-dir]   (default: plugins/ae/skills)
 # Exit 0 = all L1 invariants hold; non-zero = a structural violation (offending file on stderr).

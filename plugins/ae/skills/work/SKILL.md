@@ -500,7 +500,7 @@ Fix findings, re-run from Check D until clean pass.
      ```
    - UNVERIFIED states block the gate — they are not true values
    - User can disable auto-pass in `pipeline.yml` → `work.auto_pass: false` if they prefer manual confirmation every step
-5. All steps done → run **Knowledge capture (below) → Completion Invariant**, then `All steps complete. Next: /ae:review <plan-file-path>`
+5. All steps done → run **Knowledge capture (below) → Completion Invariant**, then **branch on the Harness-presence check** (defined in `## Harness-driven loop` below): if the plan carries a harness → **enter the harness-driven loop** (it runs `/ae:review` and drives to green); else (no harness — legacy plan) → `All steps complete. Next: /ae:review <plan-file-path>`
 
 ### Knowledge capture (Mengdie)
 
@@ -550,37 +550,44 @@ When all plan steps are `[x]`, write pipeline state before suggesting next steps
 ## Next Steps
 
 Based on work completion, suggest with exact executable command:
-- If all plan steps completed → `Pipeline state updated. All steps complete. Next: /ae:review <plan-file-path>`
+- If all plan steps completed AND the plan carries a harness (Harness-presence check) → **enter the harness-driven loop** (drives `/ae:review`→fixup to green); on `escalate_cap` → surface the diagnostic + classification to the human.
+- If all plan steps completed AND no harness (legacy) → `Pipeline state updated. All steps complete. Next: /ae:review <plan-file-path>`
 - If steps remain → auto-continue to next step (or pause if gate failed)
 - If blockers encountered → `Blocker on Step N. Try: /ae:think <blocker description>`
 
 ## Harness-driven loop — back-half leash (F-048)
 
-**No flag.** The harness drives the loop. If the plan carries a verification harness — per-AC `verify_by` (F-041) and/or a `pipeline.yml` `test.command` — then after the steps complete `/ae:work` does NOT just suggest `/ae:review`; it **loops `review → fixup` to `verdict: pass` or an iteration cap**, because *correctly executing a harness-gated plan means driving it to green*. A plan with **no harness** (legacy: no `verify_by`, no `test.command`) → old behavior: do the steps, suggest `/ae:review`, no loop. (Asking the invoker to pass `--loop` would be the wrong shape — the harness's presence already determines this; the flag was dropped per the harness-driven principle.)
+**No flag.** The harness drives the loop. The human-in-loop *degree* is the EXISTING `work.auto_pass` knob (not a new flag): `auto_pass: true` → loop to green autonomously; `auto_pass: false` → loop but pause for "go" each iteration. The front half (discuss→plan) stays human regardless; the loop only runs the reviewed back half.
 
-The human-in-loop *degree* is the EXISTING `work.auto_pass` knob, not a new flag: `auto_pass: true` → loop to green autonomously; `auto_pass: false` → loop but pause for "go" each iteration. The front half (discuss→plan) stays human regardless; the loop only runs the reviewed back half.
+**Harness-presence check (the trigger — evaluated at step 5 "all steps done")** — deterministic from the plan + `pipeline.yml`, no flag, no guess:
+1. Does the plan's `## Acceptance Criteria` declare any `verify_by` field? **OR**
+2. Is `pipeline.yml` `test.command` non-empty?
 
-**Shape (F-048 D4)**: LLM-driven driver with a deterministic skeleton — the in-session TL chains the LLM steps; the only written-down rules are two pure scripts. No `claude -p`, no judgment in shell.
+→ **either true** = the plan has a harness → enter the loop below. **neither** = legacy / no-harness plan → old behavior (suggest `/ae:review`, no loop, no error). (This is why there is no `--loop` flag — presence already decides.)
 
-**Self-mod freeze**: gates run from the installed plugin (frozen mid-loop); guard = do NOT reinstall mid-loop; log the active gate-skill version (`plugin.json` version + `git rev-parse --short HEAD`) at loop-start.
+**Shape (F-048 D4)**: LLM-driven driver with a deterministic skeleton — the in-session TL chains the LLM steps. The only orchestration-judgment-free scripts are `parse-review-verdict` + `loop-decide` (and the L1 oracle that runs as `test.command` — a structural gate, not orchestration). All judgment (the work, the review verdict) is LLM. No `claude -p`, no judgment in shell.
 
-**The loop**:
+**Self-mod freeze (real mechanism, not a snapshot)**: AE's gate-skills (`/ae:work`, `/ae:review`) execute from the **installed plugin** (`~/.claude/plugins/cache/agentic-engineering/ae/<version>/`), NOT the working-tree `plugins/ae/skills/` the loop edits — so the running gates are unaffected by the loop's own edits until the next reinstall. *That* is the freeze (CC does re-read SKILL.md per call, but from the installed path, not the edited working tree). **Guard**: do NOT reinstall / `/ae:setup` mid-loop. **Audit**: at loop-start emit `[LOOP-FREEZE] gate-version=<plugin.json version> commit=<git rev-parse --short HEAD>` so the run records which gate logic governed it. **Residual (honest)**: if AE skills are run directly from an *uninstalled* working tree, the freeze does NOT hold — out of MVP scope, flagged for the worktree-isolation follow-up.
+
+**The loop** (iteration state is **disk-backed**, not in-context — it must survive compaction):
 ```
-iter = 0
+iter = 0; persist `LOOP_ITER: 0` to <milestone-dir>/notes.md
 loop:
   run /ae:review <plan>
   verdict = sh plugins/ae/scripts/parse-review-verdict.sh <review-file>   # pass|fail|invalid
   if pipeline.yml test.command set: run it; non-zero exit → verdict = fail   # D5b deterministic hedge
-  action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>      # cap = work.max_fix_loops (default 3)
+  iter = read `LOOP_ITER` from notes.md                                    # re-read from disk, never trust in-context memory
+  action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>     # cap = work.max_fix_loops (default 3)
+  record `LOOP_FINDINGS: <iter> <one-line review-findings summary>` to notes.md
   case action:
     exit_pass      → STOP, report success
-    dispatch_fixup → iter += 1; re-enter fixup-mode addressing the review findings;
+    dispatch_fixup → iter += 1; persist `LOOP_ITER: <iter>`; re-enter fixup-mode on the review findings;
                      if work.auto_pass=false → pause for human "go" (else continue)
     escalate_cap   → escalation (below)
 ```
-Work/review are LLM skill chains (never `claude -p`); only parse/decide are deterministic. `/ae:review`'s `verdict` already aggregates cross-family — diverse-judge-AND comes free.
+Work/review are LLM skill chains (never `claude -p`). `/ae:review`'s `verdict` already aggregates cross-family — diverse-judge-AND comes free.
 
-**Escalation (cap exhausted)** — never exit silently: emit a "what failed across N iterations" diagnostic + a per-iteration failure-signature (hash of review findings). Repeated identical signature → classify **structural-plan-wrong** (surface to human for a plan revisit, NOT another fixup) vs **fixable-not-yet-converged**.
+**Escalation (cap exhausted)** — never exit silently: emit a "what failed across N iterations" diagnostic, then **classify** by comparing this iteration's `LOOP_FINDINGS` to the prior iterations' (recorded above in notes.md): findings **substantially unchanged** across iterations → **structural-plan-wrong** (surface to human for a plan revisit, NOT another fixup); **shrinking / changing** → **fixable-not-yet-converged**. (The comparison is LLM-judged from the recorded findings — `verify_by: judge`, NOT a deterministic hash — the "hash" framing was dropped per review.)
 
 ## Trace emission (final step)
 

@@ -55,4 +55,11 @@ assert "parse quoted pass"     pass    0 sh "$PARSE" "$tmp/quoted.md"
 assert "parse not-a-file"      "" 2 sh "$PARSE" "$tmp/nope.md"
 rm -rf "$tmp"
 
+# --- loop-decide: invalid verdict emits a DISTINCT stderr diagnostic (MF-4, not silent) ---
+err=$(sh "$DECIDE" invalid 0 3 2>&1 >/dev/null)
+case $err in
+  *"invalid verdict treated as fail"*) echo "ok: invalid emits stderr diagnostic" ;;
+  *) echo "FAIL: invalid stderr diagnostic missing — got [$err]"; fail=1 ;;
+esac
+
 if [ "$fail" -eq 0 ]; then echo "ALL PASS"; else echo "SOME FAILED"; exit 1; fi
