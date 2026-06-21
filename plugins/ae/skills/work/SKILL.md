@@ -554,9 +554,11 @@ Based on work completion, suggest with exact executable command:
 - If steps remain → auto-continue to next step (or pause if gate failed)
 - If blockers encountered → `Blocker on Step N. Try: /ae:think <blocker description>`
 
-## `--loop` mode — back-half leash (F-048)
+## Harness-driven loop — back-half leash (F-048)
 
-When `/ae:work <plan> --loop` is invoked, after the plan's steps complete don't just suggest `/ae:review` — **drive `review → fixup` to `verdict: pass` or an iteration cap.** This is an **extension of `/ae:work`** (reuses the existing fixup-mode + auto-pass gate), NOT a separate skill. The front half (discuss→plan) stays human; `--loop` only runs the already-reviewed back half.
+**No flag.** The harness drives the loop. If the plan carries a verification harness — per-AC `verify_by` (F-041) and/or a `pipeline.yml` `test.command` — then after the steps complete `/ae:work` does NOT just suggest `/ae:review`; it **loops `review → fixup` to `verdict: pass` or an iteration cap**, because *correctly executing a harness-gated plan means driving it to green*. A plan with **no harness** (legacy: no `verify_by`, no `test.command`) → old behavior: do the steps, suggest `/ae:review`, no loop. (Asking the invoker to pass `--loop` would be the wrong shape — the harness's presence already determines this; the flag was dropped per the harness-driven principle.)
+
+The human-in-loop *degree* is the EXISTING `work.auto_pass` knob, not a new flag: `auto_pass: true` → loop to green autonomously; `auto_pass: false` → loop but pause for "go" each iteration. The front half (discuss→plan) stays human regardless; the loop only runs the reviewed back half.
 
 **Shape (F-048 D4)**: LLM-driven driver with a deterministic skeleton — the in-session TL chains the LLM steps; the only written-down rules are two pure scripts. No `claude -p`, no judgment in shell.
 
