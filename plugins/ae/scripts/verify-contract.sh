@@ -25,9 +25,14 @@ if ! command -v jq >/dev/null 2>&1; then echo "jq not available" >&2; exit 2; fi
 fail=0
 n=0
 while IFS= read -r line || [ -n "$line" ]; do
-  case "$line" in ''|\#*) continue ;; esac
+  case "$line" in ''|\#*) continue ;; esac   # NB: \# is load-bearing — bare # after | starts a comment in some sh (codex's "unnecessary backslash" Consider was wrong)
   n=$((n + 1))
-  # jq -e: exit 0 if the result is neither false nor null; non-0 on false/null OR a jq error.
+  # jq -e: exit 0 if the result is neither false nor null; non-0 on false/null = violation.
+  # KNOWN LIMIT (codex review Consider → BL-143): a malformed jq program (compile error)
+  # is currently conflated with a data violation (both → fail). jq 1.8.1 exit codes don't
+  # cleanly separate compile-error from falsy without false-positives on valid assertions
+  # that error on edge inputs; the clean distinction is deferred (diagnostic quality, not
+  # a safety issue — a bad spec surfaces as a loud failing AC either way).
   if ! jq -e "$line" "$sample" >/dev/null 2>&1; then
     echo "FAIL: $line" >&2
     fail=1

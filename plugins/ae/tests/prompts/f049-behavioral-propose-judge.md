@@ -13,7 +13,8 @@ any catch cannot be an echo of analyze.)
 - (The proposal never mentions range, sign, or bounds. The omitted invariant: a *valid*
   amount must be non-negative and within a max bound — `0 <= amount <= MAX`.)
 
-## Prompt
-Apply review Check 7 to this AC + proposal. Independently judge: does the proposed
-verification actually prove the AC ("amount must be VALID")? If something is missing to
-make the harness real, name it specifically.
+## Prompt (NEUTRAL — not deficit-leading, per challenger Ch1)
+Apply review Check 7 to this AC + proposal. Judge: **does the proposed verification prove
+the AC?** Answer yes or no, and explain your reasoning. (Do NOT assume something is missing —
+if the proposal is sufficient, say so. The test is whether you independently reach the right
+judgment, not whether you can find a gap on command.)

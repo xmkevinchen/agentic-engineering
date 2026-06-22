@@ -23,7 +23,10 @@ echo '{"amounts":[999]}' > "$tmp/bad.json"
 if sh "$RUNNER" "$tmp/spec.jq" "$tmp/bad.json" >/dev/null 2>&1; then
   echo "FAIL: contract should have failed on violating data"; fail=1
 else
-  verdict=fail   # F-048 loop hedge: test.command non-zero → verdict = fail
+  verdict=fail   # SIMULATES the F-048 hedge: in /ae:work this conversion (test.command
+                 # non-0 → verdict=fail) is LLM-executed prompt logic, not shell-callable,
+                 # so we hand-set it here. This test covers the deterministic skeleton, not
+                 # the LLM seam (codex M2 + challenger Ch2 — scope is honest, not end-to-end).
 fi
 action=$(sh "$DECIDE" "$verdict" 0 3)
 if [ "$action" = "dispatch_fixup" ]; then
