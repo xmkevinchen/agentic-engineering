@@ -200,7 +200,7 @@ Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:wo
 
 Every AC declares two fields — this is the feature's verification harness, carried in the AC section AE already has (not a parallel system):
 
-- `verify_by`: `unit` | `integration` | `e2e` | `judge` | `manual` — which proof kind enforces this AC.
+- `verify_by`: `unit` | `integration` | `e2e` | `contract` | `judge` | `manual` — which proof kind enforces this AC.
 - `fixture`: `per-feature` (scaffolding, default) | `project` (reusable — surfaced for promotion at `/ae:retrospect`).
 
 **Claim→track mapping** (the deterministic-vs-LLM line sits at the *claim*, not the artifact — a prose/SKILL.md AC can still have deterministic sub-claims):
@@ -209,10 +209,12 @@ Every AC declares two fields — this is the feature's verification harness, car
 |---|---|---|
 | Reference Case | deterministic (`unit` / `integration` / `e2e`) | test runner; hard-block at `/ae:work` when `test.command` empty |
 | Output Verification | `judge` | review-stage judge against the AC's stated rubric |
-| Sanity Check | author picks (deterministic or `judge`) | per the chosen value |
+| Sanity Check | author picks (deterministic / `contract` / `judge`) | per the chosen value |
+| Business-data / domain invariant | `contract` (deterministic) or `judge` | `contract`: jq-assertion runner; `judge`: review rubric |
 
 - **`judge` ACs MUST state a pass-criterion (rubric question)** in the AC body — a bare `verify_by: judge` with no criterion is rejected at `/ae:plan-review` (otherwise it's vibes-as-enforcement, not a harness).
 - **Non-code dimensions** (business-data validity, domain invariants, BDD/behavioral scenarios): `verify_by: judge` + a rubric is the **general fallback** — the review-stage judge (Check 7) adjudicates the rubric against the actual output. For data/invariant dimensions that are *deterministically checkable*, prefer `verify_by: contract` (a declarative-spec check — see below) over judge.
+- **`verify_by: contract`** (deterministic declarative-spec check for data / domain invariants): the AC declares a `spec:` field naming a **jq-assertion spec file** (jq filters asserting ranges / uniqueness / invariants over the feature's data output). The LLM *instantiates* the spec for this feature — **instantiate boundary values, not "easy" ones** (a range assertion must exercise min/max, not a trivially-passing midpoint). A deterministic runner (`verify-contract.sh`, run as a `test.command` target) executes the assertions: exit 0 = all pass, non-0 = violation → the AC fails. `contract` is a **deterministic kind** (like unit/integration/e2e) for Check 7 + the `/ae:work` hard-block. The LLM fills a human-authored spec *shape* — it does NOT free-generate checks (the self-grading guard: shape is authored, not generated).
 - **Brownfield rule**: a missing `verify_by` is a plan-validity failure for plans created or revised *after* this ships; legacy in-flight plans are migrated on touch (add the fields before new work starts) — not retroactively invalid.
 
 ### Plan Quality Self-check
