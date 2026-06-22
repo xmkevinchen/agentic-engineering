@@ -594,6 +594,15 @@ Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md
 - `Knowledge capture: [N] items ingested, no conflicts`
 - Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
 
+## Loop-invocation mode (called from the /ae:work harness loop — F-048)
+
+When `/ae:review` runs as an iteration of the `/ae:work` harness loop, the **loop owns lifecycle**, so two defaults change (codex P1 root fix — archive must not precede the loop's hedge + manual gate):
+
+1. **Verdict to the canonical path, overwrite.** Write this iteration's verdict to the plan's canonical `review.md` (Output case (a)/(b) target), OVERWRITING any prior `review.md`. Do NOT route a re-review to an ad-hoc `*-rerun-*.md` file — ad-hoc reviews omit `verdict:`, so the loop would keep reading the stale first verdict and dispatch fixups to the cap even after a successful re-review. The loop re-reads the canonical `review.md` each iteration and needs the FRESH verdict there.
+2. **Do NOT archive.** Skip the Feature-level archive trigger below — the loop performs the archive itself at its terminal `exit_pass`, AFTER the deterministic hedge passes AND any `verify_by: manual` AC is human-confirmed. Archiving on a per-iteration passing verdict moves the feature to `done/` before those gates (premature lifecycle: a later hedge failure or manual rejection would leave a feature falsely marked done with no defined recovery).
+
+Standalone `/ae:review` (not invoked from the loop) keeps the existing behavior: write per the Output rule + archive on `verdict: pass`.
+
 ## Completion Invariant
 
 After writing the review file with `verdict:`, update pipeline state:
@@ -602,6 +611,8 @@ After writing the review file with `verdict:`, update pipeline state:
 - [ ] Log: `[WRITEBACK] Review written, plan status confirmed done`
 
 ### Feature-level archive trigger (GTD)
+
+**Loop-mode skip**: if invoked from the `/ae:work` harness loop (see § "Loop-invocation mode" above), SKIP this trigger entirely — the loop archives at its terminal `exit_pass` after the hedge + manual confirm. The rest of this section applies only to standalone `/ae:review`.
 
 When `verdict: pass` AND the target plan's feature dir is in `.ae/features/{active,paused}/F-NNN-slug/`, archive the feature (a reviewed-and-passed paused feature is complete → `done/`, per F-032 D7).
 

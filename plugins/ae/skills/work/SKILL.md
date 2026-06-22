@@ -575,25 +575,30 @@ Based on work completion, suggest with exact executable command:
 ```
 iter = 0; persist `LOOP_ITER: 0` to <milestone-dir>/notes.md
 loop:
-  run /ae:review <plan>
-  # codex P1: /ae:review archives a feature-dir plan (active→done) on a PASS (its Completion
-  # Invariant). RE-RESOLVE paths before parsing — if <feature-dir> is no longer in active/,
-  # read <review-file>/<notes>/<plan> from done/ (else parse fails on a stale active/ path
-  # and the loop can never reach exit_pass on a successful review).
-  re-resolve <review-file>,<notes>,<plan> under done/ if the feature dir moved
-  verdict = sh plugins/ae/scripts/parse-review-verdict.sh <review-file>   # pass|fail|invalid
-  if pipeline.yml test.command set: run it; non-zero exit → verdict = fail   # D5b deterministic hedge
-  iter = read `LOOP_ITER` from notes.md                                    # re-read from disk, never trust in-context memory
-  action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>     # cap = work.max_fix_loops (default 3)
+  run /ae:review <plan> in LOOP MODE (see /ae:review § "Loop-invocation mode"):
+    # codex P1 root fix: the loop owns lifecycle. In loop mode /ae:review (a) writes THIS
+    # iteration's verdict to the CANONICAL review.md (overwrite — NOT an ad-hoc rerun file),
+    # so the loop reads the FRESH verdict every iteration (a re-review routed to a
+    # verdict-less ad-hoc file left the loop reading the stale first 'fail' to the cap); and
+    # (b) does NOT archive (archive is deferred to exit_pass below, after the hedge + manual confirm).
+  verdict = sh plugins/ae/scripts/parse-review-verdict.sh <review.md>       # fresh each iteration (loop mode overwrote it)
+  if pipeline.yml test.command set: run it; non-zero exit → verdict = fail  # deterministic hedge — runs BEFORE any lifecycle transition
+  iter = read `LOOP_ITER` from notes.md                                     # re-read from disk, never trust in-context memory
+  action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>      # cap = work.max_fix_loops (default 3)
   record `LOOP_FINDINGS: <iter> <one-line review-findings summary>` to notes.md
   case action:
-    exit_pass      → if the plan has ANY `verify_by: manual` AC → PAUSE for human confirmation
-                     of those manual ACs (codex P1: auto_pass never covers manual); else STOP, report success
+    exit_pass      → # review verdict AND the hedge both passed. ONLY NOW do the lifecycle transition:
+                     1. if the plan has ANY `verify_by: manual` AC → PAUSE for human confirmation FIRST
+                        (auto_pass never covers manual). REJECT → set verdict=fail, re-run loop-decide
+                        (→ dispatch_fixup or escalate_cap); do NOT archive. CONFIRM → continue.
+                     2. archive HERE (the loop owns it, moved out of /ae:review — codex P1: archive must
+                        FOLLOW the hedge + manual confirm, never precede): mv <feature-dir> active→done,
+                        set index.md status: done. Then STOP, report success.
     dispatch_fixup → iter += 1; persist `LOOP_ITER: <iter>`; re-enter fixup-mode on the review findings;
                      if work.auto_pass=false → pause for human "go" (else continue)
     escalate_cap   → escalation (below)
 ```
-Work/review are LLM skill chains (never `claude -p`). `/ae:review`'s `verdict` already aggregates cross-family — diverse-judge-AND comes free.
+Work/review are LLM skill chains (never `claude -p`). `/ae:review`'s `verdict` already aggregates cross-family — diverse-judge-AND comes free. **Lifecycle is the loop's job, not the per-iteration review's** — `/ae:review` archives only when invoked standalone (not in loop mode).
 
 **Escalation (cap exhausted)** — never exit silently: emit a "what failed across N iterations" diagnostic, then **classify** by comparing this iteration's `LOOP_FINDINGS` to the prior iterations' (recorded above in notes.md): findings **substantially unchanged** across iterations → **structural-plan-wrong** (surface to human for a plan revisit, NOT another fixup); **shrinking / changing** → **fixable-not-yet-converged**. (The comparison is LLM-judged from the recorded findings — `verify_by: judge`, NOT a deterministic hash — the "hash" framing was dropped per review.)
 
