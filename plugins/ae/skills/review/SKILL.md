@@ -605,7 +605,9 @@ Standalone `/ae:review` (not invoked from the loop) keeps the existing behavior:
 
 ## Completion Invariant
 
-**Loop-mode skip**: if invoked from the `/ae:work` harness loop (§ "Loop-invocation mode"), skip this ENTIRE section on every iteration — the loop invokes it once at its terminal `exit_pass` (the canonical finalize). The steps below are the single source of truth for lifecycle finalize, used by BOTH standalone `/ae:review` and that one loop-terminal call — the loop does NOT reimplement them.
+**When this section runs (two distinct invocations — do not conflate):**
+- **Per-iteration loop-mode review** → **SKIP this entire section** (the loop is still iterating; nothing terminal yet).
+- **Standalone `/ae:review`, OR the loop's terminal `exit_pass` finalize** → **RUN it in full.** At `exit_pass` the loop INVOKES this section as the canonical finalize — it does NOT reimplement or skip it. This section is the single source of truth for lifecycle finalize; "loop-terminal finalize" is a *run*, not a *skip*.
 
 After writing the review file with `verdict:`, update pipeline state:
 
@@ -614,7 +616,7 @@ After writing the review file with `verdict:`, update pipeline state:
 
 ### Feature-level archive trigger (GTD)
 
-**Loop-mode skip**: if invoked from the `/ae:work` harness loop (see § "Loop-invocation mode" above), SKIP this trigger entirely — the loop archives at its terminal `exit_pass` after the hedge + manual confirm. The rest of this section applies only to standalone `/ae:review`.
+**When this trigger runs**: same rule as the Completion Invariant above — **SKIP** during a per-iteration loop-mode review; **RUN** for standalone `/ae:review` AND at the loop's terminal `exit_pass` finalize. At the loop terminal, the loop INVOKES this trigger (it does NOT archive on its own / reimplement it) — so the archive's full side effects (`done:` date, roadmap update, metadata, log, legacy manual-fallback) apply identically whether reached standalone or loop-terminal.
 
 When `verdict: pass` AND the target plan's feature dir is in `.ae/features/{active,paused}/F-NNN-slug/`, archive the feature (a reviewed-and-passed paused feature is complete → `done/`, per F-032 D7).
 

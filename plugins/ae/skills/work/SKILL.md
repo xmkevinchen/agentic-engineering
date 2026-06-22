@@ -608,7 +608,7 @@ loop:
                      if work.auto_pass=false → pause for human "go" (else continue)
     escalate_cap   → escalation (below)
 ```
-Work/review are LLM skill chains (never `claude -p`). `/ae:review`'s `verdict` already aggregates cross-family — diverse-judge-AND comes free. **Lifecycle is the loop's job, not the per-iteration review's** — `/ae:review` archives only when invoked standalone (not in loop mode).
+Work/review are LLM skill chains (never `claude -p`). `/ae:review`'s `verdict` already aggregates cross-family — diverse-judge-AND comes free. **Lifecycle is the loop's job, not the per-iteration review's** — a *per-iteration loop-mode* review never archives; the archive/finalize runs only standalone OR at the loop's terminal `exit_pass` (where the loop invokes `/ae:review`'s canonical Completion Invariant + archive trigger).
 
 **Escalation (cap exhausted)** — never exit silently: emit a "what failed across N iterations" diagnostic, then **classify** by comparing this iteration's `LOOP_FINDINGS` to the prior iterations' (recorded above in notes.md): findings **substantially unchanged** across iterations → **structural-plan-wrong** (surface to human for a plan revisit, NOT another fixup); **shrinking / changing** → **fixable-not-yet-converged**. (The comparison is LLM-judged from the recorded findings — `verify_by: judge`, NOT a deterministic hash — the "hash" framing was dropped per review.)
 
