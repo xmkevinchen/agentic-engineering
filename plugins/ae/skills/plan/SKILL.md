@@ -212,6 +212,7 @@ Every AC declares two fields — this is the feature's verification harness, car
 | Sanity Check | author picks (deterministic or `judge`) | per the chosen value |
 
 - **`judge` ACs MUST state a pass-criterion (rubric question)** in the AC body — a bare `verify_by: judge` with no criterion is rejected at `/ae:plan-review` (otherwise it's vibes-as-enforcement, not a harness).
+- **Non-code dimensions** (business-data validity, domain invariants, BDD/behavioral scenarios): `verify_by: judge` + a rubric is the **general fallback** — the review-stage judge (Check 7) adjudicates the rubric against the actual output. For data/invariant dimensions that are *deterministically checkable*, prefer `verify_by: contract` (a declarative-spec check — see below) over judge.
 - **Brownfield rule**: a missing `verify_by` is a plan-validity failure for plans created or revised *after* this ships; legacy in-flight plans are migrated on touch (add the fields before new work starts) — not retroactively invalid.
 
 ### Plan Quality Self-check
