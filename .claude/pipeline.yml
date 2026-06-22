@@ -2,9 +2,12 @@
 # Updated by /ae:setup update
 
 test:
-  # F-048 D5b′: AE's deterministic L1 oracle (AE is a prose repo with no test runner).
-  # Both /ae:work's gate and /ae:test-plugin --regression --layer1 run this same script.
-  command: "sh plugins/ae/scripts/ae-test-plugin-regression-layer1.sh"
+  # F-048 D5b′ + codex-review P1 fix: AE's full deterministic suite (L1 oracle + every
+  # mechanism test — verdict parser, loop-decide, contract runner, loop-integration).
+  # The harness loop's deterministic hedge must cover the safety-critical scripts, not just
+  # the SKILL frontmatter check. (/ae:test-plugin --regression --layer1 + Check 6/C.5 still
+  # call ae-test-plugin-regression-layer1.sh directly for the L1-only static pass.)
+  command: "sh plugins/ae/scripts/ae-run-tests.sh"
 
 lint:
   command: ""

@@ -22,10 +22,18 @@ n=0
 for skill in "$dir"/*/SKILL.md; do
   [ -f "$skill" ] || continue
   n=$((n + 1))
-  # Invariant 1: declares a `name: ae:` frontmatter field (autocomplete + dispatch contract).
-  grep -q '^name: ae:' "$skill" || { echo "L1 FAIL: missing 'name: ae:' frontmatter — $skill" >&2; rc=1; }
-  # Invariant 2: frontmatter block is closed (>= two '---' fence lines).
-  [ "$(grep -c '^---$' "$skill")" -ge 2 ] || { echo "L1 FAIL: frontmatter not closed — $skill" >&2; rc=1; }
+  # Constrain checks to a PROPERLY-OPENED-AND-CLOSED LEADING frontmatter block (codex P2):
+  # an anywhere-match for 'name: ae:' + any two '---' would false-green a malformed skill.
+  if [ "$(sed -n '1p' "$skill")" != "---" ]; then
+    echo "L1 FAIL: no leading '---' frontmatter fence on line 1 — $skill" >&2; rc=1; continue
+  fi
+  close=$(awk 'NR>1 && /^---$/{print NR; exit}' "$skill")   # line number of the closing fence
+  if [ -z "$close" ]; then
+    echo "L1 FAIL: leading frontmatter not closed — $skill" >&2; rc=1; continue
+  fi
+  # Invariant: `name: ae:` declared INSIDE the leading block (lines 2..close-1).
+  sed -n "2,$((close - 1))p" "$skill" | grep -q '^name: ae:' \
+    || { echo "L1 FAIL: missing 'name: ae:' in leading frontmatter — $skill" >&2; rc=1; }
 done
 
 if [ "$n" -eq 0 ]; then echo "L1: no SKILL.md found under $dir" >&2; exit 2; fi

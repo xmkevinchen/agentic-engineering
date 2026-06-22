@@ -565,6 +565,8 @@ Based on work completion, suggest with exact executable command:
 
 → **either true** = the plan has a harness → enter the loop below. **neither** = legacy / no-harness plan → old behavior (suggest `/ae:review`, no loop, no error). (This is why there is no `--loop` flag — presence already decides.)
 
+**Manual-AC caveat (codex P1)**: a plan whose ACs are covered *only* by `verify_by: manual` still enters the loop, but review Check 7 treats `manual` as **non-blocking** (human-confirm, not auto-pass). So the loop MUST NOT autonomously `exit_pass` a plan with any unconfirmed `manual` AC — `work.auto_pass` governs deterministic + `judge` ACs, NEVER manual verification. The `exit_pass` branch below pauses for human confirmation of manual ACs regardless of `auto_pass`.
+
 **Shape (F-048 D4)**: LLM-driven driver with a deterministic skeleton — the in-session TL chains the LLM steps. The only orchestration-judgment-free scripts are `parse-review-verdict` + `loop-decide` (and the L1 oracle that runs as `test.command` — a structural gate, not orchestration). All judgment (the work, the review verdict) is LLM. No `claude -p`, no judgment in shell.
 
 **Self-mod freeze (real mechanism, not a snapshot)**: AE's gate-skills (`/ae:work`, `/ae:review`) execute from the **installed plugin** (`~/.claude/plugins/cache/agentic-engineering/ae/<version>/`), NOT the working-tree `plugins/ae/skills/` the loop edits — so the running gates are unaffected by the loop's own edits until the next reinstall. *That* is the freeze (CC does re-read SKILL.md per call, but from the installed path, not the edited working tree). **Guard**: do NOT reinstall / `/ae:setup` mid-loop. **Audit**: at loop-start emit `[LOOP-FREEZE] gate-version=<plugin.json version> commit=<git rev-parse --short HEAD>` so the run records which gate logic governed it. **Residual (honest)**: if AE skills are run directly from an *uninstalled* working tree, the freeze does NOT hold — out of MVP scope, flagged for the worktree-isolation follow-up.
@@ -574,13 +576,19 @@ Based on work completion, suggest with exact executable command:
 iter = 0; persist `LOOP_ITER: 0` to <milestone-dir>/notes.md
 loop:
   run /ae:review <plan>
+  # codex P1: /ae:review archives a feature-dir plan (active→done) on a PASS (its Completion
+  # Invariant). RE-RESOLVE paths before parsing — if <feature-dir> is no longer in active/,
+  # read <review-file>/<notes>/<plan> from done/ (else parse fails on a stale active/ path
+  # and the loop can never reach exit_pass on a successful review).
+  re-resolve <review-file>,<notes>,<plan> under done/ if the feature dir moved
   verdict = sh plugins/ae/scripts/parse-review-verdict.sh <review-file>   # pass|fail|invalid
   if pipeline.yml test.command set: run it; non-zero exit → verdict = fail   # D5b deterministic hedge
   iter = read `LOOP_ITER` from notes.md                                    # re-read from disk, never trust in-context memory
   action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>     # cap = work.max_fix_loops (default 3)
   record `LOOP_FINDINGS: <iter> <one-line review-findings summary>` to notes.md
   case action:
-    exit_pass      → STOP, report success
+    exit_pass      → if the plan has ANY `verify_by: manual` AC → PAUSE for human confirmation
+                     of those manual ACs (codex P1: auto_pass never covers manual); else STOP, report success
     dispatch_fixup → iter += 1; persist `LOOP_ITER: <iter>`; re-enter fixup-mode on the review findings;
                      if work.auto_pass=false → pause for human "go" (else continue)
     escalate_cap   → escalation (below)

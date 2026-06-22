@@ -24,8 +24,11 @@ if ! command -v jq >/dev/null 2>&1; then echo "jq not available" >&2; exit 2; fi
 
 fail=0
 n=0
-while IFS= read -r line || [ -n "$line" ]; do
-  case "$line" in ''|\#*) continue ;; esac   # NB: \# is load-bearing — bare # after | starts a comment in some sh (codex's "unnecessary backslash" Consider was wrong)
+while IFS= read -r raw || [ -n "$raw" ]; do
+  # Strip leading/trailing whitespace FIRST, then skip blanks + comments (codex P2: an
+  # indented `  # comment` or a whitespace-only line was being sent to jq and failing).
+  line=$(printf '%s' "$raw" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  case "$line" in ''|\#*) continue ;; esac   # NB: \# is load-bearing — bare # after | starts a comment in some sh
   n=$((n + 1))
   # jq -e: exit 0 if the result is neither false nor null; non-0 on false/null = violation.
   # KNOWN LIMIT (codex review Consider → BL-143): a malformed jq program (compile error)

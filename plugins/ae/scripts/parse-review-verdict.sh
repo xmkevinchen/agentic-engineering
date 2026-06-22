@@ -24,15 +24,20 @@ else
   content=$(cat "$1")
 fi
 
-# Count verdict: lines — 0 (missing) or >1 (duplicate) both normalize to invalid.
-n=$(printf '%s\n' "$content" | grep -c '^verdict:')
+# Restrict to the LEADING YAML frontmatter block (between the first two '---' fences) —
+# a 'verdict:' mentioned in the review BODY (e.g. discussing the schema) must NOT count
+# (codex P2: whole-file counting turned a passing review with such a line into 'invalid').
+fm=$(printf '%s\n' "$content" | awk 'NR==1 && $0!="---"{exit} NR==1{next} /^---$/{exit} {print}')
+
+# Count verdict: lines in the frontmatter — 0 (missing) or >1 (duplicate) both → invalid.
+n=$(printf '%s\n' "$fm" | grep -c '^verdict:')
 if [ "$n" -ne 1 ]; then
   echo invalid
   exit 0
 fi
 
 # Extract the single value; strip whitespace, a trailing `# comment`, and surrounding quotes.
-v=$(printf '%s\n' "$content" | grep -m1 '^verdict:' \
+v=$(printf '%s\n' "$fm" | grep -m1 '^verdict:' \
     | sed -e 's/^verdict:[[:space:]]*//' -e 's/[[:space:]]*#.*$//' \
           -e 's/^["'\'']//' -e 's/["'\'']$//' -e 's/[[:space:]]*$//')
 
