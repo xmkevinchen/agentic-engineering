@@ -24,10 +24,14 @@ else
   content=$(cat "$1")
 fi
 
-# Restrict to the LEADING YAML frontmatter block (between the first two '---' fences) —
-# a 'verdict:' mentioned in the review BODY (e.g. discussing the schema) must NOT count
-# (codex P2: whole-file counting turned a passing review with such a line into 'invalid').
-fm=$(printf '%s\n' "$content" | awk 'NR==1 && $0!="---"{exit} NR==1{next} /^---$/{exit} {print}')
+# Restrict to a PROPERLY-OPENED-AND-CLOSED leading YAML frontmatter block: line 1 must be
+# '---' AND a closing '---' must exist (codex P1: an UNCLOSED block — '---' + 'verdict: pass'
+# with no closing fence — must NOT read as pass). A 'verdict:' in the review BODY is excluded.
+# Any malformed shape → invalid.
+if [ "$(printf '%s\n' "$content" | sed -n '1p')" != "---" ]; then echo invalid; exit 0; fi
+close=$(printf '%s\n' "$content" | awk 'NR>1 && /^---$/{print NR; exit}')
+[ -n "$close" ] || { echo invalid; exit 0; }                  # no closing fence → malformed
+fm=$(printf '%s\n' "$content" | sed -n "2,$((close - 1))p")
 
 # Count verdict: lines in the frontmatter — 0 (missing) or >1 (duplicate) both → invalid.
 n=$(printf '%s\n' "$fm" | grep -c '^verdict:')
@@ -36,8 +40,8 @@ if [ "$n" -ne 1 ]; then
   exit 0
 fi
 
-# Extract the single value; strip whitespace, a trailing `# comment`, and surrounding quotes.
-v=$(printf '%s\n' "$fm" | grep -m1 '^verdict:' \
+# Extract the single value (n==1 → one match, no non-POSIX `grep -m1`). Strip ws/comment/quotes.
+v=$(printf '%s\n' "$fm" | grep '^verdict:' \
     | sed -e 's/^verdict:[[:space:]]*//' -e 's/[[:space:]]*#.*$//' \
           -e 's/^["'\'']//' -e 's/["'\'']$//' -e 's/[[:space:]]*$//')
 

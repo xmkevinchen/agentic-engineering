@@ -174,7 +174,7 @@ Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:wo
 ## Acceptance Criteria
 
 ### AC1: Reference Case — <description>
-- verify_by: unit          # unit|integration|e2e|judge|manual — see Verification Harness mapping below
+- verify_by: unit          # unit|integration|e2e|contract|judge|manual — see Verification Harness mapping below
 - fixture: per-feature     # per-feature|project
 <Specific known input/output pairs>
 

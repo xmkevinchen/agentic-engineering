@@ -50,6 +50,7 @@ printf -- '---\nverdict: pass\nverdict: fail\n---\n'  > "$tmp/dup.md"
 printf -- '---\nverdict: "pass"\n---\n'               > "$tmp/quoted.md"
 # codex P2-5 lock: a 'verdict:' line in the BODY must NOT flip a passing review to invalid.
 printf -- '---\nverdict: pass\n---\n# Review\ndiscussing the verdict: field schema\n' > "$tmp/body.md"
+printf -- '---\nverdict: pass\n'                       > "$tmp/unclosed.md"   # codex P1: no closing fence
 assert "parse pass"            pass    0 sh "$PARSE" "$tmp/pass.md"
 assert "parse fail"            fail    0 sh "$PARSE" "$tmp/fail.md"
 assert "parse missing->invalid" invalid 0 sh "$PARSE" "$tmp/none.md"
@@ -57,6 +58,7 @@ assert "parse unknown->invalid" invalid 0 sh "$PARSE" "$tmp/unk.md"
 assert "parse dup->invalid"    invalid 0 sh "$PARSE" "$tmp/dup.md"
 assert "parse quoted pass"     pass    0 sh "$PARSE" "$tmp/quoted.md"
 assert "parse body-verdict ignored" pass 0 sh "$PARSE" "$tmp/body.md"
+assert "parse unclosed-fm->invalid" invalid 0 sh "$PARSE" "$tmp/unclosed.md"
 assert "parse not-a-file"      "" 2 sh "$PARSE" "$tmp/nope.md"
 rm -rf "$tmp"
 
