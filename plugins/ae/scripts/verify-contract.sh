@@ -1,0 +1,39 @@
+#!/bin/sh
+# verify-contract.sh — F-049 deterministic contract runner (jq-based).
+#
+# The deterministic-end of the LLM-driven verification harness: an LLM instantiates
+# a declarative spec (a set of jq boolean assertions over a feature's data output);
+# this runner executes them deterministically. Designed to be wired as a
+# `pipeline.yml` `test.command` target so its exit code flows into the F-048 verdict
+# loop (exit non-0 → verdict fail → loop-decide dispatches fixup).
+#
+# Usage: verify-contract.sh <spec.jq> <sample.json>
+#   spec.jq    — one jq boolean assertion per line (# comments + blank lines ignored)
+#   sample.json — the data document to validate
+# Exit: 0 = all assertions pass | 1 = a violation | 2 = usage / IO / missing-jq error.
+#
+# NOT a test-seam: this is a standalone script invoked at the test.command/fixture
+# level — never embedded in a SKILL.md prompt path (Mengdie f5ad527d).
+
+if [ $# -ne 2 ]; then echo "usage: verify-contract.sh <spec.jq> <sample.json>" >&2; exit 2; fi
+spec=$1
+sample=$2
+if [ ! -f "$spec" ]; then echo "spec not found: $spec" >&2; exit 2; fi
+if [ ! -f "$sample" ]; then echo "sample not found: $sample" >&2; exit 2; fi
+if ! command -v jq >/dev/null 2>&1; then echo "jq not available" >&2; exit 2; fi
+
+fail=0
+n=0
+while IFS= read -r line || [ -n "$line" ]; do
+  case "$line" in ''|\#*) continue ;; esac
+  n=$((n + 1))
+  # jq -e: exit 0 if the result is neither false nor null; non-0 on false/null OR a jq error.
+  if ! jq -e "$line" "$sample" >/dev/null 2>&1; then
+    echo "FAIL: $line" >&2
+    fail=1
+  fi
+done < "$spec"
+
+if [ "$n" -eq 0 ]; then echo "no assertions in spec" >&2; exit 2; fi
+if [ "$fail" -eq 0 ]; then echo "contract OK ($n assertions)"; exit 0; fi
+exit 1
