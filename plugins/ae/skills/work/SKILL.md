@@ -583,18 +583,28 @@ loop:
     # (b) does NOT archive (archive is deferred to exit_pass below, after the hedge + manual confirm).
   verdict = sh plugins/ae/scripts/parse-review-verdict.sh <review.md>       # fresh each iteration (loop mode overwrote it)
   if pipeline.yml test.command set: run it; non-zero exit → verdict = fail  # deterministic hedge — runs BEFORE any lifecycle transition
+  if the hedge downgraded verdict→fail → PERSIST it: overwrite review.md `verdict: fail`     # codex P1: the
+       # EFFECTIVE verdict must hit disk. A hedge failure (or manual rejection, below) must not leave a
+       # 'pass' in review.md — an interrupted run would otherwise show the still-active feature as done.
   iter = read `LOOP_ITER` from notes.md                                     # re-read from disk, never trust in-context memory
   action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>      # cap = work.max_fix_loops (default 3)
   record `LOOP_FINDINGS: <iter> <one-line review-findings summary>` to notes.md
   case action:
-    exit_pass      → # review verdict AND the hedge both passed. ONLY NOW do the lifecycle transition:
+    exit_pass      → # review verdict AND the hedge both passed. ONLY NOW do the lifecycle, ONCE:
                      1. if the plan has ANY `verify_by: manual` AC → PAUSE for human confirmation FIRST
-                        (auto_pass never covers manual). REJECT → set verdict=fail, re-run loop-decide
-                        (→ dispatch_fixup or escalate_cap); do NOT archive. CONFIRM → continue.
-                     2. archive HERE (the loop owns it, moved out of /ae:review — codex P1: archive must
-                        FOLLOW the hedge + manual confirm, never precede): mv <feature-dir> active→done,
-                        set index.md status: done. Then STOP, report success.
-    dispatch_fixup → iter += 1; persist `LOOP_ITER: <iter>`; re-enter fixup-mode on the review findings;
+                        (auto_pass never covers manual). REJECT → persist review.md `verdict: fail`
+                        (effective state on disk), re-run loop-decide (→ dispatch_fixup or escalate_cap);
+                        do NOT finalize. CONFIRM (or no manual AC) → continue.
+                     2. FINALIZE — run `/ae:review`'s **`## Completion Invariant` + `### Feature-level
+                        archive trigger`** ONCE (loop mode deferred the WHOLE Completion Invariant every
+                        iteration; the loop runs it here). Use that canonical contract as-is — do NOT
+                        reimplement: it sets plan `status: done`; for a FEATURE-DIR plan archives
+                        active→done WITH `done: <date>` + roadmap update + metadata preserved + log; for a
+                        LEGACY plan (no feature dir) takes its manual-fallback branch (codex P1: the loop
+                        must not assume every plan has a feature dir; P2: must not drop done-date/roadmap/log).
+                        Then STOP, report success.
+    dispatch_fixup → iter += 1; persist `LOOP_ITER: <iter>`; (review.md already holds the effective verdict);
+                     re-enter fixup-mode on the review findings;
                      if work.auto_pass=false → pause for human "go" (else continue)
     escalate_cap   → escalation (below)
 ```

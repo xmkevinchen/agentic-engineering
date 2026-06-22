@@ -599,11 +599,13 @@ Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md
 When `/ae:review` runs as an iteration of the `/ae:work` harness loop, the **loop owns lifecycle**, so two defaults change (codex P1 root fix — archive must not precede the loop's hedge + manual gate):
 
 1. **Verdict to the canonical path, overwrite.** Write this iteration's verdict to the plan's canonical `review.md` (Output case (a)/(b) target), OVERWRITING any prior `review.md`. Do NOT route a re-review to an ad-hoc `*-rerun-*.md` file — ad-hoc reviews omit `verdict:`, so the loop would keep reading the stale first verdict and dispatch fixups to the cap even after a successful re-review. The loop re-reads the canonical `review.md` each iteration and needs the FRESH verdict there.
-2. **Do NOT archive.** Skip the Feature-level archive trigger below — the loop performs the archive itself at its terminal `exit_pass`, AFTER the deterministic hedge passes AND any `verify_by: manual` AC is human-confirmed. Archiving on a per-iteration passing verdict moves the feature to `done/` before those gates (premature lifecycle: a later hedge failure or manual rejection would leave a feature falsely marked done with no defined recovery).
+2. **Do NOT execute the Completion Invariant AT ALL** — neither the `status: done` plan-frontmatter writeback NOR the Feature-level archive trigger (codex P1: deferring only the archive still ran the status writeback every iteration, *including failed ones* — marking the plan `done` before fixup/hedge/manual, which dashboard treats as terminal). Per-iteration loop-mode review writes ONLY the verdict (item 1); nothing terminal. The loop invokes the ENTIRE Completion Invariant exactly once, at its terminal `exit_pass`, after the hedge passes AND any `verify_by: manual` AC is confirmed.
 
-Standalone `/ae:review` (not invoked from the loop) keeps the existing behavior: write per the Output rule + archive on `verdict: pass`.
+Standalone `/ae:review` (not invoked from the loop) keeps the existing behavior: write per the Output rule + run the full Completion Invariant + archive on `verdict: pass`.
 
 ## Completion Invariant
+
+**Loop-mode skip**: if invoked from the `/ae:work` harness loop (§ "Loop-invocation mode"), skip this ENTIRE section on every iteration — the loop invokes it once at its terminal `exit_pass` (the canonical finalize). The steps below are the single source of truth for lifecycle finalize, used by BOTH standalone `/ae:review` and that one loop-terminal call — the loop does NOT reimplement them.
 
 After writing the review file with `verdict:`, update pipeline state:
 
