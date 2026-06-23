@@ -226,6 +226,18 @@ For each AC in the plan:
 
 If the plan has NO `verify_by` fields → **distinguish by PATH, not date** (codex P1): a **feature-dir plan** (`.ae/features/.../F-NNN/plan.md`, post-F-041 by construction) with zero `verify_by` → **block verdict pass** (forgotten harness, not legacy); only a **legacy-path plan** (`output.plans/`) → skip with `Harness satisfaction: skipped (pre-F-041 legacy plan)`. Never infer legacy from a date.
 
+### Check 8: Loop-engagement audit (F-050)
+
+The review gate runs **regardless of whether `/ae:work`'s harness loop engaged** — so it is the safety net for the ignition residual (the loop's own checks cannot catch the loop *never starting*; the net must live OFF the loop, at review). Re-derive from disk:
+1. Did the plan declare ≥1 auto-node? — `sh plugins/ae/scripts/check-node.sh <plan> trigger` exits 0.
+2. If yes, did the loop engage? — grep `<milestone-dir>/notes.md` for `LOOP_ITER` / `NODE_ITER`.
+
+- **auto-nodes present AND no `LOOP_ITER`/`NODE_ITER`** → the harness loop never engaged (the Pong "LOOP_ITER never fired" mode: a plan that should have auto-driven was pushed manually / stalled). **Surface a finding requiring disposition** (was this intended-manual, or engagement-drift?). Do NOT silently pass — making non-engagement VISIBLE is the whole point of the net.
+- auto-nodes present AND `LOOP_ITER`/`NODE_ITER` present → engaged; pass.
+- no auto-nodes (legacy / all-`human-gate`) → skip (no loop expected).
+
+**Honest bound (CC-plugin ceiling — state it, do not overclaim)**: this check makes loop-non-engagement *visible + un-fakeable* at the review gate (re-derived from disk, independent of the loop) — it does **NOT** mechanically force the loop to engage (a CC plugin cannot strip the top-level agent's pause ability or compel ignition). The crystallized frame raises the floor and surfaces drift; it is not a hard guarantee. F3 — verification as an internalized agent *reflex* — remains a separate track.
+
 ### Prior Context (from Mengdie)
 
 Run this step after Pre-checks pass and before creating the review team.
