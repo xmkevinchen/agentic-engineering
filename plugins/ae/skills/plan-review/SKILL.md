@@ -124,6 +124,7 @@ TL collects findings from architect, dependency-analyst, and cross-family proxie
 - Every `judge`-typed AC states a pass-criterion/rubric question in its body. A bare `verify_by: judge` with no rubric → **Must fix** (vibes-as-enforcement, not a harness).
 - Every `contract`-typed AC names a `spec:` field pointing to a jq-assertion spec file. A `verify_by: contract` with no `spec:` → **Must fix** (a contract AC with no spec is unrunnable — codex M3, else it passes plan-review silently and the gap surfaces only at /ae:work).
 - `verify_by` matches the AC kind per the claim→track mapping (Reference Case → deterministic; Output Verification → `judge`; Sanity Check → author picks). Mismatch → **Consider**.
+- **Harness-readiness gate (F-050)** — the upstream half of the loop mechanism: plan-review confirms each step's harness is IN PLACE + bites BEFORE `/ae:work` drives it. (a) Every `### Step N` declares `human-gate: true|false` consistent with its ACs (any `judge`/`manual` AC ⇒ must be `true`; all-deterministic ⇒ `false`); mismatch or missing on a feature-dir plan → **Must fix**. (b) An **auto-node** (`human-gate: false`) whose deterministic ACs have NO runnable check (no `test.command` target, no `spec:`) → **Must fix** — it would auto-advance with nothing to gate it (the loop's green condition would be vacuous). (c) `human-gate:` is **derived** at plan time, so a mismatch usually means the AC kinds changed after derivation — re-derive, don't hand-patch.
 
 - **Must fix** — design flaws, hidden dependencies
 - **Consider** — simplification suggestions
