@@ -1,0 +1,20 @@
+# check-templates.catalog — F-051 per-node check template catalog.
+#
+# The hardened, human-authored set of per-node check templates an LLM may instantiate
+# in a plan via `node_check: <template-id> k=v ...`. The LLM supplies structured
+# parameters ONLY — never shell. run-node-check.sh + plan-review read this file; the
+# catalog GROWS by adding an entry here (config edit), the authority surface does NOT
+# (no new code path = the floor-(3)/(4) boundary, F-051 discussion Decision 4).
+#
+# Template line format:  template-id | required-params(csv) | description
+# Allowlist line format: # allow: <name>=<real-command>   (command-output cmd= values
+#   must name an allowlisted entry; the LLM cannot run arbitrary shell.)
+
+file-contains | target,pattern | target file exists AND contains the fixed string `pattern`
+json-field | target,path | jq path resolves to a truthy (non-null/non-false) value in the JSON file `target`
+command-output | cmd,expect | run the allowlisted command `cmd`; its stdout contains the fixed string `expect`
+
+# --- command-output allowlist (name = real command run directly, no shell interpolation) ---
+# allow: git-diff-name-only=git diff --name-only
+# allow: git-status-porcelain=git status --porcelain
+# allow: ls-plugin-scripts=ls plugins/ae/scripts
