@@ -230,9 +230,9 @@ If the plan has NO `verify_by` fields → **distinguish by PATH, not date** (cod
 
 The review gate runs **regardless of whether `/ae:work`'s harness loop engaged** — so it is the safety net for the ignition residual (the loop's own checks cannot catch the loop *never starting*; the net must live OFF the loop, at review). Re-derive from disk:
 1. Did the plan declare ≥1 auto-node? — `sh plugins/ae/scripts/check-node.sh <plan> trigger` exits 0.
-2. If yes, did the loop engage? — grep `<milestone-dir>/notes.md` for `LOOP_ITER` / `NODE_ITER`.
+2. If yes, did the loop engage? — grep `<milestone-dir>/notes.md` for `LOOP_ITER` (the engagement marker `/ae:work` persists when the loop starts; `NODE_ITER` is reserved for a future per-node iteration marker — do NOT require it, work does not emit it yet).
 
-- **auto-nodes present AND no `LOOP_ITER`/`NODE_ITER`** → the harness loop never engaged (the Pong "LOOP_ITER never fired" mode: a plan that should have auto-driven was pushed manually / stalled). **Surface a finding requiring disposition** (was this intended-manual, or engagement-drift?). Do NOT silently pass — making non-engagement VISIBLE is the whole point of the net.
+- **auto-nodes present AND no `LOOP_ITER`** → the harness loop never engaged (the Pong "LOOP_ITER never fired" mode: a plan that should have auto-driven was pushed manually / stalled). **Surface a finding requiring disposition** (was this intended-manual, or engagement-drift?). Do NOT silently pass — making non-engagement VISIBLE is the whole point of the net.
 - auto-nodes present AND `LOOP_ITER`/`NODE_ITER` present → engaged; pass.
 - no auto-nodes (legacy / all-`human-gate`) → skip (no loop expected).
 
