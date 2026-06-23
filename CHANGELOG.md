@@ -2,9 +2,32 @@
 
 ## Unreleased
 
+---
+
+## v0.11.0 — 2026-06-22
+
+**Release theme**: The verification harness. AE can now declare *how each acceptance criterion is proven* (`verify_by`), drive the work→review→fixup back-half to a green verdict on its own, verify data/domain invariants with declarative contracts, and prompt for a cross-family review of the combined diff before stacked features merge. Three stacked features (F-041 → F-048 → F-049) plus an integration-review convention, all dogfooded through AE's own pipeline.
+
+### New
+
+- **Per-AC verification harness — `verify_by` + `fixture` (F-041)** — every acceptance criterion now declares `verify_by` (`unit` | `integration` | `e2e` | `contract` | `judge` | `manual`) and `fixture` (`per-feature` | `project`), carried in the AC section AE already has (not a parallel system). The deterministic-vs-LLM line sits at the *claim*, not the artifact. Enforcement rides existing gates: `/ae:work` prompt-level hard-block when a deterministic AC has no `test.command`; `/ae:review` **Check 7** (Harness Satisfaction) backstops it via a `UNVERIFIED_AC` notes.md contract; `judge` ACs are adjudicated by the review-stage rubric. `/ae:analyze` surfaces verification considerations; `/ae:retrospect` surfaces `fixture: project` promotion candidates. No new engine.
+- **Harness-driven loop (F-048)** — when a plan carries `verify_by` ACs or a `test.command`, `/ae:work` folds a `review → fixup` loop that drives to a verdict-pass or an escalation cap. No flag, no new skill — harness *presence* drives it; the human-in-loop degree is the existing `work.auto_pass` knob. Deterministic skeleton (`loop-decide.sh` + `parse-review-verdict.sh`, mutation-checked); all judgment stays LLM. Self-mod freeze: gates run from the installed plugin cache, not the working tree the loop edits. AE got its own `test.command` (a Layer-1 oracle, `ae-test-plugin-regression-layer1.sh`) and a full suite runner (`ae-run-tests.sh`).
+- **LLM-driven contract verification — `verify_by: contract` (F-049)** — a deterministic declarative-spec check for data/domain invariants: an AC names a jq-assertion spec; `verify-contract.sh` runs it as a `test.command` target (exit 0 = pass). The LLM instantiates a human-authored spec *shape* (instantiate boundary values, not easy ones) — it does not free-generate checks. **propose ≠ judge**: the stage that instantiates the spec is never the stage that judges satisfaction, made structural via context isolation when the independence claim is load-bearing. Judge-end baseline (analyze/plan/review) now explicitly covers business-data validity, domain invariants, and BDD/behavioral scenarios.
+- **Pre-merge integration-review convention (discussion 055)** — `docs/references/pre-merge-integration-review.md`: before merging ≥2 stacked/`depends_on` features, run `/ae:review` on the combined `main...<tip>` range using a *different* model family than per-feature review (fallback force-rank: preferred family → local oMLX → block; same-family last-resort with explicit warning, never silent-skip). Closes the gap where per-feature review passes each feature but their combined branch has cross-feature seam defects. Two-layer model: review *discovers* the seam, a fixture *locks* it.
+  - **`/ae:review` completion reminder (BL-145)** — when a reviewed feature's `index.md` has non-empty `depends_on`, the Completion Invariant emits a pre-merge combined-review reminder; fires in both the standalone and harness-loop-terminal paths. A reminder, not a gate.
+  - **Loop-finalize contract single-source (BL-146)** — the SKIP-while-iterating / RUN-at-finalize rule now lives once in `/ae:review` § Completion Invariant; `/ae:work`'s loop references it instead of restating it. New `test-loop-contract-single-source.sh` sentinel (section-scoped denylist + positive-reference + `SECTION_MISSING` precondition, mutation-checked).
+
 ### Fixed
 
-- **/tmp/ae-session-check.log cleanup (F-044)** — the SessionEnd `trace-rotate.sh` hook now does a best-effort `rm -f /tmp/ae-session-check.log` on every run, clearing the BL-023 smoke-test leftover (session id, world-readable, no rotation) from machines that ran the smoke build. The log write itself was already removed in the Plan 054 review fixup; this only sweeps the residual file. The sweep runs before the `~/.ae/traces` existence check, so users without a traces dir are still cleaned.
+- **F-044/045/046 harness cleanup** — `/tmp/ae-session-check.log` residual now swept by the SessionEnd `trace-rotate.sh` hook (F-044); `/ae:plan` Doodlestein 3-vs-4 per-skill asymmetry documented (F-045); negative/mutation test for `check-shutdown-canonical.sh` (F-046).
+
+### Removed
+
+- **`discover-verifier.sh` (F-047)** — the hardcoded probe-table verifier-detector spike was retired during integration (superseded by the LLM-driven harness; LLM-driven verifier-discovery re-filed as a backlog item).
+
+### Notes
+
+- F-041/048/049 were merged as a stacked set; an independent cross-family review of the *combined* branch caught four rounds of integration defects that per-feature review passed — the evidence that motivated the integration-review convention above.
 
 ---
 
