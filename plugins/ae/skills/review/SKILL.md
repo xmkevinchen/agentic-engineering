@@ -613,6 +613,7 @@ After writing the review file with `verdict:`, update pipeline state:
 
 - [ ] Update plan frontmatter: `status: done` (if not already set by self-healing)
 - [ ] Log: `[WRITEBACK] Review written, plan status confirmed done`
+- [ ] **Stacked-feature pre-merge reminder (BL-145)**: if the reviewed feature's `index.md` has a non-empty `depends_on` (forward-direction; reader-tolerant — legacy plan / no feature dir / missing or empty `depends_on` → emit nothing), print: `📋 This feature is stacked on <deps> — before merging the stack, run a combined-diff cross-family review of the integrated range (see docs/references/pre-merge-integration-review.md).` This fires here in BOTH paths (standalone `/ae:review` AND the loop's terminal `exit_pass`, which invokes this section) — the merge-moment. A reminder, NOT a gate (the autonomous trigger is deferred, BL-144).
 
 ### Feature-level archive trigger (GTD)
 
