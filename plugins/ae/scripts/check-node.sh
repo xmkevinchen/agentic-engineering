@@ -17,6 +17,17 @@ ITER="${3:-0}"
 CAP="${4:-0}"
 [ -f "$PLAN" ] || { echo "fail: plan not found: $PLAN" >&2; exit 1; }
 
+# TRIGGER mode: `check-node.sh <plan> trigger` — the disk-derived loop-engagement check.
+# Engage the harness loop iff the plan declares >=1 auto-node (a `human-gate: false` line,
+# written by /ae:plan's derivation). No auto-node ⇒ legacy behavior (backward-compatible).
+# This replaces the old verify_by-PRESENCE trigger that was forgeable by omission.
+if [ "$STEP" = "trigger" ]; then
+  if grep -qiE 'human-gate:[[:space:]]*false' "$PLAN"; then
+    echo "engage: plan has >=1 auto-node (human-gate:false)"; exit 0
+  fi
+  echo "legacy: no auto-node (no human-gate:false) — no loop"; exit 1
+fi
+
 # Extract the "### Step N:" block (heading → next ### or ## or EOF).
 block="$(awk -v s="$STEP" '
   $0 ~ ("^### Step " s ":") {f=1; print; next}

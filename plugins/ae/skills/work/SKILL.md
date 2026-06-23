@@ -482,6 +482,7 @@ Fix findings, re-run from Check D until clean pass.
    ```
    `no_accumulated_p1` defaults to `true`. Set to `false` only when accumulated checkpoint runs and finds P1.
    `deferred_resolved` defaults to `true`. Set to `false` when Check 4 found DEFERRED items matching current step but TL did not write dispositions for all of them.
+   - **Per-node advancement (F-050 — replaces the implicit between-node "continue?" judgment)**: run `sh plugins/ae/scripts/check-node.sh <plan> <N> <iter> <cap>` for the current step N. It re-derives the verdict FROM DISK (deliverables present; never the agent's say-so) → **`pass` (exit 0)** = the node is auto + complete → advance automatically, NO human "continue?" prompt; **`gate` (exit 2)** = the node is a `human-gate` (judge/manual AC) OR the fixup cap is exhausted → **pause for human** (the only legitimate mid-flow pause), regardless of `auto_pass`; **`fail` (exit 1)** = a deliverable is missing → fixup, do not advance. This runs BEFORE `loop-decide.sh` (a `gate` bypasses the cap loop; `pass`/`fail` feed the existing terms). The gate expression gains a `node_verdict_pass` term: `gate = node_verdict_pass AND tests_green AND no_p1 AND ...`. The point: "should I stop and ask?" is no longer the agent's discretionary call — it is `check-node`'s exit code (gate→pause, pass→drive).
    - All met → auto-continue: `✅ Ready to continue: tests pass, no blockers, no unresolved drift. Continuing to Step N+1.` (user-facing line is plain language — the gate's internal variables above are spec, not display; output-standards.md Rule A)
    - Any failed → **pause for user confirmation** — lead the pause message with the blocker list in plain language, codes in parentheses (e.g. `Pausing: 1 blocker finding (P1) needs a fix before continuing.`)
    - Drift detected (not approved) → always pause
@@ -559,11 +560,12 @@ Based on work completion, suggest with exact executable command:
 
 **No flag.** The harness drives the loop. The human-in-loop *degree* is the EXISTING `work.auto_pass` knob (not a new flag): `auto_pass: true` → loop to green autonomously; `auto_pass: false` → loop but pause for "go" each iteration. The front half (discuss→plan) stays human regardless; the loop only runs the reviewed back half.
 
-**Harness-presence check (the trigger — evaluated at step 5 "all steps done")** — deterministic from the plan + `pipeline.yml`, no flag, no guess:
+**Harness-presence check (the trigger — evaluated at step 5 "all steps done")** — deterministic from the plan + `pipeline.yml`, no flag, no guess. **Evaluate by DISK, not field-presence (F-050 root fix):**
+0. **PRIMARY (disk-derived, F-050)**: `sh plugins/ae/scripts/check-node.sh <plan> trigger` exits 0 — i.e. the plan declares ≥1 **auto-node** (`human-gate: false`). This is the engagement signal that **cannot be defeated by omitting `verify_by`** (the Pong "LOOP_ITER never fired" bug: the old trigger silently no-op'd when a plan dropped its `verify_by` fields). **OR**
 1. Does the plan's `## Acceptance Criteria` declare any `verify_by` field? **OR**
 2. Is `pipeline.yml` `test.command` non-empty?
 
-→ **either true** = the plan has a harness → enter the loop below. **neither** = legacy / no-harness plan → old behavior (suggest `/ae:review`, no loop, no error). (This is why there is no `--loop` flag — presence already decides.)
+→ **any true** = the plan has a harness → enter the loop below. **none** = legacy / no-harness plan → old behavior (suggest `/ae:review`, no loop, no error). (No `--loop` flag — presence decides. Condition 0 is primary; 1/2 are backward-compat fallbacks for plans authored before the `human-gate` derivation.)
 
 **Manual-AC caveat (codex P1)**: a plan whose ACs are covered *only* by `verify_by: manual` still enters the loop, but review Check 7 treats `manual` as **non-blocking** (human-confirm, not auto-pass). So the loop MUST NOT autonomously `exit_pass` a plan with any unconfirmed `manual` AC — `work.auto_pass` governs deterministic + `judge` ACs, NEVER manual verification. The `exit_pass` branch below pauses for human confirmation of manual ACs regardless of `auto_pass`.
 
