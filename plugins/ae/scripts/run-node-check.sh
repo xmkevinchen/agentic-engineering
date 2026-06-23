@@ -52,9 +52,17 @@ done
 IFS=$oldIFS
 
 # Allowlist resolver — command-output cmd= must name an allowlisted entry (no arbitrary shell).
+# LITERAL name equality (codex P2): the LLM-supplied name must NOT be treated as a regex, else
+# `cmd=git.*` would glob-match a different allowlisted entry than the one named.
 resolve_cmd() {
-  grep -E "^[[:space:]]*#[[:space:]]*allow:[[:space:]]*$1=" "$CATALOG" | head -1 \
-    | sed -n "s/^[[:space:]]*#[[:space:]]*allow:[[:space:]]*$1=//p" | head -1
+  _want=$1
+  while IFS= read -r _line; do
+    _rest=$(printf '%s' "$_line" | sed -n 's/^[[:space:]]*#[[:space:]]*allow:[[:space:]]*//p')
+    [ -n "$_rest" ] || continue
+    _name=${_rest%%=*}; _cmd=${_rest#*=}
+    [ "$_name" = "$_want" ] && { printf '%s\n' "$_cmd"; return 0; }
+  done < "$CATALOG"
+  return 1
 }
 
 case "$TEMPLATE" in

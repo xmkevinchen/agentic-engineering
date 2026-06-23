@@ -34,6 +34,9 @@ assert "command-output allowlisted, expect absent → fail"  1 "$(rcroot run com
 assert "unknown template → exit 2"            2 "$(rc run no-such-template target=x)"
 assert "missing required param → exit 2"      2 "$(rc run file-contains target=routes.txt)"
 assert "command-output non-allowlisted → exit 2" 2 "$(rc run command-output cmd=rm-rf-slash expect=x)"
+# literal allowlist match (codex P2): a regex/glob or partial name must NOT resolve to a real entry
+assert "command-output regex name (git.*) → exit 2"   2 "$(rc run command-output cmd=git.* expect=x)"
+assert "command-output partial name (git-diff) → exit 2" 2 "$(rc run command-output cmd=git-diff expect=x)"
 assert "bad param form (no =) → exit 2"       2 "$(rc run file-contains targetx pattern=y)"
 
 # --- AC3: redcheck (red-before-green) bites + catches theater ---

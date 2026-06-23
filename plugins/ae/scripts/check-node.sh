@@ -72,7 +72,14 @@ if [ -n "$missing" ]; then echo "fail: missing deliverables:$missing" >&2; exit 
 # Red-before-green FIRST (the instance must demonstrably fail on a harness-synthesized bad
 # input) THEN the real run. Absent node_check ⇒ this loop runs 0 times ⇒ legacy behavior.
 RUNNER="$(dirname "$0")/run-node-check.sh"
+# Fail-safe (codex hardening): if the step declares node_check but the runner is absent
+# (packaging error), FAIL — never silently auto-advance as if no content check existed.
+has_nc=$(printf '%s\n' "$block" | sed -n 's/^[[:space:]]*node_check:[[:space:]]*//p' | grep -c . || true)
+if [ "${has_nc:-0}" -gt 0 ] && [ ! -f "$RUNNER" ]; then
+  echo "fail: step $STEP declares node_check but run-node-check.sh is absent (fail-safe)" >&2; exit 1
+fi
 if [ -f "$RUNNER" ]; then
+  set -f  # codex hardening: prevent pathname-expansion of unquoted $spec tokens (e.g. pattern=*)
   set +e  # a failing node_check makes the pipeline non-zero; we translate it below, not abort
   printf '%s\n' "$block" | sed -n 's/^[[:space:]]*node_check:[[:space:]]*//p' | while IFS= read -r spec; do
     [ -n "$spec" ] || continue
@@ -86,7 +93,7 @@ if [ -f "$RUNNER" ]; then
   done
   # The while loop runs in a subshell (pipeline); a non-zero exit propagates as the pipeline rc.
   ncrc=$?
-  set -e
+  set +f; set -e
   [ "$ncrc" -eq 0 ] || exit 1
 fi
 echo pass
