@@ -7,7 +7,7 @@
 #
 #   validate : graph well-formedness — every node has `id:`; `depends:` reference existing
 #              ids; ACYCLIC (Kahn topo sort); every auto-node (`human-gate: false`) has a
-#              runnable harness (`Expected files:` or `node_check:`); no `backend: workflow`
+#              runnable check (`Expected files:`); no `backend: workflow`
 #              on a node (node backend ∈ {subagent, agent_teams}; workflow = orchestrator
 #              level, F-030). Exit 0 ok | 1 violation (reason on stderr).
 #   ready    : print ids of nodes whose `depends:` are ALL `pass` in the NODE_STATE ledger
@@ -37,7 +37,6 @@ case "$MODE" in
     innode && cur!="" && /^depends:[[:space:]]/      { v=$0; sub(/^depends:[[:space:]]*/,"",v); gsub(/[\[\]]/,"",v); gsub(/,/," ",v); deps[cur]=trim(v); next }
     innode && cur!="" && /^human-gate:[[:space:]]/   { v=$0; sub(/^human-gate:[[:space:]]*/,"",v); hg[cur]=trim(v); next }
     innode && cur!="" && /^Expected files:[[:space:]]*[^[:space:]]/ { harness[cur]=1; next }
-    innode && cur!="" && /^node_check:[[:space:]]/   { harness[cur]=1; next }
     innode && cur!="" && /^backend:[[:space:]]*workflow/ { badbackend[cur]=1; next }
     END {
       if (n==0){ print "fail: dag plan but no nodes with id:" > "/dev/stderr"; exit 1 }
@@ -45,7 +44,7 @@ case "$MODE" in
       for(i=1;i<=n;i++){
         id=ids[i]
         if(badbackend[id]){ print "fail: node " id " backend: workflow illegal (use subagent|agent_teams; workflow=orchestrator level)" > "/dev/stderr"; exit 1 }
-        if(hg[id]=="false" && !harness[id]){ print "fail: auto-node " id " has no harness (need Expected files: or node_check:)" > "/dev/stderr"; exit 1 }
+        if(hg[id]=="false" && !harness[id]){ print "fail: auto-node " id " has no runnable check (need Expected files:)" > "/dev/stderr"; exit 1 }
         m=split(deps[id],d," ")
         for(j=1;j<=m;j++){
           if(d[j]=="") continue

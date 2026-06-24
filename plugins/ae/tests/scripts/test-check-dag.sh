@@ -28,7 +28,7 @@ human-gate: false
 ### Step 3: join (AC3)
 id: N3
 depends: [N1, N2]
-node_check: file-contains target=b.txt pattern=x
+Expected files: c.txt
 human-gate: false
 ## Acceptance Criteria
 ### AC1: ref
