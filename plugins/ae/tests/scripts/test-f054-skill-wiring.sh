@@ -6,13 +6,13 @@ S="$ROOT/plugins/ae/skills"
 fail=0
 has(){ if grep -Fq -- "$3" "$2"; then echo "  ok: $1"; else echo "  FAIL: $1 — missing in $2" >&2; fail=1; fi; }
 
-# AC3 — work DAG-drive contract
-has "work: DAG mode opt-in"          "$S/work/SKILL.md" 'DAG mode (F-054 Phase-1 — opt-in)'
+# AC3 — work DAG-drive contract (driver-loop wording per F-055; same contract)
+has "work: DAG mode opt-in"          "$S/work/SKILL.md" 'DAG mode (F-054'
 has "work: ready-set frontier"       "$S/work/SKILL.md" 'ready-set frontier'
-has "work: commit-before-execute"    "$S/work/SKILL.md" 'Commit-before-execute'
+has "work: commit-before-execute"    "$S/work/SKILL.md" 'commit-before-execute'
 has "work: NODE_STATE not verdict"   "$S/work/SKILL.md" 'check-node.sh` NEVER reads `NODE_STATE`'
 has "work: advance-node sole pass writer" "$S/work/SKILL.md" 'advance-node.sh is the ONLY sanctioned writer'
-has "work: terminal signals consumed" "$S/work/SKILL.md" '__DONE__'
+has "work: terminal signal handled"  "$S/work/SKILL.md" '`BLOCKED` (exit 3)'
 has "work: legacy unchanged"         "$S/work/SKILL.md" "no silent DAG interpretation of legacy plans"
 
 # AC4 — plan schema doc + plan-review gate
