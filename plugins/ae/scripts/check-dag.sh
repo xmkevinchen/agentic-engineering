@@ -31,8 +31,8 @@ case "$MODE" in
   validate)
     awk '
     function trim(s){ gsub(/^[[:space:]]+|[[:space:]]+$/,"",s); return s }
-    /^##[^#]/ { innode=0 }
-    /^### /   { innode=1; cur=""; next }
+    /^##[[:space:]]/ { insteps=($0 ~ /^##[[:space:]]+Steps([[:space:]]|$)/)?1:0; innode=0; next }
+    /^### /   { innode = insteps?1:0; cur=""; next }
     innode && /^id:[[:space:]]/        { v=$0; sub(/^id:[[:space:]]*/,"",v); cur=trim(v); n++; ids[n]=cur; seen[cur]=1; next }
     innode && cur!="" && /^depends:[[:space:]]/      { v=$0; sub(/^depends:[[:space:]]*/,"",v); gsub(/[\[\]]/,"",v); gsub(/,/," ",v); deps[cur]=trim(v); next }
     innode && cur!="" && /^human-gate:[[:space:]]/   { v=$0; sub(/^human-gate:[[:space:]]*/,"",v); hg[cur]=trim(v); next }
@@ -69,19 +69,29 @@ case "$MODE" in
   ready)
     awk -v ledger="$LEDGER" '
     function trim(s){ gsub(/^[[:space:]]+|[[:space:]]+$/,"",s); return s }
-    /^##[^#]/ { innode=0 }
-    /^### /   { innode=1; cur=""; next }
+    /^##[[:space:]]/ { insteps=($0 ~ /^##[[:space:]]+Steps([[:space:]]|$)/)?1:0; innode=0; next }
+    /^### /   { innode = insteps?1:0; cur=""; next }
     innode && /^id:[[:space:]]/  { v=$0; sub(/^id:[[:space:]]*/,"",v); cur=trim(v); n++; ids[n]=cur; next }
     innode && cur!="" && /^depends:[[:space:]]/ { v=$0; sub(/^depends:[[:space:]]*/,"",v); gsub(/[\[\]]/,"",v); gsub(/,/," ",v); deps[cur]=trim(v); next }
     END {
       if(ledger!=""){ while((getline line < ledger)>0){ if(line ~ /^NODE_STATE[[:space:]]/){ s=line; sub(/^NODE_STATE[[:space:]]*/,"",s); ci=index(s,":"); k=trim(substr(s,1,ci-1)); val=trim(substr(s,ci+1)); state[k]=val } } }
+      nready=0; allpass=1
       for(i=1;i<=n;i++){
         id=ids[i]
-        if(state[id]=="pass" || state[id]=="in_progress") continue
+        if(state[id]!="pass") allpass=0
+        if(state[id]=="pass") continue        # done — skip
+        if(state[id]=="gate") continue        # human-escalated (cap-exhausted/judge): NOT auto-ready; blocks the frontier until a human resolves it
+        # fail / in_progress / pending fall through = re-runnable when deps are pass.
+        # fail = retry (bounded by the work loop per-node iter/cap, which yields gate).
+        # in_progress = a node interrupted mid-run is RE-PICKED on resume (crash-safe).
         rdy=1; m=split(deps[id],d," ")
         for(j=1;j<=m;j++){ if(d[j]=="") continue; if(state[d[j]]!="pass"){ rdy=0; break } }
-        if(rdy) print id
+        if(rdy){ print id; nready++ }
       }
+      # Machine-distinguishable terminal signals (codex P2-3): caller never infers.
+      if(nready>0) exit 0
+      if(allpass){ print "__DONE__"; exit 0 }
+      print "__BLOCKED__"; exit 3
     }
     ' "$PLAN"
     ;;

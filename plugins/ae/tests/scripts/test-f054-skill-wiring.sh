@@ -11,6 +11,8 @@ has "work: DAG mode opt-in"          "$S/work/SKILL.md" 'DAG mode (F-054 Phase-1
 has "work: ready-set frontier"       "$S/work/SKILL.md" 'ready-set frontier'
 has "work: commit-before-execute"    "$S/work/SKILL.md" 'Commit-before-execute'
 has "work: NODE_STATE not verdict"   "$S/work/SKILL.md" 'check-node.sh` NEVER reads `NODE_STATE`'
+has "work: advance-node sole pass writer" "$S/work/SKILL.md" 'advance-node.sh is the ONLY sanctioned writer'
+has "work: terminal signals consumed" "$S/work/SKILL.md" '__DONE__'
 has "work: legacy unchanged"         "$S/work/SKILL.md" "no silent DAG interpretation of legacy plans"
 
 # AC4 — plan schema doc + plan-review gate
