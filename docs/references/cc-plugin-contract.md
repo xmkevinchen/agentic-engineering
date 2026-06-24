@@ -101,16 +101,15 @@ CI reproducibility check (`git diff --exit-code -- dist/` after clean rebuild) i
 
 Deterministic shell scripts under `plugins/ae/scripts/` that the harness skills shell out to (no CC-platform dependency beyond `sh`/`awk`/`jq`; each has a `tests/scripts/test-*.sh` exercised by `ae-run-tests.sh`):
 
-| Script | Role | Shipped |
-|---|---|---|
-| `check-node.sh` | re-derive ONE node's verdict from disk (deliverable presence + `node_check`); never trusts agent self-report | F-050 |
-| `run-node-check.sh` + `check-templates.catalog` | hardened per-node content-check templates (`file-contains`/`json-field`/`command-output`) + red-before-green probe | F-051 |
-| `loop-decide.sh` / `parse-review-verdict.sh` | review→fixup loop arithmetic + verdict normalization | F-048 |
-| `check-dag.sh` | opt-in (`dag: true`) DAG linter (`validate`: acyclic/no-dangling/harness-present) + `ready`-set frontier (emits ids / `__DONE__` / `__BLOCKED__`) | F-054 |
-| `advance-node.sh` | the ONLY sanctioned writer of `NODE_STATE <id>: pass` — runs `check-node.sh`, writes the verdict from its exit code alone (verdict provenance, anti-theater) | F-054 |
-| `dag-next.sh` | thin DAG driver — one call emits `LEGACY`/`DONE`/`BLOCKED`/`NEXT <id> <step#>` + does commit-before-execute; automates the deterministic orchestration | F-055 |
+| Script | Role |
+|---|---|
+| `check-node.sh` | re-derive ONE node's verdict from disk (deliverable presence); never trusts agent self-report |
+| `loop-decide.sh` / `parse-review-verdict.sh` | review→fixup loop arithmetic + verdict normalization |
+| `check-dag.sh` | opt-in (`dag: true`) DAG linter (`validate`: acyclic / no dangling depends / every auto-node has a check) + `ready`-set frontier |
+| `advance-node.sh` | the only writer of a node's `pass` — runs `check-node.sh` and records the verdict from its exit code (a node can't advance by claiming success) |
+| `dag-next.sh` | thin DAG driver — one call emits `DONE`/`BLOCKED`/`NEXT <id> <step#>` and records the picked node as in-progress |
 
-See [dag-authoring.md](dag-authoring.md) for how a plan opts into the DAG and how `/ae:work` drives it.
+A plan opts into the DAG with `dag: true` frontmatter + per-node `id:`/`depends:` (see `plan/SKILL.md`); `/ae:work` then advances by the ready-set frontier instead of document order.
 
 ## Decommissioned dependencies (historical)
 

@@ -19,6 +19,18 @@ ITER="${5:-0}"
 CAP="${6:-0}"
 HERE=$(dirname "$0")
 
+# Cross-validate that <id> is actually the id of `### Step <NUM>` — otherwise a confused/wrong
+# caller could record a pass for the wrong node (provenance hole). The verdict comes from the
+# step we RUN; it must be recorded against that step's own id.
+actual_id=$(awk -v s="$NUM" '
+  $0 ~ ("^### Step " s "[:.]") {f=1; next}
+  f && (/^### /||/^## /) {exit}
+  f && /^id:[[:space:]]/ { v=$0; sub(/^id:[[:space:]]*/,"",v); gsub(/[[:space:]]/,"",v); print v; exit }
+' "$PLAN")
+if [ -n "$actual_id" ] && [ "$actual_id" != "$ID" ]; then
+  echo "fail: id mismatch — step $NUM has id '$actual_id', not '$ID' (refusing to record)" >&2; exit 2
+fi
+
 set +e
 sh "$HERE/check-node.sh" "$PLAN" "$NUM" "$ITER" "$CAP" >/dev/null 2>&1
 rc=$?

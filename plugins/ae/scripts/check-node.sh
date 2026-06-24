@@ -38,9 +38,7 @@ block="$(awk -v s="$STEP" '
 
 # GATE — node carries a judge/manual AC or an explicit human-gate: true (in the step
 # block OR in any AC block the step references). Human-judged nodes do not auto-advance.
-# F-051: anchor to metadata-position lines so a node_check `pattern=`/`expect=` value that
-# happens to contain "verify_by: judge" cannot spuriously gate the node (codex review).
-is_gate() { grep -qiE '^[[:space:]]*-?[[:space:]]*(human-gate:[[:space:]]*true|verify_by:[[:space:]]*(judge|manual))'; }
+is_gate() { grep -qiE 'human-gate:[[:space:]]*true|verify_by:[[:space:]]*(judge|manual)'; }
 if printf '%s\n' "$block" | is_gate; then echo gate; exit 2; fi
 for ac in $(printf '%s\n' "$block" | grep -oE 'AC[0-9]+' | sort -u); do
   acblock="$(awk -v a="### $ac" 'index($0,a)==1{f=1;print;next} f&&(/^### /||/^## /){exit} f{print}' "$PLAN")"
@@ -66,35 +64,5 @@ for f in $exp; do
 done
 IFS=$oldIFS
 if [ -n "$missing" ]; then echo "fail: missing deliverables:$missing" >&2; exit 1; fi
-
-# F-051: per-node authored checks (node_check) — content gate beyond file presence.
-# Each `node_check: <template> k=v ...` line is dispatched through the hardened runner.
-# Red-before-green FIRST (the instance must demonstrably fail on a harness-synthesized bad
-# input) THEN the real run. Absent node_check ⇒ this loop runs 0 times ⇒ legacy behavior.
-RUNNER="$(dirname "$0")/run-node-check.sh"
-# Fail-safe (codex hardening): if the step declares node_check but the runner is absent
-# (packaging error), FAIL — never silently auto-advance as if no content check existed.
-has_nc=$(printf '%s\n' "$block" | sed -n 's/^[[:space:]]*node_check:[[:space:]]*//p' | grep -c . || true)
-if [ "${has_nc:-0}" -gt 0 ] && [ ! -f "$RUNNER" ]; then
-  echo "fail: step $STEP declares node_check but run-node-check.sh is absent (fail-safe)" >&2; exit 1
-fi
-if [ -f "$RUNNER" ]; then
-  set -f  # codex hardening: prevent pathname-expansion of unquoted $spec tokens (e.g. pattern=*)
-  set +e  # a failing node_check makes the pipeline non-zero; we translate it below, not abort
-  printf '%s\n' "$block" | sed -n 's/^[[:space:]]*node_check:[[:space:]]*//p' | while IFS= read -r spec; do
-    [ -n "$spec" ] || continue
-    # $spec is "<template> k=v k=v" — intentional word-split into runner args (values are
-    # whitespace-free, v1). redcheck: 0=bites, 1=theater, 2=invalid (unknown template/param).
-    set +e; sh "$RUNNER" redcheck $spec >/dev/null 2>&1; rrc=$?; set -e
-    if [ "$rrc" -eq 2 ]; then echo "fail: node_check invalid: $spec" >&2; exit 12; fi
-    if [ "$rrc" -ne 0 ]; then echo "fail: node_check theater (redcheck did not bite): $spec" >&2; exit 11; fi
-    set +e; sh "$RUNNER" run $spec >/dev/null 2>&1; nrc=$?; set -e
-    if [ "$nrc" -ne 0 ]; then echo "fail: node_check did not pass (rc=$nrc): $spec" >&2; exit 13; fi
-  done
-  # The while loop runs in a subshell (pipeline); a non-zero exit propagates as the pipeline rc.
-  ncrc=$?
-  set +f; set -e
-  [ "$ncrc" -eq 0 ] || exit 1
-fi
 echo pass
 exit 0

@@ -42,4 +42,11 @@ rm -f out/made.txt; : > ledger.txt
 sh "$ADV" plan.md 1 N1 ledger.txt >/dev/null 2>&1 || true
 if grep -q 'NODE_STATE N1: pass' ledger.txt; then echo "  FAIL: faked pass on missing deliverable" >&2; fail=1; else echo "  ok: no pass written when deliverable absent (anti-theater)"; fi
 
+# id/step-num mismatch → refuse, write NO ledger entry (provenance: verdict recorded against
+# the step actually run, not a caller-supplied wrong id).
+: > ledger.txt; : > out/made.txt
+v="$(set +e; sh "$ADV" plan.md 1 N2 ledger.txt >/dev/null 2>&1; echo $?)"
+assert "id mismatch (step 1 is N1, caller said N2) → exit 2" 2 "$v"
+if grep -q 'NODE_STATE' ledger.txt; then echo "  FAIL: wrote a ledger entry for a mismatched id" >&2; fail=1; else echo "  ok: no ledger entry written on id mismatch"; fi
+
 [ "$fail" = 0 ] && echo "ok test-advance-node" || { echo "test-advance-node FAILED" >&2; exit 1; }
