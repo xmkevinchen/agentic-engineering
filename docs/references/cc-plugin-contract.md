@@ -97,6 +97,21 @@ node dist/index.js
 
 CI reproducibility check (`git diff --exit-code -- dist/` after clean rebuild) is deferred to v0.11.x schema discipline expansion — same deferral bucket as the cc-plugin-contract.md drift validator below.
 
+### Harness toolchain scripts (the green-loop + DAG layer)
+
+Deterministic shell scripts under `plugins/ae/scripts/` that the harness skills shell out to (no CC-platform dependency beyond `sh`/`awk`/`jq`; each has a `tests/scripts/test-*.sh` exercised by `ae-run-tests.sh`):
+
+| Script | Role | Shipped |
+|---|---|---|
+| `check-node.sh` | re-derive ONE node's verdict from disk (deliverable presence + `node_check`); never trusts agent self-report | F-050 |
+| `run-node-check.sh` + `check-templates.catalog` | hardened per-node content-check templates (`file-contains`/`json-field`/`command-output`) + red-before-green probe | F-051 |
+| `loop-decide.sh` / `parse-review-verdict.sh` | review→fixup loop arithmetic + verdict normalization | F-048 |
+| `check-dag.sh` | opt-in (`dag: true`) DAG linter (`validate`: acyclic/no-dangling/harness-present) + `ready`-set frontier (emits ids / `__DONE__` / `__BLOCKED__`) | F-054 |
+| `advance-node.sh` | the ONLY sanctioned writer of `NODE_STATE <id>: pass` — runs `check-node.sh`, writes the verdict from its exit code alone (verdict provenance, anti-theater) | F-054 |
+| `dag-next.sh` | thin DAG driver — one call emits `LEGACY`/`DONE`/`BLOCKED`/`NEXT <id> <step#>` + does commit-before-execute; automates the deterministic orchestration | F-055 |
+
+See [dag-authoring.md](dag-authoring.md) for how a plan opts into the DAG and how `/ae:work` drives it.
+
 ## Decommissioned dependencies (historical)
 
 Dependencies AE no longer relies on, preserved here for archaeology:

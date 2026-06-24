@@ -85,3 +85,19 @@ SERIAL — parallel speedup is Phase-2 and modest under a serial orchestrator (t
 autonomous advancement, not raw speed); (3) the DAG is fixed at plan time until Phase-3;
 (4) the DAG raises the floor + makes drift visible but does NOT guarantee semantic
 correctness — semantic-depth Potemkin remains uncloseable.
+
+## DAG toolchain
+
+The scripts under `plugins/ae/scripts/` that implement this (all deterministic `sh`/`awk`;
+each registered in [cc-plugin-contract.md](cc-plugin-contract.md) → Harness toolchain):
+
+- `check-dag.sh <plan> validate` — graph well-formedness (acyclic, no dangling `depends:`,
+  every auto-node has a harness, no node `backend: workflow`). Run by `/ae:plan-review`.
+- `check-dag.sh <plan> ready <ledger>` — the ready-set / terminal signal.
+- `dag-next.sh <plan> <ledger>` — the thin driver: one call → `LEGACY`/`DONE`/`BLOCKED`/
+  `NEXT <id> <step#>` + commit-before-execute. This is what `/ae:work` loops on.
+- `advance-node.sh <plan> <step#> <id> <ledger>` — the ONLY writer of `NODE_STATE pass`;
+  runs `check-node.sh` (disk-re-derived verdict) and records it from the exit code alone.
+
+End-to-end behavior is exercised by `tests/scripts/test-dag-e2e.sh` (builds a real
+`dag: true` plan and drives it through `dag-next` → `advance-node` to `DONE`).
