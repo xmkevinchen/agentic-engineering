@@ -17,4 +17,9 @@ has "plan-review: relevance-not-proven honest bound"   "$S/plan-review/SKILL.md"
 # AC3 — review-stage backstop
 has "review: F-052 project backstop" "$S/review/SKILL.md" '`project` node_check cross-family backstop (F-052)'
 
+# integration fixes (codex P1-A lifecycle rule + P1-B canonical token)
+has "plan: mixed-AC lifecycle rule"          "$S/plan/SKILL.md"        'a step with ANY `fixture: project` AC'
+has "plan-review: canonical bite-review token" "$S/plan-review/SKILL.md" 'NODE_CHECK_BITE_REVIEW Step <N>:'
+has "review: greps the keyed token"          "$S/review/SKILL.md"      'NODE_CHECK_BITE_REVIEW Step <N>:'
+
 [ "$fail" = 0 ] && echo "ok test-f052-cross-family-review" || { echo "test-f052-cross-family-review FAILED" >&2; exit 1; }

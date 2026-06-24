@@ -72,10 +72,10 @@ case "$TEMPLATE" in
       [ -f "$target" ] || { echo "fail: target missing: $target" >&2; exit 1; }
       grep -Fq -- "$pattern" "$target" && exit 0 || exit 1
     else
-      # redcheck: the pattern must NOT match an empty file (catches a vacuous/empty pattern).
-      tmp=$(mktemp); : > "$tmp"
-      if grep -Fq -- "$pattern" "$tmp"; then rm -f "$tmp"; echo "theater: pattern matches empty file" >&2; exit 1; fi
-      rm -f "$tmp"; exit 0
+      # redcheck: the pattern must NOT match empty input (catches a vacuous/empty pattern).
+      # No temp file (codex integration P2: mktemp failure must not be misread as theater + leak).
+      if printf '' | grep -Fq -- "$pattern"; then echo "theater: pattern matches empty input" >&2; exit 1; fi
+      exit 0
     fi
     ;;
   json-field)
