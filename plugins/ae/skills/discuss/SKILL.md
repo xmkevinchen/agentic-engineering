@@ -105,7 +105,7 @@ This constraint exists because every downstream guard (§1.5.1 Frozen-field rule
 
 ### 1.5. Round 0 — Framing Review (new discussions only)
 
-**Framing quality review is its own task**, with its own spawn/shutdown lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two teammate groups is consistent with ae:agent-teams "one team per task"; it is not a pre-flight hack.
+**Framing quality review is its own task**, with its own spawn/shutdown lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two sequential teammate groups within the session's one implicit team — framing-review teammates shut down before the council spawns; it is not a pre-flight hack.
 
 **Path note**: throughout sections 1.5.x and 2-8 below, the symbolic `<discussion-dir>` resolves to whichever path Step 1 chose. For feature-internal discussions, `<discussion-dir>` = `<feature-dir>/discussions/<NNN>-<slug>/`; for free-text discussions, `<discussion-dir>` = `<output.discussions>/NNN-slug/` (legacy fallback). Round-00, round-NN, and conclusion files all live under `<discussion-dir>/` regardless of which location was resolved.
 
@@ -187,9 +187,9 @@ Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
                to team-lead and exit. Do not retry.
                SendMessage verdict to team-lead.")
 
-Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic",
+Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic-framing",
       run_in_background: true,
-      prompt: "📋 Cast: doodlestein-strategic
+      prompt: "📋 Cast: doodlestein-strategic-framing
                   Role: framing reviewer (strategic)
                   Angle: scope narrowing — alternative framings foreclosed
                   Why: catch TL framing biases before they propagate to Round 1
@@ -202,9 +202,9 @@ Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-str
                Report APPROVED if framing is open; REVISE with a concrete alternative
                if a better framing exists. SendMessage verdict to team-lead.")
 
-Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-adversarial",
+Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-adversarial-framing",
       run_in_background: true,
-      prompt: "📋 Cast: doodlestein-adversarial
+      prompt: "📋 Cast: doodlestein-adversarial-framing
                   Role: framing reviewer (adversarial)
                   Angle: Round 1 walls — first blocked solution class
                   Why: predict downstream Round 1 friction before commitment
@@ -239,7 +239,7 @@ TL waits for **all 5 verdicts** before aggregating. **No early-exit on first REV
 
 **Timeout rules**:
 - Proxy agents (`codex-proxy`, `gemini-proxy`): 120s per agent, per `plugins/ae/skills/agent-selection/SKILL.md` Proxy Timeout Protocol. On timeout the proxy must SendMessage `unavailable: timeout` and exit.
-- Claude-native agents (`doodlestein-strategic`, `doodlestein-adversarial`, `ae:engineering:minimal-change-engineer`): 180s wall-clock each. If a Claude-native agent does not respond within 180s, TL treats it as `unavailable: timeout`. **Missing verdict is NEVER implicit APPROVED.**
+- Claude-native agents (`doodlestein-strategic-framing`, `doodlestein-adversarial-framing`, `ae:engineering:minimal-change-engineer`): 180s wall-clock each. If a Claude-native agent does not respond within 180s, TL treats it as `unavailable: timeout`. **Missing verdict is NEVER implicit APPROVED.**
 
 #### 1.5.3. Verdict aggregation
 
@@ -300,7 +300,7 @@ Rationale for rule order (addresses review-043 P1s): rule 1.5 fires before rule 
 After aggregation:
 - **Verdict files first** — write each agent's verdict (including `unavailable` and timed-out entries) to `<discussion-dir>/round-00/<agent-name>.md` (create dir if needed). File contents: agent name, verdict state, verdict content verbatim, timestamp. These files are the durable audit trail — captured BEFORE any `shutdown_request` is sent so a hung or timed-out agent still has its record written. Agents already marked `unavailable` by §1.5.2 timeout get their files written here; they are not waited for again.
 - **Parallel shutdown** — send `shutdown_request` to all spawned agents in parallel (single broadcast pass). Wait up to **30s wall-clock total** (not per agent) for `shutdown_response` replies. Worst-case teardown latency is 30s regardless of team size.
-- **Force-abandon path** — any agent that has not responded within the 30s wall-clock window (e.g., hung on long Bash call, MCP stuck, or already crashed) is marked `abandoned` in its verdict file and skipped. The framing-review teammates are left to be reaped automatically at session end — the abandoned subprocess does not block the next task (Step 2) when one agent refuses to exit cleanly. A `[layer1] teardown: <agent> abandoned after 30s` entry is appended to the Layer 1 trace for audit.
+- **Force-abandon path** — any agent that has not responded within the 30s wall-clock window (e.g., hung on long Bash call, MCP stuck, or already crashed) is marked `abandoned` in its verdict file and skipped. The framing-review teammates are left to be reaped automatically at session end — the abandoned subprocess does not block the next task (Step 2) when one agent refuses to exit cleanly. (Round-0 framing reviewers use distinct `-framing` names so an abandoned one — still occupying its name in the implicit session team until session end — cannot collide with Step 9's same-family Doodlestein re-spawn.) A `[layer1] teardown: <agent> abandoned after 30s` entry is appended to the Layer 1 trace for audit.
 
 #### 1.5.5. Boundary to Step 2
 
@@ -322,7 +322,7 @@ Run this step after Round 0 approves framing (Step 1.5) and before spawning the 
 
 **The core of ae:discuss is team discussion.** One team lives for the entire discussion — only add agents, never remove.
 
-**DO NOT delete the team between topics, after scoring, or before Doodlestein.** The team persists from Step 2 through Doodlestein (Step 9). Original participants must be alive in case Doodlestein's review of the conclusion kicks off a new round.
+**DO NOT shut down teammates between topics, after scoring, or before Doodlestein.** The teammates persist from Step 2 through Doodlestein (Step 9). Original participants must be alive in case Doodlestein's review of the conclusion kicks off a new round.
 
 If the team already exists (resuming), skip to step 3. Otherwise:
 

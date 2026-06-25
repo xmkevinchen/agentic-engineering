@@ -280,7 +280,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Phase | When created | When `in_progress` | When `completed` |
 |---|---|---|---|
 | `ae:review: Pre-check` | At skill start (before Check 1) | Immediately before Check 1 | After Check 5 passes |
-| `ae:review: Security review` | At Step 2 batch-create (single-team skill, per agent-teams §H rule 2) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
+| `ae:review: Security review` | At Step 2 batch-create (single-team skill, per agent-teams §H Rule 1) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
 | `ae:review: Performance review` | (same) | (same) | (same) |
 | `ae:review: Architecture review` | (same) | (same) | (same) |
 | `ae:review: Cross-family challenge + synthesis` | (same) | (same) | (same) |
@@ -299,7 +299,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 
 ### 2. Create Tasks
 
-Batch-create the 4 review-track tasks at this point, per agent-teams §H rule 2 (single-team skill: tasks created on the team list stay accessible throughout; their `in_progress` transition fires later when the corresponding reviewer is spawned):
+Batch-create the 4 review-track tasks at this point, per agent-teams §H Rule 1 (single-team skill: tasks created on the team list stay accessible throughout; their `in_progress` transition fires later when the corresponding reviewer is spawned):
 
 ```
 TaskCreate(subject: "ae:review: Security review")
@@ -440,7 +440,7 @@ TL collects all findings from reviewers + challenger + cross-family proxies, the
 
 If any agent idle > 5 minutes without sending findings, SendMessage to prompt.
 
-### 5. Close Team
+### 5. Shutdown Teammates
 
 After report arrives, send shutdown_request to all teammates (cleanup is automatic at session end).
 

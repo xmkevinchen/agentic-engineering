@@ -194,9 +194,9 @@ Only runs if Layer 1 passed for this test case.
 
 Before executing, classify the target skill:
 
-- **Scan** the target SKILL.md for `Agent(` patterns
-- **Class A** (patterns not found): skill does not require Agent Teams → subagent can execute
-- **Class B** (patterns found): skill requires Agent Teams → Session TL must execute directly
+- **Scan** the target SKILL.md for NAMED-teammate spawns — `Agent(` calls that include a `name:` parameter (Agent-Teams teammates require `name`; a plain anonymous `Agent()` subagent, e.g. ae:code-review's Track 4 Doodlestein, is NOT an Agent-Teams skill)
+- **Class A** (no named-teammate spawn): skill does not require Agent Teams → subagent can execute
+- **Class B** (≥1 named-teammate spawn): skill requires Agent Teams → Session TL must execute directly
 - **Unreadable target**: → `FAIL_CLOSED` (classification_error, do not execute)
 
 #### Isolation: Git Worktree (both classes)
@@ -263,8 +263,9 @@ Phase 2.4: Judge
 Phase 2.5: Cleanup
 9. Shut down rebuilt-team teammates (shutdown_request → shutdown_response)
 10. Remove worktree: git worktree remove /tmp/test-<id> && git branch -D test-<id>
-11. Defensive cleanup: check ~/.claude/teams/ for orphan teams created by target skill
-    (skill crash may leave uncleaned teams)
+11. Defensive cleanup: check ~/.claude/teams/ for orphan teams created by target skill;
+    send shutdown_request to any orphan teammates found (skill crash may leave uncleaned
+    teams; team config is cleaned up automatically at session end)
 ```
 
 **Main repo path for assertions**: Phase 1 writes assertion files to `plugins/ae/tests/assertions/` in the main working directory. These files are uncommitted and NOT visible in the worktree. Resurrected test-lead MUST read from the main repo path, not the worktree path.
