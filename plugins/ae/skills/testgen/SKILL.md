@@ -52,17 +52,15 @@ Same lifecycle applies to Analyze, Review, and Generate+Verify phase tasks — `
 
 ## Step 2: Agent Teams Review
 
-Create a Team for parallel test planning review (Investigation Mode). **TL validates coverage**.
+Spawn teammates for parallel test planning review (Investigation Mode). **TL validates coverage**.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents.
 
 ```
-TeamCreate(team_name: "<target>-testgen")
-
 Agent(subagent_type: "qa", name: "qa",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: qa
                   Role: test plan completeness reviewer
                   Angle: code path coverage + edge cases + error handling
@@ -76,7 +74,7 @@ Agent(subagent_type: "qa", name: "qa",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "security-reviewer", name: "security-reviewer",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: security-reviewer
                   Role: security test coverage reviewer
                   Angle: injection / auth bypass / data leak test cases
@@ -92,7 +90,7 @@ Agent(subagent_type: "security-reviewer", name: "security-reviewer",
 # For each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family test reviewer (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>

@@ -12,7 +12,7 @@ source: generated
 - [text:contains] Error message references mutually exclusive flags
 
 ### MUST_NOT
-- [behavior] No TeamCreate call issued
+- [behavior] No teammates spawned via the Agent tool
 - [behavior] No test files written to plugins/ae/tests/
 
 ### SHOULD

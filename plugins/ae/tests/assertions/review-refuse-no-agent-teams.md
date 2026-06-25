@@ -14,8 +14,7 @@ source: generated
 
 ### MUST_NOT
 - [behavior] MUST NOT proceed to any subsequent checks or execution when Agent Teams is disabled
-- [behavior] MUST NOT call TeamCreate
-- [behavior] MUST NOT call Agent
+- [behavior] MUST NOT spawn any teammate via the Agent tool
 - [file:exists] MUST NOT write any review file to output.reviews
 
 ### SHOULD

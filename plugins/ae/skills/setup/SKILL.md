@@ -427,9 +427,9 @@ When `/ae:setup agents --add <name>` is invoked with an explicit rationale strin
 
 **Automatic pattern detection (3-consecutive-spawn) — deferred to Phase 3**
 
-Automatic auto-propose based on "`/ae:discuss` or `/ae:review` spawning same project agent 3+ consecutive times" is deferred to Phase 3. Discussion 041 topic-03 verified that the current detection sources (`~/.claude/teams/*/config.json` + `.ae/milestones/*/step-summaries.md`) are structurally incapable of providing the required skill-invocation context + ordered timestamps — team configs have no skill-invocation context and no history after TeamDelete; step-summaries are free-form prose with zero structured spawn logs.
+Automatic auto-propose based on "`/ae:discuss` or `/ae:review` spawning same project agent 3+ consecutive times" is deferred to Phase 3. Discussion 041 topic-03 verified that the current detection sources (`~/.claude/teams/*/config.json` + `.ae/milestones/*/step-summaries.md`) are structurally incapable of providing the required skill-invocation context + ordered timestamps — team configs have no skill-invocation context and no history after session-end cleanup; step-summaries are free-form prose with zero structured spawn logs.
 
-If user workflow reveals a real 3-consecutive-spawn pattern, open a Phase 3 discussion for AE-owned telemetry design (e.g., `.ae/telemetry/spawns.jsonl` with structured `{ts, skill, agent, session_id}` schema written by `/ae:discuss`, `/ae:review`, `/ae:work`, `/ae:team` at TeamCreate time). Until then, Trigger A covers explicit governance bootstrap cleanly and without new infrastructure.
+If user workflow reveals a real 3-consecutive-spawn pattern, open a Phase 3 discussion for AE-owned telemetry design (e.g., `.ae/telemetry/spawns.jsonl` with structured `{ts, skill, agent, session_id}` schema written by `/ae:discuss`, `/ae:review`, `/ae:work`, `/ae:team` at teammate-spawn time). Until then, Trigger A covers explicit governance bootstrap cleanly and without new infrastructure.
 
 **`/ae:next` periodic audit** — NOT implemented in Phase 1 or Phase 2. Tracked as Phase 3+ alongside telemetry-based auto-detection.
 

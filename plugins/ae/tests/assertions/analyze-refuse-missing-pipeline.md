@@ -9,11 +9,10 @@ source: generated
 
 ### MUST
 - [text:contains] Output contains a clear error about pipeline.yml being missing or unreadable
-- [behavior] Execution stops before team creation (no TeamCreate call)
+- [behavior] Execution stops before spawning teammates (no Agent tool call)
 
 ### MUST_NOT
-- [behavior] No TeamCreate tool call
-- [behavior] No Agent tool call
+- [behavior] No Agent tool call (no teammates spawned)
 - [file:exists] No analysis.md written to any output directory
 
 ### SHOULD

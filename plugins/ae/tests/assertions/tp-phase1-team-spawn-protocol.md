@@ -8,7 +8,7 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [file:contains] SKILL.md Phase 1 specifies TeamCreate to create test team named "test-<target>"
+- [file:contains] SKILL.md Phase 1 spawns teammates via the Agent tool (name param) into the session's implicit team, no TeamCreate
 - [file:contains] SKILL.md Phase 1 spawns a test-lead agent with `subagent_type: "test-lead"`
 - [file:contains] SKILL.md Phase 1 spawns a prompts-writer agent
 - [file:contains] SKILL.md Phase 1 spawns an answer-writer agent

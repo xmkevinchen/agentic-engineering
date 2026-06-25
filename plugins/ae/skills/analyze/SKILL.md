@@ -183,13 +183,11 @@ Once the feature dir exists and the BL is moved (Mode A) or the index.md is writ
 
 **Cross-family**: read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
-**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+**Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
 ```
-TeamCreate(team_name: "F-NNN-analyze")
-
 Agent(subagent_type: "archaeologist", name: "archaeologist",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: archaeologist
                   Role: research lead (code archaeology)
                   Angle: existing code structure + dependency chains
@@ -201,7 +199,7 @@ Agent(subagent_type: "archaeologist", name: "archaeologist",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: standards-expert
                   Role: research support (industry comparison)
                   Angle: framework + version specific best practices
@@ -214,7 +212,7 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "challenger", name: "challenger",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: challenger
                   Role: opposition (analyze mode)
                   Angle: blind spots in archaeologist + standards-expert findings
@@ -235,7 +233,7 @@ Agent(subagent_type: "challenger", name: "challenger",
 
 # For each enabled proxy in pipeline.yml cross_family:
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family research (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>

@@ -13,7 +13,7 @@ source: generated
 - [text:contains] --resize is the explicit persist path for accepting auto-sized values
 
 ### MUST_NOT
-- [text:contains] No TeamCreate call anywhere in the skill
+- [text:contains] No teammates spawned anywhere in the skill (no Agent tool call — one implicit team, no TeamCreate)
 - [text:contains] No Agent tool call anywhere in the skill
 - [text:contains] No modifications to feature index.md frontmatter in default invocation
 

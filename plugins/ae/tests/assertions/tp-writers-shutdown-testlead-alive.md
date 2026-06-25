@@ -10,7 +10,7 @@ source: generated
 ### MUST
 - [file:contains] SKILL.md Phase 1.3 shuts down only writers (prompts-writer, answer-writer) after suite approved
 - [file:contains] SKILL.md Phase 1.3 explicitly keeps test-lead alive in the team
-- [file:contains] SKILL.md Phase 1.3 says do NOT TeamDelete at this point
+- [file:contains] SKILL.md Phase 1.3 says teammates persist (one implicit team, no TeamDelete) at this point
 
 ### MUST_NOT
-- [file:contains] SKILL.md performs TeamDelete after Phase 1 (for the default Class A path)
+- [file:contains] SKILL.md tears down the team after Phase 1 (for the default Class A path) — teammates persist via the one implicit team (no TeamDelete)

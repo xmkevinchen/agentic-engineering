@@ -280,7 +280,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 | Phase | When created | When `in_progress` | When `completed` |
 |---|---|---|---|
 | `ae:review: Pre-check` | At skill start (before Check 1) | Immediately before Check 1 | After Check 5 passes |
-| `ae:review: Security review` | After `TeamCreate` (Step 2 batch-create — single-team skill, per agent-teams §H rule 2) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
+| `ae:review: Security review` | At Step 2 batch-create (single-team skill, per agent-teams §H rule 2) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
 | `ae:review: Performance review` | (same) | (same) | (same) |
 | `ae:review: Architecture review` | (same) | (same) | (same) |
 | `ae:review: Cross-family challenge + synthesis` | (same) | (same) | (same) |
@@ -293,17 +293,13 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 
 **Task lifecycle (Pre-check)**: at the very start of Pre-checks (before Check 1), `TaskCreate(subject: "ae:review: Pre-check")` and immediately `TaskUpdate(taskId, status: "in_progress")`. After Check 5 passes (control reaches Per-review Primary Context Bundle assembly), `TaskUpdate(taskId, status: "completed")`.
 
-### 1. Create Team
+### 1. Select Reviewers
 
-**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
-
-```
-TeamCreate(team_name: "<feature>-review")
-```
+**Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
 ### 2. Create Tasks
 
-Batch-create the 4 review-track tasks at this point — after `TeamCreate`, per agent-teams §H rule 2 (single-team skill: tasks created on the team list stay accessible throughout; their `in_progress` transition fires later when the corresponding reviewer is spawned):
+Batch-create the 4 review-track tasks at this point, per agent-teams §H rule 2 (single-team skill: tasks created on the team list stay accessible throughout; their `in_progress` transition fires later when the corresponding reviewer is spawned):
 
 ```
 TaskCreate(subject: "ae:review: Security review")
@@ -363,7 +359,7 @@ Using `--reviewer` is a **deliberate scope reduction**, not an addition. If user
 ```
 # For each selected reviewer:
 Agent(subagent_type: "<reviewer>", name: "<reviewer>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "<PRIMARY CONTEXT BUNDLE — substitute literal assembled bundle text here per 'Per-review Primary Context Bundle' section above:
                  1. Plan AC list
                  2. Conclusion body (verbatim, when discussion-referenced per Check 5)
@@ -381,7 +377,7 @@ Agent(subagent_type: "<reviewer>", name: "<reviewer>",
 
 # Always include challenger (pure opposition — does NOT synthesize):
 Agent(subagent_type: "challenger", name: "challenger",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "<PRIMARY CONTEXT BUNDLE — substitute literal assembled bundle text here per 'Per-review Primary Context Bundle' section above:
                  1. Plan AC list
                  2. Conclusion body (verbatim, when discussion-referenced per Check 5)
@@ -412,7 +408,7 @@ Agent(subagent_type: "challenger", name: "challenger",
 # Verbatim bundle text embedded in spawn prompt; the proxy agent's two-layer assembly
 # forwards it into the MCP message field. Do NOT pass a path-ref instead of the bundle.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "<PRIMARY CONTEXT BUNDLE — substitute literal assembled bundle text here per 'Per-review Primary Context Bundle' section above:
                  1. Plan AC list
                  2. Conclusion body (verbatim, when discussion-referenced per Check 5)
@@ -446,7 +442,7 @@ If any agent idle > 5 minutes without sending findings, SendMessage to prompt.
 
 ### 5. Close Team
 
-After report arrives, send shutdown_request to all teammates.
+After report arrives, send shutdown_request to all teammates (cleanup is automatic at session end).
 
 ## Result Processing
 

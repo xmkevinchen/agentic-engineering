@@ -8,7 +8,7 @@ source: generated
 ## Expected Behavior
 
 ### MUST
-- [behavior] No TeamCreate call issued for test generation team
+- [behavior] No teammates spawned via the Agent tool for a test generation team
 - [behavior] No prompts-writer or answer-writer agents spawned
 - [behavior] Skill proceeds directly to Phase 2 execution using existing test files
 

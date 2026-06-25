@@ -8,7 +8,7 @@ source: generated
 ## Context
 - Agent Teams enabled
 - `.claude/pipeline.yml` exists with valid config
-- ae:test-plugin itself is the target (Class B: contains TeamCreate + Agent patterns)
+- ae:test-plugin itself is the target (Class B: spawns teammates via the Agent tool)
 
 ## Prompt
 /ae:test-plugin ae:test-plugin

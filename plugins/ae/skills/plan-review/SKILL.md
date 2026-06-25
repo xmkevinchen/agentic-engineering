@@ -51,7 +51,7 @@ Owner field: omit. On error: stay `in_progress`. Step 2 (Merge Results) and Step
 
 ## Step 1: Agent Teams Plan Review
 
-Read the full plan text, then create a Team for parallel review.
+Read the full plan text, then spawn teammates for parallel review.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
@@ -69,11 +69,9 @@ Built-in `architect` and `dependency-analyst` are plugin first-class reviewer sl
 **Cross-family**: Read `cross_family` from pipeline.yml. For each enabled family (codex/gemini), include its proxy agent in the team. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
 ```
-TeamCreate(team_name: "<feature>-plan-review")
-
 # Architect reviews plan structure and dependencies:
 Agent(subagent_type: "architect", name: "architect",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: architect
                   Role: plan reviewer (decomposition + dependencies)
                   Angle: step dependency graph + parallel strategy
@@ -86,7 +84,7 @@ Agent(subagent_type: "architect", name: "architect",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: dependency-analyst
                   Role: parallel feasibility validator
                   Angle: file domain overlap + hidden runtime deps + shared types
@@ -101,7 +99,7 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
 # For each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family plan reviewer (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>
@@ -130,7 +128,7 @@ TL collects findings from architect, dependency-analyst, and cross-family proxie
 - **Consider** — simplification suggestions
 - **Approved**
 
-Close the Team.
+Shut down the teammates (`shutdown_request` → `shutdown_response`).
 
 ## Step 3: Apply and Confirm
 

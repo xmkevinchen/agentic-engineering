@@ -13,7 +13,7 @@ source: generated
 - [behavior] Execution stops — review does not proceed past Check 3
 
 ### MUST_NOT
-- [behavior] MUST NOT call TeamCreate when tests are failing
+- [behavior] MUST NOT spawn any teammates via the Agent tool when tests are failing
 - [behavior] MUST NOT call Agent
 - [file:exists] MUST NOT write any review file
 

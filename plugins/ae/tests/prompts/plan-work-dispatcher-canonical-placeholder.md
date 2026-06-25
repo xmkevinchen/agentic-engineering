@@ -10,7 +10,7 @@ source: manual
 - F-004 (BL-055) wired the two-tier dispatcher into /ae:plan + /ae:work team-spawn templates
 - Canonical placeholder for dispatcher-resolved `subagent_type:` is `<per agent-selection>` per ae:agent-selection SKILL.md
 - Structurally fixed roles (qa as dev-counterpart) hardcode by name with an inline annotation comment
-- Trace-emission gate text "Before TeamCreate" must be present per BL-058 wiring
+- Trace-emission gate text "Before spawning teammates" must be present per BL-058 wiring
 
 ## Prompt
 

@@ -43,7 +43,7 @@ Spawn → Rounds → [Add agents as needed] → Conclusion → Shutdown
 
 ### Cast Block Syntax
 
-Before any `Agent(...)` spawn within a `TeamCreate` batch, TL emits a structured **cast block** describing each agent's role + angle + rationale. The cast block is **dual-write**: appears in session stdout (user-visible) AND embedded in the spawn prompt's `prompt:` field (agent-receivable).
+Before any `Agent(...)` spawn within a spawn batch, TL emits a structured **cast block** describing each agent's role + angle + rationale. The cast block is **dual-write**: appears in session stdout (user-visible) AND embedded in the spawn prompt's `prompt:` field (agent-receivable).
 
 #### Canonical 4-field structure (MANDATORY)
 
@@ -75,13 +75,12 @@ The per-spawn form is the embedded form (one cast block per `Agent()` prompt: fi
 
 #### Emit timing + Spawn prompt position
 
-Cast block timing relative to existing Selection Trace + TeamCreate:
+Cast block timing relative to existing Selection Trace + teammate spawning:
 
 ```
 1. Layer 1 + Layer 2 selection trace (existing — Selection Trace Emission below)
 2. 📋 Cast block emit (stdout) — NEW per F-019
-3. TeamCreate
-4. Agent() calls — each with cast block embedded in prompt: field at position 2 (below)
+3. Agent() calls — each with cast block embedded in prompt: field at position 2 (below)
 ```
 
 When a spawn prompt has a PRIMARY CONTEXT BUNDLE, the cast block MUST appear at **position 2** of the prompt:
@@ -118,11 +117,11 @@ The "Routing lateral" anti-pattern at the end of this file forbids agent `.md` f
 
 ### Selection Trace Emission
 
-Before `TeamCreate`, TL emits a structured selection trace per `ae:agent-selection` Layer 1 + Layer 2 trace format (SKILL.md `## Layer 1 trace format` and `## Layer 2 trace format` sections). Default-ON for all modes (Debate / Discussion / Investigation). No flag required.
+Before spawning teammates, TL emits a structured selection trace per `ae:agent-selection` Layer 1 + Layer 2 trace format (SKILL.md `## Layer 1 trace format` and `## Layer 2 trace format` sections). Default-ON for all modes (Debate / Discussion / Investigation). No flag required.
 
 Two surfaces, both default-emit:
 
-1. **Console stdout** — Layer 1 events (governance firings, filter outcomes) + Layer 2 events (per role slot: `considered:` / `selected:` / `rationale:` / `library-fallback:`) printed line-by-line before `TeamCreate`. Line format per `ae:agent-selection` SKILL.md.
+1. **Console stdout** — Layer 1 events (governance firings, filter outcomes) + Layer 2 events (per role slot: `considered:` / `selected:` / `rationale:` / `library-fallback:`) printed line-by-line before spawning teammates. Line format per `ae:agent-selection` SKILL.md.
 2. **Persisted output `## Agent Selection Trace` section** — when the skill writes a final report (conclusion.md, review.md, analysis.md, etc.), reproduce the trace lines verbatim under this section heading. Skills writing other persisted artifacts (e.g., `ae:team` writes to `output.analyses/`) embed the trace there.
 
 Mechanical verification (used by `/ae:test-plugin` and any automated audit):
@@ -457,9 +456,9 @@ When Agent Teams is unavailable (env var not set or feature gate closed), skills
 
 | Tier | Skills | Behavior |
 |------|--------|----------|
-| **hard-block** | ae:discuss, ae:review, ae:consensus, ae:test-plugin | Refuse to execute — multi-agent IS the feature (test-plugin requires blind protocol isolation via TeamCreate + test-lead). Tell user to enable Agent Teams. |
+| **hard-block** | ae:discuss, ae:review, ae:consensus, ae:test-plugin | Refuse to execute — multi-agent IS the feature (test-plugin requires blind protocol isolation via spawned teammates + test-lead). Tell user to enable Agent Teams. |
 | **auto-fallback** | ae:analyze, ae:plan, ae:plan-review, ae:think, ae:trace, ae:testgen, ae:team, ae:work | Print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` TL executes directly, no team spawn. Output is lower confidence. |
-| **no-pre-check** | ae:code-review | Uses plain Agent() subagents, not TeamCreate. No Agent Teams dependency. |
+| **no-pre-check** | ae:code-review | Uses plain Agent() subagents, not an addressable team. No Agent Teams dependency. |
 
 Each skill's pre-check implements its tier. Auto-fallback skills may have skill-specific fallback details (e.g., ae:plan stays draft, ae:work uses "Lead executes directly" path).
 
@@ -477,7 +476,7 @@ Beyond the env var check, auto-fallback skills can verify `run_in_background` pa
 - **Evidence-free claims**: "I think X is better" without file:line citations. Dismissed.
 - **Concession-free debate**: Agent that never concedes anything is not engaging honestly.
 - **Killing dissenters**: Removing an agent because they disagree. Strong opinions are assets.
-- **Round-per-team**: Spawning a new team each round. One team, one lifecycle.
+- **Round-per-team**: Re-spawning the whole roster each round. One implicit team, one lifecycle — don't re-spawn teammates per round.
 - **Routing lateral**: Agent .md files containing conditional routing logic ("in /ae:review send to X, in /ae:plan send to Y"). Routing decisions belong in skill spawn prompts, not agent definitions.
 
 ---
@@ -538,7 +537,7 @@ The per-skill task list is **static and design-time** — agents do NOT estimate
 
 ### C. Lifecycle
 
-1. **At skill start**: batch-create all known tasks via one `TaskCreate` per row in the per-skill list above. For ae:work specifically, the `Step N` rows are plan-dependent — defer the per-step `TaskCreate` calls until after Pre-check Check 2 reads the plan body, then create one task per `### Step N` heading found. (Timing nuance: "at skill start" is the default for multi-team skills; single-team skills create AFTER `TeamCreate` instead — see §H rule 2.)
+1. **At skill start**: batch-create all known tasks via one `TaskCreate` per row in the per-skill list above. For ae:work specifically, the `Step N` rows are plan-dependent — defer the per-step `TaskCreate` calls until after Pre-check Check 2 reads the plan body, then create one task per `### Step N` heading found. (Timing: "at skill start" is the default — with one implicit team, tasks stay accessible throughout the run; see §H.)
 
 2. **Mid-plan resumes** (ae:work entering on step 3 of 5 because steps 1-2 are `[x]`): create tasks for ALL plan steps; immediately call `TaskUpdate(taskId, status: "completed")` for already-`[x]` steps; leave pending steps at default `pending` status. Panel reflects accurate state on resume.
 
@@ -568,7 +567,7 @@ Only allowed status enum values: `pending | in_progress | completed | deleted`. 
 Tasks created by skills for self-tracking MUST omit the `owner` field entirely (do not pass it). Self-tracking tasks are not for claim by other agents.
 
 - `owner=null` (omitted) means: the harness treats this as unassigned. The skill creating and completing the task does not claim ownership; ownership is intentionally absent for skill self-tracking tasks.
-- This differs from agent-claimed tasks (where `owner` is the assigned agent name from a TeamCreate spawn).
+- This differs from agent-claimed tasks (where `owner` is the assigned agent name from an Agent() spawn).
 - Fallback if a future Claude Code update enforces `owner` on `TaskUpdate`: change to `owner: "skill:<skill-name>"` (plain identifier — no UUID, no session ID).
 
 ### F. Concurrent invocation note
@@ -586,11 +585,10 @@ They are complementary, not redundant. A skill execution that completes successf
 
 ### H. Team-context interaction (tasks vs teams)
 
-`Team = TaskList 1:1` — `TeamCreate` switches the active task list, and `TeamDelete` switches it back. Consequence: **step tasks created BEFORE `TeamCreate` return `Task not found` for the entire lifetime of the team** — the tasks are not lost, they live on the previous (session) list and become accessible again after `TeamDelete`. This is harness behavior (Team=TaskList is a Claude Code design), not an AE bug — do not fight it in SKILL.md flows.
+With ONE implicit team per session, there is a single task list for the whole session — there is no team-switching, so step tasks created at any point stay accessible for the entire run. The earlier orphan-window problem (`Task not found` while a team was active) no longer applies under the implicit-team model.
 
-- **Rule 1 — do not retry mid-team**: while a team is active, do NOT retry `TaskUpdate` against an orphaned task (the retries fail identically and read as a stuck panel). Hold the status change and **reconcile after TeamDelete** in one batch.
-- **Rule 2 — batch-create AFTER TeamCreate** (MUST for new skills, SHOULD-retrofit for existing ones): a skill whose whole flow runs inside ONE team creates its step tasks after `TeamCreate`, so the tasks live on the team list and stay accessible throughout. Skills with multiple sequential teams (e.g. ae:discuss: framing-review → council) accept the orphan windows and apply Rule 1.
-- **Precedence**: this canonical rule wins; existing per-skill tables that still say "At skill start, batch-create" (12 files as of F-039) update opportunistically the next time each skill is modified — no big-bang rewrite.
+- **Rule 1 — batch-create at skill start**: create step tasks at skill start (the default in §C); they remain accessible throughout because spawning teammates does not switch the active task list.
+- **Precedence**: this canonical rule wins; existing per-skill tables update opportunistically the next time each skill is modified — no big-bang rewrite.
 
 ### Auto-compact panel freeze (known limit)
 
@@ -617,8 +615,8 @@ When TL sends `shutdown_request` to a teammate, the teammate replies `shutdown_r
   - Correct: `message: {"type": "shutdown_response", "request_id": "…", "approve": true}` (object) · Wrong: `message: "{\"type\": \"shutdown_response\", …}"` (string — not parsed)
 - Teammate MUST reply within 30s of request OR be force-abandoned by TL
 - `approve: false` blocks shutdown (rare — teammate has urgent in-flight work)
-- TL calls `TeamDelete()` after all approved responses OR force-abandon window expires
-- Force-abandoned teammates have verdict files written BEFORE `TeamDelete()` (audit trail)
+- There is no explicit team teardown call — teammates and team config are cleaned up automatically at session end. The shutdown handshake remains the way TL releases a teammate during a session.
+- Force-abandoned teammates have verdict files written before TL moves on (audit trail)
 - Do NOT send custom JSON variants — use the exact shape above
 
 **Why centralized**: 15 agent .md files previously embedded this schema inline (copy-paste drift accumulated). Centralizing to this canonical section means schema evolution (e.g., adding fields) only edits this 1 location; agent references inherit automatically.

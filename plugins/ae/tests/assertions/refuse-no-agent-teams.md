@@ -13,7 +13,7 @@ source: manual
 - [text:contains] Plan stays status: draft in fallback mode
 
 ### MUST_NOT
-- [behavior] MUST NOT call TeamCreate when Agent Teams disabled
+- [behavior] MUST NOT spawn teammates via the Agent tool when Agent Teams disabled
 - [behavior] MUST NOT produce a reviewed plan in fallback mode (status must stay draft)
 
 ### SHOULD

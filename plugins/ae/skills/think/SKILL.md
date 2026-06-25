@@ -58,17 +58,15 @@ Run this step after Frame (Step 1) and before spawning the team (Step 2).
 
 ## Step 2: Agent Teams Investigation
 
-Create a Team for parallel deep investigation (Investigation Mode). **TL synthesizes**.
+Spawn teammates for parallel deep investigation (Investigation Mode). **TL synthesizes**.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
 ```
-TeamCreate(team_name: "<topic>-deep-think")
-
 Agent(subagent_type: "architect", name: "architect",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: architect
                   Role: deep-think lead (structural/design)
                   Angle: problem decomposition + design trade-offs
@@ -81,7 +79,7 @@ Agent(subagent_type: "architect", name: "architect",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "standards-expert", name: "standards-expert",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: standards-expert
                   Role: deep-think support (industry comparison)
                   Angle: framework + version specific best practices for this problem
@@ -94,7 +92,7 @@ Agent(subagent_type: "standards-expert", name: "standards-expert",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "challenger", name: "challenger",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: challenger
                   Role: opposition (think mode)
                   Angle: blind spots in architect's analysis + alternative explanations
@@ -115,7 +113,7 @@ Agent(subagent_type: "challenger", name: "challenger",
 # For each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family deep-think (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>
@@ -139,7 +137,7 @@ TL collects all findings and integrates perspectives:
 - **Blind spots** — issues only raised by challenger or cross-family
 - **Recommendation** — actionable conclusion with confidence level (low/medium/high)
 
-Close the Team.
+Shut down teammates via the shutdown_request → shutdown_response handshake (no TeamDelete — team cleanup is automatic at session end).
 
 ## Step 4: Persist
 

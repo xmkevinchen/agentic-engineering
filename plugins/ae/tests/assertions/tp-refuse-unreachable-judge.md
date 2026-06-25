@@ -13,7 +13,7 @@ source: generated
 - [behavior] Skill aborts during pre-check, before any test generation begins
 
 ### MUST_NOT
-- [behavior] No TeamCreate call issued
+- [behavior] No teammates spawned via the Agent tool (skill aborts before any spawn)
 - [behavior] No Phase 1 or Phase 2 activity proceeds after judge check fails
 
 ### SHOULD

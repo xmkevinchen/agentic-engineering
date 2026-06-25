@@ -19,4 +19,4 @@ source: regression
 
 ### SHOULD
 - [text:contains] Pre-check 1 wording makes the conditional clear: env var present → normal; env var absent AND `--regression --layer1` → solo; env var absent AND any other combination → refuse
-- [behavior] When the solo carve-out path is taken, no `TeamCreate` or `Agent(team_name: ...)` calls occur during the run
+- [behavior] When the solo carve-out path is taken, no teammates are spawned via the `Agent` tool (no `name`-addressed spawn, no `team_name` arg) during the run

@@ -45,7 +45,7 @@ Scan `~/.claude/teams/<name>/config.json` directly. **Do NOT use `TaskList`** �
 
 **Performance critical**: filesystem traversal only — no team spawn, no file writes, no expensive parses. If a future edit introduces a per-team expensive operation (e.g., reading every member's full output), the <2s aggregate /ae:status contract will silently break. See integration-test.md baseline (155ms for full skill).
 
-**Staleness filter**: skip team dirs whose `config.json` mtime is older than 4 hours (heuristic — TeamDelete should clean up active teams; old surviving dirs are likely orphans from a crash). Compute via `find ~/.claude/teams -maxdepth 2 -name config.json -mmin -240`.
+**Staleness filter**: skip team dirs whose `config.json` mtime is older than 4 hours (heuristic — teammates are cleaned up automatically at session end; old surviving dirs are likely orphans from a crash). Compute via `find ~/.claude/teams -maxdepth 2 -name config.json -mmin -240`.
 
 For each surviving team:
 - Read `config.json` → extract team name, members list (each member's `name` + `agentType`), and `joinedAt` timestamps

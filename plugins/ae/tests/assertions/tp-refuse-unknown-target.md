@@ -12,7 +12,7 @@ source: generated
 - [behavior] Skill exits before Phase 1 or Phase 2 begins
 
 ### MUST_NOT
-- [behavior] No TeamCreate call issued
+- [behavior] No teammate spawned via the Agent tool
 - [behavior] No test files written or read
 
 ### SHOULD

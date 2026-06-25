@@ -238,21 +238,19 @@ If any check fails → fix the plan before proceeding to review. These checks ar
 
 > Note: Plan stays `status: draft`. Use `/ae:plan-review` before `/ae:work`.
 
-After the plan is written, create a Team for parallel review.
+After the plan is written, spawn teammates for parallel review.
 
 **Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. For plan review, the "Plan review" row applies as baseline (architect + dependency-analyst). Add more based on plan content (e.g., plan involves DB migration → add performance-reviewer).
 
 **Cross-family**: Follow the cross-family rules in the **Agent Selection Reference** skill — different angles per proxy, focused on the plan's domain. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
 
-**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+**Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
 ```
-TeamCreate(team_name: "<feature>-plan-review")
-
 # Architect reviews plan structure and dependencies:
 # architect: dispatcher-resolved default; project_agents override applies (per ae:agent-selection canonical placeholder convention)
 Agent(subagent_type: "<per agent-selection>", name: "architect",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <runtime-selected>
                   Role: architect (plan review)
                   Angle: step decomposition + dependency graph + parallel strategy
@@ -263,7 +261,7 @@ Agent(subagent_type: "<per agent-selection>", name: "architect",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "<reviewer-2>", name: "<reviewer-2>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <reviewer-2>
                   Role: <plan review secondary>
                   Angle: <review focus per plan content>
@@ -274,7 +272,7 @@ Agent(subagent_type: "<reviewer-2>", name: "<reviewer-2>",
 # Cross-family — for each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family plan reviewer (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>
@@ -307,7 +305,7 @@ Before confirming with the user, check cross-family availability (`cross_family`
   - Spawn the Doodlestein agents INTO the existing plan-review team. **Note**: at the plan-review stage `/ae:plan` spawns only the **3-agent subset** (strategic / adversarial / regret) shown below — NOT the canonical 4. `scope-reducer` is post-conclusion-specific and intentionally omitted here (see agent-teams/SKILL.md § Doodlestein Protocol per-skill asymmetry). "Canonical" in agent-teams context means 4; in plan-review context it means this 3-agent variant.
     ```
     Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
-          team_name: "<existing team>", run_in_background: true,
+          run_in_background: true,
           prompt: "📋 Cast: doodlestein-strategic
                       Role: plan reviewer (strategic)
                       Angle: single smartest improvement to the plan
@@ -317,7 +315,7 @@ Before confirming with the user, check cross-family availability (`cross_family`
                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
     Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
-          team_name: "<existing team>", run_in_background: true,
+          run_in_background: true,
           prompt: "📋 Cast: doodlestein-adversarial
                       Role: plan reviewer (adversarial)
                       Angle: blind spot / first cliff in plan execution
@@ -327,7 +325,7 @@ Before confirming with the user, check cross-family availability (`cross_family`
                    IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
     Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
-          team_name: "<existing team>", run_in_background: true,
+          run_in_background: true,
           prompt: "📋 Cast: doodlestein-regret
                       Role: plan reviewer (regret prediction)
                       Angle: highest-regret plan decision likely reversed within 30d ship
@@ -344,7 +342,7 @@ Before confirming with the user, check cross-family availability (`cross_family`
   ℹ️ Doodlestein challenge skipped: cross-family unavailable.
   ```
 
-Close the Team after Doodlestein completes (or after Step 3 if Doodlestein skipped).
+Shut down teammates (shutdown_request → shutdown_response) after Doodlestein completes (or after Step 3 if Doodlestein skipped); team config + teammates are cleaned up automatically at session end.
 
 ### 4.5. Knowledge Capture (to Mengdie)
 

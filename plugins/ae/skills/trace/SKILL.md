@@ -52,17 +52,15 @@ Ask user if not obvious:
 
 ## Step 3: Agent Teams Analysis
 
-Create a Team for parallel trace validation (Investigation Mode). **TL synthesizes**.
+Spawn teammates for parallel trace validation (Investigation Mode). **TL synthesizes**.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Include enabled proxy agents. Apply **Proxy Timeout Protocol** from Agent Selection Reference — on proxy failure, TL handles angle-aware fallback.
 
 ```
-TeamCreate(team_name: "<target>-trace")
-
 Agent(subagent_type: "architect", name: "architect",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: architect
                   Role: trace validator (structural)
                   Angle: trace completeness + accuracy + missing hops
@@ -76,7 +74,7 @@ Agent(subagent_type: "architect", name: "architect",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: dependency-analyst
                   Role: trace dependency analyzer
                   Angle: circular deps + tight coupling + fragile chains
@@ -89,7 +87,7 @@ Agent(subagent_type: "dependency-analyst", name: "dependency-analyst",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: performance-reviewer
                   Role: trace performance reviewer
                   Angle: N+1 queries + blocking calls + memory hotspots in execution path
@@ -104,7 +102,7 @@ Agent(subagent_type: "performance-reviewer", name: "performance-reviewer",
 # For each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family trace validator (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>
@@ -140,7 +138,7 @@ Include:
 - Issues found (coupling, performance, missing error handling)
 - Recommendations
 
-Close the Team.
+Shut down teammates (shutdown_request → shutdown_response); the implicit team is cleaned up automatically at session end.
 
 ## Step 5: Persist
 

@@ -7,8 +7,8 @@ source: regression
 
 ## Context
 
-F-039 documented the Team=TaskList 1:1 context-switch behavior (tasks created before TeamCreate return "Task not found" while a team is active) in the canonical `## Skill step progress tracking` section, with two rules: don't retry mid-team (reconcile after TeamDelete) and batch-create AFTER TeamCreate for single-team skills.
+The canonical `## Skill step progress tracking` section §H documents how step tasks interact with teams. Under the implicit-team model (one team per session, no create/delete API, no task-list switching), there is a single task list for the whole run, so step tasks batch-created at skill start stay accessible throughout.
 
 ## Prompt
 
-Static analysis of `plugins/ae/skills/agent-teams/SKILL.md`: verify the §H subsection exists with both rules + precedence line, the §C.1 reconciliation nuance is present, and the pre-existing A-G subsections survive.
+Static analysis of `plugins/ae/skills/agent-teams/SKILL.md`: verify the §H subsection exists with the batch-create-at-skill-start rule + precedence line, the §C.1 timing note is present, and the pre-existing A-G subsections survive.

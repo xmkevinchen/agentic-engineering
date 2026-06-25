@@ -202,14 +202,12 @@ Pre-checks:
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
-**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+**Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
 ```
-TeamCreate(team_name: "<feature>-work")
-
 # dev-agent: dispatcher-resolved per ae:agent-selection canonical placeholder convention; project_agents (e.g., backend-dev, ios-dev) override per role + tech_stack
 Agent(subagent_type: "<per agent-selection>", name: "<dev-agent>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "<PRIMARY CONTEXT — assembled per 'Per-step Primary Context Load' section below:
                  1. Current step spec (full ### Step N block)
                  2. Full plan AC list (entire ## Acceptance Criteria section)
@@ -228,7 +226,7 @@ Agent(subagent_type: "<per agent-selection>", name: "<dev-agent>",
 
 # qa: structurally fixed role — always paired with <dev-agent> as a counterpart; hardcoded by design (NOT dispatcher-resolved)
 Agent(subagent_type: "qa", name: "qa",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: qa
                   Role: checker (Step N per-step quality gate)
                   Angle: <specialized focus based on context — verify tests, build, cross-family>

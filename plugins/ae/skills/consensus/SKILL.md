@@ -64,7 +64,7 @@ Strip the flag from `$ARGUMENTS` before proceeding; the remainder is the proposa
 
 ## Step 2: Agent Teams Debate — Round 1 (Independent Arguments)
 
-Create a Team with explicit stances. **TL = mediator** (collects, evaluates, and synthesizes). Each agent argues from their assigned position.
+Spawn teammates with explicit stances. **TL = mediator** (collects, evaluates, and synthesizes). Each agent argues from their assigned position.
 
 **Select agents**: Refer to the **Agent Selection Reference** skill for the selection table and rules.
 
@@ -90,13 +90,11 @@ All agents MUST use this output structure in Round 1:
 
 ### Team Creation
 
-**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+**Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
 ```
-TeamCreate(team_name: "<topic>-consensus")
-
 Agent(subagent_type: "architect", name: "advocate",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: architect
                   Role: advocate (for/against debate, FOR position)
                   Angle: strongest arguments + codebase evidence supporting the proposal
@@ -116,7 +114,7 @@ Agent(subagent_type: "architect", name: "advocate",
                IMPORTANT: STAY IN THE TEAM. Wait for cross-examination rounds.")
 
 Agent(subagent_type: "challenger", name: "critic",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: challenger
                   Role: opposition (critic in for/against debate, AGAINST position)
                   Angle: risks + hidden costs + better alternatives
@@ -147,7 +145,7 @@ Agent(subagent_type: "challenger", name: "critic",
 # For each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family independent evaluator (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>
@@ -289,7 +287,7 @@ The verdict file = the `## Recommendation` template above (judgment-first; proce
 
 Show verdict to user.
 
-Close the Team.
+Shut down teammates via the SendMessage `shutdown_request` → `shutdown_response` handshake (team config + teammates are cleaned up automatically at session end).
 
 ## Next Steps
 

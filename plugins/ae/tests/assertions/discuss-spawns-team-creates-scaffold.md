@@ -13,12 +13,12 @@ source: manual
 - [file:contains] index.md frontmatter has `pipeline.discuss: in_progress`
 - [file:exists] At least one `topic-NN-slug/summary.md` created
 - [file:contains] topic summary.md has `status: pending` in frontmatter
-- [team:exists] A TeamCreate call occurred with a team name matching the discussion slug (inbox dir exists under ~/.claude/teams/)
+- [team:exists] At least one teammate spawned via the Agent tool (addressable `name` param), no TeamCreate (one implicit team per session; inbox dir exists under ~/.claude/teams/)
 - [behavior] Team has TL (moderator) role + at least one role agent spawned as teammate
 
 ### MUST_NOT
 - [file:exists] MUST NOT pre-populate `topic-NN-slug/summary.md` with A/B/C option choices (options emerge from team discussion per ae:discuss design)
-- [behavior] MUST NOT skip the Setup → Spawn Team sequence (scaffold before team, not parallel)
+- [behavior] MUST NOT skip the Setup → Spawn Teammates sequence (scaffold before spawning, not parallel)
 
 ### SHOULD
 - [text:contains] Output confirms Discussion N created with topic count

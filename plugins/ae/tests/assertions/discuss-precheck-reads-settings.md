@@ -15,7 +15,7 @@ source: generated
 - [text:contains] Output instructs user to restart Claude Code after making the change
 
 ### MUST_NOT
-- [behavior] No TeamCreate tool call
+- [behavior] No teammates spawned via the Agent tool (one implicit team, no TeamCreate)
 - [behavior] No Agent tool call
 - [behavior] No discussion directory or files created
 

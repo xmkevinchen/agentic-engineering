@@ -57,16 +57,14 @@ Refer to the **Agent Selection Reference** skill for the selection table and rul
 
 ## Step 2: Launch Team
 
-**Before `TeamCreate`** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+**Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
 ```
-TeamCreate(team_name: "<task-summary>")
-
 # Launch selected agents (2-4 core + cross-family if needed)
 # All agents SendMessage findings to team-lead. TL synthesizes.
 
 Agent(subagent_type: "<agent1>", name: "<agent1>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <agent1>
                   Role: <ad-hoc role per task context — computed at TL spawn-decision time>
                   Angle: <ad-hoc focus>
@@ -78,7 +76,7 @@ Agent(subagent_type: "<agent1>", name: "<agent1>",
                SendMessage findings to team-lead when done.")
 
 Agent(subagent_type: "<agent2>", name: "<agent2>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <agent2>
                   Role: <ad-hoc role per task context>
                   Angle: <ad-hoc focus from agent2's perspective>
@@ -96,7 +94,7 @@ Agent(subagent_type: "<agent2>", name: "<agent2>",
 # Cross-family — for each enabled proxy (check pipeline.yml cross_family):
 # TL picks angles first, assigns to available proxies. If both enabled, different angles.
 Agent(subagent_type: "<proxy>", name: "<proxy>",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <proxy>
                   Role: cross-family ad-hoc reviewer (<family> angle)
                   Angle: <assigned-angle-at-spawn-time>
@@ -111,7 +109,7 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
 
 TL collects all findings from agents, synthesizes final report.
 
-Close the Team.
+Shut down teammates via SendMessage shutdown_request → shutdown_response (team config + teammates are cleaned up automatically at session end).
 
 ## Persist
 

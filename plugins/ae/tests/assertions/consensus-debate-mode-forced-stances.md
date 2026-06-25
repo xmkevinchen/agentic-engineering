@@ -8,7 +8,7 @@ source: manual
 ## Expected Behavior
 
 ### MUST
-- [team:exists] TeamCreate call occurred with a consensus-debate team
+- [team:exists] Consensus-debate teammates spawned via the Agent tool (name param), no TeamCreate
 - [behavior] Team has at least one advocate (forced FOR) AND one critic (forced AGAINST) — Debate Mode stances assigned explicitly per agent
 - [behavior] Cross-examination rounds ran (evidence: agent-to-agent SendMessages with structured Claims / Evidence / Objection / Confidence format)
 - [behavior] TL acts as mediator (NOT as an agent in debate) — TL collects findings, synthesizes verdict

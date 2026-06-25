@@ -14,7 +14,7 @@ source: generated
 
 ### MUST_NOT
 - [behavior] MUST NOT output "refuse to execute" or block execution entirely
-- [behavior] MUST NOT call TeamCreate
+- [behavior] MUST NOT spawn teammates via the Agent tool (one implicit team, no TeamCreate)
 - [behavior] MUST NOT call Agent with team_name parameter
 
 ### SHOULD

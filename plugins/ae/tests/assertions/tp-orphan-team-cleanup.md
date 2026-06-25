@@ -15,5 +15,5 @@ source: generated
 - [behavior] Session TL skips orphan cleanup when target skill crashes or returns early
 
 ### SHOULD
-- [behavior] If orphan teams are found, they are cleaned up (TeamDelete or equivalent)
+- [behavior] If orphan teammates are found, they are shut down via shutdown_request (no TeamDelete; team config is cleaned up automatically at session end)
 - [text:contains] Report or output notes orphan cleanup activity if teams were found

@@ -8,7 +8,7 @@ source: generated
 ## Context
 - Agent Teams enabled
 - `.claude/pipeline.yml` exists with valid config
-- Target is a Class B skill (contains TeamCreate/Agent patterns, e.g. ae:discuss or ae:plan)
+- Target is a Class B skill (spawns teammates via the Agent tool, e.g. ae:discuss or ae:plan)
 - Phase 1 assertion files have been written to `plugins/ae/tests/assertions/` (uncommitted, main repo only)
 
 ## Prompt

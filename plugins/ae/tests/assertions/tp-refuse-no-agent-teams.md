@@ -13,7 +13,7 @@ source: generated
 - [behavior] Skill exits before any test generation or execution activity
 
 ### MUST_NOT
-- [behavior] No TeamCreate call issued
+- [behavior] No teammates spawned via the Agent tool
 - [behavior] No Phase 1 test generation begins
 - [behavior] No test files written to plugins/ae/tests/
 

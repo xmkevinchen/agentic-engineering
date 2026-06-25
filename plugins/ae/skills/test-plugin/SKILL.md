@@ -64,7 +64,7 @@ This is a **behavioral contract** (prompt-level separation of concerns), not a t
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled, apply the solo carve-out: if both `--regression` and `--layer1` flags are present, skip the Agent Teams refuse and proceed with Session TL executing Layer 1 checks directly (no TeamCreate, no Phase 1 generation, no Layer 2). Otherwise (env var unset AND not the `--regression --layer1` combination) → **refuse to execute** and tell user: "Agent Teams is required for ae:test-plugin (blind protocol requires TeamCreate + test-lead). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code." Layer 2 path still requires Agent Teams (blind protocol cannot be solo).
+1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled, apply the solo carve-out: if both `--regression` and `--layer1` flags are present, skip the Agent Teams refuse and proceed with Session TL executing Layer 1 checks directly (no teammates spawned, no Phase 1 generation, no Layer 2). Otherwise (env var unset AND not the `--regression --layer1` combination) → **refuse to execute** and tell user: "Agent Teams is required for ae:test-plugin (blind protocol requires a test-lead teammate). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code." Layer 2 path still requires Agent Teams (blind protocol cannot be solo).
 2. **Target resolution**: resolve input to file paths. If skill name → find `plugins/ae/skills/<name>/SKILL.md`. If not found → refuse with suggestion.
 3. **Judge health check**: read `pipeline.yml` → `test_plugin.judge` (default: `codex`). Verify the judge is reachable:
    - `codex` → check `mcp__plugin_ae_codex__codex` tool is available
@@ -80,13 +80,11 @@ If `--refresh` flag is set, delete existing `source: generated` test files for t
 
 ### 1.1 Spawn Test Team
 
-**Before `TeamCreate`** (applies to BOTH this team here AND Phase 2 Class B test team) — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+**Before spawning teammates** (applies to BOTH this team here AND Phase 2 Class B test team) — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
 ```
-TeamCreate(team_name: "test-<target>")
-
 Agent(subagent_type: "test-lead", name: "test-lead",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: test-lead
                   Role: adversarial test suite lead (Phase 1 generation + Phase 2 judgment)
                   Angle: test case outlines + writer review + verdict judgment by assertion text
@@ -100,7 +98,7 @@ Agent(subagent_type: "test-lead", name: "test-lead",
                Only SendMessage approved suite to team-lead.")
 
 Agent(subagent_type: "general-purpose", name: "prompts-writer",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: general-purpose (as prompts-writer)
                   Role: test prompts writer (Phase 1)
                   Angle: 2-3 prompt variants per test case, blind protocol isolation from answer-writer
@@ -115,7 +113,7 @@ Agent(subagent_type: "general-purpose", name: "prompts-writer",
                SendMessage all drafts to test-lead for review. Do NOT message team-lead.")
 
 Agent(subagent_type: "general-purpose", name: "answer-writer",
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: general-purpose (as answer-writer)
                   Role: test assertions writer (Phase 1)
                   Angle: MUST / MUST_NOT / SHOULD assertions mechanically verifiable, blind from prompts-writer
@@ -146,7 +144,7 @@ If insufficient → feedback to writers for revision. If approved → confirm fi
 
 Session TL receives approved suite → shutdown writers only (prompts-writer, answer-writer). **test-lead stays alive in the team** — it will judge execution output in Phase 2.
 
-**Do NOT TeamDelete here.** The test team persists into Phase 2 for Class A execution. Class B will TeamDelete at the start of Phase 2 (see Phase 2 → Class B Path).
+The test team persists into Phase 2 for Class A execution. Class B will shut down the writers and re-spawn the target skill's agents at the start of Phase 2 (see Phase 2 → Class B Path).
 
 **Context transfer**: test cases are split across `plugins/ae/tests/prompts/` and `plugins/ae/tests/assertions/`. If the team must be rebuilt (Class B), the resurrected test-lead recovers context by reading assertion files from `assertions/`.
 
@@ -196,7 +194,7 @@ Only runs if Layer 1 passed for this test case.
 
 Before executing, classify the target skill:
 
-- **Scan** the target SKILL.md for `TeamCreate` or `Agent(` patterns
+- **Scan** the target SKILL.md for `Agent(` patterns
 - **Class A** (patterns not found): skill does not require Agent Teams → subagent can execute
 - **Class B** (patterns found): skill requires Agent Teams → Session TL must execute directly
 - **Unreadable target**: → `FAIL_CLOSED` (classification_error, do not execute)
@@ -227,21 +225,21 @@ Worktree creation failure → `FAIL_CLOSED` (isolation_error, do not execute wit
 7. test-lead reads assertions/<id>.md + artifacts → judges → returns verdict
 ```
 
-Test team persists throughout — no TeamDelete needed for Class A.
+Test team persists throughout for Class A.
 
 **Worktree memory isolation**: When spawning agents in worktree, include in their prompt: "Do not write to ~/.claude/projects/*/memory/. You are in an isolated worktree — memory writes would pollute the user's project memory."
 
 #### Class B Execution (team rebuild, Session TL executes)
 
-Class B skills need Agent Teams (TeamCreate). The test team must be released first.
+Class B skills need Agent Teams. The test team's writers must be shut down first.
 
 ```
-Phase 2.1: Team Release
-1. TeamDelete test team (release slot for target skill)
+Phase 2.1: Writers Release
+1. Shut down any remaining test-team writers (shutdown_request → shutdown_response)
 
 Phase 2.2: Worktree + Team Rebuild
 2. Create git worktree
-3. One TeamCreate — include BOTH:
+3. Spawn — include BOTH:
    - Target skill's required agents (per the skill being tested)
    - Resurrected test-lead (context recovered from assertion files)
 
@@ -263,7 +261,7 @@ Phase 2.4: Judge
 8. test-lead reads assertions (main repo path) + artifacts → judges → returns verdict
 
 Phase 2.5: Cleanup
-9. TeamDelete rebuilt team
+9. Shut down rebuilt-team teammates (shutdown_request → shutdown_response)
 10. Remove worktree: git worktree remove /tmp/test-<id> && git branch -D test-<id>
 11. Defensive cleanup: check ~/.claude/teams/ for orphan teams created by target skill
     (skill crash may leave uncleaned teams)
@@ -379,7 +377,7 @@ target: "[skill/agent name]"
 - Isolation: worktree (/tmp/test-<id>)
 - Baseline SHA: <HEAD_SHA>
 - Class: A (subagent) / B (team rebuild)
-- Team lifecycle: [kept alive | TeamDelete → rebuild]
+- Team lifecycle: [kept alive | writers shut down → re-spawn]
 - Orphan cleanup: [none | cleaned N teams]
 
 ## Results

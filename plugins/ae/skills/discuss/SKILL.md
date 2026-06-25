@@ -46,7 +46,7 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 |---|---|---|---|---|
 | Pre-check | `ae:discuss: Pre-check` | Skill start | Before pre-check 1 | After pre-checks pass |
 | Step 1 Setup | `ae:discuss: Step 1 — Setup` | Skill start (batch) | When discussion dir resolved | After framing.md + index.md written |
-| Step 1.5 Round 0 | `ae:discuss: Step 1.5 — Round 0 Framing` | Skill start (batch) | When framing-review team spawned | After Round 0 verdicts aggregated + verdict files written + framing-review team deleted |
+| Step 1.5 Round 0 | `ae:discuss: Step 1.5 — Round 0 Framing` | Skill start (batch) | When framing-review team spawned | After Round 0 verdicts aggregated + verdict files written + framing-review teammates shut down |
 | Step 2 Spawn | `ae:discuss: Step 2 — Spawn Team` | Skill start (batch) | When discussion council team spawned | When all council members report ready for Round 1 |
 | Step 3 Discussion | `ae:discuss: Step 3 — Discussion Rounds` | Skill start (batch) | When Round 1 starts | When all topics converged or deferred |
 | Step 7 Sweep | `ae:discuss: Step 7 — Sweep Deferred` | Skill start (batch) | When Sweep starts | When zero deferred + zero revisit |
@@ -105,7 +105,7 @@ This constraint exists because every downstream guard (§1.5.1 Frozen-field rule
 
 ### 1.5. Round 0 — Framing Review (new discussions only)
 
-**Framing quality review is its own task**, with its own TeamCreate/TeamDelete lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two teams is consistent with ae:agent-teams "one team per task"; it is not a pre-flight hack.
+**Framing quality review is its own task**, with its own spawn/shutdown lifecycle, distinct from Step 2's discussion-rounds task. Two tasks = two teammate groups is consistent with ae:agent-teams "one team per task"; it is not a pre-flight hack.
 
 **Path note**: throughout sections 1.5.x and 2-8 below, the symbolic `<discussion-dir>` resolves to whichever path Step 1 chose. For feature-internal discussions, `<discussion-dir>` = `<feature-dir>/discussions/<NNN>-<slug>/`; for free-text discussions, `<discussion-dir>` = `<output.discussions>/NNN-slug/` (legacy fallback). Round-00, round-NN, and conclusion files all live under `<discussion-dir>/` regardless of which location was resolved.
 
@@ -120,9 +120,9 @@ Applies to **new discussions** and any discussion where `framing.md` was changed
 
 #### 1.5.1. Spawn framing-review team
 
-**Before `TeamCreate`** (applies to BOTH framing-review team here AND Step 2 council team) — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
+**Before spawning teammates** (applies to BOTH framing-review team here AND Step 2 council team) — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
-**Preflight — project agent presence check**: before `TeamCreate`, verify that the minimal-change-engineer agent exists. Discovery order (first match wins):
+**Preflight — project agent presence check**: before spawning teammates, verify that the minimal-change-engineer agent exists. Discovery order (first match wins):
 - `plugins/ae/agents/engineering/minimal-change-engineer.md` (plugin built-in — default location since F-011)
 - `.claude/agents/engineering-minimal-change-engineer.md` (project-local override, optional)
 - `~/.claude/agents/engineering-minimal-change-engineer.md` (user override, optional)
@@ -150,15 +150,11 @@ Reviewers may critique TL-authored framing, but the `## User Question (Frozen)` 
 
 Each spawn prompt below echoes this rule by including the line `Honor the Frozen-field rule defined in §1.5.1 above.` immediately under its `framing_context:` line, so the agent's prompt context carries the constraint without re-stating the full rule.
 
-```
-TeamCreate(team_name: "<discussion-id>-framing-review")
-```
-
 Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), each with `framing_context:` in the prompt:
 
 ```
 Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
-      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: codex-proxy
                   Role: framing reviewer (OpenAI angle)
                   Angle: bias anchoring
@@ -175,7 +171,7 @@ Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
                Do not retry. SendMessage verdict to team-lead.")
 
 Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
-      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: gemini-proxy
                   Role: framing reviewer (Google angle)
                   Angle: bias anchoring (system-level lens)
@@ -192,7 +188,7 @@ Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
                SendMessage verdict to team-lead.")
 
 Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic",
-      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: doodlestein-strategic
                   Role: framing reviewer (strategic)
                   Angle: scope narrowing — alternative framings foreclosed
@@ -207,7 +203,7 @@ Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-str
                if a better framing exists. SendMessage verdict to team-lead.")
 
 Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-adversarial",
-      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: doodlestein-adversarial
                   Role: framing reviewer (adversarial)
                   Angle: Round 1 walls — first blocked solution class
@@ -222,7 +218,7 @@ Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-a
                SendMessage verdict to team-lead.")
 
 Agent(subagent_type: "ae:engineering:minimal-change-engineer", name: "minimal-change-engineer",
-      team_name: "<discussion-id>-framing-review", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: minimal-change-engineer
                   Role: framing reviewer (over-complication detection)
                   Angle: simpler framing covering same problem with less machinery
@@ -299,17 +295,16 @@ The `target:` field is required on REVISE verdicts and MUST be one of the 3 muta
 
 Rationale for rule order (addresses review-043 P1s): rule 1.5 fires before rule 2 because the mechanical guard (target validation + frozen-section byte-diff) must filter invalid REVISE verdicts before the user-facing halt — otherwise the user sees consolidated feedback derived from invalid REVISE proposals. Rule 2 fires before rule 3/4 so any REVISE is dispositioned cleanly (fast-path integration or contested halt). Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
 
-#### 1.5.4. Per-agent verdict files + team teardown
+#### 1.5.4. Per-agent verdict files + teammate shutdown
 
 After aggregation:
 - **Verdict files first** — write each agent's verdict (including `unavailable` and timed-out entries) to `<discussion-dir>/round-00/<agent-name>.md` (create dir if needed). File contents: agent name, verdict state, verdict content verbatim, timestamp. These files are the durable audit trail — captured BEFORE any `shutdown_request` is sent so a hung or timed-out agent still has its record written. Agents already marked `unavailable` by §1.5.2 timeout get their files written here; they are not waited for again.
 - **Parallel shutdown** — send `shutdown_request` to all spawned agents in parallel (single broadcast pass). Wait up to **30s wall-clock total** (not per agent) for `shutdown_response` replies. Worst-case teardown latency is 30s regardless of team size.
-- **Force-abandon path** — any agent that has not responded within the 30s wall-clock window (e.g., hung on long Bash call, MCP stuck, or already crashed) is marked `abandoned` in its verdict file and skipped. `TeamDelete()` is called regardless — the CC team manager reaps the abandoned subprocess. This prevents the framing-review team from blocking the next task (Step 2) when one agent refuses to exit cleanly. A `[layer1] teardown: <agent> abandoned after 30s` entry is appended to the Layer 1 trace for audit.
-- `TeamDelete()` the framing-review team.
+- **Force-abandon path** — any agent that has not responded within the 30s wall-clock window (e.g., hung on long Bash call, MCP stuck, or already crashed) is marked `abandoned` in its verdict file and skipped. The framing-review teammates are left to be reaped automatically at session end — the abandoned subprocess does not block the next task (Step 2) when one agent refuses to exit cleanly. A `[layer1] teardown: <agent> abandoned after 30s` entry is appended to the Layer 1 trace for audit.
 
 #### 1.5.5. Boundary to Step 2
 
-Step 2 spawns a **separate, newly created team** (`<discussion-id>-council`). Step 2's agent selection follows `ae:agent-selection` normal rules driven by discussion content — **Round 0 agent outcomes do NOT influence Step 2's team composition**. The framing-review team is a quality gate, not a signal for discussion team design.
+Step 2 spawns a **separate set of council teammates** (the framing-review teammates have been shut down). Step 2's agent selection follows `ae:agent-selection` normal rules driven by discussion content — **Round 0 agent outcomes do NOT influence Step 2's team composition**. The framing-review team is a quality gate, not a signal for discussion team design.
 
 **Why Round 0 exists (not a mechanism you can inline into later rounds)**: once Round 1 spawns, agents anchor on whatever framing is provided. Mid-round reviewers (challenger, Doodlestein at conclusion) evaluate within the framing. Round 0 is the only point where framing itself is the object of evaluation, before it infects Round 1 context.
 
@@ -343,12 +338,10 @@ If the team already exists (resuming), skip to step 3. Otherwise:
 **Discussion Mode per `ae:agent-teams` protocol**: TL = moderator, all agents = equal participants. No forced proposer/opposition.
 
 ```
-TeamCreate(team_name: "<discussion>-council")
-
 # All agents are equal participants — dynamic roles per Agent Selection Reference.
 Agent(subagent_type: "<per agent-selection>",
       name: "<role-name>", # e.g., "architect", "code-researcher", "security-expert"
-      team_name: "<team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: <runtime-selected>
                   Role: <role-name> (council participant in <discussion title>)
                   Angle: <role-specific focus per Agent Selection Reference>
@@ -650,7 +643,7 @@ Per `ae:agent-teams` Doodlestein Protocol. Four fresh agents, each answering ONE
 
 ```
 Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
-      team_name: "<existing team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: doodlestein-strategic
                   Role: post-conclusion reviewer (strategic)
                   Angle: single smartest improvement to the conclusion
@@ -661,7 +654,7 @@ Agent(subagent_type: "doodlestein-strategic", name: "doodlestein-strategic",
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
 Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
-      team_name: "<existing team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: doodlestein-adversarial
                   Role: post-conclusion reviewer (adversarial)
                   Angle: first real-use failure of the conclusion
@@ -672,7 +665,7 @@ Agent(subagent_type: "doodlestein-adversarial", name: "doodlestein-adversarial",
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
 Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
-      team_name: "<existing team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: doodlestein-regret
                   Role: post-conclusion reviewer (regret prediction)
                   Angle: highest-regret decision likely reversed within 6 months
@@ -683,7 +676,7 @@ Agent(subagent_type: "doodlestein-regret", name: "doodlestein-regret",
                IMPORTANT: STAY IN THE TEAM. Do NOT exit.")
 
 Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reducer",
-      team_name: "<existing team>", run_in_background: true,
+      run_in_background: true,
       prompt: "📋 Cast: doodlestein-scope-reducer
                   Role: post-conclusion reviewer (scope reduction — SUBTRACT angle)
                   Angle: what could be deleted from the conclusion such that the original problem is still solved?

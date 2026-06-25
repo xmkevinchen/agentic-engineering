@@ -13,5 +13,5 @@ source: generated
 - [behavior] Falls back to TL executing task directly
 
 ### MUST_NOT
-- [behavior] MUST NOT call TeamCreate tool when Agent Teams disabled
+- [behavior] MUST NOT spawn teammates via the Agent tool (name param) when Agent Teams disabled
 - [behavior] MUST NOT spawn team agents when in fallback mode

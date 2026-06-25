@@ -13,7 +13,7 @@ source: generated
 - [behavior] Skill exits cleanly after warning — no test execution occurs
 
 ### MUST_NOT
-- [behavior] No TeamCreate call issued
+- [behavior] No teammates spawned via the Agent tool (no team activity)
 - [behavior] No Phase 1 generation proceeds (must not silently generate new cases in --regression mode)
 
 ### SHOULD

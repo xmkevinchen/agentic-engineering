@@ -13,7 +13,7 @@ source: generated
 - [behavior] Execution stops — review does not proceed past Check 2
 
 ### MUST_NOT
-- [behavior] MUST NOT call TeamCreate when plan has uncompleted steps
+- [behavior] MUST NOT spawn teammates (Agent tool) when plan has uncompleted steps
 - [behavior] MUST NOT call Agent
 - [file:exists] MUST NOT write any review file
 

@@ -14,8 +14,8 @@ source: generated
 
 ### MUST_NOT
 - [behavior] MUST NOT hard-refuse or block execution when Agent Teams is disabled
-- [behavior] MUST NOT call TeamCreate
-- [behavior] MUST NOT call Agent with team_name parameter
+- [behavior] MUST NOT call TeamCreate (removed; one implicit team per session, no creation step)
+- [behavior] MUST NOT pass a team_name parameter to Agent (accepted-but-ignored; omit it)
 
 ### SHOULD
 - [text:contains] Warning mentions "running solo" or equivalent phrase
