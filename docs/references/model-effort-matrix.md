@@ -2,13 +2,15 @@
 
 Current model and effort assignments for all AE skills and agents.
 
+**CC model baseline (2026-06):** `opus` resolves to **Opus 4.8** — the current Claude Code default, whose **default effort is high**. The effort ladder is `minimal | low | medium | high | xhigh`; **`xhigh`** (`/effort xhigh`) is reserved for the single **hardest verify/judge stage** (`ae:review`, the verdict gate). Fast mode (~2× cost for ~2.5× speed) is opt-in per run, not a default here. `inherit` = use the session/parent model + effort.
+
 ## Skills (TL model + effort)
 
 | Skill | Model | Effort | Role |
 |-------|-------|--------|------|
 | ae:discuss | opus | high | Multi-round team orchestration + synthesis |
 | ae:plan | opus | high | Plan generation + team review |
-| ae:review | opus | high | Deep multi-agent review + fixup |
+| ae:review | opus | xhigh | Deep multi-agent review + fixup (verdict gate — the hardest verify/judge stage) |
 | ae:work | inherit | high | Plan execution loop (TDD + commit + review) |
 | ae:think | inherit | high | Deep multi-step reasoning |
 | ae:analyze | inherit | medium | Research + team analysis |
@@ -61,3 +63,6 @@ Priority (highest wins):
 
 ### User override
 Users can override with `CLAUDE_CODE_SUBAGENT_MODEL` env var (agents) or pipeline.yml config (planned: BL-019).
+
+### Cost-gate (parameter-level permission, CC v2.1.178+)
+`Agent(model:…)` permission rules cap which model a subagent may use — e.g. `deniedTools: ["Agent(model:opus)"]` blocks opus subagents to force cheaper sonnet/haiku on mechanical stages. Scope: **Claude-family subagents only** — it does NOT govern non-Claude / local model backends reached via MCP (those are controlled at the MCP server layer).

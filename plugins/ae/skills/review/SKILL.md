@@ -4,7 +4,7 @@ description: Deep multi-agent review + fixup (feature completion gate). Recommen
 argument-hint: "<plan file path>"
 user-invocable: true
 model: opus
-effort: high
+effort: xhigh
 ---
 
 <!-- ae-output-standards-v1 -->
