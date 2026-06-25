@@ -322,7 +322,7 @@ After `analysis.md` is written, before closing the team. Follow the [Knowledge C
 - `entities`: derive from each specific finding (e.g., `fts5-idf-contamination`), NOT from broad frontmatter tags.
 - `source_file`: path to the new `analysis.md`.
 
-## Close team + present
+## Shut down teammates + present
 
 Send `shutdown_request` to all teammates. Show the user:
 

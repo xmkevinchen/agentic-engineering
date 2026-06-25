@@ -137,7 +137,7 @@ TL collects all findings and integrates perspectives:
 - **Blind spots** — issues only raised by challenger or cross-family
 - **Recommendation** — actionable conclusion with confidence level (low/medium/high)
 
-Shut down teammates via the shutdown_request → shutdown_response handshake (no TeamDelete — team cleanup is automatic at session end).
+Shut down teammates via the shutdown_request → shutdown_response handshake; cleanup is automatic at session end.
 
 ## Step 4: Persist
 

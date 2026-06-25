@@ -101,6 +101,8 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
                SendMessage findings to team-lead when done.")
 ```
 
+Once TL has validated coverage, send `shutdown_request` to all teammates (cleanup is automatic at session end) before generating.
+
 ## Step 3: Generate
 
 Write tests following project conventions:

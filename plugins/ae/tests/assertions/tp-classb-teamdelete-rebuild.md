@@ -13,7 +13,7 @@ source: generated
 - [behavior] The re-spawned teammates include both the target skill's required agents AND a resurrected test-lead
 
 ### MUST_NOT
-- [behavior] The Phase 1 teammates are NOT alive while the target skill (Class B) executes — they are shut down first
+- [behavior] The Phase 1 teammates are NOT alive while the target skill (Class B) executes — shutdown_request must be acknowledged (shutdown_response) before Phase 2 spawns; a non-responding Phase 1 teammate blocks Phase 2 start (no override path)
 - [behavior] No test execution proceeds without first shutting down the Phase 1 teammates
 
 ### SHOULD

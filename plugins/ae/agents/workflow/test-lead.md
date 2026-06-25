@@ -51,7 +51,7 @@ Prioritize: refusal/boundary cases first (highest signal-to-noise), then tool ca
 
 ### Resurrection Protocol (Class B)
 
-In Class B execution, you may be respawned after shutdown (no TeamDelete — teammates are cleaned up automatically at session end). When resurrected:
+In Class B execution, you may be respawned after shutdown; teammates are cleaned up automatically at session end. When resurrected:
 
 1. **Do NOT regenerate test cases** — Phase 1 is complete, enter Judge mode directly
 2. **Read assertions from main repo path** (`plugins/ae/tests/assertions/`), NOT from worktree — Phase 1 files are uncommitted and invisible in worktree
