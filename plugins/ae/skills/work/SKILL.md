@@ -117,17 +117,6 @@ When the helper is referenced below as `<milestone-dir>` it expands per the rule
 
 `- [x]` = done, `- [ ]` = pending. All steps completed → suggest `/ae:review`, **refuse to execute**.
 
-**DAG mode (opt-in)**: if the plan has `dag: true` frontmatter, the current node is NOT the next in document order — it is chosen by the ready-set frontier via a small driver script. The driver does the deterministic orchestration (compute the ready-set, pick a node, record it, detect done/blocked); the only thing left to you is doing the node's work and advancing it.
-1. `sh plugins/ae/scripts/check-dag.sh <plan> validate` once at start — non-zero ⇒ refuse (malformed DAG; fix the plan).
-2. **Driver loop**: `out = sh plugins/ae/scripts/dag-next.sh <plan> <milestone-dir>/notes.md`, then dispatch:
-   - `DONE` ⇒ every node passed → finish + `/ae:review`.
-   - `BLOCKED` (exit 3) ⇒ a node is escalated to a human and blocks the frontier → surface + stop.
-   - `NEXT <id> <step-num>` ⇒ the driver has already recorded the node as in-progress. Do that node's work (its `### Step <step-num>` block), then advance it: `sh plugins/ae/scripts/advance-node.sh <plan> <step-num> <id> <milestone-dir>/notes.md <iter> <cap>`.
-3. Repeat until `DONE`.
-- `advance-node.sh` is the only thing that records a node as passed — it runs `check-node.sh` (verdict re-derived from disk) and records the result from its exit code, so a node can't advance by claiming success.
-- The `NODE_STATE` ledger is scheduling/resume state only; the verdict is always re-derived from disk, never read from the ledger.
-- A plan WITHOUT `dag: true` runs in normal linear document order, unchanged.
-
 **Fixup-mode exception (F-041)**: if all steps are `[x]` BUT the invocation prompt carries review findings to address — i.e., it contains a re-work directive such as `Review returned verdict: fail. Address these findings` or an explicit human fixup request — then do NOT refuse. Enter **fixup mode**: treat each finding as a targeted TDD micro-task (write/adjust a failing test that captures the finding → fix → green → `git commit --fixup`), then run the normal Pre-commit chain (Checks A–G) and re-verify. This lets a review⇄re-work cycle re-engage a completed plan instead of dead-ending. Fixup mode does NOT add or reopen plan steps (the plan is done); it commits findings-driven fixes against the existing steps' files. If a finding cannot be addressed without new plan scope → STOP and report (it needs a new plan/step, not a fixup).
 
 **Task dispatch (plan-dependent)**: After locating the current step but before reading step-summaries, batch-create per-step tasks via `TaskCreate(subject: "ae:work: Step N — <title>")` — one per `### Step N` heading in the plan body. **Title extraction** follows the canonical normalization order in `plugins/ae/skills/agent-teams/SKILL.md` § A — strip trailing `✅ <hash>` → strip trailing `(AC...)` → trim → empty-title fallback (use no-title form `ae:work: Step N`) → truncate to 42 chars. Example: `### Step 3: ae:review writes feature-dir review (AC3) ✅ 18ca947` → subject `ae:work: Step 3 — ae:review writes feature-dir review`. Empty-title example: `### Step 7:` → subject `ae:work: Step 7` (no em-dash, no title suffix — the empty-title fallback). Apply the completion-detection rule above to each block: COMPLETED blocks get immediate `TaskUpdate(taskId, status: "completed")`. PENDING blocks stay default `pending`. Track the task IDs (one per step) for later TaskUpdate calls in TDD cycle and Post-commit.
@@ -491,7 +480,6 @@ Fix findings, re-run from Check D until clean pass.
    ```
    `no_accumulated_p1` defaults to `true`. Set to `false` only when accumulated checkpoint runs and finds P1.
    `deferred_resolved` defaults to `true`. Set to `false` when Check 4 found DEFERRED items matching current step but TL did not write dispositions for all of them.
-   - **Per-node advancement (F-050 — replaces the implicit between-node "continue?" judgment)**: run `sh plugins/ae/scripts/check-node.sh <plan> <N> <iter> <cap>` for the current step N. It re-derives the verdict FROM DISK (deliverables present; never the agent's say-so) → **`pass` (exit 0)** = the node is auto + complete → advance automatically, NO human "continue?" prompt; **`gate` (exit 2)** = the node is a `human-gate` (judge/manual AC) OR the fixup cap is exhausted → **pause for human** (the only legitimate mid-flow pause), regardless of `auto_pass`; **`fail` (exit 1)** = a deliverable is missing → fixup, do not advance. This runs BEFORE `loop-decide.sh` (a `gate` bypasses the cap loop; `pass`/`fail` feed the existing terms). The gate expression gains a `node_verdict_pass` term: `gate = node_verdict_pass AND tests_green AND no_p1 AND ...`. The point: "should I stop and ask?" is no longer the agent's discretionary call — it is `check-node`'s exit code (gate→pause, pass→drive).
    - All met → auto-continue: `✅ Ready to continue: tests pass, no blockers, no unresolved drift. Continuing to Step N+1.` (user-facing line is plain language — the gate's internal variables above are spec, not display; output-standards.md Rule A)
    - Any failed → **pause for user confirmation** — lead the pause message with the blocker list in plain language, codes in parentheses (e.g. `Pausing: 1 blocker finding (P1) needs a fix before continuing.`)
    - Drift detected (not approved) → always pause
@@ -569,12 +557,11 @@ Based on work completion, suggest with exact executable command:
 
 **No flag.** The harness drives the loop. The human-in-loop *degree* is the EXISTING `work.auto_pass` knob (not a new flag): `auto_pass: true` → loop to green autonomously; `auto_pass: false` → loop but pause for "go" each iteration. The front half (discuss→plan) stays human regardless; the loop only runs the reviewed back half.
 
-**Harness-presence check (the trigger — evaluated at step 5 "all steps done")** — deterministic from the plan + `pipeline.yml`, no flag, no guess. **Evaluate by DISK, not field-presence (F-050 root fix):**
-0. **PRIMARY (disk-derived, F-050)**: `sh plugins/ae/scripts/check-node.sh <plan> trigger` exits 0 — i.e. the plan declares ≥1 **auto-node** (`human-gate: false`). This is the engagement signal that **cannot be defeated by omitting `verify_by`** (the Pong "LOOP_ITER never fired" bug: the old trigger silently no-op'd when a plan dropped its `verify_by` fields). **OR**
+**Harness-presence check (the trigger — evaluated at step 5 "all steps done")** — deterministic from the plan + `pipeline.yml`, no flag, no guess:
 1. Does the plan's `## Acceptance Criteria` declare any `verify_by` field? **OR**
 2. Is `pipeline.yml` `test.command` non-empty?
 
-→ **any true** = the plan has a harness → enter the loop below. **none** = legacy / no-harness plan → old behavior (suggest `/ae:review`, no loop, no error). (No `--loop` flag — presence decides. Condition 0 is primary; 1/2 are backward-compat fallbacks for plans authored before the `human-gate` derivation.)
+→ **any true** = the plan has a harness → enter the loop below. **none** = legacy / no-harness plan → old behavior (suggest `/ae:review`, no loop, no error). (No `--loop` flag — harness presence decides.)
 
 **Manual-AC caveat (codex P1)**: a plan whose ACs are covered *only* by `verify_by: manual` still enters the loop, but review Check 7 treats `manual` as **non-blocking** (human-confirm, not auto-pass). So the loop MUST NOT autonomously `exit_pass` a plan with any unconfirmed `manual` AC — `work.auto_pass` governs deterministic + `judge` ACs, NEVER manual verification. The `exit_pass` branch below pauses for human confirmation of manual ACs regardless of `auto_pass`.
 

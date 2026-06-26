@@ -97,19 +97,14 @@ node dist/index.js
 
 CI reproducibility check (`git diff --exit-code -- dist/` after clean rebuild) is deferred to v0.11.x schema discipline expansion — same deferral bucket as the cc-plugin-contract.md drift validator below.
 
-### Harness toolchain scripts (the green-loop + DAG layer)
+### Harness toolchain scripts (the green-loop layer)
 
 Deterministic shell scripts under `plugins/ae/scripts/` that the harness skills shell out to (no CC-platform dependency beyond `sh`/`awk`/`jq`; each has a `tests/scripts/test-*.sh` exercised by `ae-run-tests.sh`):
 
 | Script | Role |
 |---|---|
-| `check-node.sh` | re-derive ONE node's verdict from disk (deliverable presence); never trusts agent self-report |
 | `loop-decide.sh` / `parse-review-verdict.sh` | review→fixup loop arithmetic + verdict normalization |
-| `check-dag.sh` | opt-in (`dag: true`) DAG linter (`validate`: acyclic / no dangling depends / every auto-node has a check) + `ready`-set frontier |
-| `advance-node.sh` | the only writer of a node's `pass` — runs `check-node.sh` and records the verdict from its exit code (a node can't advance by claiming success) |
-| `dag-next.sh` | thin DAG driver — one call emits `DONE`/`BLOCKED`/`NEXT <id> <step#>` and records the picked node as in-progress |
-
-A plan opts into the DAG with `dag: true` frontmatter + per-node `id:`/`depends:` (see `plan/SKILL.md`); `/ae:work` then advances by the ready-set frontier instead of document order.
+| `verify-contract.sh` | jq-assertion runner for `verify_by: contract` ACs (exit 0 = all pass) |
 
 ## Decommissioned dependencies (historical)
 
