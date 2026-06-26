@@ -17,7 +17,7 @@ import subprocess
 if __name__ != "__main__":
     raise SystemExit("verify-ac.py is subprocess-only; do not import")
 
-FORGEABLE = ("", ".", "./", "*")
+FORGEABLE = ("", ".", "./", "*", "true", ":")  # always-pass no-ops — prove nothing
 
 
 def main(argv):
