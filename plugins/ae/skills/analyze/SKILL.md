@@ -298,8 +298,8 @@ Only write the sections below when the TL;DR tip is insufficient to carry the us
 ### Industry comparison (on-demand)
 <standards-expert, only when it has actionable impact on the current judgment. Otherwise omit.>
 
-### Verification considerations (on-demand)
-<What would prove this feature correct, measurably — the raw material that **feeds `/ae:plan`'s per-AC `verify_by` choices**. Consider **non-code dimensions too — business-data validity, domain invariants, BDD/behavioral scenarios** — not just code-level checks. For each likely acceptance dimension, note whether it is deterministically checkable (→ `unit`/`integration`/`e2e`, or `contract` for a declarative-spec check of data/invariants) or a judgment call (→ `judge` + a candidate rubric question). This is **input to plan's AC authoring**; `analyze` does NOT gate on it — `analyze` is pre-AC research (GTD Organize), not a verification gate. Omit if the BL's verification shape is obvious or trivial.>
+### Verification considerations (REQUIRED — per acceptance dimension)
+**Mandatory, not on-demand** (the one always-present supporting section — this is HDD's front-load: discover the verification means before planning). One entry **per likely acceptance dimension**: name **how it would be verified**, mapped to a `verify_by` kind per [`docs/references/verify-by-kinds.md`](../../../../docs/references/verify-by-kinds.md) — deterministic (`unit`/`integration`/`e2e`/`contract`, + what the runnable check would be) OR `judge` (+ a candidate rubric question + what artifact the judge would evaluate) OR `manual`. Cover **non-code dimensions too** — business-data validity, domain invariants, BDD/behavioral scenarios — not just code checks. Push each dimension as far toward deterministic as it honestly goes. This is the raw material `/ae:plan` turns into per-AC `verify_by` + the runnable-check mandate, so a vague entry here becomes a vacuous AC there. `analyze` does NOT gate on it (pre-AC research, GTD Organize) — it just must be PRESENT + per-dimension.>
 
 ### Mengdie prior art (on-demand)
 <only when there are relevant results. No results → do not write an "unavailable" placeholder.>
