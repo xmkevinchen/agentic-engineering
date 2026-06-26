@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Harness-driven development (HDD) — MVP (v0.12.0)
+
+**Removed (main-cleanup)**: the DAG/enforcement over-build (F-050..F-057) — `check-dag`/`check-node`/`advance-node`/`dag-next` scripts + tests, the `dag: true` mode + per-node driver + NODE_STATE ledger in `/ae:work`, review Check 8 (loop-engagement audit), the `check-dag` validate gate in `/ae:plan-review`. In-session engagement enforcement is structurally impossible (the top-level model is irreducibly the entrypoint). Kept: the F-048 review→fixup loop + `verify-contract` + `verify_by` + `human-gate`.
+
+**Added (HDD MVP, F-059)** — a per-feature **harness = acceptance criteria + independently-re-runnable verification means**, woven through analyze→plan→work→review:
+- `docs/references/verify-by-kinds.md` — non-normative anchor (per `verify_by` kind → what a runnable check looks like).
+- `verify-ac.py` — thin per-AC `verify:` runner (forgery-rejecting); `check-harness.sh` — mechanical mandate enforcement at `/ae:plan-review`.
+- `/ae:plan` — runnable-check mandate (every deterministic AC declares a `verify:`) + freeze the GOAL → `goal.frozen.md`.
+- `/ae:analyze` — verification-considerations now required + per-AC.
+- `/ae:review` Check 7 — confidence-per-AC + judge-artifact-capture + re-examine against `goal.frozen.md`.
+
+Built + independently cross-family-reviewed through AE's own pipeline (fail→fixup→pass).
+
 ---
 
 ## v0.11.0 — 2026-06-22
