@@ -17,11 +17,11 @@ plan="$1"
 awk '
   function evalac() { if (ac != "" && det && !has) { print "  MISSING runnable check: " ac; bad++ } }
   /^### AC/   { evalac(); ac=$0; sub(/:.*/,"",ac); sub(/^### /,"",ac); det=0; has=0; next }
-  /^#{2,3} /  { evalac(); ac=""; det=0; has=0; next }   # next ## / ### heading ends the AC block (matches verify-ac.py boundary)
+  /^#{2,3} /  { evalac(); ac=""; det=0; has=0; next }   # next ## / ### heading ends the AC block (matches collect-ac-evidence.py boundary)
   /verify_by:[[:space:]]*(unit|integration|e2e|contract)/ { if (ac!="") det=1 }
   /^[[:space:]]*-?[[:space:]]*verify:/                     { if (ac!="") has=1 }
   END { evalac(); if (bad) exit 1 }
 ' "$plan"
 rc=$?
-[ "$rc" = 0 ] && echo "check-harness: OK (every deterministic AC has a runnable check)"
+[ "$rc" = 0 ] && echo "check-harness: LINT OK — completeness only (every deterministic AC declares a verify: recipe); coverage is judged at /ae:review from the evidence record"
 exit $rc
