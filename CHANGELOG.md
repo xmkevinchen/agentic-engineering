@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Dogfood-loop fixes — Wave 1 (v0.12.2)
+
+The loop-breakers from the v0.12.x field-tests (loom + Games/tetris) — what made external dogfood fight the harness:
+- **Plugin scripts on PATH (`bin/`)**: the 8 skill-invoked scripts (check-agent-teams / check-harness / verify-ac / verify-contract / cross-family-counter / parse-review-verdict / loop-decide / check-shutdown-canonical) are symlinked into `plugins/ae/bin/` (auto-added to the Bash PATH) and called by **bare name** — so they resolve when AE self-hosts on an external repo (cwd ≠ the AE repo). Was: cwd-relative `plugins/ae/scripts/x` → `No such file` on loom/Games. (loom F4 + Games G5, double-confirmed. `${CLAUDE_PLUGIN_ROOT}` is NOT available in skill Bash — only hooks/MCP — so `bin/`-on-PATH is the mechanism.)
+- **`description` required on every `Agent()` spawn**: the spawn protocol (`agent-teams`) now states `description` is a mandatory tool field — omitting it is an `InputValidationError` that killed a 4-agent batch in the Games dogfood. (Games G3.)
+- **Dogfood feedback template**: `plugins/ae/templates/dogfood-feedback.template.md` — systematizes the field-test→AE loop (pin exact version, evidence-first, substance-vs-scale-fit, suggested disposition).
+
 ### Fix — Agent Teams detection (v0.12.1)
 
 The per-skill Agent Teams check was under-specified prose ("read settings.json → check the env var is set"), so each skill improvised — some ran a grep whose regex missed the line, **false-negatived, and silently degraded the whole pipeline to solo** (cross-family / parallel review / Doodlestein dropped). Found in a Games-project field-test where the flag *was* set. Fix: one canonical `plugins/ae/scripts/check-agent-teams.sh` (runtime env var first — the source of truth — then a jq/grep settings.json fallback) that all 11 skills now *call* (exit 0/1) instead of eyeballing. A deterministic fact now uses a deterministic check.

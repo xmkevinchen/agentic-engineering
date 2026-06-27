@@ -41,6 +41,15 @@ Spawn → Rounds → [Add agents as needed] → Conclusion → Shutdown
 - **Non-responsive agents**: If an agent has not responded within 120s after a round prompt, TL marks it as unresponsive and proceeds without it. This is operational, not removal for dissent. (Extends Proxy Timeout Protocol from `ae:agent-selection` to all agents.)
 - **Shutdown only after conclusion is written.** If the skill has a Doodlestein step, team close MUST be after Doodlestein completes — original team members must be alive to respond to challenges.
 
+### Required `Agent()` tool fields (every spawn)
+
+Every `Agent(...)` spawn MUST pass the Agent tool's required parameters — **including `description`** (a 3-5 word task summary). The per-skill spawn *templates* below and in the spawning SKILL.md files elide it for brevity, but **omitting `description` at spawn time is an `InputValidationError` that kills the agent before it starts** (observed in a Games-project dogfood — a 4-agent review batch failed on first send). Canonical shape (`description:` is a tool-level field, distinct from — and in addition to — the cast block that lives *inside* `prompt:`):
+
+```
+Agent(description: "<3-5 word task>", subagent_type: "<type>", name: "<name>",
+      run_in_background: true, prompt: "<cast block at position 2 + context>")
+```
+
 ### Cast Block Syntax
 
 Before any `Agent(...)` spawn within a spawn batch, TL emits a structured **cast block** describing each agent's role + angle + rationale. The cast block is **dual-write**: appears in session stdout (user-visible) AND embedded in the spawn prompt's `prompt:` field (agent-receivable).

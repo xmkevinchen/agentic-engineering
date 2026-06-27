@@ -136,7 +136,7 @@ Compare the **immediately preceding step's** `Actual files:` list (from the last
 - **No previous step summary** (step 1, cold start, or missing `Actual files:` field) → skip injection silently, no error.
 
 ### Check 3: Agent Teams
-1. Run `sh plugins/ae/scripts/check-agent-teams.sh` (exit 0 = available; exit 1 = unavailable, prints the reason)
+1. Run `check-agent-teams.sh` (exit 0 = available; exit 1 = unavailable, prints the reason)
    - exit 1 → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
 2. If set → call `ToolSearch("select:Agent")` to verify Agent tool schema includes `run_in_background` parameter:
    - Schema returned WITH `run_in_background` param → `AGENT_TEAMS_FULL = true`
@@ -579,13 +579,13 @@ loop:
     # so the loop reads the FRESH verdict every iteration (a re-review routed to a
     # verdict-less ad-hoc file left the loop reading the stale first 'fail' to the cap); and
     # (b) does NOT archive (archive is deferred to exit_pass below, after the hedge + manual confirm).
-  verdict = sh plugins/ae/scripts/parse-review-verdict.sh <review.md>       # fresh each iteration (loop mode overwrote it)
+  verdict = parse-review-verdict.sh <review.md>       # fresh each iteration (loop mode overwrote it)
   if pipeline.yml test.command set: run it; non-zero exit → verdict = fail  # deterministic hedge — runs BEFORE any lifecycle transition
   if the hedge downgraded verdict→fail → PERSIST it: overwrite review.md `verdict: fail`     # codex P1: the
        # EFFECTIVE verdict must hit disk. A hedge failure (or manual rejection, below) must not leave a
        # 'pass' in review.md — an interrupted run would otherwise show the still-active feature as done.
   iter = read `LOOP_ITER` from notes.md                                     # re-read from disk, never trust in-context memory
-  action = sh plugins/ae/scripts/loop-decide.sh <verdict> <iter> <cap>      # cap = work.max_fix_loops (default 3)
+  action = loop-decide.sh <verdict> <iter> <cap>      # cap = work.max_fix_loops (default 3)
   record `LOOP_FINDINGS: <iter> <one-line review-findings summary>` to notes.md
   case action:
     exit_pass      → # review verdict AND the hedge both passed. ONLY NOW do the lifecycle, ONCE:

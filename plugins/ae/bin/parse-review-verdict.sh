@@ -1,0 +1,1 @@
+../scripts/parse-review-verdict.sh
