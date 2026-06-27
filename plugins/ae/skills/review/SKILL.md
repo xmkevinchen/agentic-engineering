@@ -143,8 +143,8 @@ Ad-hoc mode reasoning: target is not a pipeline plan OR user signaled re-review 
 ## Pre-checks (all must pass before starting; pipeline mode only — see router above)
 
 ### Check 1: Agent Teams
-- Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
-- If not enabled → **refuse to execute** and tell user: "Agent Teams is required for `/ae:review` (verdict pass/fail is a load-bearing gate-keeper output — see `docs/agent-teams-policy.md`). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
+- Run `sh plugins/ae/scripts/check-agent-teams.sh` (exit 0 = available; exit 1 = unavailable, prints the reason)
+- If exit 1 → **refuse to execute** and tell user: "Agent Teams is required for `/ae:review` (verdict pass/fail is a load-bearing gate-keeper output — see `docs/agent-teams-policy.md`). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
 
 ### Check 2: Plan All Done
 - Read the plan file

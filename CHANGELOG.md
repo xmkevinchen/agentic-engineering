@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fix — Agent Teams detection (v0.12.1)
+
+The per-skill Agent Teams check was under-specified prose ("read settings.json → check the env var is set"), so each skill improvised — some ran a grep whose regex missed the line, **false-negatived, and silently degraded the whole pipeline to solo** (cross-family / parallel review / Doodlestein dropped). Found in a Games-project field-test where the flag *was* set. Fix: one canonical `plugins/ae/scripts/check-agent-teams.sh` (runtime env var first — the source of truth — then a jq/grep settings.json fallback) that all 11 skills now *call* (exit 0/1) instead of eyeballing. A deterministic fact now uses a deterministic check.
+
 ### Harness-driven development (HDD) — MVP (v0.12.0)
 
 **Removed (main-cleanup)**: the DAG/enforcement over-build (F-050..F-057) — `check-dag`/`check-node`/`advance-node`/`dag-next` scripts + tests, the `dag: true` mode + per-node driver + NODE_STATE ledger in `/ae:work`, review Check 8 (loop-engagement audit), the `check-dag` validate gate in `/ae:plan-review`. In-session engagement enforcement is structurally impossible (the top-level model is irreducibly the entrypoint). Kept: the F-048 review→fixup loop + `verify-contract` + `verify_by` + `human-gate`.

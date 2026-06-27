@@ -136,8 +136,8 @@ Compare the **immediately preceding step's** `Actual files:` list (from the last
 - **No previous step summary** (step 1, cold start, or missing `Actual files:` field) → skip injection silently, no error.
 
 ### Check 3: Agent Teams
-1. Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set
-   - Not set → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
+1. Run `sh plugins/ae/scripts/check-agent-teams.sh` (exit 0 = available; exit 1 = unavailable, prints the reason)
+   - exit 1 → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo.` and proceed with Lead executing TDD cycle directly (same as "No developer agents found" path). Cross-family and parallel review disabled.
 2. If set → call `ToolSearch("select:Agent")` to verify Agent tool schema includes `run_in_background` parameter:
    - Schema returned WITH `run_in_background` param → `AGENT_TEAMS_FULL = true`
    - Schema returned WITHOUT `run_in_background` → `AGENT_TEAMS_FULL = false`, degrade per tier table (same as auto-fallback)

@@ -43,7 +43,7 @@ Owner field: omit. On error: stay `in_progress`. Step 2 (Merge Results) and Step
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled. Plan stays `status: draft`. Re-run under Agent Teams to promote to reviewed. See docs/agent-teams-policy.md.` and proceed with TL executing directly (no team spawn). The Apply and Confirm step below detects this fallback path and preserves `status: draft` (does NOT promote to `status: reviewed`).
+1. **Agent Teams**: Run `sh plugins/ae/scripts/check-agent-teams.sh` (exit 0 = available; exit 1 = unavailable, prints the reason). If exit 1 → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled. Plan stays `status: draft`. Re-run under Agent Teams to promote to reviewed. See docs/agent-teams-policy.md.` and proceed with TL executing directly (no team spawn). The Apply and Confirm step below detects this fallback path and preserves `status: draft` (does NOT promote to `status: reviewed`).
 2. Confirm `.claude/pipeline.yml` exists
 3. If missing → tell user "First time using ae plugin, initializing project config..." then auto-run `/ae:setup` flow inline. After setup completes, continue with the original command.
 4. Read the plan file at `$ARGUMENTS` — confirm it exists and contains `## Steps` and `## Acceptance Criteria`

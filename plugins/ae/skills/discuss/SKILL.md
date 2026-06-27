@@ -70,7 +70,7 @@ Owner field: omit. On error: stay `in_progress`. Steps 4-6 and 10 are sub-action
 
 ## Pre-check
 
-1. **Agent Teams**: Read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **refuse to execute** and tell user: "Agent Teams is required for `/ae:discuss` (debate protocol — see `docs/agent-teams-policy.md` for the Framing A carve-out rationale). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
+1. **Agent Teams**: Run `sh plugins/ae/scripts/check-agent-teams.sh` (exit 0 = available; exit 1 = unavailable, prints the reason). If exit 1 → **refuse to execute** and tell user: "Agent Teams is required for `/ae:discuss` (debate protocol — see `docs/agent-teams-policy.md` for the Framing A carve-out rationale). Add `{ \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }` to ~/.claude/settings.json and restart Claude Code."
 
 ## Step 1. Setup
 

@@ -45,7 +45,7 @@ Owner field: omit. On error: stay `in_progress`.
 
 1. Confirm `.claude/pipeline.yml` exists. Missing → `Run /ae:setup first.` Stop.
 2. Confirm `.ae/features/active/`, `.ae/features/done/`, `.ae/features/abandoned/` exist. Missing → `Project hasn't bootstrapped GTD; run Plan 050 setup first.` Stop. (Defensive — should be rare once Plan 050 ships.) Also ensure `.ae/features/paused/` exists — `mkdir -p` it if absent (F-032 newest state dir, created on demand; do NOT Stop on its absence).
-3. **Agent Teams**: read `~/.claude/settings.json` → check `env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set. If not enabled → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing the analysis directly. Output is lower confidence but structurally identical.
+3. **Agent Teams**: Run `sh plugins/ae/scripts/check-agent-teams.sh` (exit 0 = available; exit 1 = unavailable, prints the reason). If exit 1 → **auto-fallback**: print `[WARNING] Agent Teams unavailable, running solo. Cross-family and parallel review disabled.` and proceed with TL executing the analysis directly. Output is lower confidence but structurally identical.
 
 ## Mode selection
 
