@@ -341,9 +341,11 @@ Every reviewer spawn prompt below embeds the primary-context bundle verbatim (se
 
 `$ARGUMENTS` may include one or more `--reviewer <name>` flags. Each flag occurrence specifies one reviewer to spawn. Examples:
 
-- `/ae:review HEAD~3..HEAD --reviewer challenger` → spawn ONLY challenger
-- `/ae:review HEAD~3..HEAD --reviewer codex-proxy --reviewer gemini-proxy` → spawn ONLY both proxies
+- `/ae:review HEAD~3..HEAD --reviewer challenger` → ONLY challenger *as the specialist set* (the §1 floor still spawns — see floor carve-out below)
+- `/ae:review HEAD~3..HEAD --reviewer codex-proxy --reviewer gemini-proxy` → ONLY both proxies *as the specialist set* (floor still spawns)
 - `/ae:review HEAD~3..HEAD` (no flag) → existing default selection table (current behavior)
+
+("ONLY" throughout this section scopes the *specialist* selection; the floor is never dropped by `--reviewer` — only `ceremony: minimal` drops it.)
 
 **Override semantics (NOT additive)**: when one or more `--reviewer` flags present, **skip the default Agent Selection Reference _specialist_ table entirely** and spawn the listed agents. This is intentional override — the use case is "I want exactly these specialist reviewers, not the default mix" (D3 re-review with specific angle).
 
@@ -352,24 +354,24 @@ Every reviewer spawn prompt below embeds the primary-context bundle verbatim (se
 Concrete examples to prevent ambiguity (each implicitly also spawns the floor unless `ceremony: minimal`):
 
 - **WRONG behavior** (additive interpretation): `/ae:review HEAD --reviewer security-reviewer --reviewer challenger` → runs security + challenger PLUS default selection table reviewers (architecture / cross-family / etc).
-- **CORRECT behavior** (override per F-012): `/ae:review HEAD --reviewer security-reviewer --reviewer challenger` → runs ONLY security + challenger; default selection table SKIPPED entirely.
+- **CORRECT behavior** (override per F-012): `/ae:review HEAD --reviewer security-reviewer --reviewer challenger` → security + challenger as the *specialist set*; the default *specialist* table is SKIPPED. The §1 floor (challenger + code-reviewer) still spawns regardless (dedup if listed).
 
-**Multi-flag is additive AMONG flags, but collectively override default**: `--reviewer X --reviewer Y` spawns both X and Y (additive to each other), but skips the default selection table entirely (collective override). Listing 5 `--reviewer` flags spawns 5 reviewers, all together, no defaults added.
+**Multi-flag is additive AMONG flags, but collectively override default**: `--reviewer X --reviewer Y` selects both X and Y as the specialist set (additive to each other), but skips the default specialist table (collective override). Listing 5 `--reviewer` flags selects 5 specialists, no default specialists added — the §1 floor still spawns on top.
 
 **Scale anchor — what "skip default table" actually means** (silent quality degradation risk if user thinks adding to default):
 
-Default selection table per `ae:agent-selection` SKILL.md typically spawns **4-5 reviewers** (e.g., 1-2 core reviewers + challenger + 2 cross-family proxies). Using `--reviewer challenger` alone means:
+Default selection table per `ae:agent-selection` SKILL.md typically adds **2-3 specialists** on top of the floor (e.g., security/architecture + cross-family proxies on signal). Using `--reviewer challenger` alone means:
 
-- Spawned: 1 (just challenger)
-- **Skipped**: 3-4 reviewers (architecture-reviewer / security-reviewer / codex-proxy / gemini-proxy depending on diff signals)
+- Specialist set: just challenger (the floor — challenger + code-reviewer — still spawns regardless)
+- **Skipped**: the default *specialist* additions (architecture-reviewer / security-reviewer / codex-proxy / gemini-proxy depending on diff signals)
 
-Using `--reviewer` is a **deliberate scope reduction**, not an addition. If user wants challenger PLUS the default mix, they need to either (a) not pass `--reviewer` flag (default mix runs), or (b) explicitly list every reviewer they want in `--reviewer` flags.
+Using `--reviewer` is a **deliberate reduction of the specialist set** (never below the floor — `ceremony: minimal` is the only path below the floor), not an addition. If user wants challenger PLUS the default mix, they need to either (a) not pass `--reviewer` flag (default mix runs), or (b) explicitly list every reviewer they want in `--reviewer` flags.
 
 **Future additive variant** (forward-reference): if `--reviewer` override proves insufficient (likely 60%+ within 6 months per regret analysis), v0.11.x may add `--add-reviewer <name>` flag (additive to default table, POSIX-style two-flag split — keep `--reviewer` as override, `--add-reviewer` as additive). F-012 deliberately defers this to keep scope minimal.
 
 **Invalid name handling**: each `--reviewer <name>` value MUST be a valid agent name (e.g., `challenger`, `codex-proxy`, `architecture-reviewer`, `ae:engineering:minimal-change-engineer`). Unknown name → **hard fail** with full list of valid names. Do NOT silently skip unknown names (would silently shrink review coverage).
 
-**Combined with target**: `--reviewer` flag is fully orthogonal to `<target>` argument; both can be specified. Example: `/ae:review src/foo.py --reviewer security-reviewer` → review file with only security-reviewer.
+**Combined with target**: `--reviewer` flag is fully orthogonal to `<target>` argument; both can be specified. Example: `/ae:review src/foo.py --reviewer security-reviewer` → review the file with security-reviewer as the sole specialist (the §1 floor still spawns).
 
 **Not on ae:code-review**: this flag is ae:review only. ae:code-review's 4-track structure is fundamentally multi-reviewer; single-reviewer use cases route through ae:review with `--reviewer`.
 
