@@ -306,6 +306,13 @@ Emit these alongside the existing Layer 1/Layer 2 selection trace. The trace **r
 
 **Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
 
+**Always-on generalist floor (F-067, → `baseline_lenses`)**: UNCONDITIONALLY spawn the two-agent floor on every review, before any signal-based specialist selection and regardless of diff signals:
+- **`challenger`** — attacks decisions (should this exist? blind spots).
+- **`code-reviewer`** — catches implementation-correctness bugs (is this correct?).
+These two are non-overlapping (a strategy-clean design with a planted implementation bug: challenger misses it, code-reviewer catches it). The floor is **structural**, not signal-chosen — this is what makes the never-drop invariant (`final_lenses ⊇ baseline_lenses`) deterministically true. Record them in `baseline_lenses`.
+
+**`ceremony: minimal` manual override (F-067 user decision 2b)**: the ONLY way to drop below the floor. Read `ceremony` from pipeline.yml — if `minimal`, the floor may reduce below the two-agent baseline for trivial reviews. There is NO automatic trivial-detector; dropping the floor is always an explicit human act via this preset. (`light`/`full` do NOT drop the floor.)
+
 ### 2. Create Tasks
 
 Batch-create the 4 review-track tasks at this point, per agent-teams §H Rule 1 (single-team skill: tasks created on the team list stay accessible throughout; their `in_progress` transition fires later when the corresponding reviewer is spawned):
