@@ -282,6 +282,26 @@ Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress trackin
 
 **Task lifecycle (Pre-check)**: at the very start of Pre-checks (before Check 1), `TaskCreate(subject: "ae:review: Pre-check")` and immediately `TaskUpdate(taskId, status: "in_progress")`. After Check 5 passes (control reaches Per-review Primary Context Bundle assembly), `TaskUpdate(taskId, status: "completed")`.
 
+### 0. Deterministic risk-floor + selection trace (F-067)
+
+Review lenses are **sparse-filled** from a structural floor (F-067 disc 001): the generalist floor (§1/§2) always runs; specialist lenses are ADDED on signal, never dropped from a full set. To make lens selection auditable AND keep the safety-critical lenses independent of the LLM, run the **deterministic risk-floor BEFORE any LLM soft-add**, and record selection provenance in four trace fields.
+
+**Risk-floor (deterministic, LLM-independent)** — run before reviewer selection:
+```
+git diff --name-only <target> > <tmp>/changed-paths
+# work.security_patterns globs from pipeline.yml, one per line, into <tmp>/patterns
+sh "$AE_PLUGIN/scripts/risk-floor-lenses.sh" <tmp>/changed-paths <tmp>/patterns   # → forced lenses
+```
+Any lens emitted here is **forced into the final set regardless of the soft-add** — a 3-line auth/migration/secret change forces `security` even if an LLM stat-read would judge it minor (the soft-add cannot omit a floor-forced lens). This is deterministic *given the current `work.security_patterns` globs* (a user-maintained artifact that can drift — it does not prove the glob list is complete).
+
+**Selection trace — four provenance fields** (so an audit can tell WHICH path produced a lens, not just that it appeared):
+- `baseline_lenses` — the always-on structural floor (challenger + code-reviewer; see §1/§2).
+- `risk_floor_lenses` — output of `risk-floor-lenses.sh` (deterministic).
+- `soft_added_lenses` — specialist lenses the LLM ADDED on positive diff evidence (§3).
+- `final_lenses` — `union(baseline, risk_floor, soft_added)`.
+
+Emit these alongside the existing Layer 1/Layer 2 selection trace. The trace **records** the selection; it does not **prove** the soft-add judged correctly (F-067 honesty scope). Tier-2 deferred: committed `review_lenses:` tags — add only at the first production incident where a soft-signal miss ships a real issue (see `docs/references/trace-schema.md`).
+
 ### 1. Select Reviewers
 
 **Before spawning teammates** — emit Layer 1 + Layer 2 selection trace per `ae:agent-teams` Base Protocol § Selection Trace Emission (default-ON, no flag; format spec in `ae:agent-selection` SKILL.md).
