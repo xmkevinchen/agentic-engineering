@@ -7,7 +7,7 @@ SKILL="$ROOT/plugins/ae/skills/plan/SKILL.md"
 fail=0
 check() {
   if grep -qiE -- "$2" "$SKILL"; then
-    echo "PASS: $1"
+    echo "ok: $1"
   else
     echo "FAIL: $1 (marker absent: $2)"
     fail=1
