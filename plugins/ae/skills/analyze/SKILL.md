@@ -264,6 +264,8 @@ After all teammates have SendMessage'd findings to TL, before synthesis:
 
 TL collects findings, resolves disagreements, writes to `.ae/features/active/F-NNN-<slug>/analysis.md`:
 
+**Exit gate (analyze DoD — F-063)**: do NOT finish `analysis.md` until its `### Verification considerations` table (see below) is present with one row per likely acceptance dimension. This is `/ae:analyze`'s definition-of-done — the front-load that `/ae:plan` consumes. **Honest scope**: it is a presence gate and the *weak, self-graded half* of the harness (it raises the floor by forcing the verification means to be discovered, but cannot catch a specific-looking-but-vacuous row); review Check 7 remains the correctness check.
+
 **Per CLAUDE.md `Output Standards`** — pyramid tip ≤ 5 lines (required), supporting detail below (on-demand, omit empty sections). TL must first understand and distill — do not just splice raw agent findings together.
 
 ```markdown
@@ -299,7 +301,13 @@ Only write the sections below when the TL;DR tip is insufficient to carry the us
 <standards-expert, only when it has actionable impact on the current judgment. Otherwise omit.>
 
 ### Verification considerations (REQUIRED — per acceptance dimension)
-**Mandatory, not on-demand** (the one always-present supporting section — this is HDD's front-load: discover the verification means before planning). One entry **per likely acceptance dimension**: name **how it would be verified**, mapped to a `verify_by` kind per [`docs/references/verify-by-kinds.md`](../../../../docs/references/verify-by-kinds.md) — deterministic (`unit`/`integration`/`e2e`/`contract`, + what the runnable check would be) OR `judge` (+ a candidate rubric question + what artifact the judge would evaluate) OR `manual`. Cover **non-code dimensions too** — business-data validity, domain invariants, BDD/behavioral scenarios — not just code checks. Push each dimension as far toward deterministic as it honestly goes. This is the raw material `/ae:plan` turns into per-AC `verify_by` + the runnable-check mandate, so a vague entry here becomes a vacuous AC there. `analyze` does NOT gate on it (pre-AC research, GTD Organize) — it just must be PRESENT + per-dimension.
+**Mandatory, not on-demand** (the one always-present supporting section — this is HDD's front-load: discover the verification means before planning). Record it as a **table**, one row **per likely acceptance dimension**:
+
+| dimension | verify_by | runnable-check sketch / rubric |
+|---|---|---|
+| `<acceptance dimension>` | `unit`\|`integration`\|`e2e`\|`contract`\|`judge`\|`manual` | deterministic → the check that would run; `judge` → candidate rubric question + the artifact it judges; `manual` → what a human confirms |
+
+Map each dimension to a `verify_by` kind per [`docs/references/verify-by-kinds.md`](../../../../docs/references/verify-by-kinds.md) — push each as far toward deterministic as it honestly goes; cover **non-code dimensions too** (business-data validity, domain invariants, BDD/behavioral scenarios), not just code checks. This table is the raw material `/ae:plan` consumes (its Step-1 Research reads it as the per-AC `verify_by` starting point + the runnable-check mandate), so a vague row here becomes a vacuous AC there. It must be PRESENT + per-dimension — the `### Synthesize` **Exit gate (analyze DoD)** above blocks finishing `analysis.md` without it. (Pre-F-063 this section was REQUIRED-but-ungated; F-063 gave it teeth.)
 
 ### Mengdie prior art (on-demand)
 <only when there are relevant results. No results → do not write an "unavailable" placeholder.>
