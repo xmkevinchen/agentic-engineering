@@ -264,15 +264,16 @@ Bundle contents:
 
 ## Task progress tracking
 
-Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:review creates exactly **5 tasks** per invocation (1 Pre-check + 4 review tracks). NO additional per-phase tasks for Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant — those are sub-actions of the review cycle.
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:review creates a Pre-check task + **2 floor tasks unconditionally**, plus **0–3 specialist tasks sparse-filled** when the diff selects that lens (F-067 §2/§3 — a specialist task appears iff a reviewer will fill it). NO additional per-phase tasks for Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant — those are sub-actions of the review cycle.
 
 | Phase | When created | When `in_progress` | When `completed` |
 |---|---|---|---|
 | `ae:review: Pre-check` | At skill start (before Check 1) | Immediately before Check 1 | After Check 5 passes |
-| `ae:review: Security review` | At Step 2 batch-create (single-team skill, per agent-teams §H Rule 1) | When the corresponding reviewer agent is spawned in step 3 | When the track's findings arrive at TL via SendMessage |
-| `ae:review: Performance review` | (same) | (same) | (same) |
-| `ae:review: Architecture review` | (same) | (same) | (same) |
-| `ae:review: Cross-family challenge + synthesis` | (same) | (same) | (same) |
+| `ae:review: Code review (generalist floor)` | At §2 (unconditional floor, per agent-teams §H Rule 1) | When code-reviewer is spawned in §3 | When its findings arrive at TL via SendMessage |
+| `ae:review: Cross-family challenge + synthesis` | At §2 (unconditional floor) | When challenger / first proxy is spawned in §3 | When the last cross-family / challenger reply arrives |
+| `ae:review: Security review` *(sparse — only if selected)* | At §3, ONLY when the sparse-fill selects `security` (risk-floor-forced or soft-added) | When security-reviewer is spawned | When its findings arrive at TL via SendMessage |
+| `ae:review: Performance review` *(sparse — only if selected)* | At §3, ONLY when the sparse-fill selects `performance` | (same) | (same) |
+| `ae:review: Architecture review` *(sparse — only if selected)* | At §3, ONLY when the sparse-fill selects `architecture` | (same) | (same) |
 
 **Owner field**: omit. **On error**: stay `in_progress` (per agent-teams §C/§D).
 
@@ -313,24 +314,22 @@ These two are non-overlapping (a strategy-clean design with a planted implementa
 
 **`ceremony: minimal` manual override (F-067 user decision 2b)**: the ONLY way to drop below the floor. Read `ceremony` from pipeline.yml — if `minimal`, the floor may reduce below the two-agent baseline for trivial reviews. There is NO automatic trivial-detector; dropping the floor is always an explicit human act via this preset. (`light`/`full` do NOT drop the floor.)
 
-### 2. Create Tasks
+### 2. Create Tasks (floor unconditional; specialists sparse-filled in §3)
 
-Batch-create the 4 review-track tasks at this point, per agent-teams §H Rule 1 (single-team skill: tasks created on the team list stay accessible throughout; their `in_progress` transition fires later when the corresponding reviewer is spawned):
+Batch-create **only the floor tasks** unconditionally (F-067 sparse-fill — the floor always runs; specialist tasks are created in §3 only for lenses actually selected, never pre-batched as empty panel noise):
 
 ```
-TaskCreate(subject: "ae:review: Security review")
-TaskCreate(subject: "ae:review: Performance review")
-TaskCreate(subject: "ae:review: Architecture review")
+TaskCreate(subject: "ae:review: Code review (generalist floor)")
 TaskCreate(subject: "ae:review: Cross-family challenge + synthesis")
 ```
 
-Track the 4 task IDs alongside the team handle. Do NOT create additional tasks beyond these 5 (Pre-check + 4 tracks). Synthesis, Fixup, Outcome Statistics, Output, Knowledge Capture, and Completion Invariant are sub-actions; they do NOT get their own tasks (would produce ~16-task panel noise — explicitly rejected).
+Specialist-lens tasks (Security / Performance / Architecture) are created in §3 **only for lenses the sparse-fill selects** (risk-floor-forced or soft-added) — a task appears iff a reviewer will fill it. Track the floor task IDs alongside the team handle; specialist task IDs are tracked as §3 creates them. Synthesis, Fixup, Outcome Statistics, Output, Knowledge Capture, and Completion Invariant are sub-actions; they do NOT get their own tasks.
 
 ### 3. Select and Launch Reviewers
 
 Every reviewer spawn prompt below embeds the primary-context bundle verbatim (see "## Per-review Primary Context Bundle" above). Cross-family proxies receive the bundle text in their spawn prompt — NOT a path reference.
 
-**Select reviewers**: Refer to the **Agent Selection Reference** skill for the selection table. Analyze `git diff --stat` to determine which context signals match. Select 2-4 reviewers. Always include **challenger** (pure opposition).
+**Select reviewers (sparse-fill — ADDITIVE, never prune)**: the floor (challenger + code-reviewer, §1) ALWAYS runs. On top of the floor, **ADD** a specialist lens (security / performance / architecture, per the Agent Selection Reference signal table) ONLY when the diff shows **positive evidence** for it, OR when the deterministic risk-floor (§0 `risk_floor_lenses`) forced it. This is **additive**: you ADD lenses to the floor on evidence — you NEVER start from the full specialist set and prune down. "No security lens" means the diff showed no security evidence AND no risk-floor match (the absence of a trigger), NOT a dropped lens. Record LLM-added specialists in `soft_added_lenses`; create each selected specialist's task (per §2) as you select it. The final spawned set is `final_lenses = union(baseline_lenses, risk_floor_lenses, soft_added_lenses)` — ALWAYS ⊇ `baseline_lenses` (the floor is structurally unconditional) and ⊇ `risk_floor_lenses` (a forced lens cannot be vetoed by the soft-add).
 
 ### `--reviewer <name>` flag (override default selection)
 
@@ -368,7 +367,7 @@ Using `--reviewer` is a **deliberate scope reduction**, not an addition. If user
 
 **Cross-family**: Read `cross_family` from pipeline.yml. Follow the cross-family rules in the **Agent Selection Reference** skill — different angles per proxy. If a proxy fails to connect, it should SendMessage to **team-lead** and exit gracefully.
 
-**Task lifecycle (per-track)**: when each reviewer agent is spawned, immediately `TaskUpdate(reviewerTaskId, status: "in_progress")` for the track that reviewer covers. Track-to-task mapping: security-reviewer → `Security review`, performance-reviewer → `Performance review`, architecture-reviewer → `Architecture review`, challenger + cross-family proxies → `Cross-family challenge + synthesis` (one shared task). Track IDs come from the Step 2 batch-create.
+**Task lifecycle (per-track)**: when each reviewer agent is spawned, immediately `TaskUpdate(reviewerTaskId, status: "in_progress")` for the track that reviewer covers. Track-to-task mapping: code-reviewer → `Code review (generalist floor)`, security-reviewer → `Security review`, performance-reviewer → `Performance review`, architecture-reviewer → `Architecture review`, challenger + cross-family proxies → `Cross-family challenge + synthesis` (one shared task). The two floor task IDs come from §2; specialist task IDs come from the §3 sparse-fill create (only for selected lenses).
 
 **Launch all in one message** (`run_in_background: true`):
 
@@ -446,7 +445,7 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
 
 ### 4. TL Synthesizes Final Report
 
-**Task lifecycle (per-track completion)**: when each track's findings arrive at TL via SendMessage, immediately `TaskUpdate(reviewerTaskId, status: "completed")` for that track. The 4 review-track tasks transition independently as their reviewers finish. The "Cross-family challenge + synthesis" task transitions when the last cross-family / challenger reply arrives (it's a shared task across challenger + 2 proxies).
+**Task lifecycle (per-track completion)**: when each track's findings arrive at TL via SendMessage, immediately `TaskUpdate(reviewerTaskId, status: "completed")` for that track. The floor + any sparse-filled specialist tasks transition independently as their reviewers finish. The "Cross-family challenge + synthesis" task transitions when the last cross-family / challenger reply arrives (it's a shared task across challenger + 2 proxies).
 
 TL collects all findings from reviewers + challenger + cross-family proxies, then synthesizes:
 - Merge overlapping findings, resolve contradictions
