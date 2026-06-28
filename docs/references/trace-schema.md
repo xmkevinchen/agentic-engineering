@@ -22,6 +22,6 @@ Emitted by `/ae:review` § 0 (Deterministic risk-floor + selection trace) per re
 - `final_lenses ⊇ risk_floor_lenses` always (the soft-add can ADD beyond the floor, never remove a floor-forced lens; AC4).
 - A lens in `risk_floor_lenses` was forced deterministically — its presence does NOT depend on, and cannot be vetoed by, the LLM soft-add.
 
-**Honesty scope** (F-067 Doodlestein): the trace **records** the selection; it does not **prove** the soft-add judged correctly. `risk_floor_lenses` is deterministic only insofar as `work.security_patterns` is current — the glob list is user-maintained and can drift from the codebase (no staleness detection in the MVP; see the glob-staleness backlog item).
+**Honesty scope** (F-067 Doodlestein): the trace **records** the selection; it does not **prove** the soft-add judged correctly. `risk_floor_lenses` is deterministic only insofar as `work.security_patterns` is current — the glob list is user-maintained and can drift from the codebase (no staleness detection in the MVP; see the glob-staleness backlog item BL-176).
 
 **Tier-2 deferred**: committed feature-level `review_lenses:` tags (a PR-visible, retrospectively-challengeable provenance artifact, stronger than a session-local trace). Trigger to build: the first production incident where a soft-signal miss ships a real issue.
