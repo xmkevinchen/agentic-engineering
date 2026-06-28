@@ -32,6 +32,17 @@ security_forced=0
 while IFS= read -r path; do
   [ -n "$path" ] || continue
   while IFS= read -r pat; do
+    # Normalize a YAML list line into a bare glob (C-P2c): pipeline.yml stores
+    # work.security_patterns as `  - "auth/*"`. Strip leading whitespace, a `- `/`-`
+    # list marker, then surrounding double/single quotes. A pre-extracted bare glob
+    # passes through unchanged.
+    pat=${pat#"${pat%%[![:space:]]*}"}   # strip leading whitespace
+    pat=${pat#- } ; pat=${pat#-}         # strip "- " or bare "-" list marker
+    pat=${pat#"${pat%%[![:space:]]*}"}   # strip whitespace after the marker
+    case $pat in
+      \"*\") pat=${pat#\"}; pat=${pat%\"} ;;   # surrounding double quotes
+      \'*\') pat=${pat#\'}; pat=${pat%\'} ;;   # surrounding single quotes
+    esac
     [ -n "$pat" ] || continue
     # shellcheck disable=SC2254  # $pat is intentionally an unquoted glob pattern
     case "$path" in

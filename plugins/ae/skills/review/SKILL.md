@@ -289,8 +289,14 @@ Review lenses are **sparse-filled** from a structural floor (F-067 disc 001): th
 
 **Risk-floor (deterministic, LLM-independent)** — run before reviewer selection:
 ```
-git diff --name-only <target> > <tmp>/changed-paths
-# work.security_patterns globs from pipeline.yml, one per line, into <tmp>/patterns
+# Use the SAME computed review scope as the reviewers (## Execution → "Review scope"):
+#   feature branch → main...HEAD ; main branch → <feature-start>..HEAD ; ad-hoc → the commit range.
+# Do NOT diff the raw <target>: in pipeline mode <target> is the PLAN PATH, so
+# `git diff --name-only <plan-path>` lists nothing and the floor goes silently inert (C-P1).
+git diff --name-only "$REVIEW_SCOPE" > <tmp>/changed-paths    # $REVIEW_SCOPE = the computed range, never the plan path
+# Extract work.security_patterns globs from pipeline.yml into <tmp>/patterns, one per line.
+# The helper normalizes YAML list syntax (`  - "auth/*"` → auth/*), so a raw grep of the
+# block's list lines is sufficient; no need to hand-strip dashes/quotes.
 sh "$AE_PLUGIN/scripts/risk-floor-lenses.sh" <tmp>/changed-paths <tmp>/patterns   # → forced lenses
 ```
 Any lens emitted here is **forced into the final set regardless of the soft-add** — a 3-line auth/migration/secret change forces `security` even if an LLM stat-read would judge it minor (the soft-add cannot omit a floor-forced lens). This is deterministic *given the current `work.security_patterns` globs* (a user-maintained artifact that can drift — it does not prove the glob list is complete; a security-sensitive path under no glob gets no floor, the honest limit tracked as the glob-staleness backlog item BL-176).
@@ -339,9 +345,11 @@ Every reviewer spawn prompt below embeds the primary-context bundle verbatim (se
 - `/ae:review HEAD~3..HEAD --reviewer codex-proxy --reviewer gemini-proxy` → spawn ONLY both proxies
 - `/ae:review HEAD~3..HEAD` (no flag) → existing default selection table (current behavior)
 
-**Override semantics (NOT additive)**: when one or more `--reviewer` flags present, **skip the default Agent Selection Reference table entirely**. Spawn ONLY the listed agents. This is intentional override — the use case is "I want exactly these reviewers, not the default mix" (D3 re-review with specific angle).
+**Override semantics (NOT additive)**: when one or more `--reviewer` flags present, **skip the default Agent Selection Reference _specialist_ table entirely** and spawn the listed agents. This is intentional override — the use case is "I want exactly these specialist reviewers, not the default mix" (D3 re-review with specific angle).
 
-Concrete examples to prevent ambiguity:
+**Floor survives `--reviewer` (F-067 — resolves the AC2/AC6 contradiction)**: `--reviewer` overrides only the *specialist* selection; the §1 always-on floor (`challenger` + `code-reviewer` → `baseline_lenses`) STILL spawns. So `final_lenses` remains ⊇ `baseline_lenses` even under `--reviewer` (AC2 "ALWAYS" holds), and `ceremony: minimal` stays the **ONLY** path that drops the floor (AC6). The "Spawn ONLY the listed agents" examples below describe the *specialist* set the override controls — the floor is always added on top (deduplicated if a floor agent is also listed). To review *below* the floor, use `ceremony: minimal`, never `--reviewer`.
+
+Concrete examples to prevent ambiguity (each implicitly also spawns the floor unless `ceremony: minimal`):
 
 - **WRONG behavior** (additive interpretation): `/ae:review HEAD --reviewer security-reviewer --reviewer challenger` → runs security + challenger PLUS default selection table reviewers (architecture / cross-family / etc).
 - **CORRECT behavior** (override per F-012): `/ae:review HEAD --reviewer security-reviewer --reviewer challenger` → runs ONLY security + challenger; default selection table SKIPPED entirely.

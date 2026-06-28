@@ -46,5 +46,24 @@ printf 'src/game/render.go\nauth/login.go\nsrc/game/input.go\n' > "$tmp/paths"
 got=$(sh "$SUT" "$tmp/paths" "$tmp/patterns" 2>/dev/null)
 [ "$got" = "security" ] && echo "ok: mixed paths → security once (dedup)" || { echo "FAIL: dedup — got [$got]"; fail=1; }
 
+# YAML-style pattern lines (C-P2c regression): pipeline.yml stores work.security_patterns as
+# quoted, dash-prefixed YAML list entries. The helper MUST normalize `  - "auth/*"` → `auth/*`,
+# else it silently misses even LISTED patterns. Boundary: dash+dquote, dash+squote, bare-quote.
+cat > "$tmp/yaml-patterns" <<'EOF'
+  - "auth/*"
+  - 'migrations/*'
+  - secret*
+EOF
+printf 'auth/middleware.go\n' > "$tmp/paths"
+got=$(sh "$SUT" "$tmp/paths" "$tmp/yaml-patterns" 2>/dev/null)
+[ "$got" = "security" ] && echo "ok: YAML dash+dquote pattern normalized → security" || { echo "FAIL: YAML dash+dquote — got [$got]"; fail=1; }
+printf 'migrations/0007.sql\n' > "$tmp/paths"
+got=$(sh "$SUT" "$tmp/paths" "$tmp/yaml-patterns" 2>/dev/null)
+[ "$got" = "security" ] && echo "ok: YAML dash+squote pattern normalized → security" || { echo "FAIL: YAML dash+squote — got [$got]"; fail=1; }
+# negative: non-matching path against YAML patterns stays empty (normalization didn't over-broaden)
+printf 'src/ui/button.go\n' > "$tmp/paths"
+got=$(sh "$SUT" "$tmp/paths" "$tmp/yaml-patterns" 2>/dev/null)
+[ -z "$got" ] && echo "ok: YAML patterns, non-match → empty" || { echo "FAIL: YAML non-match should be empty — got [$got]"; fail=1; }
+
 rm -rf "$tmp"
 [ "$fail" -eq 0 ] && echo "ALL PASS" || { echo "SOME FAILED"; exit 1; }
