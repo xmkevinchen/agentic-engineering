@@ -14,7 +14,7 @@ check() {
   fi
 }
 # explicit consume instruction in Step-1 Research (challenger binding condition)
-check "explicit consume instruction" 'consume the analyze verification|Verification considerations table as the per-AC'
+check "explicit consume instruction" 'consume the analyze verification'
 check "verify_by STARTING POINT framing" 'starting point'
 # brownfield graceful degrade
 check "brownfield absent -> warn + derive from scratch" 'derive .*from scratch|non-blocking warning'

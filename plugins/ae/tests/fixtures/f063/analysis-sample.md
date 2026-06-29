@@ -21,5 +21,3 @@
 | row-schema parsing (known-good + known-bad CSV → correct accept/reject) | `unit` | `sh tests/parse.sh` over fixture CSVs |
 | imported-total invariant (sum of imported rows == sum of valid input rows, boundary: empty file, all-invalid file) | `contract` | jq spec asserting the invariant at min/max boundaries |
 | summary-report readability (the human-facing report is clear + correctly highlights rejected rows) | `judge` | rubric: does the report state total/accepted/rejected counts + list each rejection reason? |
-
-Notes: the `contract` invariant row is a plausible downgrade candidate (a planner under pressure might map it to a thin `unit` test) → exercises the `# verify_by override` path. The `judge` readability row is easy to leave unmapped if the planner only writes code-ACs → exercises the `# dimension dropped` path.
