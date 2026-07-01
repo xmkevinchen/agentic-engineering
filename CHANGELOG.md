@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### Harness wave — F-063 / F-065 / F-067 / F-068 + pre-merge integration fixups
+### Harness wave — F-063 / F-065 / F-067 / F-068 + pre-merge integration fixups (v0.12.3)
 
 Four features completing the HDD harness, then a cross-family pre-merge integration review of the combined branch (the convention from v0.11.0) that caught two P1 seam defects per-feature review structurally missed:
 - **F-065** — evidence-collector + Check 7 rewrite: `collect-ac-evidence.py` (facts-only, `verdict: null` — "machines measure, LLM judges meaning") + a fresh context-isolated cross-family judge for coverage. Supersedes F-059's `verify-ac.py`.
