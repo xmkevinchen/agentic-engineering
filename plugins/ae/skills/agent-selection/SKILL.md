@@ -24,6 +24,16 @@ Every skill that builds an Agent Team references this table.
 | Research / analysis | archaeologist, standards-expert, dependency-analyst | archaeologist |
 | Plan review | architect, dependency-analyst | architect |
 
+### Negative / disambiguation signals (soft-add calibration — BL-180)
+
+The table above lists **positive** triggers. Adding a specialist lens requires *positive evidence for that lens's actual concern in the diff*, never a surface keyword match. Common false-positive disambiguations:
+
+- A tight **game/render/update loop is NOT** by itself a `performance` signal — `performance` needs an actual hot-path, query, allocation, or scaling concern. A fixed-size in-memory game core is not a performance surface. **Positive counter-example (the disqualifier is "by itself", not the loop shape)**: a game/render loop that DOES allocate per-frame, runs an O(n²) scan, or issues a query *inside* the loop IS a `performance` concern → still ADD the lens. Withhold on loop-shape alone, never on a loop with a real hot-path.
+- A **config / constant / copy** change is NOT a `security` signal unless it touches auth / tokens / secrets / permissions.
+- A **large or multi-file diff** is NOT by itself an `architecture` signal — architecture needs a module-boundary / dependency-direction / contract change, not mere line count.
+
+These are calibration examples, not exhaustive: the rule is **positive evidence** for the lens's real concern, never a keyword. (The soft-add trace records the selection; it does not prove the judgment — see review/SKILL.md §0.)
+
 ## Rules
 
 1. **Pick 2-4 core agents** from the table. Multiple rows can match — combine.
