@@ -2,10 +2,19 @@
 
 ## Unreleased
 
+### Harness wave — F-063 / F-065 / F-067 / F-068 + pre-merge integration fixups
+
+Four features completing the HDD harness, then a cross-family pre-merge integration review of the combined branch (the convention from v0.11.0) that caught two P1 seam defects per-feature review structurally missed:
+- **F-065** — evidence-collector + Check 7 rewrite: `collect-ac-evidence.py` (facts-only, `verdict: null` — "machines measure, LLM judges meaning") + a fresh context-isolated cross-family judge for coverage. Supersedes F-059's `verify-ac.py`.
+- **F-063** — front-load harness selection at `/ae:analyze`: a `| dimension | verify_by | runnable-check |` table + an analyze-exit DoD; `/ae:plan` explicitly consumes it (per-row map-or-drop).
+- **F-067** — right-size review ceremony: always-on generalist floor + soft-add specialist lenses on positive diff evidence + a deterministic risk-floor (`risk-floor-lenses.sh`) forcing the security lens on auth/migration/secret diffs.
+- **F-068** — review scale-fit: standalone `/ae:review` terminal-blocks archive on an unsatisfied `verify_by: manual` AC (reads `goal.frozen.md`) + lens negative/disambiguation examples.
+- **Integration fixups** (found by the cross-family review of `main...HEAD`): removed the dangling `bin/verify-ac.py` symlink (F-065 deleted its target, orphaning the symlink Wave 1 had created); fixed F-067's risk-floor invocation — it called `$AE_PLUGIN/scripts/risk-floor-lenses.sh` with `$AE_PLUGIN` undefined everywhere, so the deterministic floor was **inert** (now a bare bin/-PATH call like its siblings + a `bin/` symlink + a wiring regression test); reconciled Check 7's `collect-ac-evidence.py` invocation to pass the frozen goal, not the mutable plan.
+
 ### Dogfood-loop fixes — Wave 1 (v0.12.2)
 
 The loop-breakers from the v0.12.x field-tests (loom + Games/tetris) — what made external dogfood fight the harness:
-- **Plugin scripts on PATH (`bin/`)**: the 8 skill-invoked scripts (check-agent-teams / check-harness / verify-ac / verify-contract / cross-family-counter / parse-review-verdict / loop-decide / check-shutdown-canonical) are symlinked into `plugins/ae/bin/` (auto-added to the Bash PATH) and called by **bare name** — so they resolve when AE self-hosts on an external repo (cwd ≠ the AE repo). Was: cwd-relative `plugins/ae/scripts/x` → `No such file` on loom/Games. (loom F4 + Games G5, double-confirmed. `${CLAUDE_PLUGIN_ROOT}` is NOT available in skill Bash — only hooks/MCP — so `bin/`-on-PATH is the mechanism.)
+- **Plugin scripts on PATH (`bin/`)**: the skill-invoked scripts (check-agent-teams / check-harness / verify-contract / cross-family-counter / parse-review-verdict / loop-decide / check-shutdown-canonical — plus collect-ac-evidence + risk-floor-lenses added by the harness wave; the originally-listed `verify-ac` was superseded by `collect-ac-evidence` in F-065 and its dangling symlink removed) are symlinked into `plugins/ae/bin/` (auto-added to the Bash PATH) and called by **bare name** — so they resolve when AE self-hosts on an external repo (cwd ≠ the AE repo). Was: cwd-relative `plugins/ae/scripts/x` → `No such file` on loom/Games. (loom F4 + Games G5, double-confirmed. `${CLAUDE_PLUGIN_ROOT}` is NOT available in skill Bash — only hooks/MCP — so `bin/`-on-PATH is the mechanism.)
 - **`description` required on every `Agent()` spawn**: the spawn protocol (`agent-teams`) now states `description` is a mandatory tool field — omitting it is an `InputValidationError` that killed a 4-agent batch in the Games dogfood. (Games G3.)
 - **Dogfood feedback template**: `plugins/ae/templates/dogfood-feedback.template.md` — systematizes the field-test→AE loop (pin exact version, evidence-first, substance-vs-scale-fit, suggested disposition).
 
@@ -19,7 +28,7 @@ The per-skill Agent Teams check was under-specified prose ("read settings.json �
 
 **Added (HDD MVP, F-059)** — a per-feature **harness = acceptance criteria + independently-re-runnable verification means**, woven through analyze→plan→work→review:
 - `docs/references/verify-by-kinds.md` — non-normative anchor (per `verify_by` kind → what a runnable check looks like).
-- `verify-ac.py` — thin per-AC `verify:` runner (forgery-rejecting); `check-harness.sh` — mechanical mandate enforcement at `/ae:plan-review`.
+- `verify-ac.py` — thin per-AC `verify:` runner (forgery-rejecting) **[superseded by `collect-ac-evidence.py` in the F-065 harness wave below; its dangling `bin/` symlink was removed in the integration fixup]**; `check-harness.sh` — mechanical mandate enforcement at `/ae:plan-review`.
 - `/ae:plan` — runnable-check mandate (every deterministic AC declares a `verify:`) + freeze the GOAL → `goal.frozen.md`.
 - `/ae:analyze` — verification-considerations now required + per-AC.
 - `/ae:review` Check 7 — confidence-per-AC + judge-artifact-capture + re-examine against `goal.frozen.md`.

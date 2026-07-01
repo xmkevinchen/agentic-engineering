@@ -27,5 +27,11 @@ check  "§0 warns <target> is the plan path (C-P1)"   '<target> is the PLAN PATH
 absent "§0 no longer diffs raw <target>"             'git diff --name-only <target>'
 # §0 feeds the floor output into the risk_floor_lenses provenance field
 check  "§0 produces risk_floor_lenses"               'risk_floor_lenses'
+# P1-b (integration review): §0 must NOT invoke via an undefined $AE_PLUGIN path — that
+# form is inert everywhere $AE_PLUGIN is unset (i.e. everywhere), silently disabling the floor.
+absent "§0 has no undefined \$AE_PLUGIN path (P1-b)"  'AE_PLUGIN'
+# P1-b: the bin/ symlink must exist so the bare `risk-floor-lenses.sh` call actually resolves on PATH
+BIN="$HERE/../../bin/risk-floor-lenses.sh"
+if [ -f "$BIN" ]; then echo "ok: bin/risk-floor-lenses.sh resolves on PATH (bare call live)"; else echo "FAIL: bin/risk-floor-lenses.sh missing — §0 bare call inert"; fail=1; fi
 
 [ "$fail" -eq 0 ] && echo "ALL PASS" || { echo "SOME FAILED"; exit 1; }

@@ -2,7 +2,10 @@
 """collect-ac-evidence.py — run ONE acceptance criterion's `verify:` command and
 emit a structured EVIDENCE record. It MEASURES; it never judges (verdict stays null).
 
-SUBPROCESS-ONLY: `python3 collect-ac-evidence.py <plan.md> <AC-id>`.
+SUBPROCESS-ONLY: `python3 collect-ac-evidence.py <goal.frozen.md|plan.md> <AC-id>`.
+  Pass the frozen goal when one exists — it is the same AC standard review Check 7
+  judges against; fall back to plan.md only when no frozen goal exists. (Both carry
+  the `### ACN` + `verify:` shape this reads; the arg name was <plan.md> historically.)
   exit 0 = command ran + evidence is non-vacuous (or exit_code_only opt-in)
   exit 1 = collector-integrity-failure (evidence VACUOUS — zero/under-min match, or
            unknown parser with no match signal + exit 0) OR the command itself failed
