@@ -31,7 +31,9 @@
 set -u
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-FEATURES_DIR="$REPO_ROOT/.ae/features"
+# FEATURES_ROOT env override (F-069): lets tests point at a fixture feature tree
+# instead of the real .ae/features. Defaults to the real tree for normal runs.
+FEATURES_DIR="${FEATURES_ROOT:-$REPO_ROOT/.ae/features}"
 PLANS_DIR="$REPO_ROOT/.ae/plans"
 
 failures=0
@@ -126,6 +128,21 @@ if [ -d "$FEATURES_DIR" ]; then
           failures=$((failures + 1))
           ;;
       esac
+
+      # edges enum validation (F-069): edges is a YAML list of provenance objects
+      # {kind, id, source, evidence, written_by, judge}. Line-based (not full YAML
+      # parse) — sufficient to enforce the two enums; wiki-lint.sh does deeper checks.
+      fm=$(extract_frontmatter "$index_file")
+      bad_kinds=$(printf '%s\n' "$fm" | grep -E '(^|[[:space:]])kind:' | sed -E 's/.*kind:[[:space:]]*//; s/[[:space:]]*$//' | grep -vE '^(origin|supersedes|superseded_by|relates_to|conflicts_with)$' || true)
+      if [ -n "$bad_kinds" ]; then
+        echo "[validate-frontmatter] FAIL: invalid edge kind in $relpath: $bad_kinds (expected: origin|supersedes|superseded_by|relates_to|conflicts_with)" >&2
+        failures=$((failures + 1))
+      fi
+      bad_writers=$(printf '%s\n' "$fm" | grep -E '(^|[[:space:]])written_by:' | sed -E 's/.*written_by:[[:space:]]*//; s/[[:space:]]*$//' | grep -vE '^(review-archive|batch|human)$' || true)
+      if [ -n "$bad_writers" ]; then
+        echo "[validate-frontmatter] FAIL: invalid written_by in $relpath: $bad_writers (expected: review-archive|batch|human)" >&2
+        failures=$((failures + 1))
+      fi
     done
   done
 fi
