@@ -162,6 +162,17 @@ case "$region" in
   *terminal-block*|*"terminal-block"*) ok "gate failure terminal-blocks the archive in prose";;
   *) notok "gate failure terminal-blocks the archive in prose";;
 esac
+# integration finding (F-069×F-070 pre-merge review): a blocked archive's re-run
+# must be an archive-retry, not an ad-hoc re-review (else the feature dead-ends)
+case "$region" in
+  *archive-retry*) ok "blocked-archive re-run named as archive-retry in the trigger";;
+  *) notok "blocked-archive re-run named as archive-retry in the trigger";;
+esac
+if rg -q 'Archive-retry exception' "$SKILL"; then
+  ok "Output rule carries the archive-retry exception"
+else
+  notok "Output rule carries the archive-retry exception"
+fi
 case "$region" in
   *wiki-index-gen.py*) ok "edge-write regenerates the layered index (wiki-index-gen.py wired)";;
   *) notok "edge-write regenerates the layered index (wiki-index-gen.py wired)";;
