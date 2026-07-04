@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+"""wiki-lint.py — machine-verifiable lint over knowledge-graph edges (F-069 Step 2).
+
+Checks the MACHINE half of edge trust (conclusion #4: machines measure, LLM judges):
+  - frontmatter parses; `edges:` is a list of mappings
+  - per edge: required fields (kind, id, written_by; source required for relates_to),
+    kind/written_by in enum, target id well-formed AND resolves in the tree,
+    source `path:line` resolves inside the node's own dir
+  - whole-tree mode only: duplicate node ids, orphan nodes (a node id participating
+    in zero edges — no outgoing edges and never referenced; legacy depends_on /
+    origin_bl are NOT edges, they migrate in Plan 2)
+NEVER judges semantic correctness — a resolving, in-enum, obviously-wrong
+relationship passes (AC2 fourth fixture); that half belongs to the review judge.
+
+Usage: wiki-lint.py [--root DIR] [NODE_DIR ...]
+  --root     features root (default: $FEATURES_ROOT or .ae/features)
+  NODE_DIR   scoped mode: lint only these nodes' edges (the /ae:review archive
+             gate's shape); skips whole-graph checks (orphan, duplicate id)
+Target resolution (within --root): F-NNN → */F-NNN-*/ dir; BL-NNN → BL-NNN*.md
+under root or <root>/../backlog; disc-NNN → any */discussions/NNN-*/ dir.
+Exit: 0 = clean | 1 = defects (each named on stdout) | 2 = usage error.
+"""
+import argparse
+import os
+import re
+import sys
+
+import yaml
+
+KIND_ENUM = {"origin", "supersedes", "superseded_by", "relates_to", "conflicts_with"}
+WRITER_ENUM = {"review-archive", "batch", "human"}
+STATE_DIRS = ("active", "done", "abandoned", "paused")
+ID_RE = re.compile(r"^(F-\d+|BL-\d+|disc-\d+)$")
+
+if __name__ != "__main__":
+    raise SystemExit("wiki-lint.py is subprocess-only; do not import")
+
+
+def frontmatter(path):
+    """Return (data, error). data is the parsed YAML mapping or None on error."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        return None, f"unreadable: {e}"
+    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    if not m:
+        return None, "no frontmatter block"
+    try:
+        data = yaml.safe_load(m.group(1))
+    except yaml.YAMLError as e:
+        return None, f"unparseable YAML frontmatter: {str(e).splitlines()[0]}"
+    if not isinstance(data, dict):
+        return None, "frontmatter is not a mapping"
+    return data, None
+
+
+def discover_nodes(root):
+    """Yield (node_dir, index_path) for every feature node under root."""
+    for state in STATE_DIRS:
+        state_dir = os.path.join(root, state)
+        if not os.path.isdir(state_dir):
+            continue
+        for name in sorted(os.listdir(state_dir)):
+            node_dir = os.path.join(state_dir, name)
+            index = os.path.join(node_dir, "index.md")
+            if name.startswith("F-") and os.path.isfile(index):
+                yield node_dir, index
+
+
+def build_resolvers(root):
+    """Scan the tree once; return (feature_ids→[dirs], bl_ids, disc_ids).
+
+    F-NNN resolves ONLY at state-dir top level — the same depth discover_nodes
+    enumerates — so "resolves" and "is a real node" are the same guarantee; a
+    coincidentally-named nested dir must not make a dangling target resolve
+    (Track 4). BL/disc walk the whole tree (they legitimately nest inside
+    feature dirs)."""
+    feature_dirs = {}
+    for state in STATE_DIRS:
+        state_dir = os.path.join(root, state)
+        if not os.path.isdir(state_dir):
+            continue
+        for name in sorted(os.listdir(state_dir)):
+            m = re.match(r"^(F-\d+)-", name)
+            # index.md required — a bare dir is not a node and must not mask a
+            # dangling target (codex challenge on the Track 4 fix)
+            if m and os.path.isfile(os.path.join(state_dir, name, "index.md")):
+                feature_dirs.setdefault(m.group(1), []).append(os.path.join(state_dir, name))
+    bl_ids = set()
+    disc_ids = set()
+    for base, dirs, files in os.walk(root):
+        if os.path.basename(base) == "discussions":
+            for d in dirs:
+                m = re.match(r"^(\d+)-", d)
+                if m:
+                    disc_ids.add(f"disc-{m.group(1)}")
+        for f in files:
+            m = re.match(r"^(BL-\d+)", f)
+            if m and f.endswith(".md"):
+                bl_ids.add(m.group(1))
+    backlog = os.path.normpath(os.path.join(root, os.pardir, "backlog"))
+    if os.path.isdir(backlog):
+        for base, _dirs, files in os.walk(backlog):
+            for f in files:
+                m = re.match(r"^(BL-\d+)", f)
+                if m and f.endswith(".md"):
+                    bl_ids.add(m.group(1))
+    return feature_dirs, bl_ids, disc_ids
+
+
+def check_source(node_dir, source):
+    """Validate `path:line` provenance stays inside node_dir and resolves."""
+    if not isinstance(source, str) or ":" not in source:
+        return f"source '{source}' is not 'path:line'"
+    path_part, _, line_part = source.rpartition(":")
+    if not line_part.isdigit() or int(line_part) < 1:
+        return f"source '{source}' has no valid line number"
+    if os.path.isabs(path_part):
+        return f"source '{source}' is absolute; must be relative to the node dir"
+    resolved = os.path.realpath(os.path.join(node_dir, path_part))
+    if not (resolved + os.sep).startswith(os.path.realpath(node_dir) + os.sep):
+        return f"source '{source}' escapes the node dir"
+    if not os.path.isfile(resolved):
+        return f"source '{source}' file does not exist"
+    with open(resolved, encoding="utf-8") as f:
+        n_lines = sum(1 for _ in f)
+    if int(line_part) > n_lines:
+        return f"source '{source}' line beyond EOF ({n_lines} lines)"
+    return None
+
+
+def lint_node(node_dir, index, resolvers, defects):
+    """Lint one node's edges. Returns (node_id, referenced_ids, has_edges)."""
+    feature_dirs, bl_ids, disc_ids = resolvers
+    rel = os.path.basename(node_dir)
+    data, err = frontmatter(index)
+    if err:
+        defects.append(f"{rel}: {err}")
+        return None, set(), False
+    node_id = data.get("id")
+    edges = data.get("edges")
+    if edges is None:
+        if "edges" in data:  # codex P2: `edges:` present but null must not bypass validation
+            defects.append(f"{rel}: 'edges' key present but null — remove the key or provide a list")
+        return node_id, set(), False
+    if not isinstance(edges, list):
+        defects.append(f"{rel}: 'edges' must be a list of mappings, got {type(edges).__name__}")
+        return node_id, set(), False
+    referenced = set()
+    for i, edge in enumerate(edges, 1):
+        where = f"{rel} edge {i}"
+        if not isinstance(edge, dict):
+            defects.append(f"{where}: not a mapping ({edge!r})")
+            continue
+        kind = edge.get("kind")
+        target = edge.get("id")
+        writer = edge.get("written_by")
+        # codex P2: non-scalar values (e.g. `kind: [relates_to]`) must be named
+        # defects, not a TypeError on set membership
+        if kind is None:
+            defects.append(f"{where}: missing required field 'kind'")
+        elif not isinstance(kind, str) or kind not in KIND_ENUM:
+            defects.append(f"{where}: kind '{kind}' not in enum {sorted(KIND_ENUM)}")
+        if writer is None:
+            defects.append(f"{where}: missing required field 'written_by'")
+        elif not isinstance(writer, str) or writer not in WRITER_ENUM:
+            defects.append(f"{where}: written_by '{writer}' not in enum {sorted(WRITER_ENUM)}")
+        if target is None:
+            defects.append(f"{where}: missing required field 'id'")
+        elif not ID_RE.match(str(target)):
+            defects.append(f"{where}: malformed target id '{target}' (expected F-NNN/BL-NNN/disc-NNN)")
+        else:
+            target = str(target)
+            referenced.add(target)
+            if target.startswith("F-"):
+                if target not in feature_dirs:
+                    defects.append(f"{where}: dangling target '{target}' (no such feature dir)")
+            elif target.startswith("BL-"):
+                if target not in bl_ids:
+                    defects.append(f"{where}: dangling target '{target}' (no such backlog file)")
+            elif target not in disc_ids:
+                defects.append(f"{where}: dangling target '{target}' (no such discussion dir)")
+        source = edge.get("source")
+        if source is None:
+            if kind == "relates_to":
+                defects.append(f"{where}: relates_to missing required 'source' provenance")
+        else:
+            src_err = check_source(node_dir, source)
+            if src_err:
+                defects.append(f"{where}: {src_err}")
+    return node_id, referenced, len(edges) > 0
+
+
+parser = argparse.ArgumentParser(add_help=True)
+parser.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
+parser.add_argument("nodes", nargs="*", help="scoped mode: node dirs to lint")
+try:
+    args = parser.parse_args()
+except SystemExit:
+    sys.exit(2)
+
+root = os.path.realpath(args.root)
+if not os.path.isdir(root):
+    print(f"[wiki-lint] usage error: no such root: {args.root}", file=sys.stderr)
+    sys.exit(2)
+
+resolvers = build_resolvers(root)
+defects = []
+
+if args.nodes:  # scoped mode — the archive gate's shape; no whole-graph checks
+    for node_dir in args.nodes:
+        index = os.path.join(node_dir, "index.md")
+        if not os.path.isfile(index):
+            print(f"[wiki-lint] usage error: no index.md in {node_dir}", file=sys.stderr)
+            sys.exit(2)
+        lint_node(node_dir, index, resolvers, defects)
+    scope = f"scoped ({len(args.nodes)} node(s))"
+else:  # whole-tree mode
+    id_dirs = {}       # node id → [dirs] (duplicate detection)
+    outgoing = set()   # node ids with ≥1 edge
+    referenced = set() # ids that appear as any edge's target
+    nodes = list(discover_nodes(root))
+    for node_dir, index in nodes:
+        node_id, refs, has_edges = lint_node(node_dir, index, resolvers, defects)
+        referenced |= refs
+        if node_id:
+            id_dirs.setdefault(node_id, []).append(os.path.basename(node_dir))
+            if has_edges:
+                outgoing.add(node_id)
+    for node_id, dirs in sorted(id_dirs.items()):
+        if len(dirs) > 1:
+            defects.append(f"duplicate node id {node_id}: {', '.join(sorted(dirs))} (resolution nondeterministic)")
+    for node_id in sorted(id_dirs):
+        if node_id not in outgoing and node_id not in referenced:
+            defects.append(f"orphan node {node_id}: participates in zero edges")
+    scope = f"whole-tree ({len(nodes)} node(s))"
+
+for d in defects:
+    print(f"[wiki-lint] DEFECT: {d}")
+print(f"[wiki-lint] {scope}: {len(defects)} defect(s)")
+sys.exit(1 if defects else 0)
