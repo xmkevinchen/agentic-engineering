@@ -1,8 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.13.0 (2026-07-04)
 
-### Project knowledge graph — F-069 / F-070 / F-071 (v0.13.0)
+### Grounded-verification contract for judge ACs — F-074
+
+Every `verify_by: judge` AC now declares `judge-class: fact-claim | form`. Form rubrics stay one-question and cheap. Fact-claim rubrics must name the source set the judge reads FIRST (two-pass, anti-anchoring), the claim-by-claim output shape (per material claim: verdict + evidence cite + the judge's own re-derived answer — fabricated citations are spot-checkable, free-text "pass" is not), and cross-family fresh-context judging for self-authored artifacts. Enforced at `/ae:plan-review` (a fact-claim rubric satisfiable by artifact self-consistency alone = Must fix) and executed at `/ae:review` Check 7. Motivated by the corpus audit's 4/4 confident-but-wrong pages that a form rubric had passed; designed from the literature's lever priority (source access > output shape > judge independence > wording), not from that single trial.
+
+### Project knowledge graph — F-069 / F-070 / F-071
 
 AE's process artifacts become a queryable relationship graph (Karpathy LLM-wiki *pattern* — zero embeddings, no RAG; the LLM reads a layered index and provenance-carrying frontmatter edges):
 
