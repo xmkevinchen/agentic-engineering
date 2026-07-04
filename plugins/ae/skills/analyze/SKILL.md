@@ -250,15 +250,17 @@ Agent(subagent_type: "<proxy>", name: "<proxy>",
 
 Also read project context files (CLAUDE.md, docs/) for background.
 
-### Prior context (Mengdie integration)
+### Prior context (project knowledge graph — F-069)
 
-After all teammates have SendMessage'd findings to TL, before synthesis:
+After all teammates have SendMessage'd findings to TL, before synthesis — the cold-start locate-step (zero embeddings; LLM reads a layered index, per F-069 conclusion #6):
 
-1. Call `memory_search` MCP with the feature title as query.
-2. Tool unavailable / no results / errors → emit `Prior context: unavailable (tool not registered / no relevant results)` and continue.
-3. Results with `degraded` field non-null → annotate as "(partial — [degraded reason])".
-4. Render under `## Prior Art from Project Knowledge Base` with provenance per item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`.
-5. Treat as background context only — does not constrain current evidence.
+1. Regenerate + read the layered index: run `plugins/ae/bin/wiki-index-gen.py` (cheap, byte-idempotent), then read `.ae/wiki/index.md`. Generator fails / no feature dirs exist → emit `Prior context: unavailable (no knowledge index)` and continue.
+2. **[LLM]** Pick the relevant theme(s): semantically read Tier A + the picked themes' `.ae/wiki/themes/<slug>.md` TL;DRs against the feature description — judgment, not string match.
+3. **[deterministic]** Grep fallback for unknown entities: `rg` the feature's key entities/terms (2-4 distinctive terms — not common words, or the fallback floods) across `.ae/features/` to catch nodes the theme-pick missed.
+4. Read the survivor node pages (each candidate feature's `index.md`). Keep the survivor set small — typically ≤10 pages; prefer dropping weak candidates over reading everything.
+5. **[deterministic]** Traverse the survivors' edges ONE hop in a single call — `plugins/ae/bin/wiki-neighbors.py <survivor-id> [<survivor-id> ...]` (batching all survivors gets cross-survivor dedup for free) — and fold the reported targets into the candidate set: **read each newly-reached feature target's `index.md` too** (BL/disc targets have no node page — cite them from the edge's `evidence` line alone). An edge is knowledge grep cannot reach (that is the graph's whole point); the helper prints `target\tkind\tfrom\tevidence` lines, and whether a reached neighbor is WORTH citing stays LLM judgment.
+6. Render under `## Prior Art from Project Knowledge Base` with provenance per item: `id`, `title`, how located (`theme-pick` / `grep` / `edge from <id>`), and the edge `evidence` line when edge-located. (This `##` heading is the TL's **in-conversation readout** during this step; the *document* home for prior art in `analysis.md` is the separate on-demand `### Prior art from the knowledge graph` section under Supporting detail — two surfaces, not a contradiction.)
+7. Treat as background context only — does not constrain current evidence.
 
 ### Synthesize + write `analysis.md`
 
@@ -309,7 +311,7 @@ Only write the sections below when the TL;DR tip is insufficient to carry the us
 
 Map each dimension to a `verify_by` kind per [`docs/references/verify-by-kinds.md`](../../../../docs/references/verify-by-kinds.md) — push each as far toward deterministic as it honestly goes; cover **non-code dimensions too** (business-data validity, domain invariants, BDD/behavioral scenarios), not just code checks. This table is the raw material `/ae:plan` consumes (its Step-1 Research reads it as the per-AC `verify_by` starting point + the runnable-check mandate), so a vague row here becomes a vacuous AC there. It must be PRESENT + per-dimension — the `### Synthesize` **Exit gate (analyze DoD)** above blocks finishing `analysis.md` without it. (Pre-F-063 this section was REQUIRED-but-ungated; F-063 gave it teeth.)
 
-### Mengdie prior art (on-demand)
+### Prior art from the knowledge graph (on-demand)
 <only when there are relevant results. No results → do not write an "unavailable" placeholder.>
 ```
 
