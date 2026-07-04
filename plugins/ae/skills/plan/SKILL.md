@@ -347,25 +347,6 @@ Before confirming with the user, check cross-family availability (`cross_family`
 
 Shut down teammates (shutdown_request → shutdown_response) after Doodlestein completes (or after Step 3 if Doodlestein skipped); team config + teammates are cleaned up automatically at session end.
 
-### 4.5. Knowledge Capture (to Mengdie)
-
-Run this step after plan review completes (Step 3/4) and before Confirm (Step 5). **Gate**: only capture if plan `status: reviewed`. Skip for draft plans (unreviewed plans may contain superseded decisions).
-
-Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
-
-**Skill-specific extraction**:
-- One item for the overall approach rationale from the Goal section
-- Additional items only for non-obvious technical choices in the Steps
-- Skip items that restate prior art already surfaced in Step 1.5
-- `source_type`: `plan`
-- `knowledge_type`: `decisional`
-- `entities`: derive from each specific decision, NOT from the broad frontmatter `tags`. Use compound tags specific to the decision (e.g., `enum-validation-api-contract`, `phase-c-skill-wiring-pattern`). Avoid single broad tags.
-- `source_file`: path to the generated plan file
-
-**Closing output** — report what was ingested and any conflicts:
-- `Knowledge capture: [N] items ingested, no conflicts`
-- Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
-
 ## Step 5: Confirm
 
 Show the complete plan to the user. State the actual write path explicitly so the user knows whether the plan landed in a feature dir or the legacy `output.plans` location:

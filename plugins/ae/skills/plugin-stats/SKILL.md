@@ -145,24 +145,6 @@ Show summary to user.
 
 The 23 existing `output.analyses/*` reports written by the old `ae:retrospect` skill use `type: retrospect` in frontmatter. This skill MUST read them as plugin-stats data (the schema is the same; only the type label changed). New reports written by this skill use `type: plugin-stats`. Both types are valid input; only `type: plugin-stats` is written going forward.
 
-### 4.5. Knowledge Capture (to Mengdie)
-
-Run after report write, before Next Steps. Skip in `--compare` mode (comparisons don't generate new insights, only deltas).
-
-Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md).
-
-**Skill-specific extraction**:
-- One item per actionable trend conclusion from Actionable Insights.
-- Skip raw statistics and data summaries.
-- `source_type`: `plugin-stats`
-- `knowledge_type`: `experiential`
-- `entities`: derive from each specific insight (compound tags like `challenger-highest-value-reviewer`, `per-commit-review-misses-cross-cutting`). Avoid single broad tags.
-- `source_file`: path to the generated report.
-
-**Closing output**:
-- `Knowledge capture: [N] items ingested, no conflicts`
-- Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
-
 ## Step 5: Comparison Mode
 
 Triggered when `--compare ID1 ID2` is provided. Pre-check validates both IDs exist.

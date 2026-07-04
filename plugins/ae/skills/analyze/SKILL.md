@@ -320,18 +320,6 @@ Map each dimension to a `verify_by` kind per [`docs/references/verify-by-kinds.m
 - No TL;DR; user must read the whole document before they can make a judgment
 - Each agent gets its own flat section, 60%+ content overlap across sections
 
-### Knowledge capture (Mengdie)
-
-After `analysis.md` is written, before closing the team. Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) (max 3 items, atomic, graceful degradation, conflict handling).
-
-**Skill-specific extraction**:
-- One item per key finding from the analysis's `## Findings` section.
-- Skip findings that restate prior art surfaced in the prior-context step.
-- `source_type`: `conclusion`
-- `knowledge_type`: `factual`
-- `entities`: derive from each specific finding (e.g., `fts5-idf-contamination`), NOT from broad frontmatter tags.
-- `source_file`: path to the new `analysis.md`.
-
 ## Shut down teammates + present
 
 Send `shutdown_request` to all teammates. Show the user:
@@ -339,8 +327,7 @@ Send `shutdown_request` to all teammates. Show the user:
 1. `Created feature F-NNN: <title>` + path to the feature dir.
 2. Mode A only: `Moved BL-<NNN> → F-NNN-<slug>/BL-<NNN>.md (frontmatter: status=promoted, promoted_to=F-NNN).`
 3. Confirmed `size:` and `depends_on:` values, if any.
-4. Knowledge-capture summary: `[N] items ingested, no conflicts` or `conflicts detected with: [titles]`.
-5. **Next step**: `/ae:discuss .ae/features/active/F-NNN-<slug>/` if decisions remain, or `/ae:plan` if the path is clear. Plan 051+ note: subsequent `/ae:discuss`, `/ae:plan`, `/ae:review` outputs will write inside this feature dir (`<feature-dir>/discussions/<NNN>-<slug>/`, `<feature-dir>/plan.md`, `<feature-dir>/review.md`) — feature ID is path-derived from `F-NNN`. The feature dir is now the canonical home for all per-feature artifacts.
+4. **Next step**: `/ae:discuss .ae/features/active/F-NNN-<slug>/` if decisions remain, or `/ae:plan` if the path is clear. Plan 051+ note: subsequent `/ae:discuss`, `/ae:plan`, `/ae:review` outputs will write inside this feature dir (`<feature-dir>/discussions/<NNN>-<slug>/`, `<feature-dir>/plan.md`, `<feature-dir>/review.md`) — feature ID is path-derived from `F-NNN`. The feature dir is now the canonical home for all per-feature artifacts.
 
 ## Edge cases — abandon and re-promote
 

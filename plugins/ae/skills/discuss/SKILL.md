@@ -608,33 +608,6 @@ entities: []
 
 Update index.md: set `pipeline.discuss: done`, add conclusion link.
 
-### 8.5. Knowledge Capture (to Mengdie)
-
-Run this step after the conclusion is written (Step 8) and before Doodlestein post-conclusion review (Step 9).
-
-Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
-
-**Skill-specific extraction**:
-- One item per **resolved decision** from the Decision Summary table in the conclusion
-- Include the Rationale column content (not just the decision text)
-- Skip open questions and deferred items
-- `source_type`: `conclusion`
-- `knowledge_type`: `decisional`
-- `entities`: derive from each specific decision, NOT from the broad conclusion frontmatter. Use compound tags specific to the decision (e.g., `rust-tech-stack-selection`, `jwt-rs256-auth`). Avoid single broad tags like `auth`, `database`, `search` that will match unrelated findings.
-- `source_file`: path to the generated `conclusion.md`
-
-**Example**:
-```
-memory_ingest({
-  title: "[discuss]: use Rust over TypeScript for knowledge server — compiler guardrails outweigh ecosystem convenience",
-  content: "Decided Rust for the knowledge server. Rationale: agent-written code benefits from strict compiler checks; single binary simplifies deployment; sub-5ms startup for MCP stdio; fastembed-rs provides local embedding without Node.js overhead.",
-  source_file: "docs/discussions/003-tech-stack/conclusion.md",
-  source_type: "conclusion",
-  knowledge_type: "decisional",
-  entities: "rust,tech-stack,mcp,fastembed"
-})
-```
-
 ### 9. Doodlestein — Post-Conclusion Review
 
 **Triggered when**: Conclusion document is written. Doodlestein reviews the **written conclusion**, not the discussion in progress. No round extensions from Doodlestein findings.
@@ -703,9 +676,6 @@ Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reduc
 
 - All converged, no spawned → "Ready for `/ae:plan`"
 - Has spawned discussions → "Resolve sub-discussions first, then `/ae:plan`"
-- **Knowledge capture summary** — report what was ingested and any conflicts:
-  - `Knowledge capture: [N] items ingested, no conflicts`
-  - Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
 
 ## Principles
 

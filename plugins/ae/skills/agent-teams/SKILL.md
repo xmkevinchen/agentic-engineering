@@ -540,7 +540,7 @@ Each modified SKILL.md MUST inline its full canonical phase list at the top of i
 | `ae:discuss` | `Pre-check`, `Step 1 — Setup`, `Step 1.5 — Round 0 Framing`, `Step 2 — Spawn Team`, `Step 3 — Discussion Rounds`, `Step 7 — Sweep Deferred`, `Step 8 — Generate Conclusion`, `Step 9 — Doodlestein` | 8 |
 | `ae:test-plugin` | `Pre-check`, `Phase 1 — Test Generation`, `Phase 2 — Execution`, `Phase 3 — Report` | 4 |
 
-Sub-actions deliberately excluded (analysis flagged them as noise): TDD sub-cycles (write/red/implement/green/refactor), individual Pre-commit Checks A-G in ae:work, Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant in ae:review, Steps 4-6 (Consensus / TL Scores / Present) and Step 10 (Shutdown) in ae:discuss.
+Sub-actions deliberately excluded (analysis flagged them as noise): TDD sub-cycles (write/red/implement/green/refactor), individual Pre-commit Checks A-G in ae:work, Synthesis / Fixup / Outcome Statistics / Output / Completion Invariant in ae:review, Steps 4-6 (Consensus / TL Scores / Present) and Step 10 (Shutdown) in ae:discuss.
 
 The per-skill task list is **static and design-time** — agents do NOT estimate phase duration at runtime to decide which to track. The static list is the contract.
 

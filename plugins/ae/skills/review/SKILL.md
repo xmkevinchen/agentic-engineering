@@ -264,7 +264,7 @@ Bundle contents:
 
 ## Task progress tracking
 
-Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:review creates a Pre-check task + **2 floor tasks unconditionally**, plus **0–3 specialist tasks sparse-filled** when the diff selects that lens (F-067 §2/§3 — a specialist task appears iff a reviewer will fill it). NO additional per-phase tasks for Synthesis / Fixup / Outcome Statistics / Output / Knowledge Capture / Completion Invariant — those are sub-actions of the review cycle.
+Per `plugins/ae/skills/agent-teams/SKILL.md` → `## Skill step progress tracking`. ae:review creates a Pre-check task + **2 floor tasks unconditionally**, plus **0–3 specialist tasks sparse-filled** when the diff selects that lens (F-067 §2/§3 — a specialist task appears iff a reviewer will fill it). NO additional per-phase tasks for Synthesis / Fixup / Outcome Statistics / Output / Completion Invariant — those are sub-actions of the review cycle.
 
 | Phase | When created | When `in_progress` | When `completed` |
 |---|---|---|---|
@@ -329,7 +329,7 @@ TaskCreate(subject: "ae:review: Code review (generalist floor)")
 TaskCreate(subject: "ae:review: Cross-family challenge + synthesis")
 ```
 
-Specialist-lens tasks (Security / Performance / Architecture) are created in §3 **only for lenses the sparse-fill selects** (risk-floor-forced or soft-added) — a task appears iff a reviewer will fill it. Track the floor task IDs alongside the team handle; specialist task IDs are tracked as §3 creates them. Synthesis, Fixup, Outcome Statistics, Output, Knowledge Capture, and Completion Invariant are sub-actions; they do NOT get their own tasks.
+Specialist-lens tasks (Security / Performance / Architecture) are created in §3 **only for lenses the sparse-fill selects** (risk-floor-forced or soft-added) — a task appears iff a reviewer will fill it. Track the floor task IDs alongside the team handle; specialist task IDs are tracked as §3 creates them. Synthesis, Fixup, Outcome Statistics, Output, and Completion Invariant are sub-actions; they do NOT get their own tasks.
 
 ### 3. Select and Launch Reviewers
 
@@ -609,24 +609,6 @@ Report contents:
 4. Deferred findings audit results (FIXED/WAIVED/UNRESOLVED classification from Check 4), backlog items to `pipeline.yml` → `output.backlog/unscheduled/` (default: `.ae/backlog/unscheduled/`) — sprint assignment via `/ae:roadmap plan` later
 5. Prompt user to create PR
 
-### Knowledge Capture (to Mengdie)
-
-Run this step after the review report is written and before prompting for PR creation.
-
-Follow the [Knowledge Capture Protocol](../../docs/knowledge-capture-protocol.md) for common rules (max 3 items, atomic units, graceful degradation, conflict handling).
-
-**Skill-specific extraction**:
-- One item per reusable pattern (P2+ findings that apply beyond this specific code)
-- Skip one-off bugs that are already fixed in the fixup commits
-- `source_type`: `review`
-- `knowledge_type`: `experiential`
-- `entities`: derive from each specific pattern, NOT from the broad review title. Use compound tags specific to the pattern (e.g., `sqlite-migration-column-guard`, `mcp-project-scope-validation`). Avoid single broad tags.
-- `source_file`: path to the generated review file
-
-**Closing output** — report what was ingested and any conflicts:
-- `Knowledge capture: [N] items ingested, no conflicts`
-- Or: `Knowledge capture: [N] items ingested, conflicts detected with: [titles]`
-
 ## Loop-invocation mode (called from the /ae:work harness loop — F-048)
 
 When `/ae:review` runs as an iteration of the `/ae:work` harness loop, the **loop owns lifecycle**, so two defaults change (codex P1 root fix — archive must not precede the loop's hedge + manual gate):
@@ -707,8 +689,6 @@ Runs ONLY between a resolved Phase 1 and Phase 2 — i.e. under the trigger's ow
    ```
    The `judge` field records this review's OWN semantic verdict that the evidence supports the relationship — the half wiki-lint cannot check (AC4b's rubric judges this). **Only write edges that pass that semantic check** (`judge.value: pass`); a relationship that fails it is simply not written — never emit a `judge: {value: fail}` edge. Zero genuine siblings → write zero edges (legitimate outcome, not a failure).
 2. **Trust gate (deterministic)**: run `plugins/ae/bin/wiki-lint.py --root .ae/features <feature-dir>` (scoped mode — per-node edge checks, no whole-graph checks). Exit 0 → proceed to Phase 2. Non-zero → **terminal-block the archive** (mirror the Manual-AC guard's terminal shape): report pass-but-pending — verdict stays `pass`, feature stays in its current state dir, list each `[wiki-lint] DEFECT:` line, print the fix (correct/remove the offending edges in `<feature-dir>/index.md`, then re-run `/ae:review`). Do NOT flip `verdict:`; do NOT run Phase 2.
-
-**Mengdie dual-write window (F-069 Plan 1)**: the Knowledge Capture step above is deliberately untouched — mengdie ingest and the edge-write both fire during Plan 1; mengdie removal is Plan 2.
 
 **Known gap — manual-AC features (F-069 review finding)**: a feature blocked by the Manual-AC guard exits via a human manual `mv` that never reaches this Phase — such features get no incremental edges through this channel (and Plan 2's batch deliberately writes no semantic edges). The guard's terminal readout tells the human to hand-seed edges when lineage matters; a mechanized path is deferred (revisit in Plan 2).
 

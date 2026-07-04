@@ -170,7 +170,7 @@ These ACs were flagged `fixture: project` — reusable harnesses worth 固化 in
 
 If none → `No fixture: project ACs in this window — nothing to promote yet.`
 
-**Mengdie storage DEFERRED** (discussion 001 Decision 5): this section *surfaces* promotion candidates only — it does NOT auto-ingest a harness artifact to Mengdie. The storage substrate (a concrete Mengdie extraction criterion, or a simpler shared-fixtures location) is deferred to a follow-up BL (BL-140); do not ship a vague "extract harness artifact" criterion here. Promotion stays a human decision, consistent with this skill's read-only / no-auto-ingest principle.
+**Storage substrate DEFERRED** (discussion 001 Decision 5, updated by F-070): this section *surfaces* promotion candidates only — it does NOT auto-ingest a harness artifact anywhere. The storage substrate (a shared-fixtures location; the historical Mengdie option was retired by F-070) is deferred to a follow-up BL (BL-140); do not ship a vague "extract harness artifact" criterion here. Promotion stays a human decision, consistent with this skill's read-only / no-auto-ingest principle.
 
 ## Conversational delivery
 
@@ -178,7 +178,7 @@ Render all 5 sections in a single message. The output is **prose with markdown f
 
 - Write any file.
 - Suggest the user save the output (they'll save what they want).
-- Run `memory_ingest` automatically — Reflect is for reading, not capturing. The user may decide a lesson is worth a memory and save it manually.
+- Auto-capture anything — Reflect is for reading, not capturing. The user may decide a lesson is worth a memory and save it manually.
 
 ## Principles
 
