@@ -16,6 +16,20 @@ correction channel**: run it whenever the graph may lag the corpus — it conver
 the graph to the current state, and because every mechanism is idempotent, running
 it often is safe and running it on an un-graphed corpus is simply the first refresh.
 
+## Judgment provenance (applies to every LLM step below)
+
+**No semantic judgment in this graph is self-judged.** The session that PRODUCES
+content (proposes an edge, writes a page) never issues its own accept verdict:
+
+- **Minimum**: a fresh-context agent, independent of the producer, judges.
+- **Preferred**: a cross-family judge (codex/gemini proxy, or the local fallback
+  model) — same-family review catches form, never its own confabulations.
+- Degraded mode (no cross-family, no agent spawn available): the TL may judge
+  solo but MUST mark every such verdict `judge: {... rationale: "same-family
+  solo — degraded"}` so the next refresh re-judges them first.
+- Mechanical checks (lint, page check, index) are unaffected — machines are
+  family-less.
+
 ## Flow
 
 ### 0. Corpus state readout
@@ -44,10 +58,12 @@ still lacks an edge, as `from  target  line  snippet` rows. These are PROPOSALS,
 edges. On a repeat refresh this list is naturally short — only mentions that appeared
 (or were previously rejected) since the last run.
 
-### 3. Judge candidates (LLM — the semantic half)
+### 3. Judge candidates (LLM — the semantic half, independently judged)
 
-For each candidate row, read the cited line (and surrounding body when the snippet is
-ambiguous) and judge the relationship class:
+Hand the candidate rows to the judge (per **Judgment provenance** above: fresh
+agent minimum, cross-family preferred — the rows + cited lines are a small
+bundle, cheap to ship). The judge reads each cited line (and surrounding body
+when the snippet is ambiguous) and judges the relationship class:
 
 - **Verbatim supersession** ("Supersedes F-NNN", "abandoned per F-NNN", "work moved to")
   → `kind: supersedes` (or the inverse reading of the statement).
@@ -78,8 +94,10 @@ human` is the only exemption: a human ruling is never machine-re-judged (and
 `remove-edges` refuses to delete it at the script layer).
 
 1. Enumerate batch edges: `rg -B2 -A4 'written_by: batch' .ae/features/*/F-*/index.md`.
-2. For each, re-read the `source` line (and surrounding body) and re-apply the
-   step-3 judgment classes. Still grounded → keep (no write, nothing to do).
+2. Ship the batch to an independent judge (per **Judgment provenance** — and
+   re-judging is where cross-family matters MOST: the batch stock was written by
+   a same-family session). The judge re-reads each `source` line (and
+   surrounding body) and re-applies the step-3 judgment classes. Still grounded → keep (no write, nothing to do).
    No longer grounded (source drifted, claim was noise, judgment was wrong) →
    add to a removal list `{from, kind, target}`.
 3. `plugins/ae/bin/graph-refresh.py remove-edges <removals.json>` — the only
@@ -143,8 +161,17 @@ gets a page (the working tree answers that live via grep). Flow:
 5. **Judge gate (rubric)**: reject a page section if every sentence in it is
    verbatim-quotable from a single anchored source — that is a summary, not
    synthesis. Grade actual content non-restatability, never section-template
-   presence.
-6. **Stale pages**: re-read the drifted anchors, decide whether the understanding
+   presence. **The page's WRITER never runs this gate on its own page** (per
+   Judgment provenance) — an independent judge does.
+6. **Write-then-audit (immediately, not at the next refresh)**: after `add-page`
+   succeeds, the new page gets a cross-family ground-truth pass right away — the
+   fact-claim contract shape (plan/SKILL.md's judge-class rule): the judge reads
+   the anchored sources FIRST, then verifies the page claim-by-claim (verdict +
+   evidence cite + its own re-derived answer per material claim). Findings →
+   fix via delete + re-add before the page enters circulation. A synthesis page
+   is the canonical self-authored fact-claim artifact; it does not wait for the
+   next manual refresh to be trusted.
+7. **Stale pages**: re-read the drifted anchors, decide whether the understanding
    still holds — update anchors (human edit or delete + re-add) or retire the page
    (delete the file; index, check, and log converge on the next run).
 
