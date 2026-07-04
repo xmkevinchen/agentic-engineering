@@ -43,7 +43,9 @@ def frontmatter(path):
             text = f.read()
     except OSError as e:
         return None, f"unreadable: {e}"
-    m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    # \n? — a closing --- with no trailing newline must parse the same way
+    # wiki-index-gen accepts it (review P1: regex mismatch falsely blocked archives)
+    m = re.match(r"^---\n(.*?)\n---\n?", text, re.S)
     if not m:
         return None, "no frontmatter block"
     try:

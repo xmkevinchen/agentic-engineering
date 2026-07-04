@@ -16,6 +16,9 @@ edges:
   - kind: supersedes
     id: F-030
     written_by: human
+  - kind: superseded_by
+    id: F-031
+    written_by: human
   - kind: conflicts_with
     id: F-055
     written_by: batch

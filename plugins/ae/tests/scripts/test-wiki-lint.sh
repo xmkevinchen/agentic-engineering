@@ -363,6 +363,16 @@ else
   ok "duplicate id with edges not ALSO flagged as orphan (orphan is per-id)"
 fi
 
+# --- review P1: closing --- without trailing newline parses like index-gen ---
+mkdir -p "$tmp/lint-noeol/done/F-927-noeol" "$tmp/lint-noeol/done/F-928-target"
+printf -- '---\nid: F-927\ntitle: "Fixture — no trailing newline"\nstatus: done\ncreated: 2026-07-03\nedges:\n  - kind: relates_to\n    id: F-928\n    source: "index.md:1"\n    evidence: "regex-parity fixture"\n    written_by: human\n---' > "$tmp/lint-noeol/done/F-927-noeol/index.md"
+printf -- '---\nid: F-928\ntitle: "Fixture — target"\nstatus: done\ncreated: 2026-07-03\n---\n' > "$tmp/lint-noeol/done/F-928-target/index.md"
+if python3 "$LINT" --root "$tmp/lint-noeol" >/dev/null 2>&1; then
+  ok "file with no trailing newline after closing --- parses (regex parity with index-gen)"
+else
+  notok "file with no trailing newline after closing --- parses (regex parity with index-gen)"
+fi
+
 # --- usage errors → exit 2 ---
 python3 "$LINT" --root "$tmp/no-such-tree" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "nonexistent root exits 2 (usage)" || notok "nonexistent root exits 2 (usage)"

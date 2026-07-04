@@ -47,7 +47,8 @@ for state in STATE_DIRS:
             continue
         try:
             with open(index, encoding="utf-8") as f:
-                m = re.match(r"^---\n(.*?)\n---\n", f.read(), re.S)
+                # \n? matches wiki-lint/wiki-index-gen (review P1: regex parity)
+                m = re.match(r"^---\n(.*?)\n---\n?", f.read(), re.S)
             data = yaml.safe_load(m.group(1)) if m else None
         except (OSError, yaml.YAMLError):
             continue  # unparseable nodes are wiki-lint's job, not traversal's

@@ -33,5 +33,34 @@ else
   ok "out-of-enum written_by rejected"
 fi
 
+# 4. every enum kind appears in the valid fixture (AC1: "one valid instance of each edge type")
+fixture="$FIX/valid-edges/done/F-901-sample/index.md"
+missing=""
+for kind in origin supersedes superseded_by relates_to conflicts_with; do
+  grep -q "kind: $kind" "$fixture" || missing="$missing $kind"
+done
+if [ -z "$missing" ]; then
+  ok "valid fixture carries one instance of every edge kind"
+else
+  notok "valid fixture carries one instance of every edge kind (missing:$missing)"
+fi
+
+# 5. schema documented in CLAUDE.local.md (AC1 documentation claim; the file is
+# contributor-local/gitignored — absent checkout degrades to an explicit skip-pass)
+LOCALDOC="$REPO/CLAUDE.local.md"
+if [ -f "$LOCALDOC" ]; then
+  docmiss=""
+  for token in "kind:" "written_by:" "source:" "evidence:" "judge:" origin supersedes superseded_by relates_to conflicts_with; do
+    grep -q -- "$token" "$LOCALDOC" || docmiss="$docmiss $token"
+  done
+  if [ -z "$docmiss" ]; then
+    ok "edge schema + provenance documented in CLAUDE.local.md"
+  else
+    notok "edge schema + provenance documented in CLAUDE.local.md (missing:$docmiss)"
+  fi
+else
+  ok "edge schema doc check skipped (CLAUDE.local.md absent — contributor-local file)"
+fi
+
 echo "1..$((pass + fail))"
 [ "$fail" -eq 0 ]

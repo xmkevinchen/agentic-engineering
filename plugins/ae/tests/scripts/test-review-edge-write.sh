@@ -90,6 +90,8 @@ fi
 [ -d "$tmp/a/done/F-940-finisher" ] && ok "feature mv'd to done/ after clean gate" || notok "feature mv'd to done/ after clean gate"
 grep -q 'written_by: review-archive' "$tmp/a/done/F-940-finisher/index.md" && \
   grep -q 'judge: {value: pass' "$tmp/a/done/F-940-finisher/index.md" && \
+  grep -q 'source: "index.md:2"' "$tmp/a/done/F-940-finisher/index.md" && \
+  grep -q 'evidence: "shares the sample-lineage mechanism' "$tmp/a/done/F-940-finisher/index.md" && \
   ok "written edge carries full provenance (source/evidence/written_by/judge)" || \
   notok "written edge carries full provenance (source/evidence/written_by/judge)"
 
@@ -123,7 +125,18 @@ fi
 [ -d "$tmp/c/active/F-940-finisher" ] && ok "loop-mode iteration does not archive" || notok "loop-mode iteration does not archive"
 
 # --- boundary (ii): zero genuine siblings → zero edges → gate passes clean ---
-make_tree "$tmp/d"
+# (isolated judge: the tree must GENUINELY have no sibling — only the finisher exists)
+mkdir -p "$tmp/d/active/F-940-finisher" "$tmp/d/done"
+cat > "$tmp/d/active/F-940-finisher/index.md" <<'EOF'
+---
+id: F-940
+title: "Fixture — finishing feature, alone in the tree"
+status: active
+created: 2026-07-03
+---
+
+# F-940 — finisher with no sibling anywhere
+EOF
 if sim_archive "$tmp/d" 0 ""; then
   ok "zero-siblings archive writes zero edges and gate passes clean"
 else
