@@ -7,7 +7,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 BOOT="$REPO/plugins/ae/scripts/graph-refresh.py"
 LINT="$REPO/plugins/ae/scripts/graph-lint.py"
-SKILL="$REPO/plugins/ae/skills/graph-refresh/SKILL.md"
+SKILL="$REPO/plugins/ae/skills/knowledge-refresh/SKILL.md"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 

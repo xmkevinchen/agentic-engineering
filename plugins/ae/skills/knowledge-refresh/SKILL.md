@@ -1,12 +1,12 @@
 ---
-name: ae:graph-refresh
+name: ae:knowledge-refresh
 description: Manually re-sync the knowledge graph with the corpus — backfill missed legacy fields, judge new grounded relationships, lint-gate every write. Idempotent; run whenever the graph may lag reality.
 argument-hint: "[--dry-run]"
 user-invocable: true
 effort: medium
 ---
 
-# /ae:graph-refresh — Re-sync the Knowledge Graph with the Corpus
+# /ae:knowledge-refresh — Re-sync the Project Knowledge Graph with the Corpus
 
 The graph's automatic write points are narrow by design (edges are written when a
 feature archives). Reality drifts past them: features ship while a write point is
