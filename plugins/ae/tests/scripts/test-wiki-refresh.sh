@@ -1,13 +1,13 @@
 #!/bin/sh
-# AC1+AC2 (F-071): wiki-bootstrap.py deterministic half + live-run landmines locked
-# + /ae:wiki-bootstrap SKILL.md wiring. sh-tap output (parser: sh-tap.v1).
+# AC1+AC2 (F-071): wiki-refresh.py deterministic half + live-run landmines locked
+# + /ae:wiki-refresh SKILL.md wiring. sh-tap output (parser: sh-tap.v1).
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-BOOT="$REPO/plugins/ae/scripts/wiki-bootstrap.py"
+BOOT="$REPO/plugins/ae/scripts/wiki-refresh.py"
 LINT="$REPO/plugins/ae/scripts/wiki-lint.py"
-SKILL="$REPO/plugins/ae/skills/wiki-bootstrap/SKILL.md"
+SKILL="$REPO/plugins/ae/skills/wiki-refresh/SKILL.md"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -126,7 +126,7 @@ case "$out" in *F-999*) ok "reverted row reported";; *) notok "reverted row repo
 
 # ---------- AC2: SKILL.md wiring ----------
 if [ -f "$SKILL" ]; then
-  ok "wiki-bootstrap SKILL.md exists"
+  ok "wiki-refresh SKILL.md exists"
   for token in "backfill" "candidates" "add-edges" "wiki-lint.py" "wiki-index-gen.py" "wiki-neighbors.py"; do
     if grep -q -- "$token" "$SKILL"; then ok "SKILL wires $token"; else notok "SKILL wires $token"; fi
   done
@@ -134,7 +134,7 @@ if [ -f "$SKILL" ]; then
     ok "never-invent-orphan-edges rule present" || notok "never-invent-orphan-edges rule present"
   grep -qi 'noise\|REJECT' "$SKILL" && ok "noise-rejection guidance present" || notok "noise-rejection guidance present"
 else
-  notok "wiki-bootstrap SKILL.md exists"
+  notok "wiki-refresh SKILL.md exists"
 fi
 
 echo "1..$((pass + fail))"
