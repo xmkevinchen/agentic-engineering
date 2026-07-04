@@ -22,11 +22,16 @@ PATTERN='\((codex|gemini)[^)]*\)|\(doodlestein[ -][^)]+\)|(codex|gemini|architec
 # functional-line exemptions: the cross-family FEATURE legitimately names families
 FUNC='proxy|cross.family|mcp__|codex/gemini|\(codex/gemini\)|family \(codex|CLI|command not found|track [0-9] \((codex|gemini)\)'
 
-viol=$(rg -n -i "$PATTERN" \
-        "$REPO/plugins/ae/scripts" "$REPO/plugins/ae/tests/scripts" \
-        "$REPO/plugins/ae/skills" "$REPO/plugins/ae/agents" "$REPO/docs" \
-        -g '!*codex-proxy*' -g '!*gemini-proxy*' -g '!check-cross-family.sh' \
-        -g '!*.deprecated' -g '!test-jargon-tripwire.sh' 2>/dev/null \
+# repo-entering text = git-TRACKED files only (gitignored local notes are not
+# repo-entering; and rg's own ignore handling proved order-dependent in the
+# suite, so the file list comes from git, not from rg's discovery)
+viol=$(git -C "$REPO" ls-files -- \
+        'plugins/ae/scripts' 'plugins/ae/tests/scripts' \
+        'plugins/ae/skills' 'plugins/ae/agents' 'docs' \
+      | grep -v -e 'codex-proxy' -e 'gemini-proxy' -e 'check-cross-family.sh' \
+                -e '\.deprecated$' -e 'test-jargon-tripwire.sh' \
+      | sed "s|^|$REPO/|" \
+      | xargs rg -n -i --no-ignore "$PATTERN" 2>/dev/null \
       | rg -v -i "$FUNC" || true)
 
 if [ -z "$viol" ]; then
