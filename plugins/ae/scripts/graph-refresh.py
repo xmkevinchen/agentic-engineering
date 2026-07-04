@@ -13,6 +13,11 @@ Subcommands (the LLM half lives in the /ae:knowledge-refresh skill):
                          Per-node: newline-safe append + line-number compensation
                          + post-write source-line ANCHOR check + scoped graph-lint;
                          any failure REVERTS that node and exits non-zero.
+  remove-edges <e.json>  the ONLY machine delete path for edges. Rows:
+                         {from, kind, target}. REFUSES written_by: human rows
+                         (a human ruling is never machine-deleted); missing
+                         rows are reported no-ops; per-node scoped lint after
+                         removal, revert on failure.
   add-page <page.json>   the ONLY machine write path for synthesis pages.
                          {id, title, anchors: [{source, anchor_hash, commit?}],
                          body}. Atomic temp-write + rename; identical re-add
@@ -344,6 +349,80 @@ def cmd_add_edges(args):
     return 1 if failures else 0
 
 
+def cmd_remove_edges(args):
+    try:
+        rows = json.load(open(args.edges_json, encoding="utf-8"))
+        assert isinstance(rows, list)
+    except Exception as e:
+        print(f"[graph-refresh] usage error: cannot read {args.edges_json}: {e}", file=sys.stderr)
+        return 2
+    dirs = {str(parse(idx)[0].get("id", "")): (nd, idx)
+            for nd, idx in nodes(args.root) if parse(idx)[0]}
+    failures = removed = 0
+    for r in rows:
+        fid, kind, target = str(r["from"]), str(r["kind"]), str(r["target"])
+        if fid not in dirs:
+            print(f"[graph-refresh] remove {fid}: no such node — no-op")
+            continue
+        node_dir, idx = dirs[fid]
+        data, m, text = parse(idx)
+        edges = data.get("edges") or []
+        hit = next((e for e in edges if isinstance(e, dict) and e.get("kind") == kind
+                    and str(e.get("id")) == target), None)
+        if hit is None:
+            print(f"[graph-refresh] remove {fid}: {kind} -> {target} not present — no-op")
+            continue
+        if hit.get("written_by") == "human":
+            print(f"[graph-refresh] REFUSED {fid}: {kind} -> {target} is written_by: human "
+                  f"— a human ruling is never machine-deleted")
+            failures += 1
+            continue
+        # rebuild the frontmatter without this edge, script-owned surgery only
+        keep = [e for e in edges if e is not hit]
+        fm = m.group(1)
+        block_re = re.compile(r"^edges:\n(?:^[ \t].*\n?)*", re.M)
+        if keep:
+            new_block = "edges:\n" + "".join(l for e in keep for l in edge_lines_existing(e))
+        else:
+            new_block = ""
+        new_fm, n = block_re.subn(new_block, fm, count=1)
+        if n != 1:
+            print(f"[graph-refresh] REVERTED {fid}: edges block not found for rewrite")
+            failures += 1
+            continue
+        body = text[m.end():]
+        before = text
+        open(idx, "w", encoding="utf-8").write("---\n" + new_fm.rstrip("\n") + "\n---\n" + body)
+        okk, out = scoped_lint(args.root, node_dir)
+        if not okk:
+            open(idx, "w", encoding="utf-8").write(before)
+            print(f"[graph-refresh] REVERTED {fid}: lint after removal: {out}")
+            failures += 1
+            continue
+        removed += 1
+        log_mutation(os.path.join(os.path.realpath(args.root), os.pardir, "graph"),
+                     "remove-edges", f"{fid}: {kind} -> {target}")
+        print(f"[graph-refresh] {fid}: removed {kind} -> {target}")
+    print(f"[graph-refresh] remove-edges: {removed} removed, {failures} refused/failed")
+    return 1 if failures else 0
+
+
+def edge_lines_existing(e):
+    """Render a PARSED edge dict back to frontmatter lines (round-trip form)."""
+    out = [f"  - kind: {e['kind']}\n", f"    id: {e['id']}\n"]
+    if e.get("source") is not None:
+        out.append(f'    source: "{yq(e["source"])}"\n')
+    if e.get("evidence") is not None:
+        out.append(f'    evidence: "{yq(e["evidence"])}"\n')
+    out.append(f"    written_by: {e.get('written_by', 'batch')}\n")
+    j = e.get("judge")
+    if isinstance(j, dict):
+        out.append(f'    judge: {{value: {j.get("value", "pass")}, rationale: "{yq(j.get("rationale", ""))}"}}\n')
+    elif j is not None:
+        out.append(f'    judge: {{value: pass, rationale: "{yq(j)}"}}\n')
+    return out
+
+
 def cmd_add_page(args):
     try:
         page = json.load(open(args.page_json, encoding="utf-8"))
@@ -411,7 +490,9 @@ p3.add_argument("edges_json")
 p4 = sub.add_parser("add-page")
 p4.add_argument("page_json")
 p4.add_argument("--synthesis-root", default=".ae/graph/synthesis")
-for p in (p1, p2, p3, p4):
+p5 = sub.add_parser("remove-edges")
+p5.add_argument("edges_json")
+for p in (p1, p2, p3, p4, p5):
     p.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
 try:
     args = parser.parse_args()
@@ -421,4 +502,5 @@ if args.cmd != "add-page" and not os.path.isdir(args.root):
     print(f"[graph-refresh] usage error: no such root: {args.root}", file=sys.stderr)
     sys.exit(2)
 sys.exit({"backfill": cmd_backfill, "candidates": cmd_candidates,
-          "add-edges": cmd_add_edges, "add-page": cmd_add_page}[args.cmd](args))
+          "add-edges": cmd_add_edges, "add-page": cmd_add_page,
+          "remove-edges": cmd_remove_edges}[args.cmd](args))

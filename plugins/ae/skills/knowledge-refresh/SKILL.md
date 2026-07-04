@@ -69,6 +69,31 @@ scoped lint, revert-on-failure. Reverted rows come back in the output — re-jud
 drop them; a reverted dangling target usually means the mentioned feature has no dir
 (correct outcome: no edge).
 
+### 3.5 Re-judge the batch stock (DEFAULT — LLM output is not settled fact)
+
+Everything `written_by: batch` was LLM-generated and may hide judgment errors no
+lint can see. A refresh therefore RE-JUDGES the batch stock every run — the same
+posture the pull gate takes toward anchors, applied to semantics. `written_by:
+human` is the only exemption: a human ruling is never machine-re-judged (and
+`remove-edges` refuses to delete it at the script layer).
+
+1. Enumerate batch edges: `rg -B2 -A4 'written_by: batch' .ae/features/*/F-*/index.md`.
+2. For each, re-read the `source` line (and surrounding body) and re-apply the
+   step-3 judgment classes. Still grounded → keep (no write, nothing to do).
+   No longer grounded (source drifted, claim was noise, judgment was wrong) →
+   add to a removal list `{from, kind, target}`.
+3. `plugins/ae/bin/graph-refresh.py remove-edges <removals.json>` — the only
+   machine delete path (refuses human rows, no-ops on missing, scoped lint +
+   revert, logs real removals).
+4. Batch synthesis pages: re-apply the step-4.5 content contract + judge rubric
+   to every `written_by: batch` page. FAIL → rewrite through delete + `add-page`
+   (the full evidence-bundle gate again) or delete outright if the page should
+   not exist. PASS → keep, untouched.
+5. **Hardening path**: pages/edges the user has spot-checked and endorsed get
+   `written_by` flipped to `human` (plain frontmatter/file edit) — they leave
+   the re-judge pool permanently. Over successive refreshes the corpus migrates
+   from "LLM-claimed" to "human-confirmed"; the report tracks the ratio.
+
 ### 4. Whole-tree gate (orphan-filtered)
 
 `plugins/ae/bin/graph-lint.py --root .ae/features --log-validations` — the exit code will be non-zero
@@ -132,7 +157,11 @@ and `--hops 2` on one lineage — non-empty, sensible output.
 - The review ask: judged edges carry `written_by: batch` + a `judge` rationale noting
   user-review pending — invite the user to spot-check the semantic edges and delete
   any they disagree with (plain frontmatter edit; the next refresh + lint keep
-  everything else honest).
+  everything else honest). Endorsed items should be flipped to `written_by: human`
+  so they leave the re-judge pool (step 3.5's hardening path).
+- **Batch-vs-human ratio**: report how much of the corpus is still `written_by:
+  batch` (re-judged every run) vs `human` (settled) — the honest measure of how
+  much LLM-generated content remains unconfirmed.
 - **Synthesis page freshness**: list every page ordered by time-since-last-validation
   (oldest first — pages nobody reads never hit the pull gate, so this list is their
   only surfacing), with each page's current check verdict. The validation times come
