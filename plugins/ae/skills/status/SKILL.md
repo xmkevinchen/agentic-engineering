@@ -102,7 +102,7 @@ Total wall-clock target: under 2 seconds for a typical project (≤20 active fea
 - **Not a replacement for `/ae:dashboard`**: dashboard is the project-pipeline-state view; status is the session-state-now view. Different consumers.
 - **No team spawn, no writes**: `/ae:status` MUST remain pure-read. Any modification of state belongs in a different skill (e.g., archiving stale team dirs → BL).
 - **No session ID concept**: git/team-dir/BL queries use filesystem timestamps, not session boundaries (no session ID exists in the runtime).
-- **No `git log --since=<duration>`**: rejected during plan-review (gemini P2 #4) — wall-clock windows go stale on user pause. Section 1's `git log @{u}..HEAD` is upstream-relative, immune to pause.
+- **No `git log --since=<duration>`**: rejected during plan-review — wall-clock windows go stale on user pause. Section 1's `git log @{u}..HEAD` is upstream-relative, immune to pause.
 
 ## Output example
 

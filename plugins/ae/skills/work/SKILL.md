@@ -543,7 +543,7 @@ Based on work completion, suggest with exact executable command:
 
 → **any true** = the plan has a harness → enter the loop below. **none** = legacy / no-harness plan → old behavior (suggest `/ae:review`, no loop, no error). (No `--loop` flag — harness presence decides.)
 
-**Manual-AC caveat (codex P1)**: a plan whose ACs are covered *only* by `verify_by: manual` still enters the loop, but review Check 7 treats `manual` as **non-blocking** (human-confirm, not auto-pass). So the loop MUST NOT autonomously `exit_pass` a plan with any unconfirmed `manual` AC — `work.auto_pass` governs deterministic + `judge` ACs, NEVER manual verification. The `exit_pass` branch below pauses for human confirmation of manual ACs regardless of `auto_pass`.
+**Manual-AC caveat**: a plan whose ACs are covered *only* by `verify_by: manual` still enters the loop, but review Check 7 treats `manual` as **non-blocking** (human-confirm, not auto-pass). So the loop MUST NOT autonomously `exit_pass` a plan with any unconfirmed `manual` AC — `work.auto_pass` governs deterministic + `judge` ACs, NEVER manual verification. The `exit_pass` branch below pauses for human confirmation of manual ACs regardless of `auto_pass`.
 
 **Shape (F-048 D4)**: LLM-driven driver with a deterministic skeleton — the in-session TL chains the LLM steps. The only orchestration-judgment-free scripts are `parse-review-verdict` + `loop-decide` (and the L1 oracle that runs as `test.command` — a structural gate, not orchestration). All judgment (the work, the review verdict) is LLM. No `claude -p`, no judgment in shell.
 
@@ -554,14 +554,14 @@ Based on work completion, suggest with exact executable command:
 iter = 0; persist `LOOP_ITER: 0` to <milestone-dir>/notes.md
 loop:
   run /ae:review <plan> in LOOP MODE (see /ae:review § "Loop-invocation mode"):
-    # codex P1 root fix: the loop owns lifecycle. In loop mode /ae:review (a) writes THIS
+    # The loop owns lifecycle. In loop mode /ae:review (a) writes THIS
     # iteration's verdict to the CANONICAL review.md (overwrite — NOT an ad-hoc rerun file),
     # so the loop reads the FRESH verdict every iteration (a re-review routed to a
     # verdict-less ad-hoc file left the loop reading the stale first 'fail' to the cap); and
     # (b) does NOT archive (archive is deferred to exit_pass below, after the hedge + manual confirm).
   verdict = parse-review-verdict.sh <review.md>       # fresh each iteration (loop mode overwrote it)
   if pipeline.yml test.command set: run it; non-zero exit → verdict = fail  # deterministic hedge — runs BEFORE any lifecycle transition
-  if the hedge downgraded verdict→fail → PERSIST it: overwrite review.md `verdict: fail`     # codex P1: the
+  if the hedge downgraded verdict→fail → PERSIST it: overwrite review.md `verdict: fail`     # the
        # EFFECTIVE verdict must hit disk. A hedge failure (or manual rejection, below) must not leave a
        # 'pass' in review.md — an interrupted run would otherwise show the still-active feature as done.
   iter = read `LOOP_ITER` from notes.md                                     # re-read from disk, never trust in-context memory
@@ -578,8 +578,8 @@ loop:
                         iteration; the loop runs it here). Use that canonical contract as-is — do NOT
                         reimplement: it sets plan `status: done`; for a FEATURE-DIR plan archives
                         active→done WITH `done: <date>` + roadmap update + metadata preserved + log; for a
-                        LEGACY plan (no feature dir) takes its manual-fallback branch (codex P1: the loop
-                        must not assume every plan has a feature dir; P2: must not drop done-date/roadmap/log).
+                        LEGACY plan (no feature dir) takes its manual-fallback branch (the loop
+                        must not assume every plan has a feature dir, and must not drop done-date/roadmap/log).
                         Then STOP, report success.
     dispatch_fixup → iter += 1; persist `LOOP_ITER: <iter>`; (review.md already holds the effective verdict);
                      re-enter fixup-mode on the review findings;
