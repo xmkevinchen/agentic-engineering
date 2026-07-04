@@ -71,7 +71,7 @@ drop them; a reverted dangling target usually means the mentioned feature has no
 
 ### 4. Whole-tree gate (orphan-filtered)
 
-`plugins/ae/bin/graph-lint.py --root .ae/features` — the exit code will be non-zero
+`plugins/ae/bin/graph-lint.py --root .ae/features --log-validations` — the exit code will be non-zero
 whenever orphans exist; that is BY DESIGN, so filter by DEFECT class:
 
 - Any **non-orphan** DEFECT line (dangling target, bad source, enum, duplicate id,
@@ -135,7 +135,10 @@ and `--hops 2` on one lineage — non-empty, sensible output.
   everything else honest).
 - **Synthesis page freshness**: list every page ordered by time-since-last-validation
   (oldest first — pages nobody reads never hit the pull gate, so this list is their
-  only surfacing), with each page's current check verdict. Track the **stale-backlog
+  only surfacing), with each page's current check verdict. The validation times come
+  from the `check:` records the step-4 gate just appended to `.ae/graph/log.md`
+  (`--log-validations`); a page with no check record ever is listed first as
+  "never validated". Track the **stale-backlog
   trend** across refreshes: if the stale count grew versus the previous refresh
   report, say so explicitly — consecutive growth is the recorded condition for
   reopening the automated-trigger decision.

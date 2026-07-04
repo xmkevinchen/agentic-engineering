@@ -231,5 +231,23 @@ else
   notok "lint without synthesis dir: behavior unchanged (rc=$rc out=$out)"
 fi
 
+# 13. --log-validations appends one check record per page; default stays read-only
+LOG="$FAKE/.ae/graph/log.md"
+rm -f "$LOG"
+python3 "$LINT" --root "$FEAT" --synthesis-root "$SYN" --repo-root "$FAKE" >/dev/null 2>&1
+if [ ! -f "$LOG" ]; then
+  ok "default lint run writes no log"
+else
+  notok "default lint run writes no log"
+fi
+python3 "$LINT" --root "$FEAT" --synthesis-root "$SYN" --repo-root "$FAKE" --log-validations >/dev/null 2>&1
+n=$(grep -c '^- .* check: syn-' "$LOG" 2>/dev/null || echo 0)
+pages=$(ls "$SYN"/syn-*.md | wc -l | tr -d ' ')
+if [ "$n" = "$pages" ]; then
+  ok "--log-validations appends one check record per page ($n)"
+else
+  notok "--log-validations appends one check record per page (n=$n pages=$pages)"
+fi
+
 echo "1..$((pass + fail))"
 [ "$fail" -eq 0 ]

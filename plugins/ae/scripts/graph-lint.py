@@ -206,6 +206,10 @@ parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
 parser.add_argument("--synthesis-root", default=None)
 parser.add_argument("--repo-root", default=None)
+parser.add_argument("--log-validations", action="store_true",
+                    help="append one 'check' record per synthesis page to the graph "
+                         "log — gives unread pages durable freshness telemetry "
+                         "(off by default: lint stays read-only unless asked)")
 parser.add_argument("nodes", nargs="*", help="scoped mode: node dirs to lint")
 try:
     args = parser.parse_args()
@@ -276,6 +280,13 @@ else:  # whole-tree mode
             if proc.returncode != 0 and not found_defect:
                 defects.append(f"synthesis page {f}: check failed "
                                f"(exit {proc.returncode}) with no reported defect")
+            if args.log_validations:
+                verdict = proc.stdout.splitlines()[-1].split(": ")[-1] if proc.stdout else "unknown"
+                import datetime
+                stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                with open(os.path.join(os.path.dirname(syn_root), "log.md"),
+                          "a", encoding="utf-8") as lf:
+                    lf.write(f"- {stamp} check: {f[:-3]} {verdict}\n")
         scope += f" + {len(pages)} synthesis page(s)"
 
 for d in defects:
