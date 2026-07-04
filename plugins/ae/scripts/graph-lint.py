@@ -247,9 +247,8 @@ else:  # whole-tree mode
     for node_id, dirs in sorted(id_dirs.items()):
         if len(dirs) > 1:
             defects.append(f"duplicate node id {node_id}: {', '.join(sorted(dirs))} (resolution nondeterministic)")
-    for node_id in sorted(id_dirs):
-        if node_id not in outgoing and node_id not in referenced:
-            defects.append(f"orphan node {node_id}: participates in zero edges")
+    orphans = [n for n in sorted(id_dirs)
+               if n not in outgoing and n not in referenced]
     scope = f"whole-tree ({len(nodes)} node(s))"
     # synthesis pages: leaf nodes with anchors, checked by the single page-check
     # implementation; a missing dir is the normal no-synthesis-layer case
@@ -289,7 +288,12 @@ else:  # whole-tree mode
                     lf.write(f"- {stamp} check: {f[:-3]} {verdict}\n")
         scope += f" + {len(pages)} synthesis page(s)"
 
+orphans = orphans if "orphans" in dir() else []
 for d in defects:
     print(f"[graph-lint] DEFECT: {d}")
-print(f"[graph-lint] {scope}: {len(defects)} defect(s)")
-sys.exit(1 if defects else 0)
+for n in orphans:
+    # observation class, not a defect — but it still fails the whole-tree gate
+    # so an unreviewed orphan cannot pass silently
+    print(f"[graph-lint] ORPHAN: {n}: participates in zero edges")
+print(f"[graph-lint] {scope}: {len(defects)} defect(s), {len(orphans)} orphan(s)")
+sys.exit(1 if (defects or orphans) else 0)

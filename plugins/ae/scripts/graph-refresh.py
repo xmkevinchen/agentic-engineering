@@ -319,6 +319,8 @@ def cmd_add_edges(args):
             e = {"kind": r["kind"], "id": str(r["target"]),
                  "evidence": r.get("evidence", ""),
                  "judge": r.get("rationale", "bootstrap judgment — user-review pending")}
+            if r.get("written_by"):
+                e["written_by"] = str(r["written_by"])
             if r.get("line"):
                 e["source"] = f"index.md:PENDING{int(r['line'])}"  # body line, pre-write
             edges.append(e)

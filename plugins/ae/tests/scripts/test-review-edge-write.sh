@@ -77,8 +77,8 @@ cat > "$tmp/a/edges.yaml" <<'EOF'
 edges:
   - kind: relates_to
     id: F-941
-    source: "index.md:2"
-    evidence: "shares the sample-lineage mechanism (body line 2)"
+    source: "index.md:17"
+    evidence: "shares the sample-lineage mechanism (the body statement)"
     written_by: review-archive
     judge: {value: pass, rationale: "review confirmed the shared mechanism"}
 EOF
@@ -90,7 +90,7 @@ fi
 [ -d "$tmp/a/done/F-940-finisher" ] && ok "feature mv'd to done/ after clean gate" || notok "feature mv'd to done/ after clean gate"
 grep -q 'written_by: review-archive' "$tmp/a/done/F-940-finisher/index.md" && \
   grep -q 'judge: {value: pass' "$tmp/a/done/F-940-finisher/index.md" && \
-  grep -q 'source: "index.md:2"' "$tmp/a/done/F-940-finisher/index.md" && \
+  grep -q 'source: "index.md:17"' "$tmp/a/done/F-940-finisher/index.md" && \
   grep -q 'evidence: "shares the sample-lineage mechanism' "$tmp/a/done/F-940-finisher/index.md" && \
   ok "written edge carries full provenance (source/evidence/written_by/judge)" || \
   notok "written edge carries full provenance (source/evidence/written_by/judge)"

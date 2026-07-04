@@ -152,5 +152,10 @@ for d in defects:
 for s in stale:
     print(f"[page-check] STALE: {page_id} {s}")
 verdict = "DEFECT" if defects else ("stale" if stale else "fresh")
+stored = data.get("state") if isinstance(data, dict) else None
+if stored and verdict != "DEFECT" and stored != verdict:
+    # the frontmatter label is a navigation hint; when it disagrees with the
+    # computed verdict, say so instead of silently ignoring a human's edit
+    print(f"[page-check] NOTE: {page_id} frontmatter state '{stored}' != computed '{verdict}'")
 print(f"[page-check] {page_id}: {verdict}")
 sys.exit(1 if defects else 0)

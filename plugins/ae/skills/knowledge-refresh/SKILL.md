@@ -102,11 +102,12 @@ human` is the only exemption: a human ruling is never machine-re-judged (and
 ### 4. Whole-tree gate (orphan-filtered)
 
 `plugins/ae/bin/graph-lint.py --root .ae/features --log-validations` — the exit code will be non-zero
-whenever orphans exist; that is BY DESIGN, so filter by DEFECT class:
+whenever orphans exist; that is BY DESIGN — the two output classes are distinct
+prefixes:
 
-- Any **non-orphan** DEFECT line (dangling target, bad source, enum, duplicate id,
-  unparseable) → a real failure: fix (usually by removing the offending edge) and re-run.
-- **`orphan node` lines** → the observation report, NOT failures. **Never invent edges for orphans** — an orphan with no grounded relationship stays an orphan. List them in the report; they are the honest shape of the corpus.
+- Any **`[graph-lint] DEFECT:`** line (dangling target, bad source, enum, duplicate
+  id, unparseable) → a real failure: fix (usually by removing the offending edge) and re-run.
+- **`[graph-lint] ORPHAN:`** lines → the observation report, NOT failures. **Never invent edges for orphans** — an orphan with no grounded relationship stays an orphan. List them in the report; they are the honest shape of the corpus.
 
 This step is also where a MISFIRING write point surfaces: edges that should have been
 written automatically but weren't show up here as zero-edge nodes or fresh candidates
