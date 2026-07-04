@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""wiki-refresh.py — brownfield knowledge-graph bootstrap, deterministic half (F-071).
+"""graph-refresh.py — brownfield knowledge-graph bootstrap, deterministic half (F-071).
 
 Three subcommands (the LLM half lives in the /ae:wiki-bootstrap skill):
   backfill [--dry-run]   legacy origin_bl → `origin` edges; depends_on →
@@ -11,7 +11,7 @@ Three subcommands (the LLM half lives in the /ae:wiki-bootstrap skill):
   add-edges <edges.json> the ONLY write path for judged semantic edges. Rows:
                          {from, kind, target, line, evidence, rationale}.
                          Per-node: newline-safe append + line-number compensation
-                         + post-write source-line ANCHOR check + scoped wiki-lint;
+                         + post-write source-line ANCHOR check + scoped graph-lint;
                          any failure REVERTS that node and exits non-zero.
 
 Landmines this script exists to encode (all hit in the 2026-07-04 live run):
@@ -33,10 +33,10 @@ import yaml
 
 STATE_DIRS = ("active", "done", "abandoned", "paused")
 HERE = os.path.dirname(os.path.realpath(__file__))
-LINT = os.path.join(HERE, "wiki-lint.py")
+LINT = os.path.join(HERE, "graph-lint.py")
 
 if __name__ != "__main__":
-    raise SystemExit("wiki-refresh.py is subprocess-only; do not import")
+    raise SystemExit("graph-refresh.py is subprocess-only; do not import")
 
 
 def nodes(root):
@@ -118,7 +118,7 @@ def append_edges(idx, edges):
 
 
 def resolvers(root):
-    # F-target resolution mirrors wiki-lint exactly: TOP-LEVEL state-dir entries
+    # F-target resolution mirrors graph-lint exactly: TOP-LEVEL state-dir entries
     # WITH index.md (a bare/nested dir must not mask a dangling target)
     fids = set()
     for state in STATE_DIRS:
@@ -224,13 +224,13 @@ def cmd_backfill(args):
         if not (okk and anchor_ok):
             open(idx, "w", encoding="utf-8").write(before)
             failures += 1
-            print(f"[wiki-refresh] REVERTED {fid}: "
+            print(f"[graph-refresh] REVERTED {fid}: "
                   f"{'lint failure: ' + out if not okk else 'source anchor missed'}")
             continue
         wrote += len(new)
     for s in skipped:
-        print(f"[wiki-refresh] {s}")
-    print(f"[wiki-refresh] backfill: {wrote} edge(s) written, "
+        print(f"[graph-refresh] {s}")
+    print(f"[graph-refresh] backfill: {wrote} edge(s) written, "
           f"{len(skipped)} skipped, {failures} reverted")
     return 1 if failures else 0
 
@@ -257,7 +257,7 @@ def cmd_add_edges(args):
         rows = json.load(open(args.edges_json, encoding="utf-8"))
         assert isinstance(rows, list)
     except Exception as e:
-        print(f"[wiki-refresh] usage error: cannot read {args.edges_json}: {e}", file=sys.stderr)
+        print(f"[graph-refresh] usage error: cannot read {args.edges_json}: {e}", file=sys.stderr)
         return 2
     by_from = {}
     for r in rows:
@@ -267,7 +267,7 @@ def cmd_add_edges(args):
     failures = 0
     for fid, items in by_from.items():
         if fid not in dirs:
-            print(f"[wiki-refresh] REVERTED {fid}: no such node", file=sys.stderr)
+            print(f"[graph-refresh] REVERTED {fid}: no such node", file=sys.stderr)
             failures += 1
             continue
         node_dir, idx = dirs[fid]
@@ -277,7 +277,7 @@ def cmd_add_edges(args):
         edges = []
         for r in items:
             if (r["kind"], str(r["target"])) in have:
-                print(f"[wiki-refresh] {fid}: {r['kind']} -> {r['target']} already present — skipped (idempotent)")
+                print(f"[graph-refresh] {fid}: {r['kind']} -> {r['target']} already present — skipped (idempotent)")
                 continue
             e = {"kind": r["kind"], "id": str(r["target"]),
                  "evidence": r.get("evidence", ""),
@@ -311,10 +311,10 @@ def cmd_add_edges(args):
             open(idx, "w", encoding="utf-8").write(before)
             failures += 1
             targets = ", ".join(e["id"] for e in edges)
-            print(f"[wiki-refresh] REVERTED {fid} ({targets}): "
+            print(f"[graph-refresh] REVERTED {fid} ({targets}): "
                   f"{'lint: ' + out if not okk else 'source anchor missed'}")
             continue
-        print(f"[wiki-refresh] {fid}: wrote {len(edges)} judged edge(s)")
+        print(f"[graph-refresh] {fid}: wrote {len(edges)} judged edge(s)")
     return 1 if failures else 0
 
 
@@ -332,7 +332,7 @@ try:
 except SystemExit:
     sys.exit(2)
 if not os.path.isdir(args.root):
-    print(f"[wiki-refresh] usage error: no such root: {args.root}", file=sys.stderr)
+    print(f"[graph-refresh] usage error: no such root: {args.root}", file=sys.stderr)
     sys.exit(2)
 sys.exit({"backfill": cmd_backfill, "candidates": cmd_candidates,
           "add-edges": cmd_add_edges}[args.cmd](args))

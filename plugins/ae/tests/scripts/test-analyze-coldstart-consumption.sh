@@ -4,7 +4,7 @@
 #
 # HONESTY SCOPE (plan Design note 1/3): this tests the DETERMINISTIC skeleton of the
 # cold-start locate-step — grep isolation + node-read + the 1-hop edge traversal via
-# wiki-neighbors.py (the ONE real implementation the analyze prose also invokes) —
+# graph-neighbors.py (the ONE real implementation the analyze prose also invokes) —
 # NOT the LLM theme-pick (that is AC5b's judge rubric). No live skill invocation
 # (no headless harness exists in-repo); the prose-is-wired half is the structural
 # grep in part 2.
@@ -12,7 +12,7 @@ set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-NEIGH="$REPO/plugins/ae/scripts/wiki-neighbors.py"
+NEIGH="$REPO/plugins/ae/scripts/graph-neighbors.py"
 SKILL="$REPO/plugins/ae/skills/analyze/SKILL.md"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -114,12 +114,12 @@ python3 "$NEIGH" --root "$tmp/no-such" F-950 >/dev/null 2>&1
 # the Prior-context section must now be the graph locate-step, not memory_search
 section=$(sed -n '/^### Prior context/,/^### Synthesize/p' "$SKILL")
 case "$section" in
-  *".ae/wiki"*) ok "locate-step reads the .ae/wiki layered index";;
-  *) notok "locate-step reads the .ae/wiki layered index";;
+  *".ae/graph"*) ok "locate-step reads the .ae/graph layered index";;
+  *) notok "locate-step reads the .ae/graph layered index";;
 esac
 case "$section" in
-  *wiki-neighbors.py*) ok "locate-step invokes wiki-neighbors.py for the 1-hop traversal";;
-  *) notok "locate-step invokes wiki-neighbors.py for the 1-hop traversal";;
+  *graph-neighbors.py*) ok "locate-step invokes graph-neighbors.py for the 1-hop traversal";;
+  *) notok "locate-step invokes graph-neighbors.py for the 1-hop traversal";;
 esac
 case "$section" in
   *memory_search*) notok "memory_search call replaced in the Prior-context section";;

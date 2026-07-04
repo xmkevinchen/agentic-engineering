@@ -1,12 +1,12 @@
 ---
-name: ae:wiki-refresh
+name: ae:graph-refresh
 description: Manually re-sync the knowledge graph with the corpus — backfill missed legacy fields, judge new grounded relationships, lint-gate every write. Idempotent; run whenever the graph may lag reality.
 argument-hint: "[--dry-run]"
 user-invocable: true
 effort: medium
 ---
 
-# /ae:wiki-refresh — Re-sync the Knowledge Graph with the Corpus
+# /ae:graph-refresh — Re-sync the Knowledge Graph with the Corpus
 
 The graph's automatic write points are narrow by design (edges are written when a
 feature archives). Reality drifts past them: features ship while a write point is
@@ -27,11 +27,11 @@ all → report `nothing to refresh` and stop, the only empty case).
 
 ### 1. Mechanical backfill (deterministic, incremental)
 
-1. `plugins/ae/bin/wiki-refresh.py backfill --dry-run` — show what would be written
+1. `plugins/ae/bin/graph-refresh.py backfill --dry-run` — show what would be written
    (only MISSING edges: already-converted fields are skipped by (kind,id)) and what
    is unresolvable, BEFORE mutating anything.
 2. If `$ARGUMENTS` contains `--dry-run` → STOP here (preview mode).
-3. `plugins/ae/bin/wiki-refresh.py backfill` — converts any legacy `origin_bl` /
+3. `plugins/ae/bin/graph-refresh.py backfill` — converts any legacy `origin_bl` /
    `depends_on` fields that still lack their `origin` / `relates_to` edges. The
    script owns ALL YAML surgery (newline-safe append, post-write source-line
    anchoring, per-node scoped lint with revert-on-failure). Unresolvable targets are
@@ -39,7 +39,7 @@ all → report `nothing to refresh` and stop, the only empty case).
 
 ### 2. Candidate scan (deterministic)
 
-`plugins/ae/bin/wiki-refresh.py candidates` — every node-body `F-NNN` mention that
+`plugins/ae/bin/graph-refresh.py candidates` — every node-body `F-NNN` mention that
 still lacks an edge, as `from  target  line  snippet` rows. These are PROPOSALS, not
 edges. On a repeat refresh this list is naturally short — only mentions that appeared
 (or were previously rejected) since the last run.
@@ -63,7 +63,7 @@ Judged-strong rows go into a JSON list ({from, kind, target, line, evidence,
 rationale}) — NEVER hand-edit index.md YAML (hand-rolled frontmatter surgery is how
 files get corrupted; the script owns all writes). Feed it to:
 
-`plugins/ae/bin/wiki-refresh.py add-edges <edges.json>` — the only write path:
+`plugins/ae/bin/graph-refresh.py add-edges <edges.json>` — the only write path:
 line-number compensation, post-write anchor check, (kind,id) idempotence, per-node
 scoped lint, revert-on-failure. Reverted rows come back in the output — re-judge or
 drop them; a reverted dangling target usually means the mentioned feature has no dir
@@ -71,7 +71,7 @@ drop them; a reverted dangling target usually means the mentioned feature has no
 
 ### 4. Whole-tree gate (orphan-filtered)
 
-`plugins/ae/bin/wiki-lint.py --root .ae/features` — the exit code will be non-zero
+`plugins/ae/bin/graph-lint.py --root .ae/features` — the exit code will be non-zero
 whenever orphans exist; that is BY DESIGN, so filter by DEFECT class:
 
 - Any **non-orphan** DEFECT line (dangling target, bad source, enum, duplicate id,
@@ -85,8 +85,8 @@ itself can be fixed.
 
 ### 5. Index + traversal check
 
-`plugins/ae/bin/wiki-index-gen.py` (regenerate the layered index), then spot-check the
-graph is really traversable: `plugins/ae/bin/wiki-neighbors.py <a-well-connected-id>`
+`plugins/ae/bin/graph-index-gen.py` (regenerate the layered index), then spot-check the
+graph is really traversable: `plugins/ae/bin/graph-neighbors.py <a-well-connected-id>`
 and `--hops 2` on one lineage — non-empty, sensible output.
 
 ### 6. Report (the user is the refresh's human gate)

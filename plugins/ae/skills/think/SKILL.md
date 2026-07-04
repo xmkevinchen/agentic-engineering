@@ -50,9 +50,9 @@ Same lifecycle applies to Investigation and Synthesis phase tasks — `TaskUpdat
 
 Run this step after Frame (Step 1) and before spawning the team (Step 2). Query = the $ARGUMENTS problem statement. (Compact locate-step; canonical long form incl. grep-fallback: analyze/SKILL.md § Prior context.)
 
-1. Regenerate + read the layered index: run `plugins/ae/bin/wiki-index-gen.py` (cheap, byte-idempotent), read `.ae/wiki/index.md`. Generator fails / no feature dirs → emit `Prior context: unavailable (no knowledge index)` and continue to Step 2.
+1. Regenerate + read the layered index: run `plugins/ae/bin/graph-index-gen.py` (cheap, byte-idempotent), read `.ae/graph/index.md`. Generator fails / no feature dirs → emit `Prior context: unavailable (no knowledge index)` and continue to Step 2.
 2. **[LLM]** Theme-pick: semantically read Tier A + the picked themes' TL;DRs against the query; read the survivor node pages (keep the set small — ≤10; thin/empty results → fall back to the canonical long form incl. grep-fallback in analyze/SKILL.md).
-3. **[deterministic]** Traverse the survivors' edges ONE hop in a single batched `plugins/ae/bin/wiki-neighbors.py <survivor-id ...>` call; read newly-reached feature targets' pages (BL/disc targets cite from the edge `evidence` alone; a survivor with no edges yields no lines — normal outcome, not an error; the ≤10 read cap covers the folded targets too).
+3. **[deterministic]** Traverse the survivors' edges ONE hop in a single batched `plugins/ae/bin/graph-neighbors.py <survivor-id ...>` call; read newly-reached feature targets' pages (BL/disc targets cite from the edge `evidence` alone; a survivor with no edges yields no lines — normal outcome, not an error; the ≤10 read cap covers the folded targets too).
 4. Present under `## Prior Art from Project Knowledge Base` with provenance per item: `id`, `title`, how located (`theme-pick` / `edge from <id>`), edge `evidence` when edge-located.
 5. Include prior art in the topic brief for agents in Step 2 — treat as background context, does not constrain analysis
 

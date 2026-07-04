@@ -131,7 +131,7 @@ if [ -d "$FEATURES_DIR" ]; then
 
       # edges enum validation (F-069): edges is a YAML list of provenance objects
       # {kind, id, source, evidence, written_by, judge}. Line-based (not full YAML
-      # parse) — sufficient to enforce the two enums; wiki-lint.sh does deeper checks.
+      # parse) — sufficient to enforce the two enums; graph-lint.sh does deeper checks.
       fm=$(extract_frontmatter "$index_file")
       bad_kinds=$(printf '%s\n' "$fm" | grep -E '(^|[[:space:]])kind:' | sed -E 's/.*kind:[[:space:]]*//; s/[[:space:]]*$//' | grep -vE '^(origin|supersedes|superseded_by|relates_to|conflicts_with)$' || true)
       if [ -n "$bad_kinds" ]; then

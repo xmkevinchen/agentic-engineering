@@ -1,5 +1,5 @@
 #!/bin/sh
-# AC2 (F-069 Step 2): wiki-lint.py catches planted machine-verifiable edge defects,
+# AC2 (F-069 Step 2): graph-lint.py catches planted machine-verifiable edge defects,
 # passes clean AND structurally-valid-but-semantically-dubious trees (form, not meaning).
 # sh-tap output (parser: sh-tap.v1). Fixture trees are built at runtime in a tmpdir
 # (collect-ac-evidence.py pattern); the two enum trees reuse Step 1's static fixtures.
@@ -7,8 +7,8 @@ set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-LINT="$REPO/plugins/ae/scripts/wiki-lint.py"
-FIX="$HERE/../fixtures/wiki"
+LINT="$REPO/plugins/ae/scripts/graph-lint.py"
+FIX="$HERE/../fixtures/graph"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -141,7 +141,7 @@ edges:
 ---
 
 # Resolves, in-enum, source resolves — meaning is obviously bogus.
-# wiki-lint checks FORM not MEANING → must exit 0.
+# graph-lint checks FORM not MEANING → must exit 0.
 EOF
 cat > "$tmp/lint-dubious/done/F-907-unrelated/index.md" <<'EOF'
 ---
@@ -311,7 +311,7 @@ else
   notok "semantically-dubious but well-formed edge passes (form, not meaning)"
 fi
 
-# --- enum defects: reuse Step 1 static fixtures — wiki-lint also enforces enums ---
+# --- enum defects: reuse Step 1 static fixtures — graph-lint also enforces enums ---
 if python3 "$LINT" --root "$FIX/invalid-kind" >/dev/null 2>&1; then
   notok "out-of-enum kind fails lint"
 else

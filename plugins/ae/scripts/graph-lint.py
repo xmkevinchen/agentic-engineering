@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""wiki-lint.py — machine-verifiable lint over knowledge-graph edges (F-069 Step 2).
+"""graph-lint.py — machine-verifiable lint over knowledge-graph edges (F-069 Step 2).
 
 Checks the MACHINE half of edge trust (conclusion #4: machines measure, LLM judges):
   - frontmatter parses; `edges:` is a list of mappings
@@ -12,7 +12,7 @@ Checks the MACHINE half of edge trust (conclusion #4: machines measure, LLM judg
 NEVER judges semantic correctness — a resolving, in-enum, obviously-wrong
 relationship passes (AC2 fourth fixture); that half belongs to the review judge.
 
-Usage: wiki-lint.py [--root DIR] [NODE_DIR ...]
+Usage: graph-lint.py [--root DIR] [NODE_DIR ...]
   --root     features root (default: $FEATURES_ROOT or .ae/features)
   NODE_DIR   scoped mode: lint only these nodes' edges (the /ae:review archive
              gate's shape); skips whole-graph checks (orphan, duplicate id)
@@ -33,7 +33,7 @@ STATE_DIRS = ("active", "done", "abandoned", "paused")
 ID_RE = re.compile(r"^(F-\d+|BL-\d+|disc-\d+)$")
 
 if __name__ != "__main__":
-    raise SystemExit("wiki-lint.py is subprocess-only; do not import")
+    raise SystemExit("graph-lint.py is subprocess-only; do not import")
 
 
 def frontmatter(path):
@@ -44,7 +44,7 @@ def frontmatter(path):
     except OSError as e:
         return None, f"unreadable: {e}"
     # \n? — a closing --- with no trailing newline must parse the same way
-    # wiki-index-gen accepts it (review P1: regex mismatch falsely blocked archives)
+    # graph-index-gen accepts it (review P1: regex mismatch falsely blocked archives)
     m = re.match(r"^---\n(.*?)\n---\n?", text, re.S)
     if not m:
         return None, "no frontmatter block"
@@ -204,7 +204,7 @@ except SystemExit:
 
 root = os.path.realpath(args.root)
 if not os.path.isdir(root):
-    print(f"[wiki-lint] usage error: no such root: {args.root}", file=sys.stderr)
+    print(f"[graph-lint] usage error: no such root: {args.root}", file=sys.stderr)
     sys.exit(2)
 
 resolvers = build_resolvers(root)
@@ -214,7 +214,7 @@ if args.nodes:  # scoped mode — the archive gate's shape; no whole-graph check
     for node_dir in args.nodes:
         index = os.path.join(node_dir, "index.md")
         if not os.path.isfile(index):
-            print(f"[wiki-lint] usage error: no index.md in {node_dir}", file=sys.stderr)
+            print(f"[graph-lint] usage error: no index.md in {node_dir}", file=sys.stderr)
             sys.exit(2)
         lint_node(node_dir, index, resolvers, defects)
     scope = f"scoped ({len(args.nodes)} node(s))"
@@ -239,6 +239,6 @@ else:  # whole-tree mode
     scope = f"whole-tree ({len(nodes)} node(s))"
 
 for d in defects:
-    print(f"[wiki-lint] DEFECT: {d}")
-print(f"[wiki-lint] {scope}: {len(defects)} defect(s)")
+    print(f"[graph-lint] DEFECT: {d}")
+print(f"[graph-lint] {scope}: {len(defects)} defect(s)")
 sys.exit(1 if defects else 0)

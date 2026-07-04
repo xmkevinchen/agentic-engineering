@@ -2,7 +2,7 @@
 # AC2 (F-070 Step 1): 5 read sites wired to the graph, none half-swapped.
 # sh-tap output (parser: sh-tap.v1). Structural wiring grep (F-067 lesson):
 # each Prior-Context section must carry ALL THREE mechanism tokens
-# (.ae/wiki + wiki-index-gen.py + wiki-neighbors.py) — an index read without
+# (.ae/graph + graph-index-gen.py + graph-neighbors.py) — an index read without
 # regen/traversal is a half-swap and must fail (codex plan-review).
 set -u
 
@@ -27,9 +27,9 @@ for skill in discuss think plan review plugin-stats; do
     continue
   fi
   ok "$skill: Prior-Context section exists"
-  case "$sec" in *".ae/wiki"*) ok "$skill: reads the layered index (.ae/wiki)";; *) notok "$skill: reads the layered index (.ae/wiki)";; esac
-  case "$sec" in *wiki-index-gen.py*) ok "$skill: regenerates the index (wiki-index-gen.py)";; *) notok "$skill: regenerates the index (wiki-index-gen.py)";; esac
-  case "$sec" in *wiki-neighbors.py*) ok "$skill: traverses edges (wiki-neighbors.py)";; *) notok "$skill: traverses edges (wiki-neighbors.py)";; esac
+  case "$sec" in *".ae/graph"*) ok "$skill: reads the layered index (.ae/graph)";; *) notok "$skill: reads the layered index (.ae/graph)";; esac
+  case "$sec" in *graph-index-gen.py*) ok "$skill: regenerates the index (graph-index-gen.py)";; *) notok "$skill: regenerates the index (graph-index-gen.py)";; esac
+  case "$sec" in *graph-neighbors.py*) ok "$skill: traverses edges (graph-neighbors.py)";; *) notok "$skill: traverses edges (graph-neighbors.py)";; esac
   case "$sec" in *memory_search*) notok "$skill: no memory_search remains in the section";; *) ok "$skill: no memory_search remains in the section";; esac
   case "$sec" in *"## Prior Art from Project Knowledge Base"*) ok "$skill: render heading preserved";; *) notok "$skill: render heading preserved";; esac
 done
@@ -56,7 +56,7 @@ esac
 # analyze: canonical long form untouched and still wired
 sec=$(section "$SKILLS/analyze/SKILL.md")
 case "$sec" in
-  *wiki-neighbors.py*) ok "analyze canonical locate-step still wired";;
+  *graph-neighbors.py*) ok "analyze canonical locate-step still wired";;
   *) notok "analyze canonical locate-step still wired";;
 esac
 

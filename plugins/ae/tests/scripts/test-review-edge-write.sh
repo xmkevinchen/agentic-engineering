@@ -3,17 +3,17 @@
 # sh-tap output (parser: sh-tap.v1).
 #
 # HONESTY SCOPE (plan Design note 3): part 1 is a DETERMINISTIC LOGIC SIM of the
-# archive trigger's control flow (loop-skip → edge-write → wiki-lint gate → mv);
+# archive trigger's control flow (loop-skip → edge-write → graph-lint gate → mv);
 # it does NOT invoke the live /ae:review skill (no headless-skill harness exists
 # in-repo). Part 2 is the companion STRUCTURAL WIRING GREP (F-067 lesson):
-# asserts review/SKILL.md prose actually invokes wiki-lint.py + the edge-write
+# asserts review/SKILL.md prose actually invokes graph-lint.py + the edge-write
 # inside the archive-trigger region, not near Check 7. The LLM-behavioral half
 # (are the edges REAL siblings?) is AC4b's judge rubric, not this test.
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-LINT="$REPO/plugins/ae/scripts/wiki-lint.py"
+LINT="$REPO/plugins/ae/scripts/graph-lint.py"
 SKILL="$REPO/plugins/ae/skills/review/SKILL.md"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
@@ -51,7 +51,7 @@ EOF
 
 # Deterministic logic sim of the Phase 1.5 control flow (review/SKILL.md):
 # per-iteration loop-mode SKIPS the whole trigger; otherwise write edges (the
-# test plants what the LLM would write), run the scoped wiki-lint gate, and
+# test plants what the LLM would write), run the scoped graph-lint gate, and
 # only on exit 0 execute the Phase 2 mv.
 sim_archive(){ # $1=root $2=loop_mode $3=edge_yaml_file_or_empty
   root=$1; loop_mode=$2; edges=$3
@@ -147,8 +147,8 @@ fi
 # ---------- part 2: wiring grep (F-067 lesson — prose must invoke the gate) ----------
 region=$(sed -n '/^### Feature-level archive trigger/,/^#### Phase 2/p' "$SKILL")
 case "$region" in
-  *wiki-lint.py*) ok "archive-trigger region invokes wiki-lint.py";;
-  *) notok "archive-trigger region invokes wiki-lint.py";;
+  *graph-lint.py*) ok "archive-trigger region invokes graph-lint.py";;
+  *) notok "archive-trigger region invokes graph-lint.py";;
 esac
 case "$region" in
   *relates_to*) ok "archive-trigger region contains the relates_to edge-write";;
@@ -174,8 +174,8 @@ else
   notok "Output rule carries the archive-retry exception"
 fi
 case "$region" in
-  *wiki-index-gen.py*) ok "edge-write regenerates the layered index (wiki-index-gen.py wired)";;
-  *) notok "edge-write regenerates the layered index (wiki-index-gen.py wired)";;
+  *graph-index-gen.py*) ok "edge-write regenerates the layered index (graph-index-gen.py wired)";;
+  *) notok "edge-write regenerates the layered index (graph-index-gen.py wired)";;
 esac
 # codex idempotence rule: re-append must dedupe by (kind, id)
 case "$region" in
@@ -188,16 +188,16 @@ case "$region" in
   *SKIP*) ok "edge-write shares the archive's loop-iteration SKIP condition";;
   *) notok "edge-write shares the archive's loop-iteration SKIP condition";;
 esac
-# NOT near Check 7: the 60 lines after '### Check 7' must not invoke wiki-lint.py
+# NOT near Check 7: the 60 lines after '### Check 7' must not invoke graph-lint.py
 check7=$(grep -n '^### Check 7' "$SKILL" | head -1 | cut -d: -f1)
 if [ -n "$check7" ]; then
   near=$(sed -n "${check7},$((check7 + 60))p" "$SKILL")
   case "$near" in
-    *wiki-lint.py*) notok "wiki-lint.py NOT invoked near Check 7";;
-    *) ok "wiki-lint.py NOT invoked near Check 7";;
+    *graph-lint.py*) notok "graph-lint.py NOT invoked near Check 7";;
+    *) ok "graph-lint.py NOT invoked near Check 7";;
   esac
 else
-  ok "wiki-lint.py NOT invoked near Check 7"
+  ok "graph-lint.py NOT invoked near Check 7"
 fi
 
 echo "1..$((pass + fail))"

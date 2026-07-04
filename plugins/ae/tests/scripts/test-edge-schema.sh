@@ -6,7 +6,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 VALIDATE="$REPO/plugins/ae/scripts/validate-feature-frontmatter.sh"
-FIX="$HERE/../fixtures/wiki"
+FIX="$HERE/../fixtures/graph"
 
 pass=0; fail=0
 ok(){ echo "ok: $1"; pass=$((pass+1)); }

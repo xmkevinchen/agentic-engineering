@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""wiki-neighbors.py — edge-traversal helper for the knowledge graph (F-069 Step 5).
+"""graph-neighbors.py — edge-traversal helper for the knowledge graph (F-069 Step 5).
 
 The ONE real traversal implementation shared by the analyze cold-start
 locate-step (SKILL.md prose invokes it) and the AC5a/AC6 tests — removing the
 sim-vs-real gap (plan Design note 4). Deterministic: reads `edges:` frontmatter
 lists only; which neighbor is USEFUL stays LLM judgment at the call site.
 
-Usage: wiki-neighbors.py [--root DIR] [--hops N] <start-id> [<start-id> ...]
+Usage: graph-neighbors.py [--root DIR] [--hops N] <start-id> [<start-id> ...]
 Output: one line per reached edge: `<target-id>\t<kind>\t<from-id>\t<evidence>`
 Exit: 0 = ok (zero lines is a valid result) | 2 = usage (bad root / unknown start id).
 """
@@ -20,7 +20,7 @@ import yaml
 STATE_DIRS = ("active", "done", "abandoned", "paused")
 
 if __name__ != "__main__":
-    raise SystemExit("wiki-neighbors.py is subprocess-only; do not import")
+    raise SystemExit("graph-neighbors.py is subprocess-only; do not import")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
@@ -33,7 +33,7 @@ except SystemExit:
 
 root = os.path.realpath(args.root)
 if not os.path.isdir(root):
-    print(f"[wiki-neighbors] usage error: no such root: {args.root}", file=sys.stderr)
+    print(f"[graph-neighbors] usage error: no such root: {args.root}", file=sys.stderr)
     sys.exit(2)
 
 edges_by_id = {}  # node id → list of edge dicts
@@ -47,18 +47,18 @@ for state in STATE_DIRS:
             continue
         try:
             with open(index, encoding="utf-8") as f:
-                # \n? matches wiki-lint/wiki-index-gen (review P1: regex parity)
+                # \n? matches graph-lint/graph-index-gen (review P1: regex parity)
                 m = re.match(r"^---\n(.*?)\n---\n?", f.read(), re.S)
             data = yaml.safe_load(m.group(1)) if m else None
         except (OSError, yaml.YAMLError):
-            continue  # unparseable nodes are wiki-lint's job, not traversal's
+            continue  # unparseable nodes are graph-lint's job, not traversal's
         if isinstance(data, dict) and data.get("id"):
             edges = data.get("edges")
             edges_by_id[str(data["id"])] = edges if isinstance(edges, list) else []
 
 unknown = [s for s in args.starts if s not in edges_by_id]
 if unknown:
-    print(f"[wiki-neighbors] usage error: unknown (or unparseable — run wiki-lint.py) start id(s): {', '.join(unknown)}", file=sys.stderr)
+    print(f"[graph-neighbors] usage error: unknown (or unparseable — run graph-lint.py) start id(s): {', '.join(unknown)}", file=sys.stderr)
     sys.exit(2)
 
 frontier, seen = list(args.starts), set(args.starts)

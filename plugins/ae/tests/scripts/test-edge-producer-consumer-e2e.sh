@@ -5,15 +5,15 @@
 # The PRODUCER is the same frontmatter-append mechanism the Step-4 archive
 # logic-sim exercises (and the Step-6 seed used on the real corpus), emitting
 # the identical on-disk edge shape; the CONSUMER is Step 5's actual traversal
-# implementation (wiki-neighbors.py — the one shared implementation, not a
+# implementation (graph-neighbors.py — the one shared implementation, not a
 # reimplementation). The writer's actual output frontmatter IS the reader's
 # actual input — closing the two-independently-hand-built-fixtures seam.
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-LINT="$REPO/plugins/ae/scripts/wiki-lint.py"
-NEIGH="$REPO/plugins/ae/scripts/wiki-neighbors.py"
+LINT="$REPO/plugins/ae/scripts/graph-lint.py"
+NEIGH="$REPO/plugins/ae/scripts/graph-neighbors.py"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -69,9 +69,9 @@ awk -v ef="$tmp/edge.yaml" 'BEGIN{c=0} /^---$/{c++; if(c==2){while((getline l < 
 
 # the produced edge must clear the same trust gate the archive runs
 if python3 "$LINT" --root "$tmp" "$tmp/done/F-960-producer" >/dev/null 2>&1; then
-  ok "produced edge clears the wiki-lint trust gate"
+  ok "produced edge clears the graph-lint trust gate"
 else
-  notok "produced edge clears the wiki-lint trust gate"
+  notok "produced edge clears the graph-lint trust gate"
 fi
 
 # --- CONSUMER: Step 5's actual traversal over the writer's actual output ---
