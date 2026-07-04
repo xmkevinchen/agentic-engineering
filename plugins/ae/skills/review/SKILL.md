@@ -691,6 +691,25 @@ Try in order. The first match resolves; on no match emit the manual-archive mess
    Log: `[ARCHIVE] Manual fallback: no feature linkage; user-action recommended (N candidates listed).`
    STOP — do not run Phase 2.
 
+#### Phase 1.5 — Edge-write + trust gate (F-069)
+
+Runs ONLY between a resolved Phase 1 and Phase 2 — i.e. under the trigger's own "When" rule above (per-iteration loop-mode reviews SKIP the whole trigger, so they never write edges; only standalone `/ae:review` or the loop's terminal `exit_pass` reaches here — same firing condition as the archive itself, no duplicate/premature edges).
+
+1. **Edge-write (LLM judgment)**: regenerate the layered index first — run `plugins/ae/bin/wiki-index-gen.py` unconditionally (cheap, byte-idempotent; no staleness heuristic needed) — then read `.ae/wiki/index.md` + its `themes/*.md` and identify artifacts genuinely related to the finishing feature. For each true relationship, append a `relates_to` edge to the finishing feature's EXISTING `index.md` `edges:` list — create the key only if absent, NEVER emit a second top-level `edges:` block (duplicate YAML keys silently drop edges). **Idempotent by target**: skip any `(kind, id)` pair already present (a re-run after a blocked archive must first fix/remove the edges the prior lint flagged, then re-append only what's missing — no duplicates). Full provenance per edge:
+   ```yaml
+   edges:
+     - kind: relates_to
+       id: <F-NNN / BL-NNN / disc-NNN>
+       source: "<artifact>:<line>"   # a path INSIDE the finishing feature's own dir (e.g. plan.md:88 — wiki-lint rejects escapes), at the line grounding the relationship
+       evidence: "<one-line why the relationship holds>"
+       written_by: review-archive
+       judge: {value: pass, rationale: "<this review's semantic check of the evidence>"}
+   ```
+   The `judge` field records this review's OWN semantic verdict that the evidence supports the relationship — the half wiki-lint cannot check (AC4b's rubric judges this). **Only write edges that pass that semantic check** (`judge.value: pass`); a relationship that fails it is simply not written — never emit a `judge: {value: fail}` edge. Zero genuine siblings → write zero edges (legitimate outcome, not a failure).
+2. **Trust gate (deterministic)**: run `plugins/ae/bin/wiki-lint.py --root .ae/features <feature-dir>` (scoped mode — per-node edge checks, no whole-graph checks). Exit 0 → proceed to Phase 2. Non-zero → **terminal-block the archive** (mirror the Manual-AC guard's terminal shape): report pass-but-pending — verdict stays `pass`, feature stays in its current state dir, list each `[wiki-lint] DEFECT:` line, print the fix (correct/remove the offending edges in `<feature-dir>/index.md`, then re-run `/ae:review`). Do NOT flip `verdict:`; do NOT run Phase 2.
+
+**Mengdie dual-write window (F-069 Plan 1)**: the Knowledge Capture step above is deliberately untouched — mengdie ingest and the edge-write both fire during Plan 1; mengdie removal is Plan 2.
+
 #### Phase 2 — Execute archive (only when Phase 1 resolved a single feature dir)
 
 1. **Move the feature dir**: `mv .ae/features/<source-state>/F-NNN-<slug>/ .ae/features/done/F-NNN-<slug>/`, where `<source-state>` is the state segment of the plan path resolved in Phase 1 — normally `active`, or `paused` when reviewing a paused feature that passed (F-032 D7: a reviewed-and-passed paused feature is complete → goes to `done/`, not back to paused). Plain `mv` — `.ae/` is gitignored. Atomic on the same filesystem.
