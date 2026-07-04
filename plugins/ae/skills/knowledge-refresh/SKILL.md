@@ -128,7 +128,10 @@ gets a page (the working tree answers that live via grep). Flow:
    mentioning the entity, (c) `git log --follow` / blame for the entity's files —
    commit messages ground "why" claims in recorded intent instead of invention.
 3. **Content contract**: every declarative sentence carries an anchor (its `source`
-   cited in the body) OR an explicit unanchored-judgment marker (e.g. *"judgment,
+   cited in the body) OR an explicit unanchored-judgment marker. **Prefer anchoring
+   CODE or schema-stable lines over skill/doc prose — prose lines get edited far more
+   often and each edit flips the page stale** (measured: four prose-anchor stales in
+   the layer's first day) (e.g. *"judgment,
    unanchored:"*). "Why" claims cite commits where history grounds them. A page
    holds what the sources DON'T say — responsibilities, boundaries, why — never
    restated content.
