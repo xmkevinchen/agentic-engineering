@@ -1,0 +1,1 @@
+../scripts/wiki-index-gen.py
