@@ -170,7 +170,7 @@ These ACs were flagged `fixture: project` — reusable harnesses worth 固化 in
 
 If none → `No fixture: project ACs in this window — nothing to promote yet.`
 
-**Storage substrate DEFERRED** (discussion 001 Decision 5, updated by F-070): this section *surfaces* promotion candidates only — it does NOT auto-ingest a harness artifact anywhere. The storage substrate (a shared-fixtures location; the historical Mengdie option was retired by F-070) is deferred to a follow-up BL (BL-140); do not ship a vague "extract harness artifact" criterion here. Promotion stays a human decision, consistent with this skill's read-only / no-auto-ingest principle.
+**Storage substrate DEFERRED** (discussion 001 Decision 5, updated by F-070): this section *surfaces* promotion candidates only — it does NOT auto-ingest a harness artifact anywhere. The storage substrate (a shared-fixtures location; the historical external-memory option was retired by F-070) is deferred to a follow-up BL (BL-140); do not ship a vague "extract harness artifact" criterion here. Promotion stays a human decision, consistent with this skill's read-only / no-auto-ingest principle.
 
 ## Conversational delivery
 

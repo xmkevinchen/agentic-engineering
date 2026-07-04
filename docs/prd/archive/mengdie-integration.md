@@ -1,3 +1,6 @@
+> **RETIRED 2026-07-04 by F-070** — superseded by the F-069 project knowledge graph
+> (frontmatter edges + layered index + locate-step). Kept for design history only.
+
 ---
 title: "PRD: Mengdie Integration Across AE Pipeline"
 status: draft
