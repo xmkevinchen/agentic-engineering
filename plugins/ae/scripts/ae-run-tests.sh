@@ -4,7 +4,7 @@
 # Runs the L1 oracle PLUS every shell mechanism test under tests/scripts/, so the F-048
 # harness loop's deterministic hedge actually exercises the verdict parser, loop-decide,
 # the contract runner, and the loop-integration — not just the SKILL frontmatter check.
-# (codex review P1: test.command was L1-only, so those scripts could be red while the gate
+# (test.command was L1-only, so those scripts could be red while the gate
 # stayed green, undermining the deterministic-safety claim.)
 #
 # Exit: 0 = all green | 1 = at least one failure.

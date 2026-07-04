@@ -43,7 +43,7 @@ Author: BL-005 Phase 2 infra.
 References:
   - Webber, Moffat, Zobel 2010 "A Similarity Measure for Indefinite Rankings"
     http://www.williamwebber.com/research/papers/wmz10_tois.pdf
-  - Discussion 041 conclusion (codex tuning decision tree)
+  - Discussion 041 conclusion
 """
 
 from __future__ import annotations

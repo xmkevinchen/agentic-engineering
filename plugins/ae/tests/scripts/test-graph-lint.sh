@@ -18,7 +18,7 @@ notok(){ echo "not ok: $1"; fail=$((fail+1)); }
 
 # ---------- fixture tree: planted defects ----------
 # F-999 decoys: a NESTED dir (Track 4) and a TOP-LEVEL dir WITHOUT index.md
-# (codex challenge) both coincidentally named like the dangling target —
+# both coincidentally named like the dangling target —
 # resolution requires a top-level dir WITH index.md, so F-999 must STILL be
 # named dangling despite both decoys.
 mkdir -p "$tmp/lint-defects/done/F-908-connected/notes/F-999-decoy" \
@@ -154,7 +154,7 @@ created: 2026-07-03
 # Referenced by F-906's dubious edge → tree is structurally clean.
 EOF
 
-# ---------- fixture tree: malformed shapes (codex testgen hazards) ----------
+# ---------- fixture tree: malformed shapes ----------
 mkdir -p "$tmp/lint-malformed/done/F-920-badyaml" \
          "$tmp/lint-malformed/done/F-921-scalar-edges" \
          "$tmp/lint-malformed/done/F-922-partial-edge" \
@@ -168,7 +168,7 @@ created: 2026-07-03
 ---
 
 # Unterminated quote above → unparseable frontmatter must be a NAMED defect,
-# not a false-pass as "no edges" (codex).
+# not a false-pass as "no edges".
 EOF
 cat > "$tmp/lint-malformed/done/F-921-scalar-edges/index.md" <<'EOF'
 ---
@@ -179,7 +179,7 @@ created: 2026-07-03
 edges: banana-not-a-list
 ---
 
-# Non-list edges container must be a named defect (codex).
+# Non-list edges container must be a named defect.
 EOF
 cat > "$tmp/lint-malformed/done/F-922-partial-edge/index.md" <<'EOF'
 ---
@@ -201,7 +201,7 @@ edges:
 ---
 
 # Edge 1 lacks required written_by; edge 2 is a bare string; edge 3 has a
-# list-valued kind (codex Track 2: must not crash).
+# list-valued kind (must not crash).
 EOF
 mkdir -p "$tmp/lint-malformed/done/F-926-null-edges"
 cat > "$tmp/lint-malformed/done/F-926-null-edges/index.md" <<'EOF'
@@ -214,7 +214,7 @@ edges:
 ---
 
 # `edges:` with a null value must be a named defect, not silently treated
-# as absent (codex Track 2: scoped-mode false-pass hazard).
+# as absent (scoped-mode false-pass hazard).
 EOF
 cat > "$tmp/lint-malformed/done/F-923-escape/index.md" <<'EOF'
 ---
@@ -230,7 +230,7 @@ edges:
     written_by: human
 ---
 
-# Path escape must be a named defect (codex).
+# Path escape must be a named defect.
 EOF
 
 # ---------- fixture tree: duplicate node id across states ----------

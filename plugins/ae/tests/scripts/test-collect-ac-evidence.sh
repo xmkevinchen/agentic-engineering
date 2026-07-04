@@ -109,8 +109,8 @@ e=json.load(open('$tmp/milestones/evidence/AC1.json'))
 assert e['verdict'] is None
 assert e['matched_count']==2 and e['zero_match'] is False and len(e['matched_tests'])==2
 assert e['parser']=='cargo-test.v1' and e['parser_known'] is True
-assert isinstance(e['wall_seconds'], (int,float))                 # codex P1-A
-assert set(('min_count','names','patterns')) <= set(e['expected_match'])  # codex P1-B
+assert isinstance(e['wall_seconds'], (int,float))
+assert set(('min_count','names','patterns')) <= set(e['expected_match'])
 print('  ok: AC1 schema — wall_seconds + parser_known + expected_match{min_count,names,patterns}')
 " || { echo "  FAIL: AC1 schema" >&2; fail=1; }
 
@@ -129,7 +129,7 @@ python3 "$SCRIPT" "$tmp/plan.md" AC10 >/dev/null 2>&1
 python3 -c "
 import json
 e=json.load(open('$tmp/milestones/evidence/AC10.json'))
-assert e['parser']=='madeup.v9' and e['parser_known'] is False  # codex P1-C
+assert e['parser']=='madeup.v9' and e['parser_known'] is False
 print('  ok: AC10 parser_known=False for declared-but-unsupported')
 " || { echo "  FAIL: AC10 parser_known" >&2; fail=1; }
 

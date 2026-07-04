@@ -25,7 +25,7 @@ else
 fi
 
 # Restrict to a PROPERLY-OPENED-AND-CLOSED leading YAML frontmatter block: line 1 must be
-# '---' AND a closing '---' must exist (codex P1: an UNCLOSED block — '---' + 'verdict: pass'
+# '---' AND a closing '---' must exist (an UNCLOSED block — '---' + 'verdict: pass'
 # with no closing fence — must NOT read as pass). A 'verdict:' in the review BODY is excluded.
 # Any malformed shape → invalid.
 if [ "$(printf '%s\n' "$content" | sed -n '1p')" != "---" ]; then echo invalid; exit 0; fi

@@ -52,7 +52,7 @@ def frontmatter(path):
     except OSError as e:
         return None, f"unreadable: {e}"
     # \n? — a closing --- with no trailing newline must parse the same way
-    # graph-index-gen accepts it (review P1: regex mismatch falsely blocked archives)
+    # graph-index-gen accepts it (regex mismatch falsely blocked archives)
     m = re.match(r"^---\n(.*?)\n---\n?", text, re.S)
     if not m:
         return None, "no frontmatter block"
@@ -94,7 +94,7 @@ def build_resolvers(root):
         for name in sorted(os.listdir(state_dir)):
             m = re.match(r"^(F-\d+)-", name)
             # index.md required — a bare dir is not a node and must not mask a
-            # dangling target (codex challenge on the Track 4 fix)
+            # dangling target
             if m and os.path.isfile(os.path.join(state_dir, name, "index.md")):
                 feature_dirs.setdefault(m.group(1), []).append(os.path.join(state_dir, name))
     bl_ids = set()

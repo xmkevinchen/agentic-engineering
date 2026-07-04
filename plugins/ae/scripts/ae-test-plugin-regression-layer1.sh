@@ -22,7 +22,7 @@ n=0
 for skill in "$dir"/*/SKILL.md; do
   [ -f "$skill" ] || continue
   n=$((n + 1))
-  # Constrain checks to a PROPERLY-OPENED-AND-CLOSED LEADING frontmatter block (codex P2):
+  # Constrain checks to a PROPERLY-OPENED-AND-CLOSED LEADING frontmatter block:
   # an anywhere-match for 'name: ae:' + any two '---' would false-green a malformed skill.
   if [ "$(sed -n '1p' "$skill")" != "---" ]; then
     echo "L1 FAIL: no leading '---' frontmatter fence on line 1 — $skill" >&2; rc=1; continue

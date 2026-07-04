@@ -47,7 +47,7 @@ for state in STATE_DIRS:
             continue
         try:
             with open(index, encoding="utf-8") as f:
-                # \n? matches graph-lint/graph-index-gen (review P1: regex parity)
+                # \n? matches graph-lint/graph-index-gen (regex parity)
                 m = re.match(r"^---\n(.*?)\n---\n?", f.read(), re.S)
             data = yaml.safe_load(m.group(1)) if m else None
         except (OSError, yaml.YAMLError):

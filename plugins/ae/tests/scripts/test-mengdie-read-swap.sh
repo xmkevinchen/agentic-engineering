@@ -3,7 +3,7 @@
 # sh-tap output (parser: sh-tap.v1). Structural wiring grep (F-067 lesson):
 # each Prior-Context section must carry ALL THREE mechanism tokens
 # (.ae/graph + graph-index-gen.py + graph-neighbors.py) — an index read without
-# regen/traversal is a half-swap and must fail (codex plan-review).
+# regen/traversal is a half-swap and must fail.
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

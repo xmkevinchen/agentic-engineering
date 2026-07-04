@@ -26,7 +26,7 @@ else
   verdict=fail   # SIMULATES the F-048 hedge: in /ae:work this conversion (test.command
                  # non-0 → verdict=fail) is LLM-executed prompt logic, not shell-callable,
                  # so we hand-set it here. This test covers the deterministic skeleton, not
-                 # the LLM seam (codex M2 + challenger Ch2 — scope is honest, not end-to-end).
+                 # the LLM seam (scope is honest, not end-to-end).
 fi
 action=$(sh "$DECIDE" "$verdict" 0 3)
 if [ "$action" = "dispatch_fixup" ]; then

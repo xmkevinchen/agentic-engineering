@@ -5,7 +5,7 @@
 # terminal-RUN RULE lives in ONE place (review/SKILL.md § Completion Invariant);
 # work/SKILL.md REFERENCES it and must not restate the rule-as-authority.
 #
-# Honest scope (codex + adversarial F5): this is a deterministic sentinel for
+# Honest scope: this is a deterministic sentinel for
 # KNOWN restatement forms — semantic completeness (a reworded shadow restatement)
 # is the job of /ae:plan's AC2 judge, not this test. The denylist targets the
 # rule-statement markers ("never archives" / "runs only standalone" /

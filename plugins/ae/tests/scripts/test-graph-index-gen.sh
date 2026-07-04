@@ -45,7 +45,7 @@ Second alpha member with a multi-line TL;DR paragraph | pipe included
 and this second line must survive byte-verbatim, not line-joined.
 EOF
 # F-1000 in beta-theme: numeric member sort — lexicographic would put F-1000
-# before F-932 (gemini); TL;DR starts with "#1" which is prose, not a heading (codex)
+# before F-932; TL;DR starts with "#1" which is prose, not a heading
 mkdir -p "$tmp/features/active/F-1000-gamma"
 cat > "$tmp/features/active/F-1000-gamma/index.md" <<'EOF'
 ---
@@ -60,7 +60,7 @@ theme: beta-theme
 
 #1 priority prose paragraph that starts with a hash but is not a heading.
 EOF
-# theme: 0 — falsy-but-real YAML value must keep its own bucket (gemini)
+# theme: 0 — falsy-but-real YAML value must keep its own bucket
 mkdir -p "$tmp/features/active/F-936-zero-theme"
 cat > "$tmp/features/active/F-936-zero-theme/index.md" <<'EOF'
 ---
@@ -75,7 +75,7 @@ theme: 0
 
 Falsy-but-real theme value keeps its own bucket.
 EOF
-# nested decoy (codex): a non-node index.md deep inside a real feature dir
+# nested decoy: a non-node index.md deep inside a real feature dir
 mkdir -p "$tmp/features/done/F-930-alpha-one/notes/F-998-decoy"
 cat > "$tmp/features/done/F-930-alpha-one/notes/F-998-decoy/index.md" <<'EOF'
 ---
@@ -161,18 +161,18 @@ case "$alphaB" in *"Fixture alpha one"*) ok "title verbatim";; *) notok "title v
 case "$alphaB" in *done*) ok "status verbatim";; *) notok "status verbatim";; esac
 case "$alphaB" in *"The alpha-one goal sentence used verbatim as the TL;DR row."*) ok "TL;DR = first body paragraph, verbatim";; *) notok "TL;DR = first body paragraph, verbatim";; esac
 case "$alphaB" in *"multi-line TL;DR paragraph | pipe included
-and this second line must survive byte-verbatim, not line-joined."*) ok "multi-line TL;DR with pipe preserved byte-verbatim (codex)";; *) notok "multi-line TL;DR with pipe preserved byte-verbatim (codex)";; esac
+and this second line must survive byte-verbatim, not line-joined."*) ok "multi-line TL;DR with pipe preserved byte-verbatim";; *) notok "multi-line TL;DR with pipe preserved byte-verbatim";; esac
 case "$alphaB" in *F-932*) notok "beta member not leaked into alpha theme";; *) ok "beta member not leaked into alpha theme";; esac
-case "$alphaB" in *F-998*) notok "nested decoy index.md not indexed (codex)";; *) ok "nested decoy index.md not indexed (codex)";; esac
+case "$alphaB" in *F-998*) notok "nested decoy index.md not indexed";; *) ok "nested decoy index.md not indexed";; esac
 
-# ---------- deterministic ordering (codex): sorted themes, (unthemed) last ----------
+# ---------- deterministic ordering: sorted themes, (unthemed) last ----------
 first=$(grep -nE 'alpha-theme' "$tierA" | head -1 | cut -d: -f1)
 second=$(grep -nE 'beta-theme' "$tierA" | head -1 | cut -d: -f1)
 last=$(grep -nF '(unthemed)' "$tierA" | head -1 | cut -d: -f1)
 if [ -n "$first" ] && [ -n "$second" ] && [ -n "$last" ] && [ "$first" -lt "$second" ] && [ "$second" -lt "$last" ]; then
-  ok "themes sorted alphabetically, (unthemed) last (codex ordering)"
+  ok "themes sorted alphabetically, (unthemed) last"
 else
-  notok "themes sorted alphabetically, (unthemed) last (codex ordering)"
+  notok "themes sorted alphabetically, (unthemed) last"
 fi
 
 # ---------- gemini/codex fixes: numeric sort, prose-#, falsy theme ----------

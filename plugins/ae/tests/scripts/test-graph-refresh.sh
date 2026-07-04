@@ -71,7 +71,7 @@ else
 fi
 python3 "$LINT" --root "$tmp/t" "$tmp/t/done/F-971-child" >/dev/null 2>&1 && ok "touched node lint-clean" || notok "touched node lint-clean"
 
-# anchor assertion (codex P2): the written source: line number lands on the depends_on line
+# anchor assertion: the written source: line number lands on the depends_on line
 srcline=$(grep -o 'source: "index.md:[0-9]*"' "$tmp/t/done/F-971-child/index.md" | head -1 | grep -o '[0-9]*')
 if [ -n "$srcline" ] && sed -n "${srcline}p" "$tmp/t/done/F-971-child/index.md" | grep -q 'depends_on'; then
   ok "backfill source line ANCHORS on the depends_on line post-write"

@@ -25,7 +25,7 @@ fi
 
 # (b) no live Mengdie mention in any SKILL.md outside the enumerated allowlist
 viol=""
-# scan *.md* so .md.deprecated files are ITERATED (doodlestein: with a bare *.md
+# scan *.md* so .md.deprecated files are ITERATED (with a bare *.md
 # glob the *.deprecated allowlist arm was dead code — false confidence)
 for f in $(find "$SKILLS" -name '*.md*' -type f); do
   case "$f" in

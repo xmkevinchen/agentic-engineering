@@ -30,7 +30,7 @@ if __name__ != "__main__":
 
 FORGEABLE = ("", ".", "./", "*", "true", ":")
 # Parsers the collector can produce a match-COUNT for. A declared parser outside
-# this set is parser_known=False (codex P1-C: declared != supported).
+# this set is parser_known=False (declared != supported).
 KNOWN_PARSERS = ("cargo-test.v1", "pytest.v1", "sh-tap.v1")
 
 
