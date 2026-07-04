@@ -210,6 +210,52 @@ else
   notok "idempotent (same bytes on re-run)"
 fi
 
+# ---------- synthesis tier ----------
+# no synthesis dir: tier omitted, output stays as-is
+run
+cp "$tmp/wiki/index.md" "$tmp/index-before-syn.md"
+if ! grep -q "Synthesis pages" "$tmp/wiki/index.md"; then
+  ok "no synthesis dir: tier omitted"
+else
+  notok "no synthesis dir: tier omitted"
+fi
+# with pages: one line per page, state label verbatim from page frontmatter
+syn="$tmp/graph/synthesis"
+mkdir -p "$syn"
+cat > "$syn/syn-sample.md" <<'EOF'
+---
+id: syn-sample
+title: "sample architecture page"
+created: 2026-07-04
+written_by: batch
+state: stale
+anchors:
+  - source: "src/x.txt:1"
+    anchor_hash: "x"
+---
+Body.
+EOF
+python3 "$GEN" --root "$tmp/features" --out "$tmp/wiki" --synthesis-root "$syn" >/dev/null 2>&1
+if grep -q '^- syn-sample — sample architecture page (stale)$' "$tmp/wiki/index.md"; then
+  ok "synthesis tier renders page line with stale label"
+else
+  notok "synthesis tier renders page line with stale label"
+fi
+# the default rule derives <root>/../graph/synthesis, so the tier also renders
+# without the explicit flag on this layout
+run
+grep -q "Synthesis pages" "$tmp/wiki/index.md" \
+  && ok "default synthesis-root derivation finds the sibling dir" \
+  || notok "default synthesis-root derivation finds the sibling dir"
+# removing the dir restores the tier-free output byte-identically
+rm -rf "$tmp/graph"
+run
+if diff "$tmp/index-before-syn.md" "$tmp/wiki/index.md" >/dev/null 2>&1; then
+  ok "regen after synthesis dir removal byte-identical to pre-tier output"
+else
+  notok "regen after synthesis dir removal byte-identical to pre-tier output"
+fi
+
 # ---------- usage ----------
 python3 "$GEN" --root "$tmp/no-such" --out "$tmp/wiki2" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "nonexistent root exits 2 (usage)" || notok "nonexistent root exits 2 (usage)"

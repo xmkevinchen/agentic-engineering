@@ -12,10 +12,17 @@ Checks the MACHINE half of edge trust (conclusion #4: machines measure, LLM judg
 NEVER judges semantic correctness — a resolving, in-enum, obviously-wrong
 relationship passes (AC2 fourth fixture); that half belongs to the review judge.
 
-Usage: graph-lint.py [--root DIR] [NODE_DIR ...]
-  --root     features root (default: $FEATURES_ROOT or .ae/features)
+Usage: graph-lint.py [--root DIR] [--synthesis-root DIR] [--repo-root DIR] [NODE_DIR ...]
+  --root            features root (default: $FEATURES_ROOT or .ae/features)
+  --synthesis-root  synthesis pages dir (default: <root>/../graph/synthesis;
+                    missing dir = silently skipped). Whole-tree mode only:
+                    each page runs graph-page-check.py — its STALE lines pass
+                    through without affecting exit, its DEFECTs fail the tree.
+  --repo-root       anchor resolution base forwarded to the page check
+                    (default: the page check's own git-toplevel fallback)
   NODE_DIR   scoped mode: lint only these nodes' edges (the /ae:review archive
-             gate's shape); skips whole-graph checks (orphan, duplicate id)
+             gate's shape); skips whole-graph checks (orphan, duplicate id,
+             synthesis pages)
 Target resolution (within --root): F-NNN → */F-NNN-*/ dir; BL-NNN → BL-NNN*.md
 under root or <root>/../backlog; disc-NNN → any */discussions/NNN-*/ dir.
 Exit: 0 = clean | 1 = defects (each named on stdout) | 2 = usage error.
@@ -23,6 +30,7 @@ Exit: 0 = clean | 1 = defects (each named on stdout) | 2 = usage error.
 import argparse
 import os
 import re
+import subprocess
 import sys
 
 import yaml
@@ -196,6 +204,8 @@ def lint_node(node_dir, index, resolvers, defects):
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
+parser.add_argument("--synthesis-root", default=None)
+parser.add_argument("--repo-root", default=None)
 parser.add_argument("nodes", nargs="*", help="scoped mode: node dirs to lint")
 try:
     args = parser.parse_args()
@@ -237,6 +247,36 @@ else:  # whole-tree mode
         if node_id not in outgoing and node_id not in referenced:
             defects.append(f"orphan node {node_id}: participates in zero edges")
     scope = f"whole-tree ({len(nodes)} node(s))"
+    # synthesis pages: leaf nodes with anchors, checked by the single page-check
+    # implementation; a missing dir is the normal no-synthesis-layer case
+    syn_root = args.synthesis_root or os.path.join(root, os.pardir, "graph", "synthesis")
+    syn_root = os.path.realpath(syn_root)
+    if os.path.isdir(syn_root):
+        checker = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                               "graph-page-check.py")
+        # anchors are repo-relative; derive the repo root from the synthesis dir's
+        # position (.ae/graph/synthesis → three levels up) so the check is correct
+        # no matter what cwd graph-lint runs from
+        repo_root = args.repo_root or os.path.normpath(
+            os.path.join(syn_root, os.pardir, os.pardir, os.pardir))
+        pages = sorted(f for f in os.listdir(syn_root) if f.endswith(".md"))
+        for f in pages:
+            cmd = [sys.executable, checker, "--repo-root", repo_root,
+                   os.path.join(syn_root, f)]
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            found_defect = False
+            for line in proc.stdout.splitlines():
+                if line.startswith("[page-check] DEFECT:"):
+                    found_defect = True
+                    defects.append(line.split("DEFECT:", 1)[1].strip())
+                elif line.startswith("[page-check] STALE:"):
+                    print(f"[graph-lint] STALE: {line.split('STALE:', 1)[1].strip()}")
+            # a checker that failed without reporting (crash, usage error) must
+            # not let the tree pass silently
+            if proc.returncode != 0 and not found_defect:
+                defects.append(f"synthesis page {f}: check failed "
+                               f"(exit {proc.returncode}) with no reported defect")
+        scope += f" + {len(pages)} synthesis page(s)"
 
 for d in defects:
     print(f"[graph-lint] DEFECT: {d}")

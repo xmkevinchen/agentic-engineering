@@ -19,9 +19,18 @@ paused}/F-*/index.md — top level only (nested index.md files are not nodes).
 Records missing required id/title/status are skipped with a stderr log
 (reader contract: log error, skip record, continue scanning).
 
-Usage: graph-index-gen.py [--root DIR] [--out DIR]
-  --root  features root (default: $FEATURES_ROOT or .ae/features)
-  --out   index output dir (default: .ae/graph)
+Usage: graph-index-gen.py [--root DIR] [--out DIR] [--synthesis-root DIR]
+  --root            features root (default: $FEATURES_ROOT or .ae/features)
+  --out             index output dir (default: .ae/graph)
+  --synthesis-root  synthesis pages dir (default: <root>/../graph/synthesis).
+                    Present with pages → a "Synthesis pages" tier is appended
+                    to index.md, one line per page from its own frontmatter
+                    (id / title / state — stale pages carry their state label).
+                    Missing dir → tier omitted, output byte-identical to before.
+                    The state label is a NAVIGATION HINT read verbatim from the
+                    page (this generator never runs checks — deterministic
+                    aggregation only); the read path re-validates anchors at
+                    access time, so a lying label cannot silently serve rot.
 Exit: 0 = written | 2 = usage error.
 """
 import argparse
@@ -80,6 +89,7 @@ def slugify(theme):
 parser = argparse.ArgumentParser()
 parser.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
 parser.add_argument("--out", default=".ae/graph")
+parser.add_argument("--synthesis-root", default=None)
 try:
     args = parser.parse_args()
 except SystemExit:
@@ -169,6 +179,29 @@ for theme in ordered:
     with open(os.path.join(themes_dir, f"{slug}.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(tier_b).rstrip("\n") + "\n")
 tier_a.append("")
+
+# Synthesis tier: one line per page from page frontmatter; missing dir = no tier
+syn_root = args.synthesis_root or os.path.join(root, os.pardir, "graph", "synthesis")
+syn_root = os.path.realpath(syn_root)
+if os.path.isdir(syn_root):
+    rows = []
+    for name in sorted(os.listdir(syn_root)):
+        if not name.endswith(".md"):
+            continue
+        data, _ = parse_index(os.path.join(syn_root, name))
+        if data is None:
+            print(f"[graph-index-gen] skip synthesis/{name}: unparseable", file=sys.stderr)
+            continue
+        pid, title, state = data.get("id"), data.get("title"), data.get("state")
+        if not pid or not title:
+            print(f"[graph-index-gen] skip synthesis/{name}: missing id/title", file=sys.stderr)
+            continue
+        rows.append(f"- {pid} — {title} ({state or 'unknown'})")
+    if rows:
+        tier_a.append("## Synthesis pages")
+        tier_a.append("")
+        tier_a.extend(rows)
+        tier_a.append("")
 
 with open(os.path.join(out_dir, "index.md"), "w", encoding="utf-8") as f:
     f.write("\n".join(tier_a).rstrip("\n") + "\n")
