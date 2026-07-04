@@ -3,7 +3,7 @@
 # still fires the risk-floor (provenance: the deterministic floor forces `security`,
 # NOT the LLM soft-add). The floor is path-based, so a 3-line permission change is
 # treated identically to a large one — closing the gap where an LLM stat-read judges
-# a small auth change "minor" and omits the security lens (Doodlestein adversarial F1).
+# a small auth change "minor" and omits the security lens.
 #
 # This is the deterministic half of AC4: it exercises risk-floor-lenses.sh (the producer
 # of the `risk_floor_lenses` trace field) directly. The full "appears in risk_floor_lenses

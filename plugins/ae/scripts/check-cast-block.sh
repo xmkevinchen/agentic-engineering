@@ -23,12 +23,12 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 SKILLS_DIR="$REPO_ROOT/plugins/ae/skills"
 WINDOW=30  # lines after Agent() to search for Cast markers
 
-# Scope LOCK per Plan 055 architect C1: only plugins/ae/skills/*/SKILL.md
+# Scope LOCK per Plan 055: only plugins/ae/skills/*/SKILL.md
 # docs/ and tests/ excluded by directory scope (find -path)
 
 [ -d "$SKILLS_DIR" ] || { echo "[check-cast-block] error: skills dir not found at $SKILLS_DIR" >&2; exit 1; }
 
-# Subshell-safe accumulation via temp file (per architect P2 + gemini P2 + security C1):
+# Subshell-safe accumulation via temp file:
 # `for f in $(find ...)` word-splits on $IFS and `find -mindepth/-maxdepth` is GNU-only
 # (macOS BSD find lacks them). Switched to glob + while-read for POSIX portability.
 COUNT_FILE="$(mktemp -t ae-check-cast.XXXXXX 2>/dev/null || echo /tmp/ae-check-cast-$$)"

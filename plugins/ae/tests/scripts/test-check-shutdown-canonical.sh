@@ -31,7 +31,7 @@ build_root() {
   root="$1"
   # git init so the script-under-test's `git rev-parse --show-toplevel` resolves to
   # THIS fake root, not a parent repo — guards against TMPDIR living inside a git
-  # checkout (review finding: codex P2). Without it the test would be env-dependent.
+  # checkout. Without it the test would be env-dependent.
   git -C "$root" init -q
   mkdir -p "$root/plugins/ae/scripts" \
            "$root/plugins/ae/skills/agent-teams" \
@@ -43,7 +43,7 @@ build_root() {
 }
 
 # --- AC1 negative case: forbidden sentinel present → script must exit non-zero ---
-# The fixture ALSO carries the canonical reference (review finding: codex P3 /
+# The fixture ALSO carries the canonical reference (see also
 # challenger conf-8). Without the reference, a regressed sentinel-grep would still
 # exit 1 via the missing-reference branch and the test would pass — its own
 # false-green. With the reference present, the ONLY way to exit 1 is the sentinel
@@ -70,7 +70,7 @@ out="$( cd "$POS" && sh plugins/ae/scripts/check-shutdown-canonical.sh 2>&1 )"
 rc=$?
 # Assert the exact counters (scanned=1 referenced=1 failures=0), not just failures=0
 # — a regression that skips the scan loop entirely would still print failures=0 and
-# exit 0 (review finding: codex P3). Pinning scanned=1 proves the file was visited.
+# exit 0. Pinning scanned=1 proves the file was visited.
 if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'scanned=1 referenced=1 exempt=0 failures=0'; then
   pass "positive: clean + referenced → exit 0, scanned=1 referenced=1 failures=0"
 else

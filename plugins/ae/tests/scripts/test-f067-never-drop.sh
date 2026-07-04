@@ -30,7 +30,7 @@ check  "omission = absence of trigger, not a drop"   'absence of a trigger.*NOT 
 check  "floor survives --reviewer (F4)"              'Floor survives .--reviewer|floor .*STILL spawns'
 check  "--reviewer overrides specialists only"       '--reviewer. overrides only the .specialist'
 check  "ceremony:minimal still sole floor-drop"      'ceremony: minimal. stays the .*ONLY. path that drops the floor|never .--reviewer'
-# F4 absence guards (codex2 iter-1 item 4): the stale floor-contradicting examples must NOT
+# F4 absence guards: the stale floor-contradicting examples must NOT
 # regress — a spawn-count of 1 or an unqualified "only <agent>" would imply the floor dropped.
 absent "no floor-dropping spawn count"               'Spawned: 1'
 absent "no unqualified 'only security-reviewer'"     'review file with only security-reviewer'

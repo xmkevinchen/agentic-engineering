@@ -10,7 +10,7 @@ Per conclusion 040 T9b: AE **never edits the user's CLAUDE.md body**. Instead:
 - On first governance event, AE prompts the user ONCE to add `@.claude/agent-governance.md` to their project CLAUDE.md — a single include line is the only line AE ever writes to CLAUDE.md.
 - User sees the rules in their CC context via the `@include` mechanism.
 
-**Decoupling from CC's `@include` mechanism specifically** (Doodlestein-regret mitigation from plan 041 review): AE reads `.claude/agent-governance.md` directly via its Read tool when applying governance rules — AE does **not** depend on CC's `@include` semantics for governance functionality. The `@include` line in CLAUDE.md is for user visibility only. If CC changes `@include` behavior in a future version, AE's governance still works; only the user-visibility surface changes.
+**Decoupling from CC's `@include` mechanism specifically** (plan 041 review mitigation): AE reads `.claude/agent-governance.md` directly via its Read tool when applying governance rules — AE does **not** depend on CC's `@include` semantics for governance functionality. The `@include` line in CLAUDE.md is for user visibility only. If CC changes `@include` behavior in a future version, AE's governance still works; only the user-visibility surface changes.
 
 Scope note: this decoupling is narrow. AE still depends on CC runtime for tool availability (`Read`, `Agent`, `Task*`), agent-context management, and file-path resolution. The claim is: governance semantics don't depend on `@include` specifically — NOT that AE is broadly platform-independent.
 

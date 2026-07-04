@@ -7,7 +7,7 @@
 # `record_type: synthesis-gate` discriminator so consumers (`/ae:plugin-stats`, future tools)
 # can route by record type alongside T1's 9-field per-invocation records in the same stream.
 #
-# Background: F-026 plan-review round-2 Codex F5 + Gemini #4 convergent finding — Falsifiable
+# Background: F-026 plan-review convergent finding — Falsifiable
 # Success Criterion is unfalsifiable without a tool to emit the per-round metric records.
 # Ships concurrently with Steps 1+2+3 to close the ship-measured gap.
 #
@@ -46,7 +46,7 @@ n_retained_with_rationale=$4
 n_retained_without_rationale=$5
 n_strictly_needed_estimate=$6
 
-# ---- Arg type validation (regex) — per F-026 /ae:review Codex P2 + Challenger C1 fix ----
+# ---- Arg type validation (regex) — per the F-026 review fix ----
 # Prevents JSON-schema injection via malformed string args (e.g., '1,"injected":"x"').
 # Args 1-5 MUST be non-negative integers; arg 6 allows -1 as "unavailable" sentinel.
 for arg in "$round" "$n_mechanisms" "$n_pruned" "$n_retained_with_rationale" "$n_retained_without_rationale"; do

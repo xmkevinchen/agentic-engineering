@@ -51,6 +51,15 @@ Skill definitions and agent files occasionally cite the following internal terms
 
 These identifiers do not need to be resolved to understand what a skill does — they are provenance hooks for contributors interested in the design history.
 
+## Repo-entering text discipline
+
+Everything that lands in the repository — code comments, commit messages, skill/agent prose, tests, docs — describes the WORK, never the review conversation that shaped it:
+
+- **Code comments** state a constraint the code can't show; never where a finding came from. Review bookkeeping is noise the moment it merges.
+- **Commit messages** describe the change and its reason; never reviewer names, finding severities, or iteration counts.
+- **Skill/agent prose** may keep a terse provenance cite (`F-NNN`, `Plan NNN`, `BL-NNN` — see Internal terminology above); reviewer attribution goes.
+- Enforced by `plugins/ae/tests/scripts/test-jargon-tripwire.sh` (part of the standard suite); functional cross-family references (proxy agents, track names, family selection) are exempt.
+
 ## Git
 
 - **Feature branch** — all work on feature branches, PR to main. Branch naming: `feature/<slug>` or `fix/<slug>`

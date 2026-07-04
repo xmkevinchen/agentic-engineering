@@ -110,7 +110,7 @@ Deterministic shell scripts under `plugins/ae/scripts/` that the harness skills 
 
 Dependencies AE no longer relies on, preserved here for archaeology:
 
-- **`@include` directive in skill markdown** — previously used by `ae:agent-teams` cast block resolution to pull in shared protocol fragments. Decoupled in 2026-04 (Doodlestein-regret challenge during the v0.9.x cycle): content is now inlined into each consuming SKILL.md. No current dependency on `@include`; listed here only so future archaeology need not re-derive that this WAS once a dependency.
+- **`@include` directive in skill markdown** — previously used by `ae:agent-teams` cast block resolution to pull in shared protocol fragments. Decoupled in 2026-04 (a v0.9.x-cycle design challenge): content is now inlined into each consuming SKILL.md. No current dependency on `@include`; listed here only so future archaeology need not re-derive that this WAS once a dependency.
 
 ## Format reversal note
 

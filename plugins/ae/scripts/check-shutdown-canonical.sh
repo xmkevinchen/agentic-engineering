@@ -43,7 +43,7 @@ exempt_count=0
 referenced_count=0
 total_count=0
 
-# Use find with while-read for portability (per architect P2 + security C1 + gemini P2):
+# Use find with while-read for portability:
 # `for f in $(find ...)` word-splits on $IFS — breaks on filenames with spaces.
 # Pipe to while-read with IFS= preserves filenames verbatim.
 # Note: failures/counts accumulated in subshell would not propagate — switched to

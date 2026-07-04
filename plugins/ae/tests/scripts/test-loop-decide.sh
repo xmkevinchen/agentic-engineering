@@ -41,16 +41,16 @@ assert "unknown verdict"       "" 2 sh "$DECIDE" maybe 0 3
 # --- parse-review-verdict: normalize to pass|fail|invalid ---
 tmp=$(mktemp -d)
 # Fixtures use real review-file shape: verdict lives in the LEADING --- frontmatter block
-# (parse-review-verdict counts/extracts only there — codex P2-5).
+# (parse-review-verdict counts/extracts only there).
 printf -- '---\nverdict: pass\n---\n'                 > "$tmp/pass.md"
 printf -- '---\nverdict: fail\n---\n'                 > "$tmp/fail.md"
 printf -- '---\ntitle: x\nstatus: done\n---\n'        > "$tmp/none.md"
 printf -- '---\nverdict: needs_work\n---\n'           > "$tmp/unk.md"
 printf -- '---\nverdict: pass\nverdict: fail\n---\n'  > "$tmp/dup.md"
 printf -- '---\nverdict: "pass"\n---\n'               > "$tmp/quoted.md"
-# codex P2-5 lock: a 'verdict:' line in the BODY must NOT flip a passing review to invalid.
+# A 'verdict:' line in the BODY must NOT flip a passing review to invalid.
 printf -- '---\nverdict: pass\n---\n# Review\ndiscussing the verdict: field schema\n' > "$tmp/body.md"
-printf -- '---\nverdict: pass\n'                       > "$tmp/unclosed.md"   # codex P1: no closing fence
+printf -- '---\nverdict: pass\n'                       > "$tmp/unclosed.md"   # no closing fence
 assert "parse pass"            pass    0 sh "$PARSE" "$tmp/pass.md"
 assert "parse fail"            fail    0 sh "$PARSE" "$tmp/fail.md"
 assert "parse missing->invalid" invalid 0 sh "$PARSE" "$tmp/none.md"

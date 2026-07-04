@@ -151,7 +151,7 @@ def lint_node(node_dir, index, resolvers, defects):
     node_id = data.get("id")
     edges = data.get("edges")
     if edges is None:
-        if "edges" in data:  # codex P2: `edges:` present but null must not bypass validation
+        if "edges" in data:  # `edges:` present but null must not bypass validation
             defects.append(f"{rel}: 'edges' key present but null — remove the key or provide a list")
         return node_id, set(), False
     if not isinstance(edges, list):
@@ -166,7 +166,7 @@ def lint_node(node_dir, index, resolvers, defects):
         kind = edge.get("kind")
         target = edge.get("id")
         writer = edge.get("written_by")
-        # codex P2: non-scalar values (e.g. `kind: [relates_to]`) must be named
+        # non-scalar values (e.g. `kind: [relates_to]`) must be named
         # defects, not a TypeError on set membership
         if kind is None:
             defects.append(f"{where}: missing required field 'kind'")
