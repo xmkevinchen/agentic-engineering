@@ -309,7 +309,7 @@ Only write the sections below when the TL;DR tip is insufficient to carry the us
 
 | dimension | verify_by | runnable-check sketch / rubric |
 |---|---|---|
-| `<acceptance dimension>` | `unit`\|`integration`\|`e2e`\|`contract`\|`judge`\|`manual` | deterministic → the check that would run; `judge` → candidate rubric question + the artifact it judges; `manual` → what a human confirms |
+| `<acceptance dimension>` | `unit`\|`integration`\|`e2e`\|`contract`\|`judge`\|`manual` | deterministic → the check that would run; `judge` → annotate the class in the cell — `judge (fact-claim)` or `judge (form)` — plus the candidate rubric question, the artifact it judges, and (fact-claim only) a sketch of the source set the judge would read first; `manual` → what a human confirms |
 
 Map each dimension to a `verify_by` kind per [`docs/references/verify-by-kinds.md`](../../../../docs/references/verify-by-kinds.md) — push each as far toward deterministic as it honestly goes; cover **non-code dimensions too** (business-data validity, domain invariants, BDD/behavioral scenarios), not just code checks. This table is the raw material `/ae:plan` consumes (its Step-1 Research reads it as the per-AC `verify_by` starting point + the runnable-check mandate), so a vague row here becomes a vacuous AC there. It must be PRESENT + per-dimension — the `### Synthesize` **Exit gate (analyze DoD)** above blocks finishing `analysis.md` without it. (Pre-F-063 this section was REQUIRED-but-ungated; F-063 gave it teeth.)
 
