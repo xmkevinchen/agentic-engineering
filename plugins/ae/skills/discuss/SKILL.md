@@ -308,14 +308,14 @@ Step 2 spawns a **separate set of council teammates** (the framing-review teamma
 
 **Why Round 0 exists (not a mechanism you can inline into later rounds)**: once Round 1 spawns, agents anchor on whatever framing is provided. Mid-round reviewers (challenger, Doodlestein at conclusion) evaluate within the framing. Round 0 is the only point where framing itself is the object of evaluation, before it infects Round 1 context.
 
-### 1.6. Prior Context (from Mengdie)
+### 1.6. Prior Context (project knowledge graph)
 
-Run this step after Round 0 approves framing (Step 1.5) and before spawning the team (Step 2). Query uses the approved `framing.md` content as the search query.
+Run this step after Round 0 approves framing (Step 1.5) and before spawning the team (Step 2). Query = the approved `framing.md` problem statement. (Compact locate-step; the canonical long form incl. grep-fallback lives in analyze/SKILL.md § Prior context.)
 
-1. Call `memory_search` MCP tool with the discussion topic/problem statement as query
-2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 2
-3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
-4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
+1. Regenerate + read the layered index: run `plugins/ae/bin/wiki-index-gen.py` (cheap, byte-idempotent), read `.ae/wiki/index.md`. Generator fails / no feature dirs → emit `Prior context: unavailable (no knowledge index)` and continue to Step 2.
+2. **[LLM]** Theme-pick: semantically read Tier A + the picked themes' TL;DRs against the query; read the survivor node pages (keep the set small — ≤10; thin/empty results → fall back to the canonical long form incl. grep-fallback in analyze/SKILL.md).
+3. **[deterministic]** Traverse the survivors' edges ONE hop in a single batched `plugins/ae/bin/wiki-neighbors.py <survivor-id ...>` call; read newly-reached feature targets' pages (BL/disc targets cite from the edge `evidence` alone; a survivor with no edges yields no lines — normal outcome, not an error; the ≤10 read cap covers the folded targets too).
+4. Present under `## Prior Art from Project Knowledge Base` with provenance per item: `id`, `title`, how located (`theme-pick` / `edge from <id>`), edge `evidence` when edge-located.
 5. Include prior art in the topic brief compiled for agents in Step 2 — treat as background context, does not constrain discussion
 
 ## Step 2. Spawn Discussion Team (once, persists until Conclusion)

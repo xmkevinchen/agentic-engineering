@@ -28,15 +28,15 @@ This skill is **independent of project-level GTD retrospect** (`/ae:retrospect`)
 3. Scan for review files containing Outcome Statistics. **Skip files with `type: test-report` in frontmatter** — only process `type: review` documents.
 4. If no data found → output: "Insufficient data: no Outcome Statistics found. Complete at least one `/ae:review` to generate data."
 
-### 0.5. Prior Context (from Mengdie)
+### 0.5. Prior Context (project knowledge graph)
 
-Run this step after Pre-check and before Step 1. Skip in `--compare` mode.
+Run this step after Pre-check and before Step 1. Skip in `--compare` mode. Query = the `$ARGUMENTS` filter or the plugin's own recent feature/theme titles. **Honest scope**: the graph indexes features/themes/relationships, NOT pipeline outcome trends — this lookup is narrower than the old outcome-trends intent; treat it as feature-context lookup, not trend retrieval (trends come from Step 1's own statistics). (Compact locate-step; canonical long form: analyze/SKILL.md § Prior context.)
 
-1. Call `memory_search` MCP tool with "plugin pipeline outcome trends" or `$ARGUMENTS` filter as query.
-2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 1.
-3. If results returned with `degraded` field non-null — annotate as "(partial — [degraded reason])".
-4. Present results under `## Prior Art from Project Knowledge Base` with provenance (`title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`).
-5. Compare prior conclusions with current data in Step 2 — note whether prior insights are confirmed or invalidated.
+1. Regenerate + read the layered index: run `plugins/ae/bin/wiki-index-gen.py` (cheap, byte-idempotent), read `.ae/wiki/index.md`. Generator fails / no feature dirs → emit `Prior context: unavailable (no knowledge index)` and continue to Step 1.
+2. **[LLM]** Theme-pick: semantically read Tier A + the picked themes' TL;DRs against the query; read the survivor node pages (keep the set small — ≤10; thin/empty results → fall back to the canonical long form incl. grep-fallback in analyze/SKILL.md).
+3. **[deterministic]** Traverse the survivors' edges ONE hop in a single batched `plugins/ae/bin/wiki-neighbors.py <survivor-id ...>` call; read newly-reached feature targets' pages (BL/disc targets cite from the edge `evidence` alone; a survivor with no edges yields no lines — normal outcome, not an error; the ≤10 read cap covers the folded targets too).
+4. Present under `## Prior Art from Project Knowledge Base` with provenance per item: `id`, `title`, how located (`theme-pick` / `edge from <id>`), edge `evidence` when edge-located.
+5. Note in Step 2 whether located prior artifacts carry insights the current data confirms or invalidates.
 
 ## Step 1: Collect Outcome Statistics
 

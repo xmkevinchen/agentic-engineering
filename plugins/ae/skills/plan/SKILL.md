@@ -114,14 +114,14 @@ TaskCreate(subject: "ae:plan: Step 5 — Confirm")
 
 6. **Consume the analyze verification table** (F-063 — the front-loaded harness's consumer half): when a feature dir is resolved, read its `analysis.md` `### Verification considerations` table and use it as the **per-AC `verify_by` starting point** when writing the plan's Acceptance Criteria. This is an EXPLICIT consumption step (not an implicit nod): **for each row in the table, either map it to an AC's `verify_by` or record `# dimension dropped: <reason>`** (a rigor-downgrade → `# verify_by override (was X): <reason>`; see the Verification Harness conventions below). It is a **strong convention, not mechanically enforced** — review Check 7 is the correctness backstop and silent partial-mapping is not auto-detected (deferred, BL-179); the convention's job is to make divergence *visible*, closing the F-067 inert-floor gap (produced-but-never-read) without overclaiming mechanical enforcement. **Brownfield**: if `analysis.md` is absent or has no Verification-considerations table (legacy feature predating F-063, or a standalone plan), emit a non-blocking warning and derive `verify_by` from scratch — never block. Plan remains the canonical decider on conflict (see the override / dropped-dimension conventions in the Verification Harness section below).
 
-### 1.5. Prior Context (from Mengdie)
+### 1.5. Prior Context (project knowledge graph)
 
-Run this step after Research (Step 1) and before Write Plan (Step 2).
+Run this step after Research (Step 1) and before Write Plan (Step 2). Query = the feature description ($ARGUMENTS) or the referenced discussion's problem statement. (Compact locate-step; canonical long form incl. grep-fallback: analyze/SKILL.md § Prior context.)
 
-1. Call `memory_search` MCP tool with the feature description ($ARGUMENTS) or the referenced discussion's problem statement as query
-2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue to Step 2
-3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
-4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
+1. Regenerate + read the layered index: run `plugins/ae/bin/wiki-index-gen.py` (cheap, byte-idempotent), read `.ae/wiki/index.md`. Generator fails / no feature dirs → emit `Prior context: unavailable (no knowledge index)` and continue to Step 2.
+2. **[LLM]** Theme-pick: semantically read Tier A + the picked themes' TL;DRs against the query; read the survivor node pages (keep the set small — ≤10; thin/empty results → fall back to the canonical long form incl. grep-fallback in analyze/SKILL.md).
+3. **[deterministic]** Traverse the survivors' edges ONE hop in a single batched `plugins/ae/bin/wiki-neighbors.py <survivor-id ...>` call; read newly-reached feature targets' pages (BL/disc targets cite from the edge `evidence` alone; a survivor with no edges yields no lines — normal outcome, not an error; the ≤10 read cap covers the folded targets too).
+4. Present under `## Prior Art from Project Knowledge Base` with provenance per item: `id`, `title`, how located (`theme-pick` / `edge from <id>`), edge `evidence` when edge-located.
 5. Factor prior art into plan design — reference relevant prior decisions when they constrain or inform the plan's approach
 
 ## Step 2: Write Plan

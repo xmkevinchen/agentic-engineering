@@ -227,14 +227,14 @@ For each AC in the plan:
 
 If the plan has NO `verify_by` fields → **distinguish by PATH, not date** (codex P1): a **feature-dir plan** (`.ae/features/.../F-NNN/plan.md`, post-F-041 by construction) with zero `verify_by` → **block verdict pass** (forgotten harness, not legacy); only a **legacy-path plan** (`output.plans/`) → skip with `Harness satisfaction: skipped (pre-F-041 legacy plan)`. Never infer legacy from a date.
 
-### Prior Context (from Mengdie)
+### Prior Context (project knowledge graph)
 
-Run this step after Pre-checks pass and before creating the review team.
+Run this step after Pre-checks pass and before creating the review team. Query = the feature name from $ARGUMENTS or the plan title. (Compact locate-step; canonical long form incl. grep-fallback: analyze/SKILL.md § Prior context.)
 
-1. Call `memory_search` MCP tool with the feature name from $ARGUMENTS or plan title as query
-2. If `memory_search` is not available, fails, or returns no results — emit `Prior context: unavailable (tool not registered / no relevant results)` and continue
-3. If results returned with `degraded` field non-null — annotate results as "(partial — [degraded reason])"
-4. Present results under `## Prior Art from Project Knowledge Base` with provenance for each item: `title`, `source_file`, `knowledge_type`, `valid_from`, `snippet`
+1. Regenerate + read the layered index: run `plugins/ae/bin/wiki-index-gen.py` (cheap, byte-idempotent), read `.ae/wiki/index.md`. Generator fails / no feature dirs → emit `Prior context: unavailable (no knowledge index)` and continue.
+2. **[LLM]** Theme-pick: semantically read Tier A + the picked themes' TL;DRs against the query; read the survivor node pages (keep the set small — ≤10; thin/empty results → fall back to the canonical long form incl. grep-fallback in analyze/SKILL.md).
+3. **[deterministic]** Traverse the survivors' edges ONE hop in a single batched `plugins/ae/bin/wiki-neighbors.py <survivor-id ...>` call; read newly-reached feature targets' pages (BL/disc targets cite from the edge `evidence` alone; a survivor with no edges yields no lines — normal outcome, not an error; the ≤10 read cap covers the folded targets too).
+4. Present under `## Prior Art from Project Knowledge Base` with provenance per item: `id`, `title`, how located (`theme-pick` / `edge from <id>`), edge `evidence` when edge-located.
 5. Include prior review patterns and known issues in reviewer prompts (Step 3) as additional context — treat as background, does not constrain review
 
 ## Per-review Primary Context Bundle
@@ -260,7 +260,7 @@ Bundle contents:
 
 **Observability log**: at assembly time, TL emits one line: `[REVIEW] Primary context bundle assembled: <N>B (plan_AC=<a>B, conclusion=<b>B, framing=<c>B)`. Zero architecture change; creates the measurable surface the cost-signal reopen trigger needs (without it, "aggregate per-/ae:review cost spike" has no observable signal and the trigger fires invisibly).
 
-**Interaction with `### Prior Context (from Mengdie)`**: the Prior Context step (above) separately retrieves Mengdie prior-art results and per its own spec includes them in reviewer spawn prompts "as additional context — treat as background, does not constrain review". The primary bundle and Mengdie results are BOTH inserted into each reviewer spawn prompt but at different hierarchy levels: primary bundle = primary input (same role as CLAUDE.md); Mengdie results = advisory background appended AFTER the primary bundle. Do NOT merge them into one block; do NOT drop Mengdie results when embedding the bundle.
+**Interaction with `### Prior Context (project knowledge graph)`**: the Prior Context step (above) separately retrieves knowledge-graph prior-art results and per its own spec includes them in reviewer spawn prompts "as additional context — treat as background, does not constrain review". The primary bundle and graph prior-art results are BOTH inserted into each reviewer spawn prompt but at different hierarchy levels: primary bundle = primary input (same role as CLAUDE.md); graph prior-art results = advisory background appended AFTER the primary bundle. Do NOT merge them into one block; do NOT drop the prior-art results when embedding the bundle.
 
 ## Task progress tracking
 
