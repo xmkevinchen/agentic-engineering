@@ -251,6 +251,9 @@ def cmd_backfill(args):
         wrote += len(new)
     for s in skipped:
         print(f"[graph-refresh] {s}")
+    if wrote:
+        log_mutation(os.path.join(os.path.realpath(args.root), os.pardir, "graph"),
+                     "backfill", f"{wrote} edge(s)")
     print(f"[graph-refresh] backfill: {wrote} edge(s) written, "
           f"{len(skipped)} skipped, {failures} reverted")
     return 1 if failures else 0
@@ -335,6 +338,8 @@ def cmd_add_edges(args):
             print(f"[graph-refresh] REVERTED {fid} ({targets}): "
                   f"{'lint: ' + out if not okk else 'source anchor missed'}")
             continue
+        log_mutation(os.path.join(os.path.realpath(args.root), os.pardir, "graph"),
+                     "add-edges", f"{fid}: {len(edges)} edge(s)")
         print(f"[graph-refresh] {fid}: wrote {len(edges)} judged edge(s)")
     return 1 if failures else 0
 
