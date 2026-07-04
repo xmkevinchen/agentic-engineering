@@ -1,9 +1,10 @@
 #!/bin/sh
 # AC1 (F-070 Step 3): zero mengdie residue in the live skill surface.
 # sh-tap output (parser: sh-tap.v1).
-# Allowlist has TWO parts (claude Track 1): agent-selection-rubric.md (enumerated
-# path) + *.deprecated files (class-based — retired files legitimately keep
-# historical project-name mentions). Nothing else may join without editing this test.
+# Allowlist is FULLY ENUMERATED per AC1 (isolated judge: a *.deprecated class
+# pattern could silently grow) — exactly these two files carry historical
+# dogfood-project-name mentions. A NEW file (including a new .deprecated one)
+# fails this test until a human adds it here.
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -28,7 +29,7 @@ viol=""
 # glob the *.deprecated allowlist arm was dead code — false confidence)
 for f in $(find "$SKILLS" -name '*.md*' -type f); do
   case "$f" in
-    */agent-selection-rubric.md|*.deprecated) continue ;;  # enumerated historical allowlist
+    */setup/agent-selection-rubric.md|*/setup/agent-selection-scorer.md.deprecated) continue ;;  # fully enumerated historical allowlist
   esac
   if grep -qi 'mengdie' "$f"; then
     viol="$viol $f"

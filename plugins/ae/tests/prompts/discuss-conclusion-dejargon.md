@@ -20,4 +20,4 @@ Read `plugins/ae/skills/discuss/SKILL.md` §8 conclusion template and answer:
 5. Is there a KEEP comment explaining the Process Metadata header + 2 fields are /ae:plan dual-sentinel dependencies?
 6. Does the `## Doodlestein Review` section now appear AFTER `## Next Steps` (audit-trail, below the fold)?
 7. Is there a prose-alignment pointer to AE Output Standards for conclusion prose (decision-first, risks explicit, rejected-alts in audit trail)?
-8. Is the `entities:` frontmatter field + Entity extraction instruction still present (untouched, Mengdie dependency)?
+8. Is the `entities:` frontmatter field + Entity extraction instruction still present (untouched — consumed by ae:next's "Has discussion" heuristic)?

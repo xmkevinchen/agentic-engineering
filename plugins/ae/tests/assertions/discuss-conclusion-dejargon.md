@@ -28,7 +28,7 @@ source: regression
 - [structure:order] `## Doodlestein Review` appears AFTER `## Next Steps` in the §8 conclusion template (audit-trail below the fold)
 - [text:contains] A prose-alignment pointer to AE Output Standards is present (`Conclusion prose follows` + reference to output-standards.md)
 - [text:contains] The `entities:` frontmatter field is still present in the conclusion template
-- [text:contains] The `Entity extraction (required)` instruction is still present (Mengdie dependency, untouched)
+- [text:contains] The `Entity extraction (required)` instruction is still present (consumed by ae:next's "Has discussion" heuristic, untouched)
 
 ### MUST_NOT
 
