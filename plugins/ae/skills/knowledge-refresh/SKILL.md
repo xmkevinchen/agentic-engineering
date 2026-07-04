@@ -83,6 +83,37 @@ written automatically but weren't show up here as zero-edge nodes or fresh candi
 — the refresh closes the gap AND the report names it, so the broken write point
 itself can be fixed.
 
+### 4.5 Synthesis pages (LLM writes, machine gates, human owns truth)
+
+High-level design pages — persisted understanding of components/subsystems the
+corpus references but no page explains. Fast-changing implementation detail never
+gets a page (the working tree answers that live via grep). Flow:
+
+1. **Propose candidates**: subsystems repeatedly named across nodes/edges/skills
+   with no `syn-*` page in `.ae/graph/synthesis/`. Also: every existing page whose
+   pull-gate check reports `stale` is a re-look candidate.
+2. **Evidence bundle BEFORE writing** — the write gate. For each accepted candidate
+   the author must have read: (a) the code at every anchor it will cite, (b) docs
+   mentioning the entity, (c) `git log --follow` / blame for the entity's files —
+   commit messages ground "why" claims in recorded intent instead of invention.
+3. **Content contract**: every declarative sentence carries an anchor (its `source`
+   cited in the body) OR an explicit unanchored-judgment marker (e.g. *"judgment,
+   unanchored:"*). "Why" claims cite commits where history grounds them. A page
+   holds what the sources DON'T say — responsibilities, boundaries, why — never
+   restated content.
+4. **Write via `plugins/ae/bin/graph-refresh.py add-page <page.json>`** — the only
+   machine write path (atomic, idempotent by id, refuses divergent re-adds, deletes
+   itself on a failed post-write check, logs only successes). NEVER hand-write page
+   files from the machine side; humans MAY edit pages directly (the next check
+   re-validates).
+5. **Judge gate (rubric)**: reject a page section if every sentence in it is
+   verbatim-quotable from a single anchored source — that is a summary, not
+   synthesis. Grade actual content non-restatability, never section-template
+   presence.
+6. **Stale pages**: re-read the drifted anchors, decide whether the understanding
+   still holds — update anchors (human edit or delete + re-add) or retire the page
+   (delete the file; index, check, and log converge on the next run).
+
 ### 5. Index + traversal check
 
 `plugins/ae/bin/graph-index-gen.py` (regenerate the layered index), then spot-check the
@@ -102,6 +133,12 @@ and `--hops 2` on one lineage — non-empty, sensible output.
   user-review pending — invite the user to spot-check the semantic edges and delete
   any they disagree with (plain frontmatter edit; the next refresh + lint keep
   everything else honest).
+- **Synthesis page freshness**: list every page ordered by time-since-last-validation
+  (oldest first — pages nobody reads never hit the pull gate, so this list is their
+  only surfacing), with each page's current check verdict. Track the **stale-backlog
+  trend** across refreshes: if the stale count grew versus the previous refresh
+  report, say so explicitly — consecutive growth is the recorded condition for
+  reopening the automated-trigger decision.
 
 ## Non-goals
 

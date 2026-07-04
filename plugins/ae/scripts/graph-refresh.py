@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""graph-refresh.py — brownfield knowledge-graph bootstrap, deterministic half (F-071).
+"""graph-refresh.py — knowledge-graph re-sync, deterministic half (F-071).
 
-Three subcommands (the LLM half lives in the /ae:wiki-bootstrap skill):
+Subcommands (the LLM half lives in the /ae:knowledge-refresh skill):
   backfill [--dry-run]   legacy origin_bl → `origin` edges; depends_on →
                          `relates_to` edges (source = the depends_on: line).
                          Idempotent by (kind,id); unresolvable targets SKIPPED
@@ -13,6 +13,17 @@ Three subcommands (the LLM half lives in the /ae:wiki-bootstrap skill):
                          Per-node: newline-safe append + line-number compensation
                          + post-write source-line ANCHOR check + scoped graph-lint;
                          any failure REVERTS that node and exits non-zero.
+  add-page <page.json>   the ONLY machine write path for synthesis pages.
+                         {id, title, anchors: [{source, anchor_hash, commit?}],
+                         body}. Atomic temp-write + rename; identical re-add
+                         no-ops; same-id-different-content is REFUSED (a human
+                         resolves — humans edit page files directly); every
+                         anchor's source must be cited in the body; a post-write
+                         graph-page-check DEFECT deletes the file and logs
+                         nothing.
+
+Successful mutations append one record to the graph dir's log.md (append-only,
+never hand-edited); refused/reverted writes append nothing.
 
 Landmines this script exists to encode (all hit in the 2026-07-04 live run):
 frontmatter append must preserve the trailing newline (hand-rolled surgery
@@ -34,6 +45,16 @@ import yaml
 STATE_DIRS = ("active", "done", "abandoned", "paused")
 HERE = os.path.dirname(os.path.realpath(__file__))
 LINT = os.path.join(HERE, "graph-lint.py")
+PAGE_CHECK = os.path.join(HERE, "graph-page-check.py")
+
+
+def log_mutation(graph_dir, actor, what):
+    """Append one record to the graph's append-only mutation log."""
+    import datetime
+    os.makedirs(graph_dir, exist_ok=True)
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(os.path.join(graph_dir, "log.md"), "a", encoding="utf-8") as f:
+        f.write(f"- {stamp} {actor}: {what}\n")
 
 if __name__ != "__main__":
     raise SystemExit("graph-refresh.py is subprocess-only; do not import")
@@ -318,6 +339,63 @@ def cmd_add_edges(args):
     return 1 if failures else 0
 
 
+def cmd_add_page(args):
+    try:
+        page = json.load(open(args.page_json, encoding="utf-8"))
+        pid = str(page["id"])
+        title = str(page["title"])
+        anchors = page["anchors"]
+        body = str(page["body"])
+        assert isinstance(anchors, list) and anchors
+    except Exception as e:
+        print(f"[graph-refresh] usage error: cannot read {args.page_json}: {e}", file=sys.stderr)
+        return 2
+    syn_root = os.path.realpath(args.synthesis_root)
+    graph_dir = os.path.dirname(syn_root)
+    repo_root = os.path.normpath(os.path.join(graph_dir, os.pardir, os.pardir))
+    # every declared anchor must actually be cited in the body
+    uncited = [a["source"] for a in anchors if a.get("source") not in body]
+    if uncited:
+        print(f"[graph-refresh] REFUSED {pid}: anchors not cited in body: {', '.join(uncited)}")
+        return 1
+    import datetime
+    today = datetime.date.today().isoformat()
+    lines = ["---", f"id: {pid}", f'title: "{yq(title)}"', f"created: {today}",
+             "written_by: batch", "state: fresh", "anchors:"]
+    for a in anchors:
+        lines.append(f'  - source: "{yq(a["source"])}"')
+        lines.append(f'    anchor_hash: "{yq(a["anchor_hash"])}"')
+        if a.get("commit"):
+            lines.append(f"    commit: {a['commit']}")
+    lines += ["---", "", body.rstrip("\n"), ""]
+    content = "\n".join(lines)
+    os.makedirs(syn_root, exist_ok=True)
+    target = os.path.join(syn_root, f"{pid}.md")
+    if os.path.exists(target):
+        existing = open(target, encoding="utf-8").read()
+        # created date is write-time metadata, not identity — compare without it
+        strip = lambda t: re.sub(r"^created: .*$", "created: X", t, flags=re.M)
+        if strip(existing) == strip(content):
+            print(f"[graph-refresh] {pid}: identical content already present — no-op (idempotent)")
+            return 0
+        print(f"[graph-refresh] REFUSED {pid}: page exists with different content "
+              f"(humans edit the file directly; machine rewrites go through delete + re-add)")
+        return 1
+    tmp = target + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(content)
+    os.replace(tmp, target)
+    proc = subprocess.run([sys.executable, PAGE_CHECK, "--repo-root", repo_root, target],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        os.remove(target)
+        print(f"[graph-refresh] REVERTED {pid}: page check failed:\n{proc.stdout.strip()}")
+        return 1
+    log_mutation(graph_dir, "add-page", f"{pid} ({len(anchors)} anchor(s))")
+    print(f"[graph-refresh] {pid}: page written ({len(anchors)} anchor(s))")
+    return 0
+
+
 parser = argparse.ArgumentParser()
 sub = parser.add_subparsers(dest="cmd", required=True)
 p1 = sub.add_parser("backfill")
@@ -325,14 +403,17 @@ p1.add_argument("--dry-run", action="store_true")
 p2 = sub.add_parser("candidates")
 p3 = sub.add_parser("add-edges")
 p3.add_argument("edges_json")
-for p in (p1, p2, p3):
+p4 = sub.add_parser("add-page")
+p4.add_argument("page_json")
+p4.add_argument("--synthesis-root", default=".ae/graph/synthesis")
+for p in (p1, p2, p3, p4):
     p.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
 try:
     args = parser.parse_args()
 except SystemExit:
     sys.exit(2)
-if not os.path.isdir(args.root):
+if args.cmd != "add-page" and not os.path.isdir(args.root):
     print(f"[graph-refresh] usage error: no such root: {args.root}", file=sys.stderr)
     sys.exit(2)
 sys.exit({"backfill": cmd_backfill, "candidates": cmd_candidates,
-          "add-edges": cmd_add_edges}[args.cmd](args))
+          "add-edges": cmd_add_edges, "add-page": cmd_add_page}[args.cmd](args))
