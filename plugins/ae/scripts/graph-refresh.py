@@ -308,6 +308,14 @@ def cmd_add_edges(args):
             if (r["kind"], str(r["target"])) in have:
                 print(f"[graph-refresh] {fid}: {r['kind']} -> {r['target']} already present — skipped (idempotent)")
                 continue
+            # the evidence line must live in the BODY — a line inside frontmatter
+            # would let the edge anchor to its own inserted YAML and self-validate
+            if r.get("line") and int(r["line"]) <= old_fm:
+                print(f"[graph-refresh] REJECTED {fid}: {r['kind']} -> {r['target']} "
+                      f"line {r['line']} points inside frontmatter (needs a body line)")
+                failures += 1
+                continue
+            have.add((r["kind"], str(r["target"])))  # in-batch duplicates skip too
             e = {"kind": r["kind"], "id": str(r["target"]),
                  "evidence": r.get("evidence", ""),
                  "judge": r.get("rationale", "bootstrap judgment — user-review pending")}
@@ -330,11 +338,12 @@ def cmd_add_edges(args):
         open(idx, "w", encoding="utf-8").write(cur)
         okk, out = scoped_lint(args.root, node_dir)
         anchor_ok = True
+        new_fm = fm_line_count(idx)
         for e in edges:
             if "source" in e:
                 ln = int(e["source"].rsplit(":", 1)[1])
                 lines = open(idx, encoding="utf-8").read().splitlines()
-                if ln > len(lines) or e["id"] not in lines[ln - 1]:
+                if ln <= new_fm or ln > len(lines) or e["id"] not in lines[ln - 1]:
                     anchor_ok = False
         if not (okk and anchor_ok):
             open(idx, "w", encoding="utf-8").write(before)
@@ -356,6 +365,12 @@ def cmd_remove_edges(args):
     except Exception as e:
         print(f"[graph-refresh] usage error: cannot read {args.edges_json}: {e}", file=sys.stderr)
         return 2
+    for i, r in enumerate(rows, 1):
+        if not (isinstance(r, dict) and all(k in r for k in ("from", "kind", "target"))):
+            print(f"[graph-refresh] usage error: row {i} malformed (needs from/kind/target)",
+                  file=sys.stderr)
+            return 2
+    KNOWN_EDGE_FIELDS = {"kind", "id", "source", "evidence", "written_by", "judge"}
     dirs = {str(parse(idx)[0].get("id", "")): (nd, idx)
             for nd, idx in nodes(args.root) if parse(idx)[0]}
     failures = removed = 0
@@ -375,6 +390,12 @@ def cmd_remove_edges(args):
         if hit.get("written_by") == "human":
             print(f"[graph-refresh] REFUSED {fid}: {kind} -> {target} is written_by: human "
                   f"— a human ruling is never machine-deleted")
+            failures += 1
+            continue
+        unknown = {k for e in edges if isinstance(e, dict) for k in e} - KNOWN_EDGE_FIELDS
+        if unknown:
+            print(f"[graph-refresh] REFUSED {fid}: edges block carries fields the "
+                  f"round-trip would drop ({', '.join(sorted(unknown))}) — hand-edit instead")
             failures += 1
             continue
         # rebuild the frontmatter without this edge, script-owned surgery only
@@ -434,7 +455,9 @@ def cmd_add_page(args):
     except Exception as e:
         print(f"[graph-refresh] usage error: cannot read {args.page_json}: {e}", file=sys.stderr)
         return 2
-    syn_root = os.path.realpath(args.synthesis_root)
+    syn_root = args.synthesis_root or os.path.join(
+        os.path.realpath(args.root), os.pardir, "graph", "synthesis")
+    syn_root = os.path.realpath(syn_root)
     graph_dir = os.path.dirname(syn_root)
     repo_root = os.path.normpath(os.path.join(graph_dir, os.pardir, os.pardir))
     # every declared anchor must actually be cited in the body
@@ -471,9 +494,12 @@ def cmd_add_page(args):
     os.replace(tmp, target)
     proc = subprocess.run([sys.executable, PAGE_CHECK, "--repo-root", repo_root, target],
                           capture_output=True, text=True)
-    if proc.returncode != 0:
+    verdict_fresh = proc.stdout.strip().endswith(": fresh")
+    if proc.returncode != 0 or not verdict_fresh:
         os.remove(target)
-        print(f"[graph-refresh] REVERTED {pid}: page check failed:\n{proc.stdout.strip()}")
+        why = "page check failed" if proc.returncode != 0 else \
+              "page not fresh at write time (a supplied anchor_hash is already wrong)"
+        print(f"[graph-refresh] REVERTED {pid}: {why}:\n{proc.stdout.strip()}")
         return 1
     log_mutation(graph_dir, "add-page", f"{pid} ({len(anchors)} anchor(s))")
     print(f"[graph-refresh] {pid}: page written ({len(anchors)} anchor(s))")
@@ -489,7 +515,7 @@ p3 = sub.add_parser("add-edges")
 p3.add_argument("edges_json")
 p4 = sub.add_parser("add-page")
 p4.add_argument("page_json")
-p4.add_argument("--synthesis-root", default=".ae/graph/synthesis")
+p4.add_argument("--synthesis-root", default=None)
 p5 = sub.add_parser("remove-edges")
 p5.add_argument("edges_json")
 for p in (p1, p2, p3, p4, p5):

@@ -100,5 +100,38 @@ PYEOF
 [ $? -eq 0 ] && ok "post-removal frontmatter parses; exactly the human edge remains" \
              || notok "post-removal frontmatter parses; exactly the human edge remains"
 
+# 5. edges block with a field the round-trip would drop: REFUSED
+cat > "$ROOT/done/F-951-b/index.md" <<'EOF'
+---
+id: F-951
+title: "b"
+status: done
+created: 2026-07-04
+edges:
+  - kind: origin
+    id: BL-950
+    written_by: batch
+    custom_note: "user-added field"
+---
+Body b.
+EOF
+cat > "$TMP/rm3.json" <<'EOF'
+[{"from": "F-951", "kind": "origin", "target": "BL-950"}]
+EOF
+before=$(cat "$ROOT/done/F-951-b/index.md")
+out=$(python3 "$REFRESH" remove-edges "$TMP/rm3.json" --root "$ROOT" 2>&1); rc=$?
+after=$(cat "$ROOT/done/F-951-b/index.md")
+if [ $rc -ne 0 ] && printf '%s' "$out" | grep -q 'round-trip would drop' && [ "$before" = "$after" ]; then
+  ok "unknown edge field: removal refused, file untouched"
+else
+  notok "unknown edge field: removal refused, file untouched (rc=$rc out=$out)"
+fi
+
+# 6. malformed row: usage error before any mutation
+printf '[{"from": "F-950"}]' > "$TMP/rm4.json"
+python3 "$REFRESH" remove-edges "$TMP/rm4.json" --root "$ROOT" >/dev/null 2>&1
+[ $? -eq 2 ] && ok "malformed row: exit 2 before any mutation" \
+             || notok "malformed row: exit 2 before any mutation"
+
 echo "1..$((pass + fail))"
 [ "$fail" -eq 0 ]

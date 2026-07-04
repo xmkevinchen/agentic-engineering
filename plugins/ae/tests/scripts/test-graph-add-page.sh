@@ -88,7 +88,21 @@ else
   notok "check failure: file deleted, log untouched (rc=$rc out=$out)"
 fi
 
-# 6. malformed json: usage error exit 2
+# 6. wrong anchor_hash at write time: page refused as not-fresh, no file, no log
+cat > "$TMP/stalewrite.json" <<'EOF'
+{"id": "syn-stalewrite", "title": "hash already wrong",
+ "anchors": [{"source": "src/a.txt:1", "anchor_hash": "text that never matched"}],
+ "body": "Cites (src/a.txt:1)."}
+EOF
+out=$(python3 "$REFRESH" add-page "$TMP/stalewrite.json" --synthesis-root "$SYN" 2>&1); rc=$?
+if [ $rc -ne 0 ] && printf '%s' "$out" | grep -q 'not fresh' && [ ! -f "$SYN/syn-stalewrite.md" ] \
+   && ! grep -q 'syn-stalewrite' "$LOG"; then
+  ok "stale-at-write page refused, no file, no log"
+else
+  notok "stale-at-write page refused, no file, no log (rc=$rc out=$out)"
+fi
+
+# 7. malformed json: usage error exit 2
 printf 'not json' > "$TMP/nj.json"
 python3 "$REFRESH" add-page "$TMP/nj.json" --synthesis-root "$SYN" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "malformed json: exit 2 (usage)" || notok "malformed json: exit 2 (usage)"

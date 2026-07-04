@@ -29,7 +29,7 @@ title: "alpha"
 status: done
 created: 2026-07-04
 ---
-Body mentions nothing.
+Body relates to F-941 by design.
 EOF
 cat > "$FAKE/.ae/features/done/F-941-beta/index.md" <<'EOF'
 ---
@@ -48,7 +48,7 @@ LOG="$FAKE/.ae/graph/log.md"
 
 # 1. add-edges appends exactly one record
 cat > "$TMP/edges.json" <<'EOF'
-[{"from": "F-940", "kind": "relates_to", "target": "F-941", "line": 1,
+[{"from": "F-940", "kind": "relates_to", "target": "F-941", "line": 7,
   "evidence": "alpha builds on beta", "rationale": "test"}]
 EOF
 python3 "$REFRESH" add-edges "$TMP/edges.json" --root "$ROOT" >/dev/null 2>&1
@@ -116,7 +116,20 @@ python3 "$REFRESH" backfill --root "$ROOT" >/dev/null 2>&1
 cmp -s "$LOG" "$TMP/log-after-bf" && ok "idempotent backfill re-run logs nothing" \
                                   || notok "idempotent backfill re-run logs nothing"
 
-# 7. wiring: analyze locate-step carries the write-back rule
+# 7. an edge citing a frontmatter line is rejected (self-anchoring guard)
+cat > "$TMP/attack.json" <<'EOF'
+[{"from": "F-941", "kind": "relates_to", "target": "F-940", "line": 1,
+  "evidence": "fabricated", "rationale": "attack"}]
+EOF
+out=$(python3 "$REFRESH" add-edges "$TMP/attack.json" --root "$ROOT" 2>&1); rc=$?
+if [ $rc -ne 0 ] && printf '%s' "$out" | grep -q 'REJECTED.*frontmatter' \
+   && ! grep -q 'kind: relates_to' "$ROOT/done/F-941-beta/index.md"; then
+  ok "frontmatter-line edge rejected, nothing written"
+else
+  notok "frontmatter-line edge rejected, nothing written (rc=$rc out=$out)"
+fi
+
+# 8. wiring: analyze locate-step carries the write-back rule
 sec=$(awk '/^#+ .*Prior [Cc]ontext/{p=1; next} p && /^#+ /{exit} p' "$REPO/plugins/ae/skills/analyze/SKILL.md")
 case "$sec" in
   *"add-page"*) ok "analyze locate-step carries the write-back rule";;

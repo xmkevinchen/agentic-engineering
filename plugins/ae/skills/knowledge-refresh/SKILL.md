@@ -88,7 +88,12 @@ human` is the only exemption: a human ruling is never machine-re-judged (and
 4. Batch synthesis pages: re-apply the step-4.5 content contract + judge rubric
    to every `written_by: batch` page. FAIL → rewrite through delete + `add-page`
    (the full evidence-bundle gate again) or delete outright if the page should
-   not exist. PASS → keep, untouched.
+   not exist. PASS → keep, untouched. **Same-family re-judging only catches
+   FORM (restatement, missing markers) — it cannot catch its own confabulations.
+   Page re-judging should be a CROSS-FAMILY ground-truth pass whenever available:
+   a different-family reviewer reads each page AND the code it anchors into, and
+   verifies the INTERPRETATION claim-by-claim (the first such audit found
+   confident-but-wrong claims on 4/4 pages that the form rubric had passed).**
 5. **Hardening path**: pages/edges the user has spot-checked and endorsed get
    `written_by` flipped to `human` (plain frontmatter/file edit) — they leave
    the re-judge pool permanently. Over successive refreshes the corpus migrates
