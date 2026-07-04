@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Project knowledge graph — F-069 / F-070 / F-071 (v0.13.0)
+
+AE's process artifacts become a queryable relationship graph (Karpathy LLM-wiki *pattern* — zero embeddings, no RAG; the LLM reads a layered index and provenance-carrying frontmatter edges):
+
+- **F-069 — the read/write path**: edge schema in feature frontmatter (`{kind∈5-enum, id, source:"path:line", evidence, written_by∈3-enum, judge}`); `graph-lint.py` (machine-verifiable edge lint — resolution/provenance/enums; scoped mode is the archive gate; never judges meaning) + `graph-index-gen.py` (byte-idempotent layered theme index → `.ae/graph/`) + `graph-neighbors.py` (1-hop traversal, the ONE shared implementation prose and tests both drive); `/ae:review` archive trigger gains **Phase 1.5** (LLM writes `relates_to` edges for genuine siblings, deterministic lint gate terminal-blocks the archive on defects); `/ae:analyze` cold-start reads the graph (LLM theme-pick + grep fallback + batched edge traversal).
+- **F-070 — mengdie retired**: the remaining 5 `memory_search` read sites (discuss/think/plan/review/plugin-stats) swapped to the compact graph locate-step; all 6 `memory_ingest` Knowledge-Capture sections + the shared protocol doc deleted (relationships → archive-time edges; lessons → the host's persistent memory via a new prompt-level hook in `/ae:work`'s Completion Invariant); PRD archived; `test-mengdie-zero-residue.sh` guards recurrence.
+- **F-071 — `/ae:knowledge-refresh`**: manually-triggered graph re-sync (the correction channel when automatic write points miss or misfire; first run on an un-graphed corpus = full build). `graph-refresh.py` owns all YAML surgery (backfill legacy `origin_bl`/`depends_on` → edges; grounded-candidate scan; `add-edges` judged-write path with newline-safe append, post-write source anchoring, (kind,id) idempotence, revert-on-lint-fail).
+- **Pre-merge integration review** (3 isolated fresh reviewers: Codex / local gemma-26b full-diff / Claude) caught 2 seam defects per-feature review missed: a Phase-1.5-blocked archive dead-ended on re-run (ad-hoc routing — fixed with the archive-retry exception) and the lessons hook fired before the harness loop settled (timing clause added).
+- 8 new deterministic test suites (~150 sh-tap cases); AE's own corpus bootstrapped as the first graph (70 nodes / 128 edges, 2 honest orphans).
+
 ### Harness wave — F-063 / F-065 / F-067 / F-068 + pre-merge integration fixups (v0.12.3)
 
 Four features completing the HDD harness, then a cross-family pre-merge integration review of the combined branch (the convention from v0.11.0) that caught two P1 seam defects per-feature review structurally missed:
