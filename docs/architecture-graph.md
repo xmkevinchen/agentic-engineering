@@ -16,6 +16,8 @@ graph LR
     syn_plugin_surface["Plugin surface — marketplace shell, ae plugin core, explicit naming"]
     syn_test_layer["Test layer — runtime fixtures, sh-tap contract, blind protocol"]
     syn_verification_harness["Verification harness — machines measure, LLM judges, the goal is frozen"]
+    syn_knowledge_graph -->|talks_to| syn_verification_harness
+    syn_verification_harness -->|talks_to| syn_test_layer
 ```
 
 ## Components
@@ -24,6 +26,7 @@ graph LR
 
 Page: [`syn-knowledge-graph`](../.ae/graph/synthesis/syn-knowledge-graph.md)
 Documented for: F-069, F-072
+Relationships: talks_to → syn-verification-harness
 
 ### Plugin surface — marketplace shell, ae plugin core, explicit naming
 
@@ -37,3 +40,4 @@ Page: [`syn-test-layer`](../.ae/graph/synthesis/syn-test-layer.md)
 
 Page: [`syn-verification-harness`](../.ae/graph/synthesis/syn-verification-harness.md)
 Documented for: F-048, F-065
+Relationships: talks_to → syn-test-layer

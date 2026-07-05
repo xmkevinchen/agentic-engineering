@@ -16,6 +16,12 @@ anchors:
   - source: "CLAUDE.md:70"
     anchor_hash: "- **Self-bootstrapping** — AE develops AE. All changes to this plugin go through the AE pipeline (discuss→plan→work→review). This is the default working mode, not a special case."
     commit: b4cc996
+edges:
+  - kind: talks_to
+    id: syn-verification-harness
+    evidence: "the graph's trust model delegates every semantic verdict to the harness's judge layer (machines measure, LLM judges)"
+    written_by: batch
+    judge: {value: pass, rationale: "solo — degraded (same-session producer+judge; user-review pending)"}
 ---
 
 Judgment, unanchored: the graph persists two kinds of JUDGED content — and their mechanical by-products (the append-only mutation log, the regenerated index); everything semantic beyond these two derives at read time. Domain one is relationship edges between project artifacts, whose target-id universe is a closed four-class dispatch — F / BL / disc / syn, one canonical table in the shared module (plugins/ae/scripts/graph_common.py:62); an unknown prefix is a named defect, never silently classified. (The v1 leaf-only page rule existed because admitting the fourth prefix meant touching the dispatch chain and resolvers — F-076 did exactly that, ending leaf-only.) Domain two is synthesis pages — prose understanding whose every claim anchors into the working tree, machine-graded into exactly three ANCHOR-freshness states — the grading never claims semantic truth, which stays with the judge and the human (plugins/ae/scripts/graph-page-check.py:192).

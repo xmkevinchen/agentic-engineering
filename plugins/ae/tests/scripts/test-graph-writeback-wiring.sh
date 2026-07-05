@@ -57,7 +57,7 @@ for s in analyze plan discuss review think; do
   grep -q 'query:` record' "$SKILLS/$s/SKILL.md" \
     && ok "$s appends a query record" || notok "$s appends a query record"
 done
-grep -q 'reserved and disjoint from `check:` / `add-page:` / `add-edges:` / `backfill:` / `dedup:`' "$SKILLS/analyze/SKILL.md" \
+grep -q 'reserved and disjoint from `check:` / `add-page:` / `add-edges:` / `backfill:` / `dedup:` / `rejected:`' "$SKILLS/analyze/SKILL.md" \
   && ok "query token reserved against the other ledger kinds" || notok "query token reserved against the other ledger kinds"
 
 # --- 6. filed pages are edge-targetable (binding constraint 1 pin — Step 3 shipped first)
@@ -123,12 +123,35 @@ printf -- "- 2026-07-05T00:01:00Z query: analyze topic — write-back candidate:
 out9c="$("$PY" "$SCRIPTS/graph-writeback-health.py" --graph-dir "$TMP/graph" --traces-dir "$TMP/traces" 2>&1)"
 case "$out9c" in *"invocations in traces: 3 vs query records: 1 (gap: 2 — POSITIVE GAP"*) ok "denominator: positive gap flags append-layer death";; *) notok "denominator: positive gap flags append-layer death ($out9c)";; esac
 
+# --- 9c. REJECTED proposals are durable ledger records (the resample pool's
+#         lint half — a rejection that only hits stdout is invisible to the
+#         next refresh) and health COUNTS them per source
+cat >> "$TMP/graph/log.md" <<'EOF'
+- 2026-07-05T02:00:00Z rejected: F-901: part_of -> F-902 [lint] lint-revert
+- 2026-07-05T02:01:00Z rejected: F-902: relates_to -> Q-9 [writeback] unclassifiable-target
+EOF
+out9d="$("$PY" "$SCRIPTS/graph-writeback-health.py" --graph-dir "$TMP/graph" 2>&1)"
+case "$out9d" in *"rejected proposals by source (resample-pool input): lint: 1, writeback: 1"*) ok "rejected records counted per source";; *) notok "rejected records counted per source ($out9d)";; esac
+
+# live rejection writes the ledger record: drive an illegal row through
+# add-edges against a fixture tree and assert the rejected: record lands
+FIXT="$REPO/plugins/ae/tests/fixtures/graph-topology"
+TREE="$TMP/tree9"
+cp -R "$FIXT" "$TREE"
+cat > "$TMP/badrow.json" <<'EOF'
+[{"from": "F-901", "kind": "part_of", "target": "F-902", "line": 20,
+  "evidence": "illegal", "rationale": "must be rejected", "proposal_source": "lint"}]
+EOF
+"$PY" "$SCRIPTS/graph-refresh.py" add-edges "$TMP/badrow.json" --root "$TREE/features" --repo-root "$TREE" >/dev/null 2>&1
+grep -q 'rejected: F-901: part_of -> F-902 \[lint\] lint-revert' "$TREE/graph/log.md" 2>/dev/null \
+  && ok "live rejection lands as a durable rejected: record" || notok "live rejection lands as a durable rejected: record"
+
 # --- 10. refresh wires the health run + the adversarial no-resample
 KR="$SKILLS/knowledge-refresh/SKILL.md"
 grep -q 'graph-writeback-health.py' "$KR" \
   && ok "refresh runs write-point health (computed, not promised)" || notok "refresh runs write-point health (computed, not promised)"
-grep -q 'sample ≥2 of' "$KR" && grep -q '`no` dispositions' "$KR" \
-  && ok "refresh samples no-dispositions adversarially" || notok "refresh samples no-dispositions adversarially"
+grep -q 'sample ≥2 of' "$KR" && grep -q '`no` dispositions AND ≥1 of the' "$KR" \
+  && ok "refresh resample pool covers no-dispositions AND rejected records" || notok "refresh resample pool covers no-dispositions AND rejected records"
 grep -q 'N=10' "$KR" \
   && ok "refresh states the numeric tripwire" || notok "refresh states the numeric tripwire"
 

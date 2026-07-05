@@ -58,5 +58,19 @@ else
   notok "e2e: lint-sourced proposal logged with its source tag"
 fi
 
+# --- real-corpus half of AC13: whole-tree lint over the ACTUAL corpus reports
+#     zero DEFECT lines (orphans = observation class, never defects). Skips
+#     cleanly on checkouts without local feature state.
+if [ -d "$REPO/.ae/features" ]; then
+  rc_out="$(cd "$REPO" && python3 "$REPO/plugins/ae/scripts/graph-lint.py" --root .ae/features 2>&1)"
+  rc_defects="$(printf '%s\n' "$rc_out" | grep -c '^\[graph-lint\] DEFECT:' || true)"
+  [ "$rc_defects" = "0" ] && ok "real corpus: zero DEFECT lines (whole-tree)" \
+    || notok "real corpus: zero DEFECT lines (found $rc_defects)"
+  printf '%s\n' "$rc_out" | grep -q 'whole-tree ([1-9][0-9]* node(s))' \
+    && ok "real-corpus lint actually scanned the tree" || notok "real-corpus lint actually scanned the tree"
+else
+  ok "no local feature corpus — real-corpus lint skipped (external checkout)"
+fi
+
 echo "1..$((pass + fail))"
 [ "$fail" -eq 0 ]

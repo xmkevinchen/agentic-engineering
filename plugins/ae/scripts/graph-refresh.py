@@ -320,11 +320,25 @@ def cmd_add_edges(args):
     # node abstraction: id → (class, edge-bearing path) — F index.md files and
     # syn page files write through the SAME append path (F-076 leaf-only end)
     root, syn_root, repo_root, node_map = write_context(args)
+    graph_dir = os.path.join(root, os.pardir, "graph")
+
+    def reject(row, why):
+        """A refused/reverted proposal is DURABLE — the ledger records the
+        rejection event even though nothing landed in the corpus, so the
+        adversarial resample pool has something to sample from (a rejection
+        that only ever hit stdout is invisible to the next refresh)."""
+        tag = str(row.get("proposal_source", "untagged"))
+        log_mutation(graph_dir, "rejected",
+                     f"{row.get('from')}: {row.get('kind')} -> {row.get('target')} "
+                     f"[{tag}] {why}")
+
     failures = 0
     for fid, items in by_from.items():
         entry = node_map.get(fid)
         if entry is None or entry[0] not in ("F", "syn"):
             print(f"[graph-refresh] REVERTED {fid}: no such edge-bearing node", file=sys.stderr)
+            for r in items:
+                reject(r, "no-such-node")
             failures += 1
             continue
         src_class, idx = entry
@@ -342,11 +356,13 @@ def cmd_add_edges(args):
             if r["kind"] not in graph_common.KIND_ENUM:
                 print(f"[graph-refresh] REJECTED {fid}: kind '{r['kind']}' not in enum "
                       f"{sorted(graph_common.KIND_ENUM)}")
+                reject(r, "kind-not-in-enum")
                 failures += 1
                 continue
             if graph_common.classify_id(r["target"]) is None:
                 print(f"[graph-refresh] REJECTED {fid}: unclassifiable target id "
                       f"'{r['target']}' (expected {graph_common.ID_HINT})")
+                reject(r, "unclassifiable-target")
                 failures += 1
                 continue
             if (r["kind"], str(r["target"])) in have:
@@ -357,6 +373,7 @@ def cmd_add_edges(args):
             if r.get("line") and int(r["line"]) <= old_fm:
                 print(f"[graph-refresh] REJECTED {fid}: {r['kind']} -> {r['target']} "
                       f"line {r['line']} points inside frontmatter (needs a body line)")
+                reject(r, "frontmatter-line")
                 failures += 1
                 continue
             have.add((r["kind"], str(r["target"])))  # in-batch duplicates skip too
@@ -402,6 +419,8 @@ def cmd_add_edges(args):
             targets = ", ".join(e["id"] for e in edges)
             print(f"[graph-refresh] REVERTED {fid} ({targets}): "
                   f"{'lint: ' + out if not okk else 'source anchor missed'}")
+            for r in items:
+                reject(r, "lint-revert" if not okk else "anchor-missed")
             continue
         tag_suffix = f" [{', '.join(sorted(tags))}]" if tags else ""
         log_mutation(os.path.join(os.path.realpath(args.root), os.pardir, "graph"),
@@ -534,7 +553,12 @@ def cmd_add_page(args):
     import datetime
     today = datetime.date.today().isoformat()
     lines = ["---", f"id: {pid}", f'title: "{yq(title)}"', f"created: {today}",
-             "written_by: batch", "state: fresh", "anchors:"]
+             "written_by: batch", "state: fresh"]
+    if page.get("judge"):
+        # a write-back candidate page carries its judge verdict in the artifact
+        # (same F-075 posture as edges; absent = pre-verdict, write-then-audit fills it)
+        lines.append(f'judge: {{value: pass, rationale: "{yq(page["judge"])}"}}')
+    lines.append("anchors:")
     for a in anchors:
         lines.append(f'  - source: "{yq(a["source"])}"')
         lines.append(f'    anchor_hash: "{yq(a["anchor_hash"])}"')

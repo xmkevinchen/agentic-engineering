@@ -1,0 +1,4 @@
+The cache subsystem uses a write-through policy for all writes.
+The storage layer batches flushes on a five second timer.
+The plumbing-bus delivers change events to every consumer.
+Polling was removed in v2; consumers subscribe to plumbing-bus events.

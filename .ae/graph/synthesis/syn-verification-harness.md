@@ -15,6 +15,12 @@ anchors:
     commit: 7571863
   - source: "plugins/ae/skills/plan/SKILL.md:377"
     anchor_hash: "- [ ] **Freeze the GOAL**: for a feature-dir plan, write the verbatim `## Acceptance Criteria` section of this `plan.md` → `<feature-dir>/goal.frozen.md` — the immutable acceptance standard a fresh `/ae:review` re-examines the work against (frozen at plan-approval so the executor cannot move the goalposts during work). Only the GOAL is frozen (AC substance + `verify_by` + `verify:`); the harness/means stay editable in the live plan (goal/harness split deferred). Legacy plans (no feature dir) skip."
+edges:
+  - kind: talks_to
+    id: syn-test-layer
+    evidence: "verify: recipes execute the sh-tap test layer and Check 7 consumes its evidence records"
+    written_by: batch
+    judge: {value: pass, rationale: "solo — degraded (same-session producer+judge; user-review pending)"}
 ---
 
 Every acceptance criterion in a current-convention plan declares which proof kind enforces it — brownfield plans migrate on touch, not retroactively — and the split is load-bearing: deterministic kinds must name a runnable command while judge kinds must state a rubric, with neither substituting for the other (docs/references/verify-by-kinds.md:1). Judgment, unanchored: the reason is a failure class this project hit repeatedly — an AC whose verifier runs but proves nothing. The suite runner itself only executes test files and trusts exit codes (plugins/ae/scripts/ae-run-tests.sh:22); non-vacuity is proven one level up — AC-referenced tests declare the sh-tap contract so the evidence collector can count their ok-lines, making a checker that proves nothing visibly vacuous at review rather than silently green in the suite (plugins/ae/tests/scripts/test-graph-lint.sh:4).

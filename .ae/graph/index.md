@@ -17,5 +17,5 @@ frontmatter (theme/id/title/status + first body paragraph). Do not edit.
 
 - syn-knowledge-graph — Knowledge graph subsystem — two persisted domains, one trust skeleton (fresh) ← documents F-069, documents F-072
 - syn-plugin-surface — Plugin surface — marketplace shell, ae plugin core, explicit naming (fresh)
-- syn-test-layer — Test layer — runtime fixtures, sh-tap contract, blind protocol (fresh)
-- syn-verification-harness — Verification harness — machines measure, LLM judges, the goal is frozen (fresh) ← documents F-048, documents F-065
+- syn-test-layer — Test layer — runtime fixtures, sh-tap contract, blind protocol (fresh) ← talks_to syn-verification-harness
+- syn-verification-harness — Verification harness — machines measure, LLM judges, the goal is frozen (fresh) ← talks_to syn-knowledge-graph, documents F-048, documents F-065

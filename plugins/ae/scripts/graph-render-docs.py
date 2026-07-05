@@ -97,7 +97,8 @@ def mermaid_id(nid):
 def mermaid_label(text):
     """Free-text titles are unconstrained YAML — a double-quote inside a
     quoted mermaid label silently breaks rendering (exit 0, blank diagram)."""
-    return text.replace('"', "'")
+    return (text.replace("\\", "/").replace("\n", " ").replace("\r", " ")
+            .replace("\t", " ").replace('"', "'"))
 
 
 out_lines = [

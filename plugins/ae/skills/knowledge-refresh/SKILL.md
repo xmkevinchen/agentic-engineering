@@ -207,9 +207,11 @@ permanent blind spot for untouched pre-existing pairs is a RECORDED property
 add-edges JSON row tagged `"proposal_source": "lint"` and goes through the SAME
 judged gate as step 3 candidates (independent judge; cross-family when the
 detector authored the analyzed content). Nothing is auto-written — a proposal
-the judge rejects simply never reaches the corpus, and the rejection joins the
-adversarial resample pool that write-point-health samples (per-source
-breakdown: lint vs writeback). The proactive-suggestion posture is deliberate:
+the judge rejects simply never reaches the corpus, and the rejection lands as a durable
+`rejected:` ledger record (machine-refused rows are logged by add-edges
+itself; judge rejections are logged by this flow at rejection time) and
+joins the adversarial resample pool that write-point-health reports
+(per-source breakdown: lint vs writeback). The proactive-suggestion posture is deliberate:
 lint SUGGESTS missing structure (pages, xrefs), not only flags defects.
 
 ### 5. Index + traversal check + docs rendering
@@ -256,12 +258,19 @@ with their state marked — the doc never hides rot.
   positive gap means locate-steps ran but appended no query record (the
   append-layer death that `queries: 0` alone cannot distinguish from "the
   skills never ran"; windows differ, so treat as smoke alarm).
-  **Adversarial `no`-resample (the T4 lesson applied to T1)**: sample ≥2 of
-  the `no` dispositions recorded since the last refresh and re-judge them
-  against the source material with a fresh-context judge (Judgment provenance
-  applies) — the aggregate yes-rate cannot see a systematic
-  "files-trivia, skips-valuable" precision failure; per-sample verdicts go in
-  the report, and an overturned `no` becomes a write-back candidate now.
+  **Adversarial resample — ONE pool, both write-trigger paths (the T4 lesson
+  applied to T1)**: sample ≥2 of the `no` dispositions AND ≥1 of the
+  `rejected:` records logged since the last refresh (machine-refused rows land
+  as durable `rejected:` ledger records with their proposal-source tag;
+  judge-rejected proposals from steps 3/4.7 MUST also be logged as `rejected:`
+  records at rejection time — a rejection that only hit the conversation is
+  invisible to the next refresh). Re-judge each sample against the source
+  material with a fresh-context judge (Judgment provenance applies) — the
+  aggregate yes-rate cannot see a systematic "files-trivia, skips-valuable"
+  precision failure, and an unmonitored rejection stream cannot show a
+  detector gone noisy. Per-sample verdicts go in the report; an overturned
+  `no` becomes a write-back candidate now, an overturned rejection re-enters
+  the judged write path.
 - **Synthesis page freshness**: list every page ordered by time-since-last-validation
   (oldest first — pages nobody reads never hit the pull gate, so this list is their
   only surfacing), with each page's current check verdict. The validation times come

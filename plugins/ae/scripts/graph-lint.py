@@ -194,7 +194,7 @@ else:  # whole-tree mode
     # are backlog-numbering hygiene, guarded at capture time, not here.
     for nid, paths in sorted(all_paths.items()):
         if len(paths) > 1 and graph_common.classify_id(nid) in ("F", "syn") \
-                and nid not in id_dirs:
+                and not (nid in id_dirs and len(id_dirs[nid]) > 1):
             defects.append(f"duplicate node id {nid}: {len(paths)} paths (resolution nondeterministic)")
     orphans = [n for n in sorted(id_dirs)
                if n not in outgoing and n not in referenced]

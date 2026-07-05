@@ -2,7 +2,7 @@
 """graph-writeback-health.py — write-point-health over the graph ledger (F-076).
 
 Reads .ae/graph/log.md's record kinds (stable actor prefixes: query: / check: /
-add-page: / add-edges: / backfill: / dedup:) and COMPUTES — not promises —
+add-page: / add-edges: / backfill: / dedup: / rejected:) and COMPUTES — not promises —
 the disposition health of the write-back forcing function:
 
   - query records + write-back candidate yes-rate (the T1 monitoring
@@ -58,6 +58,7 @@ queries = yes = no = 0
 by_skill = {}  # skill → [queries, yes, no] — a per-surface dead hook must not
                # hide behind a healthy aggregate rate
 edge_src = {"lint": 0, "writeback": 0, "untagged": 0}
+rejected_src = {}  # the resample pool's lint half: durable rejection records
 pages_since_dedup = 0
 for ln in lines:
     m = re.match(r"^- \S+ query: (\S+)", ln)
@@ -84,6 +85,10 @@ for ln in lines:
     if re.match(r"^- \S+ add-page: ", ln):
         pages_since_dedup += 1
         continue
+    m = re.match(r"^- \S+ rejected: .*\[([^\]]+)\]", ln)
+    if m:
+        rejected_src[m.group(1)] = rejected_src.get(m.group(1), 0) + 1
+        continue
     if re.match(r"^- \S+ dedup: ", ln):
         pages_since_dedup = 0
 
@@ -95,6 +100,8 @@ print(f"[writeback-health] queries: {queries} (yes: {yes}, no: {no}, "
       f"undisposed: {undisposed}, yes-rate: {rate}) by skill: {skills}")
 print("[writeback-health] accepted edges by source: "
       + ", ".join(f"{k}: {v}" for k, v in sorted(edge_src.items())))
+rej = ", ".join(f"{k}: {v}" for k, v in sorted(rejected_src.items())) or "none"
+print(f"[writeback-health] rejected proposals by source (resample-pool input): {rej}")
 state = "OK" if pages_since_dedup < args.tripwire else \
     "FORCED — run the dedup-lint revisit before this refresh closes"
 print(f"[writeback-health] batch pages since last dedup pass: {pages_since_dedup} "
