@@ -212,11 +212,17 @@ adversarial resample pool that write-point-health samples (per-source
 breakdown: lint vs writeback). The proactive-suggestion posture is deliberate:
 lint SUGGESTS missing structure (pages, xrefs), not only flags defects.
 
-### 5. Index + traversal check
+### 5. Index + traversal check + docs rendering
 
 `plugins/ae/bin/graph-index-gen.py` (regenerate the layered index), then spot-check the
 graph is really traversable: `plugins/ae/bin/graph-neighbors.py <a-well-connected-id>`
 and `--hops 2` on one lineage — non-empty, sensible output.
+
+Then regenerate the human-facing architecture view:
+`plugins/ae/bin/graph-render-docs.py` → `docs/architecture-graph.md` (git-tracked,
+readable with zero AE context; deterministic — an unchanged topology produces an
+unchanged file, so the diff is exactly the topology change). Stale pages render
+with their state marked — the doc never hides rot.
 
 ### 6. Report (the user is the refresh's human gate)
 
