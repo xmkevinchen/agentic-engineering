@@ -40,7 +40,9 @@ import sys
 
 import yaml
 
-STATE_DIRS = ("active", "done", "abandoned", "paused")
+import graph_common
+from graph_common import STATE_DIRS
+
 UNTHEMED = "(unthemed)"
 
 if __name__ != "__main__":
@@ -129,6 +131,33 @@ ordered = sorted((t for t in themes if t != UNTHEMED), key=str.lower)
 if UNTHEMED in themes:
     ordered.append(UNTHEMED)
 
+# inbound cross-references (F-076): edges are written one-sided into the
+# `from` node; the index renders each node's INBOUND edges with the inversion
+# label from graph_common, so the artifact carries the cross-references in
+# both directions without mirrored frontmatter (derived at generation time).
+# Deliberately LOSSY: dedup is on (label, source) — distinct same-kind edges
+# collapse and evidence is not rendered; the index is a navigation aggregate,
+# frontmatter stays the source of truth for per-edge evidence.
+syn_root = args.synthesis_root or os.path.join(root, os.pardir, "graph", "synthesis")
+syn_root = os.path.realpath(syn_root)
+node_map, _ = graph_common.build_node_map(root, syn_root)
+inbound = {}  # target id → set of (inverse-kind label, src id)
+for tgt, srcs in graph_common.build_inbound_index(node_map).items():
+    for nid, e in srcs:
+        k = str(e.get("kind", ""))
+        inbound.setdefault(tgt, set()).add((graph_common.INVERSE.get(k, k), nid))
+
+
+def inbound_line(node_id):
+    """Deterministic 'label src, label src' rendering of a node's inbound refs."""
+    refs = inbound.get(node_id)
+    if not refs:
+        return None
+    def key(t):
+        m = re.search(r"(\d+)", t[1])
+        return (int(m.group(1)) if m else 0, t[1], t[0])
+    return ", ".join(f"{lab} {src}" for lab, src in sorted(refs, key=key))
+
 out_dir = os.path.realpath(args.out)
 themes_dir = os.path.join(out_dir, "themes")
 os.makedirs(themes_dir, exist_ok=True)
@@ -176,13 +205,15 @@ for theme in ordered:
         if tldr:
             tier_b.append(tldr)
             tier_b.append("")
+        inb = inbound_line(fid)
+        if inb:
+            tier_b.append(f"Inbound: {inb}")
+            tier_b.append("")
     with open(os.path.join(themes_dir, f"{slug}.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(tier_b).rstrip("\n") + "\n")
 tier_a.append("")
 
 # Synthesis tier: one line per page from page frontmatter; missing dir = no tier
-syn_root = args.synthesis_root or os.path.join(root, os.pardir, "graph", "synthesis")
-syn_root = os.path.realpath(syn_root)
 if os.path.isdir(syn_root):
     rows = []
     for name in sorted(os.listdir(syn_root)):
@@ -196,7 +227,11 @@ if os.path.isdir(syn_root):
         if not pid or not title:
             print(f"[graph-index-gen] skip synthesis/{name}: missing id/title", file=sys.stderr)
             continue
-        rows.append(f"- {pid} — {title} ({state or 'unknown'})")
+        line = f"- {pid} — {title} ({state or 'unknown'})"
+        inb = inbound_line(str(pid))
+        if inb:
+            line += f" ← {inb}"
+        rows.append(line)
     if rows:
         tier_a.append("## Synthesis pages")
         tier_a.append("")

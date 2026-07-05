@@ -219,3 +219,43 @@ def default_synthesis_root(features_root):
     """The conventional synthesis dir for a features root (<root>/../graph/synthesis)."""
     return os.path.normpath(
         os.path.join(os.path.realpath(features_root), os.pardir, "graph", "synthesis"))
+
+
+# ---- edge reading + the derived reverse index --------------------------------
+
+
+def read_edges(path):
+    """Return a file's frontmatter `edges:` list ([] on parse error or absence).
+
+    Unparseable nodes are graph-lint's job — readers degrade to no-edges."""
+    import yaml
+    try:
+        with open(path, encoding="utf-8") as f:
+            m = re.match(r"^---\n(.*?)\n---\n?", f.read(), re.S)
+        data = yaml.safe_load(m.group(1)) if m else None
+    except (OSError, yaml.YAMLError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    edges = data.get("edges")
+    return edges if isinstance(edges, list) else []
+
+
+def build_inbound_index(node_map):
+    """Derived reverse index over every edge-bearing node: target id →
+    [(src id, edge dict)].
+
+    ONE construction shared by traversal (graph-neighbors) and index
+    rendering (graph-index-gen) — two independent copies of this grouping
+    is the divergence bug this module exists to end. Computed per run,
+    never persisted (conclusion D5: reverse edges are a build artifact,
+    not a second source of truth)."""
+    incoming = {}
+    for nid in sorted(node_map):
+        cls, path = node_map[nid]
+        if cls not in ("F", "syn"):
+            continue
+        for edge in read_edges(path):
+            if isinstance(edge, dict) and edge.get("id"):
+                incoming.setdefault(str(edge["id"]), []).append((nid, edge))
+    return incoming
