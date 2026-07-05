@@ -35,10 +35,8 @@ import sys
 
 import yaml
 
-KIND_ENUM = {"origin", "supersedes", "superseded_by", "relates_to", "conflicts_with"}
-WRITER_ENUM = {"review-archive", "batch", "human"}
-STATE_DIRS = ("active", "done", "abandoned", "paused")
-ID_RE = re.compile(r"^(F-\d+|BL-\d+|disc-\d+)$")
+import graph_common
+from graph_common import KIND_ENUM, WRITER_ENUM, STATE_DIRS
 
 if __name__ != "__main__":
     raise SystemExit("graph-lint.py is subprocess-only; do not import")
@@ -78,45 +76,12 @@ def discover_nodes(root):
                 yield node_dir, index
 
 
-def build_resolvers(root):
-    """Scan the tree once; return (feature_ids→[dirs], bl_ids, disc_ids).
-
-    F-NNN resolves ONLY at state-dir top level — the same depth discover_nodes
-    enumerates — so "resolves" and "is a real node" are the same guarantee; a
-    coincidentally-named nested dir must not make a dangling target resolve
-    (Track 4). BL/disc walk the whole tree (they legitimately nest inside
-    feature dirs)."""
-    feature_dirs = {}
-    for state in STATE_DIRS:
-        state_dir = os.path.join(root, state)
-        if not os.path.isdir(state_dir):
-            continue
-        for name in sorted(os.listdir(state_dir)):
-            m = re.match(r"^(F-\d+)-", name)
-            # index.md required — a bare dir is not a node and must not mask a
-            # dangling target
-            if m and os.path.isfile(os.path.join(state_dir, name, "index.md")):
-                feature_dirs.setdefault(m.group(1), []).append(os.path.join(state_dir, name))
-    bl_ids = set()
-    disc_ids = set()
-    for base, dirs, files in os.walk(root):
-        if os.path.basename(base) == "discussions":
-            for d in dirs:
-                m = re.match(r"^(\d+)-", d)
-                if m:
-                    disc_ids.add(f"disc-{m.group(1)}")
-        for f in files:
-            m = re.match(r"^(BL-\d+)", f)
-            if m and f.endswith(".md"):
-                bl_ids.add(m.group(1))
-    backlog = os.path.normpath(os.path.join(root, os.pardir, "backlog"))
-    if os.path.isdir(backlog):
-        for base, _dirs, files in os.walk(backlog):
-            for f in files:
-                m = re.match(r"^(BL-\d+)", f)
-                if m and f.endswith(".md"):
-                    bl_ids.add(m.group(1))
-    return feature_dirs, bl_ids, disc_ids
+def build_resolvers(root, synthesis_root):
+    """One tree scan via graph_common.build_node_map — id→(class, path) plus
+    id→[paths] for duplicate detection. The node abstraction (class+path)
+    replaces the old per-class sets so file-shaped syn pages and dir-shaped
+    feature nodes resolve through the same map."""
+    return graph_common.build_node_map(root, synthesis_root)
 
 
 def check_source(node_dir, source):
@@ -140,9 +105,8 @@ def check_source(node_dir, source):
     return None
 
 
-def lint_node(node_dir, index, resolvers, defects):
+def lint_node(node_dir, index, node_map, defects, src_class="F"):
     """Lint one node's edges. Returns (node_id, referenced_ids, has_edges)."""
-    feature_dirs, bl_ids, disc_ids = resolvers
     rel = os.path.basename(node_dir)
     data, err = frontmatter(index)
     if err:
@@ -178,19 +142,20 @@ def lint_node(node_dir, index, resolvers, defects):
             defects.append(f"{where}: written_by '{writer}' not in enum {sorted(WRITER_ENUM)}")
         if target is None:
             defects.append(f"{where}: missing required field 'id'")
-        elif not ID_RE.match(str(target)):
-            defects.append(f"{where}: malformed target id '{target}' (expected F-NNN/BL-NNN/disc-NNN)")
         else:
             target = str(target)
-            referenced.add(target)
-            if target.startswith("F-"):
-                if target not in feature_dirs:
-                    defects.append(f"{where}: dangling target '{target}' (no such feature dir)")
-            elif target.startswith("BL-"):
-                if target not in bl_ids:
-                    defects.append(f"{where}: dangling target '{target}' (no such backlog file)")
-            elif target not in disc_ids:
-                defects.append(f"{where}: dangling target '{target}' (no such discussion dir)")
+            tgt_class = graph_common.classify_id(target)
+            if tgt_class is None:
+                defects.append(f"{where}: unclassifiable target id '{target}' "
+                               f"(expected {graph_common.ID_HINT})")
+            else:
+                referenced.add(target)
+                if target not in node_map or node_map[target][0] != tgt_class:
+                    defects.append(f"{where}: dangling target '{target}' (no such {tgt_class} node)")
+                if isinstance(kind, str) and kind in KIND_ENUM:
+                    legality = graph_common.kind_legality_defect(kind, src_class, tgt_class)
+                    if legality:
+                        defects.append(f"{where}: {legality}")
         source = edge.get("source")
         if source is None:
             if kind == "relates_to":
@@ -221,7 +186,13 @@ if not os.path.isdir(root):
     print(f"[graph-lint] usage error: no such root: {args.root}", file=sys.stderr)
     sys.exit(2)
 
-resolvers = build_resolvers(root)
+# synthesis root resolves up front: BOTH modes need it for syn target
+# resolution (scoped mode previously never saw it — page targets couldn't
+# resolve from the archive gate's shape)
+syn_root = args.synthesis_root or os.path.join(root, os.pardir, "graph", "synthesis")
+syn_root = os.path.realpath(syn_root)
+
+node_map, all_paths = build_resolvers(root, syn_root)
 defects = []
 
 if args.nodes:  # scoped mode — the archive gate's shape; no whole-graph checks
@@ -230,7 +201,7 @@ if args.nodes:  # scoped mode — the archive gate's shape; no whole-graph check
         if not os.path.isfile(index):
             print(f"[graph-lint] usage error: no index.md in {node_dir}", file=sys.stderr)
             sys.exit(2)
-        lint_node(node_dir, index, resolvers, defects)
+        lint_node(node_dir, index, node_map, defects)
     scope = f"scoped ({len(args.nodes)} node(s))"
 else:  # whole-tree mode
     id_dirs = {}       # node id → [dirs] (duplicate detection)
@@ -238,7 +209,7 @@ else:  # whole-tree mode
     referenced = set() # ids that appear as any edge's target
     nodes = list(discover_nodes(root))
     for node_dir, index in nodes:
-        node_id, refs, has_edges = lint_node(node_dir, index, resolvers, defects)
+        node_id, refs, has_edges = lint_node(node_dir, index, node_map, defects)
         referenced |= refs
         if node_id:
             id_dirs.setdefault(node_id, []).append(os.path.basename(node_dir))
@@ -247,13 +218,20 @@ else:  # whole-tree mode
     for node_id, dirs in sorted(id_dirs.items()):
         if len(dirs) > 1:
             defects.append(f"duplicate node id {node_id}: {', '.join(sorted(dirs))} (resolution nondeterministic)")
+    # path-level duplicates for the unambiguous-by-design classes. F ids come
+    # from dir names (frontmatter dups caught above), syn ids from page files.
+    # disc is EXCLUDED by design — discussion numbering is per-feature, so
+    # disc-NNN is inherently ambiguous (known id-scheme limit); BL collisions
+    # are backlog-numbering hygiene, guarded at capture time, not here.
+    for nid, paths in sorted(all_paths.items()):
+        if len(paths) > 1 and graph_common.classify_id(nid) in ("F", "syn") \
+                and nid not in id_dirs:
+            defects.append(f"duplicate node id {nid}: {len(paths)} paths (resolution nondeterministic)")
     orphans = [n for n in sorted(id_dirs)
                if n not in outgoing and n not in referenced]
     scope = f"whole-tree ({len(nodes)} node(s))"
     # synthesis pages: leaf nodes with anchors, checked by the single page-check
     # implementation; a missing dir is the normal no-synthesis-layer case
-    syn_root = args.synthesis_root or os.path.join(root, os.pardir, "graph", "synthesis")
-    syn_root = os.path.realpath(syn_root)
     if os.path.isdir(syn_root):
         checker = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                "graph-page-check.py")

@@ -31,7 +31,8 @@ import sys
 
 import yaml
 
-ID_RE = re.compile(r"^syn-[a-z0-9][a-z0-9-]*$")
+from graph_common import SYN_ID_RE as ID_RE
+
 REQUIRED = ("id", "title", "created", "written_by", "state")
 
 if __name__ != "__main__":

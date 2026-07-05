@@ -47,7 +47,8 @@ import sys
 
 import yaml
 
-STATE_DIRS = ("active", "done", "abandoned", "paused")
+import graph_common
+from graph_common import STATE_DIRS
 HERE = os.path.dirname(os.path.realpath(__file__))
 LINT = os.path.join(HERE, "graph-lint.py")
 PAGE_CHECK = os.path.join(HERE, "graph-page-check.py")
@@ -305,6 +306,18 @@ def cmd_add_edges(args):
                 if isinstance(e, dict)}
         edges = []
         for r in items:
+            # fail fast on kind/target-shape errors — clearer than a post-write
+            # lint revert, and the shared tables keep the wording identical
+            if r["kind"] not in graph_common.KIND_ENUM:
+                print(f"[graph-refresh] REJECTED {fid}: kind '{r['kind']}' not in enum "
+                      f"{sorted(graph_common.KIND_ENUM)}")
+                failures += 1
+                continue
+            if graph_common.classify_id(r["target"]) is None:
+                print(f"[graph-refresh] REJECTED {fid}: unclassifiable target id "
+                      f"'{r['target']}' (expected {graph_common.ID_HINT})")
+                failures += 1
+                continue
             if (r["kind"], str(r["target"])) in have:
                 print(f"[graph-refresh] {fid}: {r['kind']} -> {r['target']} already present — skipped (idempotent)")
                 continue
