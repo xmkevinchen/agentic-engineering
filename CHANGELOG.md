@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.14.0 (2026-07-05)
+
+### Knowledge topology — the full LLM-wiki pattern — F-076
+
+The knowledge graph now carries the source pattern's complete topology, in one pass:
+
+- **Synthesis pages are edge-bearing nodes** — the v1 leaf-only rule ends. Pages carry `edges:` lists (syn↔syn `part_of`/`talks_to`/`relates_to`/`conflicts_with`; features link pages via `documented_by`), are legal edge targets, and write/delete through the same machine path as feature edges (`add-edges`/`remove-edges` resolve file-shaped nodes; post-write page check, revert on failure).
+- **`graph_common.py`** — one canonical home for ALL kind knowledge: the kind enum (+3 topology kinds), the source/target legality matrix (fail-closed on unknown kinds), the reverse-display inversion table, `classify_id` dict dispatch (unknown prefixes are named defects — the falls-to-disc bug fixed), the id→(class, path) node map, the shared per-edge validation core (identical defect wording from every checker), and the derived inbound index.
+- **Bidirectional cross-domain traversal** — `graph-neighbors` reaches nodes through INBOUND edges at read time (inversion labels: `supersedes` reads `superseded_by` backward, `documented_by` reads `documents`); inbound-only nodes are legal traversal starts; no frontmatter mirroring, ever. The layered index renders each node's inbound refs.
+- **The lint network** — mechanical: `ORPHAN-PAGE` (fails the tree gate) and `DRIFT` (informational; index lags pages). Judged, incremental-only: missing pages, missing cross-references, contradictions, superseded claims — detection SUGGESTS/PROPOSES into the judged write path, never writes; rejections land as durable `rejected:` ledger records.
+- **The write-back forcing function** — ONE canonical hook (analyze) referenced by plan/discuss/review/think: a MANDATORY disposition (`write-back candidate: yes/no + reason`) recorded as a durable `query:` ledger record ("skip freely" is gone — the optional hook had a 0% fire rate). Per-surface conditions: discuss fires once at conclusion; review asks the durability sub-question. `graph-writeback-health.py` COMPUTES the yes-rate (aggregate + per-skill), per-source acceptance/rejection counts, the numeric dedup tripwire (N=10), and an independent invocation-vs-records denominator.
+- **Human-facing architecture view** — `graph-render-docs.py` renders the topology into git-tracked `docs/architecture-graph.md` (mermaid + per-component page links); page states are COMPUTED live at render time, so a drifted page can never render fresh. Deterministic and byte-idempotent.
+- **The graph corpus is version-controlled** — `.ae/graph/` carved out of the blanket `.ae/` gitignore: edits are reviewable, mistakes roll back, history is recoverable.
+- add-page accepts an optional judge verdict (write-back candidate pages carry their provenance verdict like edges do); knowledge-refresh gains the judged-lint classes (§4.7), the write-point-health report step, and the dual-source adversarial resample pool.
+- 10 new/extended sh-tap test scripts incl. mixed-family and judged-class fixture corpora; real-corpus whole-tree lint runs in the suite (skips cleanly on external checkouts).
+
 ## 0.13.0 (2026-07-04)
 
 ### Grounded-verification contract for judge ACs — F-074
