@@ -235,6 +235,27 @@ and `--hops 2` on one lineage — non-empty, sensible output.
 - **Batch-vs-human ratio**: report how much of the corpus is still `written_by:
   batch` (re-judged every run) vs `human` (settled) — the honest measure of how
   much LLM-generated content remains unconfirmed.
+- **Write-point health (F-076 — COMPUTED, not promised)**: run
+  `plugins/ae/bin/graph-writeback-health.py` and include its output verbatim:
+  the write-back disposition yes-rate over the ledger's `query:` records
+  (a mandatory disposition line whose aggregate nobody computes is grep-green
+  theater), accepted-edge counts per proposal source (`lint` vs `writeback` —
+  both structurally-parallel write-trigger paths under one monitor), and the
+  numeric dedup tripwire (N=10 batch pages since the last `dedup:` record →
+  the FORCED line means the dedup-lint revisit runs before this refresh
+  closes; log the pass as a `dedup:` record CARRYING the pass evidence —
+  pages compared + duplicates found — a bare reset line with no evidence is
+  itself a bypass signal), and the **independent denominator**: locate-step
+  invocation counts from the skill traces vs the ledger's query records — a
+  positive gap means locate-steps ran but appended no query record (the
+  append-layer death that `queries: 0` alone cannot distinguish from "the
+  skills never ran"; windows differ, so treat as smoke alarm).
+  **Adversarial `no`-resample (the T4 lesson applied to T1)**: sample ≥2 of
+  the `no` dispositions recorded since the last refresh and re-judge them
+  against the source material with a fresh-context judge (Judgment provenance
+  applies) — the aggregate yes-rate cannot see a systematic
+  "files-trivia, skips-valuable" precision failure; per-sample verdicts go in
+  the report, and an overturned `no` becomes a write-back candidate now.
 - **Synthesis page freshness**: list every page ordered by time-since-last-validation
   (oldest first — pages nobody reads never hit the pull gate, so this list is their
   only surfacing), with each page's current check verdict. The validation times come
