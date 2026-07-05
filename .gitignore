@@ -13,7 +13,12 @@ node_modules/
 .fastembed_cache/
 
 # Process artifacts (discussions, plans, reviews, analyses, etc.)
-.ae/
+# `.ae/*` (not `.ae/`) so the knowledge-graph corpus can be re-included below —
+# git cannot re-include anything inside a fully-ignored directory.
+.ae/*
+# Knowledge-graph corpus is version-controlled (F-076 user ruling): edits are
+# reviewable, mistakes roll back, history is archaeologically recoverable.
+!.ae/graph/
 
 # Local-only references (kept out of repo)
 docs/references/pipeline-quality-failure-cases.md
