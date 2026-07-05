@@ -335,6 +335,7 @@ def cmd_add_edges(args):
         have = {(e.get("kind"), str(e.get("id"))) for e in (parse(idx)[0].get("edges") or [])
                 if isinstance(e, dict)}
         edges = []
+        tags = set()  # proposal_source values → mutation-log suffix
         for r in items:
             # fail fast on kind/target-shape errors — clearer than a post-write
             # lint revert, and the shared tables keep the wording identical
@@ -366,6 +367,11 @@ def cmd_add_edges(args):
                 e["written_by"] = str(r["written_by"])
             if r.get("line"):
                 e["source"] = f"{src_ref}:PENDING{int(r['line'])}"  # body line, pre-write
+            if r.get("proposal_source"):
+                # write-point-health breaks acceptance down per proposal source
+                # (lint-detected vs write-back candidates) — carried into the
+                # mutation log record, never into the edge frontmatter
+                tags.add(str(r["proposal_source"]))
             edges.append(e)
         if not edges:
             continue
@@ -397,9 +403,10 @@ def cmd_add_edges(args):
             print(f"[graph-refresh] REVERTED {fid} ({targets}): "
                   f"{'lint: ' + out if not okk else 'source anchor missed'}")
             continue
+        tag_suffix = f" [{', '.join(sorted(tags))}]" if tags else ""
         log_mutation(os.path.join(os.path.realpath(args.root), os.pardir, "graph"),
-                     "add-edges", f"{fid}: {len(edges)} edge(s)")
-        print(f"[graph-refresh] {fid}: wrote {len(edges)} judged edge(s)")
+                     "add-edges", f"{fid}: {len(edges)} edge(s){tag_suffix}")
+        print(f"[graph-refresh] {fid}: wrote {len(edges)} judged edge(s){tag_suffix}")
     return 1 if failures else 0
 
 

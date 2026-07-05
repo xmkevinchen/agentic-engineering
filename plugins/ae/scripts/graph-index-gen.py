@@ -227,7 +227,8 @@ if os.path.isdir(syn_root):
         if not pid or not title:
             print(f"[graph-index-gen] skip synthesis/{name}: missing id/title", file=sys.stderr)
             continue
-        line = f"- {pid} — {title} ({state or 'unknown'})"
+        line = graph_common.SYN_INDEX_ROW.format(
+            pid=pid, title=title, state=state or "unknown")
         inb = inbound_line(str(pid))
         if inb:
             line += f" ← {inb}"

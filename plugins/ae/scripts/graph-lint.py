@@ -161,6 +161,8 @@ syn_root = os.path.realpath(syn_root)
 
 node_map, all_paths = build_resolvers(root, syn_root)
 defects = []
+page_orphans = []
+drift = []
 
 if args.nodes:  # scoped mode — the archive gate's shape; no whole-graph checks
     for node_dir in args.nodes:
@@ -237,6 +239,44 @@ else:  # whole-tree mode
                     lf.write(f"- {stamp} check: {f[:-3]} {verdict}\n")
         scope += f" + {len(pages)} synthesis page(s)"
 
+        # ORPHAN-PAGE (F-076 mechanical lint): a page participating in zero
+        # edges — no outgoing and never an edge target. Same observation class
+        # as feature orphans: reported, and it fails the whole-tree gate so an
+        # unreviewed orphan page cannot pass silently. Reachability is computed
+        # from the shared inbound index (read-only, nothing invented).
+        # NB "participates" counts RAW edges, not validated ones — a page
+        # referenced only by an illegal edge is not an orphan here, but that
+        # same edge is a DEFECT in the same run, so the tree fails regardless.
+        incoming = graph_common.build_inbound_index(node_map)
+        for f in pages:
+            pid = f[:-3]
+            if pid in node_map and node_map[pid][0] == "syn":
+                has_out = bool(graph_common.read_edges(os.path.join(syn_root, f)))
+                if not has_out and pid not in incoming:
+                    page_orphans.append(pid)
+
+        # DRIFT (F-076 mechanical lint): the index overview lags the pages —
+        # a page missing from the Synthesis tier, or shown with a state label
+        # that no longer matches its frontmatter. Informational like STALE
+        # (regenerating the index is the zero-SLA fix); never changes exit.
+        index_md = os.path.join(os.path.dirname(syn_root), "index.md")
+        if os.path.isfile(index_md):
+            listed = {}  # page id → state label shown in the index
+            for line in open(index_md, encoding="utf-8"):
+                # parser lives with the writer's format in graph_common —
+                # a lone regex here would go silently blind on a format change
+                m2 = graph_common.SYN_INDEX_ROW_RE.match(line.strip())
+                if m2:
+                    listed[m2.group(1)] = m2.group(2)
+            for f in pages:
+                pid = f[:-3]
+                data, _err = frontmatter(os.path.join(syn_root, f))
+                state = str(data.get("state", "")) if isinstance(data, dict) else ""
+                if pid not in listed:
+                    drift.append(f"{pid}: missing from the index Synthesis tier")
+                elif state and listed[pid] != state:
+                    drift.append(f"{pid}: index shows '{listed[pid]}', frontmatter says '{state}'")
+
 orphans = orphans if "orphans" in dir() else []
 for d in defects:
     print(f"[graph-lint] DEFECT: {d}")
@@ -244,5 +284,10 @@ for n in orphans:
     # observation class, not a defect — but it still fails the whole-tree gate
     # so an unreviewed orphan cannot pass silently
     print(f"[graph-lint] ORPHAN: {n}: participates in zero edges")
-print(f"[graph-lint] {scope}: {len(defects)} defect(s), {len(orphans)} orphan(s)")
-sys.exit(1 if (defects or orphans) else 0)
+for p in page_orphans:
+    print(f"[graph-lint] ORPHAN-PAGE: {p}: participates in zero edges")
+for d in drift:
+    print(f"[graph-lint] DRIFT: {d} — regenerate with graph-index-gen.py")
+print(f"[graph-lint] {scope}: {len(defects)} defect(s), "
+      f"{len(orphans) + len(page_orphans)} orphan(s), {len(drift)} drift line(s)")
+sys.exit(1 if (defects or orphans or page_orphans) else 0)

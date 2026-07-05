@@ -180,6 +180,15 @@ edges:
   - kind: origin
     id: BL-901
     written_by: human
+  - kind: documented_by
+    id: syn-fresh
+    written_by: batch
+  - kind: documented_by
+    id: syn-ws
+    written_by: batch
+  - kind: documented_by
+    id: syn-stale
+    written_by: batch
 ---
 Sample body.
 EOF

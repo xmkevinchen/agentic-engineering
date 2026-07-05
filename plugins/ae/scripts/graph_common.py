@@ -221,6 +221,16 @@ def default_synthesis_root(features_root):
         os.path.join(os.path.realpath(features_root), os.pardir, "graph", "synthesis"))
 
 
+# ---- index synthesis-tier row format (writer + parser, one home) -------------
+# graph-index-gen WRITES this shape; graph-lint's DRIFT check PARSES it.
+# Keeping both here means a format change updates writer and parser together —
+# a drifted pair would make DRIFT detection silently blind (it is informational
+# and never fails the gate, so nothing else would notice).
+
+SYN_INDEX_ROW = "- {pid} — {title} ({state})"
+SYN_INDEX_ROW_RE = re.compile(r"^- (syn-[a-z0-9][a-z0-9-]*) — .*\((\w+)\)")
+
+
 # ---- edge reading + the derived reverse index --------------------------------
 
 

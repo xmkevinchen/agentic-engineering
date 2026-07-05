@@ -124,8 +124,11 @@ whenever orphans exist; that is BY DESIGN — the two output classes are distinc
 prefixes:
 
 - Any **`[graph-lint] DEFECT:`** line (dangling target, bad source, enum, duplicate
-  id, unparseable) → a real failure: fix (usually by removing the offending edge) and re-run.
-- **`[graph-lint] ORPHAN:`** lines → the observation report, NOT failures. **Never invent edges for orphans** — an orphan with no grounded relationship stays an orphan. List them in the report; they are the honest shape of the corpus.
+  id, unparseable, page-edge violations) → a real failure: fix (usually by removing the offending edge) and re-run.
+- **`[graph-lint] ORPHAN:`** / **`[graph-lint] ORPHAN-PAGE:`** lines → the observation report, NOT failures. **Never invent edges for orphans** — an orphan with no grounded relationship stays an orphan. List them in the report; they are the honest shape of the corpus. (An orphan PAGE is often a candidate for a `documented_by` edge from the feature that motivated it — propose it through step 3's judged path only when the grounding is real.)
+- **`[graph-lint] DRIFT:`** lines → informational, never exit-changing: the index
+  overview lags the pages (missing row or stale state label). Fix = regenerate the
+  index (step 5); no judgment involved.
 
 This step is also where a MISFIRING write point surfaces: edges that should have been
 written automatically but weren't show up here as zero-edge nodes or fresh candidates
@@ -174,6 +177,40 @@ gets a page (the working tree answers that live via grep). Flow:
 7. **Stale pages**: re-read the drifted anchors, decide whether the understanding
    still holds — update anchors (human edit or delete + re-add) or retire the page
    (delete the file; index, check, and log converge on the next run).
+
+### 4.7 Judged lint classes (LLM — the network's semantic half, incremental-only)
+
+The mechanical classes above prove structure; these four prove MEANING, and every
+one routes through the same independently-judged flow as step 3 (Judgment
+provenance applies — the detector never judges its own findings). **Incremental
+schedule, never all-pairs**: only pages/nodes NEW or CHANGED since the last
+refresh run (log.md records bound the window) are compared, and only against
+their THEME-NEIGHBORHOOD (same index theme + 1-hop graph neighbors). All-pairs
+is O(n²) by arithmetic — 50 pages = 2,450 pairs — and stays out by design; the
+permanent blind spot for untouched pre-existing pairs is a RECORDED property
+(completion table), not an oversight.
+
+1. **Missing pages**: a concept repeatedly named across nodes/edges/skill prose
+   (grep candidates: ≥3 distinct nodes naming it) with no `syn-*` page → SUGGEST
+   a page candidate into step 4.5's flow. Suggestion only — the lint proposes,
+   the evidence-bundle gate + judge decide.
+2. **Missing cross-references**: two pages/nodes whose bodies name each other (or
+   share ≥2 anchored files) with no edge either way → SUGGEST an edge candidate
+   into step 3's judged path. Grep finds candidates; the judge decides grounding.
+3. **Contradictions**: a new/changed page's claims vs its theme-neighborhood —
+   two anchored claims that cannot both hold → emit a `conflicts_with` PROPOSAL.
+4. **Superseded claims**: a new/changed page/node whose sources postdate and
+   overturn an older page's anchored claim (SEMANTIC judgment — anchor byte-diffs
+   cannot see it) → emit a `supersedes` PROPOSAL.
+
+**Detection FEEDS the write path, never writes**: every proposal lands as an
+add-edges JSON row tagged `"proposal_source": "lint"` and goes through the SAME
+judged gate as step 3 candidates (independent judge; cross-family when the
+detector authored the analyzed content). Nothing is auto-written — a proposal
+the judge rejects simply never reaches the corpus, and the rejection joins the
+adversarial resample pool that write-point-health samples (per-source
+breakdown: lint vs writeback). The proactive-suggestion posture is deliberate:
+lint SUGGESTS missing structure (pages, xrefs), not only flags defects.
 
 ### 5. Index + traversal check
 
