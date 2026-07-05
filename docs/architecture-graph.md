@@ -23,6 +23,7 @@ graph LR
 ### Knowledge graph subsystem — two persisted domains, one trust skeleton
 
 Page: [`syn-knowledge-graph`](../.ae/graph/synthesis/syn-knowledge-graph.md)
+Documented for: F-069, F-072
 
 ### Plugin surface — marketplace shell, ae plugin core, explicit naming
 
@@ -35,3 +36,4 @@ Page: [`syn-test-layer`](../.ae/graph/synthesis/syn-test-layer.md)
 ### Verification harness — machines measure, LLM judges, the goal is frozen
 
 Page: [`syn-verification-harness`](../.ae/graph/synthesis/syn-verification-harness.md)
+Documented for: F-048, F-065

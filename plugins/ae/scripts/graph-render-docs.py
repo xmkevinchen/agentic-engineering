@@ -17,6 +17,7 @@ Exit: 0 = written (or nothing to render — writes the empty-state doc) | 2 = us
 import argparse
 import os
 import re
+import subprocess
 import sys
 
 import yaml
@@ -30,6 +31,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--features-root",
                     default=os.environ.get("FEATURES_ROOT", ".ae/features"))
 parser.add_argument("--synthesis-root", default=None)
+parser.add_argument("--repo-root", default=None,
+                    help="anchor resolution base for the live page check "
+                         "(default: three up from the synthesis dir)")
 parser.add_argument("--out", default="docs/architecture-graph.md")
 try:
     args = parser.parse_args()
@@ -43,6 +47,11 @@ if not os.path.isdir(root):
     sys.exit(2)
 syn_root = os.path.realpath(args.synthesis_root) if args.synthesis_root \
     else graph_common.default_synthesis_root(root)
+
+repo_root = os.path.realpath(args.repo_root) if args.repo_root \
+    else os.path.normpath(os.path.join(syn_root, os.pardir, os.pardir, os.pardir))
+checker = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                       "graph-page-check.py")
 
 node_map, _ = graph_common.build_node_map(root, syn_root)
 pages = {}  # syn id → {title, state, edges}
@@ -58,8 +67,17 @@ for nid in sorted(node_map):
         continue
     if not isinstance(data, dict):
         continue
+    # the state is COMPUTED live (page-check), never the stored label — the
+    # frontmatter label is a navigation hint no write path keeps current, so
+    # rendering it verbatim would let a drifted page show "fresh" forever
+    # ("the doc never hides rot" needs a mechanism, not discipline)
+    proc = subprocess.run(
+        [sys.executable, checker, "--repo-root", repo_root,
+         "--features-root", root, path],
+        capture_output=True, text=True)
+    verdict = proc.stdout.strip().rsplit(": ", 1)[-1] if proc.stdout else "unknown"
     pages[nid] = {"title": str(data.get("title", nid)),
-                  "state": str(data.get("state", "unknown")),
+                  "state": verdict,
                   "edges": [e for e in (data.get("edges") or [])
                             if isinstance(e, dict) and e.get("id")]}
 

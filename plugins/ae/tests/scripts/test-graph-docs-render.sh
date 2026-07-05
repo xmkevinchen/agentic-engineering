@@ -23,9 +23,9 @@ ROOT="$TMP/tree/features"
 SYN="$TMP/tree/graph/synthesis"
 
 # --- 1. render + determinism: two runs, empty byte-diff
-"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --out "$TMP/a.md" >/dev/null 2>&1 \
+"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --repo-root "$TMP/tree" --out "$TMP/a.md" >/dev/null 2>&1 \
   && ok "render succeeds" || notok "render succeeds"
-"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --out "$TMP/b.md" >/dev/null 2>&1
+"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --repo-root "$TMP/tree" --out "$TMP/b.md" >/dev/null 2>&1
 cmp -s "$TMP/a.md" "$TMP/b.md" && ok "byte-identical on re-run (deterministic)" || notok "byte-identical on re-run (deterministic)"
 
 # --- 2. topology rendered: syn→syn typed arrow + component sections + page links
@@ -38,13 +38,20 @@ grep -q '](../.ae/graph/synthesis/syn-alpha-arch.md)' "$TMP/a.md" \
 grep -q 'Documented for: F-901' "$TMP/a.md" \
   && ok "documented_by feature listed" || notok "documented_by feature listed"
 
-# --- 3. stale page renders WITH its state marked
-sed -i '' 's/^state: fresh$/state: stale/' "$SYN/syn-beta-arch.md" 2>/dev/null || sed -i 's/^state: fresh$/state: stale/' "$SYN/syn-beta-arch.md"
-"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --out "$TMP/c.md" >/dev/null 2>&1
+# --- 3. GENUINELY drifted page renders stale even though its stored label
+#        still says fresh — the state is COMPUTED live, never read from the
+#        label (a lying label must not let the doc hide rot)
+sed -i '' 's/^Beta is referenced by alpha\.$/Beta was rewritten and drifted./' "$ROOT/active/F-902-beta/index.md" 2>/dev/null \
+  || sed -i 's/^Beta is referenced by alpha\.$/Beta was rewritten and drifted./' "$ROOT/active/F-902-beta/index.md"
+grep -q '^state: fresh$' "$SYN/syn-beta-arch.md" || { echo "fixture precondition broken"; exit 1; }
+"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --repo-root "$TMP/tree" --out "$TMP/c.md" >/dev/null 2>&1
 grep -q 'Beta architecture \[stale\]' "$TMP/c.md" \
-  && ok "stale page marked in the diagram" || notok "stale page marked in the diagram"
+  && ok "drifted page marked stale in the diagram (computed, label still says fresh)" || notok "drifted page marked stale in the diagram (computed, label still says fresh)"
 grep -q '— \*\*stale\*\*' "$TMP/c.md" \
-  && ok "stale page marked in its component section" || notok "stale page marked in its component section"
+  && ok "drifted page marked in its component section" || notok "drifted page marked in its component section"
+# restore the anchored line — several fixture pages anchor it
+sed -i '' 's/^Beta was rewritten and drifted\.$/Beta is referenced by alpha./' "$ROOT/active/F-902-beta/index.md" 2>/dev/null \
+  || sed -i 's/^Beta was rewritten and drifted\.$/Beta is referenced by alpha./' "$ROOT/active/F-902-beta/index.md"
 
 # --- 3b. a double-quote in a free-text title must not break the mermaid label
 #         (unterminated string = silent blank diagram, exit still 0)
@@ -62,7 +69,7 @@ anchors:
 
 Quoted title fixture (anchored at features/active/F-902-beta/index.md:8).
 EOF
-"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --out "$TMP/q.md" >/dev/null 2>&1
+"$PY" "$SCRIPTS/graph-render-docs.py" --features-root "$ROOT" --synthesis-root "$SYN" --repo-root "$TMP/tree" --out "$TMP/q.md" >/dev/null 2>&1
 grep -q 'syn_quoted\["The .quoted. component"\]' "$TMP/q.md" \
   && ok "double-quote in title escaped in the mermaid label" || notok "double-quote in title escaped in the mermaid label"
 grep -q 'syn_quoted\["The "quoted" component"\]' "$TMP/q.md" \
