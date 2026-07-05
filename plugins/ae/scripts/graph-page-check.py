@@ -31,6 +31,7 @@ import sys
 
 import yaml
 
+import graph_common
 from graph_common import SYN_ID_RE as ID_RE
 
 REQUIRED = ("id", "title", "created", "written_by", "state")
@@ -43,8 +44,42 @@ def norm(line):
     return re.sub(r"\s+", " ", line.strip())
 
 
+def resolve_repo_source(source, repo_root):
+    """Resolve a repo-root-relative 'path:line' reference.
+
+    Returns (error, lines, line_no): error is the defect string (no location
+    prefix) or None; on success `lines` is the file's line list and `line_no`
+    the 1-based line. ONE implementation for both anchors and page edges —
+    duplicated resolution logic is how line-number drift slips in."""
+    if not isinstance(source, str) or ":" not in source:
+        return f"source '{source}' is not 'path:line'", None, None
+    path_part, _, line_part = source.rpartition(":")
+    if not line_part.isdigit() or int(line_part) < 1:
+        return f"source '{source}' has no valid line number", None, None
+    if os.path.isabs(path_part):
+        return f"source '{source}' is absolute; must be repo-relative", None, None
+    resolved = os.path.realpath(os.path.join(repo_root, path_part))
+    if not (resolved + os.sep).startswith(repo_root + os.sep):
+        return f"source '{source}' escapes the repo root", None, None
+    if not os.path.isfile(resolved):
+        return f"source '{source}' file does not exist", None, None
+    try:
+        with open(resolved, encoding="utf-8", errors="replace") as f:
+            lines = f.read().splitlines()
+    except OSError as e:
+        return f"source '{source}' unreadable: {e}", None, None
+    ln = int(line_part)
+    if ln > len(lines):
+        return f"source '{source}' line beyond EOF ({len(lines)} lines)", None, None
+    return None, lines, ln
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--repo-root", default=None)
+parser.add_argument("--features-root", default=None,
+                    help="features tree for edge-target resolution (default: "
+                         "<page-dir>/../../../features — the .ae/graph/synthesis "
+                         "→ .ae/features layout)")
 parser.add_argument("page")
 try:
     args = parser.parse_args()
@@ -111,32 +146,9 @@ for i, a in enumerate(anchors, 1):
     source = a.get("source")
     ahash = a.get("anchor_hash")
     commit = a.get("commit")
-    if not isinstance(source, str) or ":" not in source:
-        defects.append(f"{where}: source '{source}' is not 'path:line'")
-        continue
-    path_part, _, line_part = source.rpartition(":")
-    if not line_part.isdigit() or int(line_part) < 1:
-        defects.append(f"{where}: source '{source}' has no valid line number")
-        continue
-    if os.path.isabs(path_part):
-        defects.append(f"{where}: source '{source}' is absolute; must be repo-relative")
-        continue
-    resolved = os.path.realpath(os.path.join(repo_root, path_part))
-    if not (resolved + os.sep).startswith(repo_root + os.sep):
-        defects.append(f"{where}: source '{source}' escapes the repo root")
-        continue
-    if not os.path.isfile(resolved):
-        defects.append(f"{where}: source '{source}' file does not exist")
-        continue
-    try:
-        with open(resolved, encoding="utf-8", errors="replace") as f:
-            lines = f.read().splitlines()
-    except OSError as e:
-        defects.append(f"{where}: source '{source}' unreadable: {e}")
-        continue
-    ln = int(line_part)
-    if ln > len(lines):
-        defects.append(f"{where}: source '{source}' line beyond EOF ({len(lines)} lines)")
+    err, lines, ln = resolve_repo_source(source, repo_root)
+    if err:
+        defects.append(f"{where}: {err}")
         continue
     if not isinstance(ahash, str) or not ahash.strip():
         defects.append(f"{where}: missing anchor_hash")
@@ -147,6 +159,31 @@ for i, a in enumerate(anchors, 1):
                               capture_output=True)
         if proc.returncode != 0:
             defects.append(f"{where}: commit '{commit}' does not resolve")
+
+# ---- page edges (F-076: pages are edge-bearing, leaf-only ended) -------------
+# Validated through the same shared core as feature-node edges, so the same
+# bad edge produces the identical named defect from lint and page-check.
+edges = data.get("edges") if isinstance(data, dict) else None
+if edges is not None or (isinstance(data, dict) and "edges" in data):
+    syn_dir = os.path.dirname(page)
+    features_root = args.features_root or os.path.normpath(
+        os.path.join(syn_dir, os.pardir, os.pardir, "features"))
+    node_map, _ = graph_common.build_node_map(features_root, syn_dir)
+    if edges is None:  # `edges:` present but null must not bypass validation
+        defects.append("'edges' key present but null — remove the key or provide a list")
+        edges = []
+    elif not isinstance(edges, list):
+        defects.append(f"'edges' must be a list of mappings, got {type(edges).__name__}")
+        edges = []
+
+    for i, edge in enumerate(edges, 1):
+        # page-edge provenance is repo-root-relative — the SAME resolver as
+        # anchors, so both drift the same way and are fixed in one place
+        defs, _ref = graph_common.validate_edge(
+            edge, "syn", node_map,
+            source_check=lambda s: resolve_repo_source(s, repo_root)[0])
+        for d in defs:
+            defects.append(f"edge {i}: {d}")
 
 for d in defects:
     print(f"[page-check] DEFECT: {page_id} {d}")

@@ -183,6 +183,31 @@ def scoped_lint(root, node_dir):
     return r.returncode == 0, (r.stdout + r.stderr).strip()
 
 
+def write_context(args):
+    """Resolve the shared write-path context: (root, syn_root, repo_root, node_map).
+
+    repo root: pages' source provenance is repo-relative (same base as their
+    anchors); default = three up from the synthesis dir (.ae/graph/synthesis)."""
+    root = os.path.realpath(args.root)
+    syn_root = graph_common.default_synthesis_root(root)
+    repo_root = os.path.realpath(args.repo_root) if getattr(args, "repo_root", None) \
+        else os.path.normpath(os.path.join(syn_root, os.pardir, os.pardir, os.pardir))
+    node_map, _ = graph_common.build_node_map(root, syn_root)
+    return root, syn_root, repo_root, node_map
+
+
+def post_write_check(src_class, root, node_dir, idx, repo_root):
+    """Per-class post-write validation: F nodes run the scoped lint, syn pages
+    run the page check (which validates page edges too). Returns (ok, output)."""
+    if src_class == "F":
+        return scoped_lint(root, node_dir)
+    proc = subprocess.run(
+        [sys.executable, PAGE_CHECK, "--repo-root", repo_root,
+         "--features-root", root, idx],
+        capture_output=True, text=True)
+    return proc.returncode == 0, (proc.stdout + proc.stderr).strip()
+
+
 def cmd_backfill(args):
     fids, bls = resolvers(args.root)
     skipped, failures, wrote = [], 0, 0
@@ -292,15 +317,20 @@ def cmd_add_edges(args):
     by_from = {}
     for r in rows:
         by_from.setdefault(str(r["from"]), []).append(r)
-    dirs = {str(parse(idx)[0].get("id", "")): (nd, idx)
-            for nd, idx in nodes(args.root) if parse(idx)[0]}
+    # node abstraction: id → (class, edge-bearing path) — F index.md files and
+    # syn page files write through the SAME append path (F-076 leaf-only end)
+    root, syn_root, repo_root, node_map = write_context(args)
     failures = 0
     for fid, items in by_from.items():
-        if fid not in dirs:
-            print(f"[graph-refresh] REVERTED {fid}: no such node", file=sys.stderr)
+        entry = node_map.get(fid)
+        if entry is None or entry[0] not in ("F", "syn"):
+            print(f"[graph-refresh] REVERTED {fid}: no such edge-bearing node", file=sys.stderr)
             failures += 1
             continue
-        node_dir, idx = dirs[fid]
+        src_class, idx = entry
+        node_dir = os.path.dirname(idx)
+        # the path a `line` row anchors to, as written into `source:`
+        src_ref = "index.md" if src_class == "F" else os.path.relpath(idx, repo_root)
         old_fm = fm_line_count(idx)
         have = {(e.get("kind"), str(e.get("id"))) for e in (parse(idx)[0].get("edges") or [])
                 if isinstance(e, dict)}
@@ -335,7 +365,7 @@ def cmd_add_edges(args):
             if r.get("written_by"):
                 e["written_by"] = str(r["written_by"])
             if r.get("line"):
-                e["source"] = f"index.md:PENDING{int(r['line'])}"  # body line, pre-write
+                e["source"] = f"{src_ref}:PENDING{int(r['line'])}"  # body line, pre-write
             edges.append(e)
         if not edges:
             continue
@@ -347,11 +377,11 @@ def cmd_add_edges(args):
         for e in edges:
             if "source" in e and "PENDING" in e["source"]:
                 orig = int(e["source"].rsplit("PENDING", 1)[1])
-                e["source"] = f"index.md:{orig + delta}"
-                cur = cur.replace(f'source: "index.md:PENDING{orig}"',
+                e["source"] = f"{src_ref}:{orig + delta}"
+                cur = cur.replace(f'source: "{src_ref}:PENDING{orig}"',
                                   f'source: "{e["source"]}"')
         open(idx, "w", encoding="utf-8").write(cur)
-        okk, out = scoped_lint(args.root, node_dir)
+        okk, out = post_write_check(src_class, args.root, node_dir, idx, repo_root)
         anchor_ok = True
         new_fm = fm_line_count(idx)
         for e in edges:
@@ -386,15 +416,16 @@ def cmd_remove_edges(args):
                   file=sys.stderr)
             return 2
     KNOWN_EDGE_FIELDS = {"kind", "id", "source", "evidence", "written_by", "judge"}
-    dirs = {str(parse(idx)[0].get("id", "")): (nd, idx)
-            for nd, idx in nodes(args.root) if parse(idx)[0]}
+    root, syn_root, repo_root, node_map = write_context(args)
     failures = removed = 0
     for r in rows:
         fid, kind, target = str(r["from"]), str(r["kind"]), str(r["target"])
-        if fid not in dirs:
-            print(f"[graph-refresh] remove {fid}: no such node — no-op")
+        entry = node_map.get(fid)
+        if entry is None or entry[0] not in ("F", "syn"):
+            print(f"[graph-refresh] remove {fid}: no such edge-bearing node — no-op")
             continue
-        node_dir, idx = dirs[fid]
+        src_class, idx = entry
+        node_dir = os.path.dirname(idx)
         data, m, text = parse(idx)
         edges = data.get("edges") or []
         hit = next((e for e in edges if isinstance(e, dict) and e.get("kind") == kind
@@ -415,6 +446,19 @@ def cmd_remove_edges(args):
             continue
         # rebuild the frontmatter without this edge, script-owned surgery only
         keep = [e for e in edges if e is not hit]
+        # frontmatter shrinks by the removed edge's lines — remaining edges'
+        # SELF-FILE source line numbers must shift with the body or they
+        # silently mis-anchor (beyond-EOF on pages exposed this; F nodes
+        # drifted silently because resolvability alone still passed)
+        removed_lines = len(edge_lines_existing(hit))
+        old_fm_lines = m.group(0).count("\n")
+        self_ref = "index.md" if src_class == "F" else os.path.relpath(idx, repo_root)
+        for e in keep:
+            src = e.get("source")
+            if isinstance(src, str):
+                p, _, l = src.rpartition(":")
+                if p == self_ref and l.isdigit() and int(l) > old_fm_lines:
+                    e["source"] = f"{self_ref}:{int(l) - removed_lines}"
         fm = m.group(1)
         block_re = re.compile(r"^edges:\n(?:^[ \t].*\n?)*", re.M)
         if keep:
@@ -429,7 +473,7 @@ def cmd_remove_edges(args):
         body = text[m.end():]
         before = text
         open(idx, "w", encoding="utf-8").write("---\n" + new_fm.rstrip("\n") + "\n---\n" + body)
-        okk, out = scoped_lint(args.root, node_dir)
+        okk, out = post_write_check(src_class, args.root, node_dir, idx, repo_root)
         if not okk:
             open(idx, "w", encoding="utf-8").write(before)
             print(f"[graph-refresh] REVERTED {fid}: lint after removal: {out}")
@@ -528,11 +572,17 @@ p1.add_argument("--dry-run", action="store_true")
 p2 = sub.add_parser("candidates")
 p3 = sub.add_parser("add-edges")
 p3.add_argument("edges_json")
+p3.add_argument("--repo-root", default=None,
+                help="base for page-edge source provenance (default: three up "
+                     "from the synthesis dir — the .ae/graph/synthesis layout)")
 p4 = sub.add_parser("add-page")
 p4.add_argument("page_json")
 p4.add_argument("--synthesis-root", default=None)
 p5 = sub.add_parser("remove-edges")
 p5.add_argument("edges_json")
+p5.add_argument("--repo-root", default=None,
+                help="base for page-edge validation (default: three up from "
+                     "the synthesis dir)")
 for p in (p1, p2, p3, p4, p5):
     p.add_argument("--root", default=os.environ.get("FEATURES_ROOT", ".ae/features"))
 try:

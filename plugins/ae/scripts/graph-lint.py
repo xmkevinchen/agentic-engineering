@@ -36,7 +36,7 @@ import sys
 import yaml
 
 import graph_common
-from graph_common import KIND_ENUM, WRITER_ENUM, STATE_DIRS
+from graph_common import STATE_DIRS
 
 if __name__ != "__main__":
     raise SystemExit("graph-lint.py is subprocess-only; do not import")
@@ -124,46 +124,13 @@ def lint_node(node_dir, index, node_map, defects, src_class="F"):
     referenced = set()
     for i, edge in enumerate(edges, 1):
         where = f"{rel} edge {i}"
-        if not isinstance(edge, dict):
-            defects.append(f"{where}: not a mapping ({edge!r})")
-            continue
-        kind = edge.get("kind")
-        target = edge.get("id")
-        writer = edge.get("written_by")
-        # non-scalar values (e.g. `kind: [relates_to]`) must be named
-        # defects, not a TypeError on set membership
-        if kind is None:
-            defects.append(f"{where}: missing required field 'kind'")
-        elif not isinstance(kind, str) or kind not in KIND_ENUM:
-            defects.append(f"{where}: kind '{kind}' not in enum {sorted(KIND_ENUM)}")
-        if writer is None:
-            defects.append(f"{where}: missing required field 'written_by'")
-        elif not isinstance(writer, str) or writer not in WRITER_ENUM:
-            defects.append(f"{where}: written_by '{writer}' not in enum {sorted(WRITER_ENUM)}")
-        if target is None:
-            defects.append(f"{where}: missing required field 'id'")
-        else:
-            target = str(target)
-            tgt_class = graph_common.classify_id(target)
-            if tgt_class is None:
-                defects.append(f"{where}: unclassifiable target id '{target}' "
-                               f"(expected {graph_common.ID_HINT})")
-            else:
-                referenced.add(target)
-                if target not in node_map or node_map[target][0] != tgt_class:
-                    defects.append(f"{where}: dangling target '{target}' (no such {tgt_class} node)")
-                if isinstance(kind, str) and kind in KIND_ENUM:
-                    legality = graph_common.kind_legality_defect(kind, src_class, tgt_class)
-                    if legality:
-                        defects.append(f"{where}: {legality}")
-        source = edge.get("source")
-        if source is None:
-            if kind == "relates_to":
-                defects.append(f"{where}: relates_to missing required 'source' provenance")
-        else:
-            src_err = check_source(node_dir, source)
-            if src_err:
-                defects.append(f"{where}: {src_err}")
+        defs, ref = graph_common.validate_edge(
+            edge, src_class, node_map,
+            source_check=lambda s: check_source(node_dir, s))
+        for d in defs:
+            defects.append(f"{where}: {d}")
+        if ref:
+            referenced.add(ref)
     return node_id, referenced, len(edges) > 0
 
 

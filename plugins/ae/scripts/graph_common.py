@@ -102,6 +102,60 @@ def kind_legality_defect(kind, src_class, tgt_class):
             f"(legal: {legal})")
 
 
+# ---- per-edge validation core ------------------------------------------------
+
+
+def validate_edge(edge, src_class, node_map, source_check=None):
+    """Validate ONE edge mapping; return (defect_strings, referenced_target).
+
+    Shared by every edge-bearing node class (F nodes via graph-lint, syn pages
+    via graph-page-check) so the same bad edge produces the identical named
+    defect everywhere. Location prefixes are the caller's job.
+    source_check(source) → error-or-None handles the per-class provenance
+    semantics (node-dir-relative for F nodes, repo-relative for pages)."""
+    if not isinstance(edge, dict):
+        return [f"not a mapping ({edge!r})"], None
+    defs = []
+    kind = edge.get("kind")
+    target = edge.get("id")
+    writer = edge.get("written_by")
+    # non-scalar values (e.g. `kind: [relates_to]`) must be named defects,
+    # not a TypeError on set membership
+    if kind is None:
+        defs.append("missing required field 'kind'")
+    elif not isinstance(kind, str) or kind not in KIND_ENUM:
+        defs.append(f"kind '{kind}' not in enum {sorted(KIND_ENUM)}")
+    if writer is None:
+        defs.append("missing required field 'written_by'")
+    elif not isinstance(writer, str) or writer not in WRITER_ENUM:
+        defs.append(f"written_by '{writer}' not in enum {sorted(WRITER_ENUM)}")
+    referenced = None
+    if target is None:
+        defs.append("missing required field 'id'")
+    else:
+        target = str(target)
+        tgt_class = classify_id(target)
+        if tgt_class is None:
+            defs.append(f"unclassifiable target id '{target}' (expected {ID_HINT})")
+        else:
+            referenced = target
+            if target not in node_map or node_map[target][0] != tgt_class:
+                defs.append(f"dangling target '{target}' (no such {tgt_class} node)")
+            if isinstance(kind, str) and kind in KIND_ENUM:
+                legality = kind_legality_defect(kind, src_class, tgt_class)
+                if legality:
+                    defs.append(legality)
+    source = edge.get("source")
+    if source is None:
+        if kind == "relates_to":
+            defs.append("relates_to missing required 'source' provenance")
+    elif source_check is not None:
+        src_err = source_check(source)
+        if src_err:
+            defs.append(src_err)
+    return defs, referenced
+
+
 # ---- node map: id → (class, path) -------------------------------------------
 
 STATE_DIRS = ("active", "done", "abandoned", "paused")

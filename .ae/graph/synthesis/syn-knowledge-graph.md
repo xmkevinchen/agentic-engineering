@@ -7,7 +7,7 @@ state: fresh
 anchors:
   - source: "plugins/ae/scripts/graph_common.py:62"
     anchor_hash: "_CLASS_PATTERNS = ("
-  - source: "plugins/ae/scripts/graph-page-check.py:155"
+  - source: "plugins/ae/scripts/graph-page-check.py:192"
     anchor_hash: "verdict = \"DEFECT\" if defects else (\"stale\" if stale else \"fresh\")"
   - source: "plugins/ae/scripts/graph-refresh.py:57"
     anchor_hash: "def log_mutation(graph_dir, actor, what):"
@@ -18,7 +18,7 @@ anchors:
     commit: b4cc996
 ---
 
-Judgment, unanchored: the graph persists two kinds of JUDGED content — and their mechanical by-products (the append-only mutation log, the regenerated index); everything semantic beyond these two derives at read time. Domain one is relationship edges between project artifacts, whose target-id universe is a closed four-class dispatch — F / BL / disc / syn, one canonical table in the shared module (plugins/ae/scripts/graph_common.py:62); an unknown prefix is a named defect, never silently classified. (The v1 leaf-only page rule existed because admitting the fourth prefix meant touching the dispatch chain and resolvers — F-076 did exactly that, ending leaf-only.) Domain two is synthesis pages — prose understanding whose every claim anchors into the working tree, machine-graded into exactly three ANCHOR-freshness states — the grading never claims semantic truth, which stays with the judge and the human (plugins/ae/scripts/graph-page-check.py:155).
+Judgment, unanchored: the graph persists two kinds of JUDGED content — and their mechanical by-products (the append-only mutation log, the regenerated index); everything semantic beyond these two derives at read time. Domain one is relationship edges between project artifacts, whose target-id universe is a closed four-class dispatch — F / BL / disc / syn, one canonical table in the shared module (plugins/ae/scripts/graph_common.py:62); an unknown prefix is a named defect, never silently classified. (The v1 leaf-only page rule existed because admitting the fourth prefix meant touching the dispatch chain and resolvers — F-076 did exactly that, ending leaf-only.) Domain two is synthesis pages — prose understanding whose every claim anchors into the working tree, machine-graded into exactly three ANCHOR-freshness states — the grading never claims semantic truth, which stays with the judge and the human (plugins/ae/scripts/graph-page-check.py:192).
 
 Judgment, unanchored: the boundary rule that explains the whole design is that persistence follows CHANGE RATE, not artifact type — slow-changing things (feature relationships, high-level design) persist, while fast-changing implementation detail is never stored because the working tree answers it live; this is also the single decision most likely to confuse a newcomer, because the graph looks code-free when the code actually enters through page anchors.
 
