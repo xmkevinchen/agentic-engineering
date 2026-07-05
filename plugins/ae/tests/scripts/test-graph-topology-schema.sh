@@ -65,6 +65,14 @@ rc4=$?
 [ $rc4 -ne 0 ] && ok "refresh rejects unclassifiable target id" || notok "refresh rejects unclassifiable target id"
 case "$out4" in *"unclassifiable target id 'Q-77'"*) ok "refresh names the unclassifiable id";; *) notok "refresh names the unclassifiable id ($out4)";; esac
 
+# --- 4c. NON-CONVENTIONAL layout: a relocated synthesis dir must not produce
+#         false dangling defects — graph-lint forwards --features-root to the
+#         page check instead of letting its fallback derivation guess wrong
+mkdir -p "$TMP/elsewhere"
+cp -R "$SYN" "$TMP/elsewhere/pages"
+out4c="$("$PY" "$SCRIPTS/graph-lint.py" --root "$ROOT" --synthesis-root "$TMP/elsewhere/pages" --repo-root "$TMP/tree" 2>&1)"
+case "$out4c" in *"dangling target 'BL-901'"*) notok "relocated synthesis dir: no false dangling (features-root forwarded)";; *) ok "relocated synthesis dir: no false dangling (features-root forwarded)";; esac
+
 # --- 5. kind knowledge lives ONLY in graph_common (no divergent copies)
 copies=0
 for s in graph-lint.py graph-refresh.py graph-page-check.py graph-neighbors.py graph-index-gen.py; do

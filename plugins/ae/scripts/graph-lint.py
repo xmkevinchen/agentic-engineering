@@ -209,7 +209,11 @@ else:  # whole-tree mode
             os.path.join(syn_root, os.pardir, os.pardir, os.pardir))
         pages = sorted(f for f in os.listdir(syn_root) if f.endswith(".md"))
         for f in pages:
+            # forward the resolved features root — page-check's own fallback
+            # derivation is only right in the conventional layout, and a missed
+            # forward makes page-edge targets falsely dangle (midpoint catch)
             cmd = [sys.executable, checker, "--repo-root", repo_root,
+                   "--features-root", root,
                    os.path.join(syn_root, f)]
             proc = subprocess.run(cmd, capture_output=True, text=True)
             found_defect = False
