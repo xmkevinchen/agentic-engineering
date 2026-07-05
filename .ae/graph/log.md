@@ -60,3 +60,7 @@
 - 2026-07-05T01:18:43Z add-edges: F-065: 1 edge(s)
 - 2026-07-05T01:50:26Z add-edges: syn-knowledge-graph: 1 edge(s)
 - 2026-07-05T01:50:26Z add-edges: syn-verification-harness: 1 edge(s)
+- 2026-07-05T01:56:16Z query: review F-076 knowledge-topology review-loop locate+verify — write-back candidate: no — durable understanding (harness verification patterns, graph trust skeleton) already held by syn-verification-harness + syn-knowledge-graph; review findings were transient and fixed in-loop
+- 2026-07-05T01:59:07Z rejected: F-076: relates_to -> F-069 [untagged] lint-revert
+- 2026-07-05T01:59:07Z rejected: F-076: relates_to -> F-075 [untagged] lint-revert
+- 2026-07-05T01:59:46Z add-edges: F-076: 2 edge(s)
