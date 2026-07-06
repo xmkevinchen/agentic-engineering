@@ -376,7 +376,7 @@ Check E dispositions **every** finding accumulated across the pre-commit chain �
     Reason: <why deferred, what will resolve it>
     ```
     `[Step N]` = target step where this must be addressed (REQUIRED). If no target step can be identified → use backlog (`BL-NNN` in `output.backlog/unscheduled/`), not defer. This write is mandatory — defer without writing to notes.md is a protocol violation.
-- Backlog → `BL-NNN-slug.md` in `output.backlog/unscheduled/` (new BLs always land unscheduled; user commits to a sprint later via `/ae:roadmap plan`)
+- Backlog → `BL-NNN-slug.md` in `output.backlog/unscheduled/`, allocating the `BL-NNN` via `bash plugins/ae/scripts/next-bl-id.sh` (canonical allocator; do not hand-pick) — new BLs always land unscheduled; user commits to a sprint later via `/ae:roadmap plan`
 
 ### F. Disposition Challenge
 Send P1 + P2-logic/security to cross-family for challenge.

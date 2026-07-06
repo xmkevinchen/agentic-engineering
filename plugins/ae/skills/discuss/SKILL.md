@@ -551,7 +551,7 @@ Can the team obtain the missing info?
 |------------|------|--------|
 | **Converge now** | Team found new info | `converged` with decision + rationale |
 | **Spawn new discussion** | Independent deep-dive needed | Create sub-discussion dir, link from index.md |
-| **Spawn as backlog** | Execution problem, not design | Write to `output.backlog/unscheduled/` (new BLs land unscheduled; sprint assignment via `/ae:roadmap plan`) |
+| **Spawn as backlog** | Execution problem, not design | Write to `output.backlog/unscheduled/` — allocate the `BL-NNN` via `bash plugins/ae/scripts/next-bl-id.sh` (canonical allocator; do not hand-pick a number). New BLs land unscheduled; sprint assignment via `/ae:roadmap plan` |
 | **Explain + assume** | Delay cost > assumption risk | Record assumption + revisit trigger |
 
 **TL resolves autonomously first.** Only escalate to user when TL genuinely can't resolve.
@@ -669,7 +669,7 @@ Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reduc
 
 1. **Valid finding requiring response → kick off new round**. The team discusses the Doodlestein challenge directly. After the round, TL updates the conclusion to reflect the outcome. Then Doodlestein may run again on the revised conclusion (bounded by whether new Doodlestein agents produce new findings — identical findings mean convergence, not loop).
 2. **Refuted finding** → record the exchange in the conclusion's Doodlestein Review section. No round.
-3. **Out-of-scope finding** → record as a new backlog item in `output.backlog/unscheduled/`. No round.
+3. **Out-of-scope finding** → record as a new backlog item in `output.backlog/unscheduled/`, allocating the `BL-NNN` via `bash plugins/ae/scripts/next-bl-id.sh` (canonical allocator; do not hand-pick). No round.
 
 **The key difference from pre-conclusion Doodlestein** (044 failure mode): Doodlestein audits **the actual written conclusion**, not an anticipated conclusion. If a new round fires, it's because a real finding challenges a written decision — not because of anticipatory churn. Team reviews a concrete artifact, not a moving target.
 

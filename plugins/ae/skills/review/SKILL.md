@@ -526,7 +526,7 @@ Track consecutive fixup rounds. Read `work.max_fix_loops` from pipeline.yml (def
 
 Options:
 1. Fix manually — pause for human intervention
-2. Defer to backlog — write to `output.backlog/unscheduled/` as BL-NNN-slug.md (new BLs always land unscheduled; user commits to a sprint later via `/ae:roadmap plan`)
+2. Defer to backlog — write to `output.backlog/unscheduled/` as BL-NNN-slug.md, allocating the `BL-NNN` via `bash plugins/ae/scripts/next-bl-id.sh` (canonical allocator; do not hand-pick). New BLs always land unscheduled; user commits to a sprint later via `/ae:roadmap plan`
 3. Accept as-is — record finding as known issue in review report
 ```
 
@@ -609,7 +609,7 @@ Report contents:
 1. TL synthesis report (merged findings from all reviewers + challenger + cross-family, with Disagreement Value Assessment and severity classification)
 2. Outcome statistics (rework rate, P1 escape rate, drift events, fix loop triggers, auto-pass rate)
 3. Fixups squashed
-4. Deferred findings audit results (FIXED/WAIVED/UNRESOLVED classification from Check 4), backlog items to `pipeline.yml` → `output.backlog/unscheduled/` (default: `.ae/backlog/unscheduled/`) — sprint assignment via `/ae:roadmap plan` later
+4. Deferred findings audit results (FIXED/WAIVED/UNRESOLVED classification from Check 4), backlog items to `pipeline.yml` → `output.backlog/unscheduled/` (default: `.ae/backlog/unscheduled/`), allocating each `BL-NNN` via `bash plugins/ae/scripts/next-bl-id.sh` (canonical allocator; do not hand-pick) — sprint assignment via `/ae:roadmap plan` later
 5. Prompt user to create PR
 
 ## Loop-invocation mode (called from the /ae:work harness loop — F-048)

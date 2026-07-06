@@ -64,3 +64,4 @@
 - 2026-07-05T01:59:07Z rejected: F-076: relates_to -> F-069 [untagged] lint-revert
 - 2026-07-05T01:59:07Z rejected: F-076: relates_to -> F-075 [untagged] lint-revert
 - 2026-07-05T01:59:46Z add-edges: F-076: 2 edge(s)
+- 2026-07-05T22:48:52Z query: discuss F-042 BL-number allocation collision root-cause+fix — write-back candidate: no — bug-fix design for a specific allocation gap (promote-invisibility + direct-write bypass); durable artifacts are the fix itself (→ plan) + the uniqueness audit, not a cross-cutting architecture page; no synthesis novelty warranting a syn-* page

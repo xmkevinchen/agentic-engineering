@@ -19,7 +19,7 @@ If the user runs `/ae:backlog` without an argument, ask them once for the one-li
 ## Steps
 
 1. **Read** `<output.backlog>` from `.claude/pipeline.yml` (default: `.ae/backlog/`).
-2. **Allocate next BL number**: scan **recursively** across all subdirs (`unscheduled/`, `closed/`, `done/`, and any sprint dirs) — `find <output.backlog> -type f -name 'BL-*.md'`. Parse the `NNN` digits from each filename, take `max(NNN) + 1`. Zero-pad to 3 digits (`042`, `100`). If no BL exists yet, start at `001`. The recursive scan is required — a non-recursive listing would miss closed/done BLs and reuse already-assigned numbers.
+2. **Allocate next BL number**: run `bash plugins/ae/scripts/next-bl-id.sh` — it prints the next free `BL-NNN` (zero-padded to 3 digits; `001` when none exist). Do NOT compute `max+1` by hand. This is the **canonical BL allocator**: it union-scans `<output.backlog>` (recursive) ∪ the feature dirs `.ae/features/{active,done,abandoned,paused}/F-*/BL-*.md` (promoted BLs move into feature dirs and must not be reused — a backlog-only scan would silently reuse them). Every other BL-writing path (discuss/review/work defer sites) calls this same script rather than re-implementing the scan.
 3. **Slugify** the description deterministically. Apply these steps **in this exact order** (not best-effort, not LLM-judged — same input always produces the same slug across agents):
    1. **Lowercase** the entire string.
    2. **Strip non-ASCII characters** (emoji, accents, full-width punctuation, etc.) — replace each with empty string. Do NOT transliterate (e.g., `ñ` becomes empty, not `n`).
