@@ -428,7 +428,7 @@ def cmd_add_edges(args):
                     e["written_by"] = str(r["written_by"])
                 if r.get("proposal_source"):
                     tags.add(str(r["proposal_source"]))
-                page_edge_targets.add(str(r["target"]))
+                page_edge_targets.add((r["kind"], str(r["target"])))
                 edges.append(e)
                 continue
             e = {"kind": r["kind"], "id": str(r["target"]),
@@ -452,7 +452,7 @@ def cmd_add_edges(args):
         delta = fm_line_count(idx) - old_fm
         cur = open(idx, encoding="utf-8").read()
         for e in edges:
-            if "source" in e and "PENDING" in e["source"]:
+            if "source" in e and e["source"].startswith(f"{src_ref}:PENDING"):
                 orig = int(e["source"].rsplit("PENDING", 1)[1])
                 e["source"] = f"{src_ref}:{orig + delta}"
                 cur = cur.replace(f'source: "{src_ref}:PENDING{orig}"',
@@ -463,8 +463,10 @@ def cmd_add_edges(args):
         new_fm = fm_line_count(idx)
         for e in edges:
             # page-edge sources are shared CODE anchors (F-078), validated by
-            # overlap + page-check's resolve_repo_source — not an id-in-line mention
-            if "source" in e and e["id"] not in page_edge_targets:
+            # overlap + page-check's resolve_repo_source — not an id-in-line mention.
+            # Key on (kind, target): a non-overlap edge to the SAME target id must
+            # still get id-in-line'd (a bare target-id skip would leak the exemption).
+            if "source" in e and (e["kind"], e["id"]) not in page_edge_targets:
                 ln = int(e["source"].rsplit(":", 1)[1])
                 lines = open(idx, encoding="utf-8").read().splitlines()
                 if ln <= new_fm or ln > len(lines) or e["id"] not in lines[ln - 1]:

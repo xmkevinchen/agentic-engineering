@@ -72,6 +72,8 @@ EOF
 mkpage syn-aa "code.py:1" "ALPHA anchor line"
 mkpage syn-bb "code.py:1" "ALPHA anchor line"
 mkpage syn-cc "code.py:2" "BETA anchor line"
+mkpage syn-dd "code.py:1" "ALPHA anchor line"   # fresh pair for the P1 mixed-batch regression
+mkpage syn-ee "code.py:1" "ALPHA anchor line"
 
 adde(){ "$PY" "$REFRESH" add-edges "$1" --root "$ROOT" --repo-root "$TREE" 2>&1; }
 
@@ -134,6 +136,25 @@ if [ $rc -eq 0 ] && grep -q 'id: syn-aa' "$ROOT/active/F-810-x/index.md"; then
   ok "AC5b: documented_by uses id-in-line (lands on body mention, not overlap)"
 else
   notok "AC5b: documented_by uses id-in-line (rc=$rc out=$out)"
+fi
+
+# --- P1 regression: a MIXED batch (relates_to + a different kind to the SAME
+#     target, the latter carrying a bogus source line) must NOT let the overlap
+#     exemption leak to the sibling — the whole batch reverts on the bad id-in-line.
+ddline=$(grep -n 'Page syn-dd owns' "$SYN/syn-dd.md" | cut -d: -f1)
+before=$(cat "$SYN/syn-dd.md")
+cat > "$TMP/mixed.json" <<JSON
+[{"from": "syn-dd", "kind": "relates_to", "target": "syn-ee",
+  "evidence": "shared anchor", "rationale": "fixture", "written_by": "batch"},
+ {"from": "syn-dd", "kind": "talks_to", "target": "syn-ee", "line": $ddline,
+  "evidence": "bogus source line not naming syn-ee", "rationale": "fixture", "written_by": "batch"}]
+JSON
+out=$(adde "$TMP/mixed.json"); rc=$?
+after=$(cat "$SYN/syn-dd.md")
+if [ $rc -ne 0 ] && [ "$before" = "$after" ]; then
+  ok "P1: overlap exemption keyed on (kind,target) — sibling talks_to still id-in-line'd (batch reverts)"
+else
+  notok "P1: mixed-batch sibling wrongly admitted (rc=$rc out=$out)"
 fi
 
 echo "1..$((pass + fail))"
