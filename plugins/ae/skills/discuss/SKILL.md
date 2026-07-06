@@ -153,9 +153,9 @@ Each spawn prompt below echoes this rule by including the line `Honor the Frozen
 Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), each with `framing_context:` in the prompt:
 
 ```
-Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
+Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy-framing",
       run_in_background: true,
-      prompt: "📋 Cast: codex-proxy
+      prompt: "📋 Cast: codex-proxy-framing
                   Role: framing reviewer (OpenAI angle)
                   Angle: bias anchoring
                   Why: cross-family check for TL pre-commitments before Round 1 begins
@@ -170,9 +170,9 @@ Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy",
                SendMessage 'unavailable: <reason>' to team-lead and exit.
                Do not retry. SendMessage verdict to team-lead.")
 
-Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy",
+Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy-framing",
       run_in_background: true,
-      prompt: "📋 Cast: gemini-proxy
+      prompt: "📋 Cast: gemini-proxy-framing
                   Role: framing reviewer (Google angle)
                   Angle: bias anchoring (system-level lens)
                   Why: cross-family check complements OpenAI angle; gemma4 fallback per CLAUDE.md
@@ -217,9 +217,9 @@ Agent(subagent_type: "ae:workflow:doodlestein-adversarial", name: "doodlestein-a
                if no obvious wall; REVISE with the blocked solution class if one exists.
                SendMessage verdict to team-lead.")
 
-Agent(subagent_type: "ae:engineering:minimal-change-engineer", name: "minimal-change-engineer",
+Agent(subagent_type: "ae:engineering:minimal-change-engineer", name: "minimal-change-engineer-framing",
       run_in_background: true,
-      prompt: "📋 Cast: minimal-change-engineer
+      prompt: "📋 Cast: minimal-change-engineer-framing
                   Role: framing reviewer (over-complication detection)
                   Angle: simpler framing covering same problem with less machinery
                   Why: anti-over-engineering check before TL commits to mechanism
@@ -238,8 +238,8 @@ Agent(subagent_type: "ae:engineering:minimal-change-engineer", name: "minimal-ch
 TL waits for **all 5 verdicts** before aggregating. **No early-exit on first REVISE** — in-flight agents must complete or time out.
 
 **Timeout rules**:
-- Proxy agents (`codex-proxy`, `gemini-proxy`): 120s per agent, per `plugins/ae/skills/agent-selection/SKILL.md` Proxy Timeout Protocol. On timeout the proxy must SendMessage `unavailable: timeout` and exit.
-- Claude-native agents (`doodlestein-strategic-framing`, `doodlestein-adversarial-framing`, `ae:engineering:minimal-change-engineer`): 180s wall-clock each. If a Claude-native agent does not respond within 180s, TL treats it as `unavailable: timeout`. **Missing verdict is NEVER implicit APPROVED.**
+- Proxy agents (`codex-proxy-framing`, `gemini-proxy-framing`): 120s per agent, per `plugins/ae/skills/agent-selection/SKILL.md` Proxy Timeout Protocol. On timeout the proxy must SendMessage `unavailable: timeout` and exit.
+- Claude-native agents (`doodlestein-strategic-framing`, `doodlestein-adversarial-framing`, `minimal-change-engineer-framing`): 180s wall-clock each. If a Claude-native agent does not respond within 180s, TL treats it as `unavailable: timeout`. **Missing verdict is NEVER implicit APPROVED.**
 
 #### 1.5.3. Verdict aggregation
 
@@ -281,7 +281,7 @@ The `target:` field is required on REVISE verdicts and MUST be one of the 3 muta
    - **Revise**: TL rewrites `framing.md` per feedback, re-runs Round 0 (will transition `round_0` to `approved` or back to `revise_requested`). TL rewrite — scope, terminology, and structure only. **MUST NOT alter `## User Question (Frozen)` section: byte-for-byte preserved across re-runs.**
    - **Override**: skip Round 0 outcome for this discussion. Log `round_0: overridden` with user-supplied reason. Proceed to Step 1.6.
    - **Cancel**: abort discussion
-3. **Cross-family degraded** (precondition: rules 1–2 passed, i.e. quorum met and zero REVISE; at this point all available verdicts are APPROVED) — BOTH `codex-proxy` and `gemini-proxy` returned `unavailable`:
+3. **Cross-family degraded** (precondition: rules 1–2 passed, i.e. quorum met and zero REVISE; at this point all available verdicts are APPROVED) — BOTH `codex-proxy-framing` and `gemini-proxy-framing` returned `unavailable`:
    - Bias-anchoring coverage is zero. **Do NOT auto-approve.** Halt and present to user:
      - Current: 3 Claude-family reviewers all APPROVED; both cross-family reviewers unavailable.
      - Options:
@@ -300,7 +300,7 @@ Rationale for rule order (addresses review-043 P1s): rule 1.5 fires before rule 
 After aggregation:
 - **Verdict files first** — write each agent's verdict (including `unavailable` and timed-out entries) to `<discussion-dir>/round-00/<agent-name>.md` (create dir if needed). File contents: agent name, verdict state, verdict content verbatim, timestamp. These files are the durable audit trail — captured BEFORE any `shutdown_request` is sent so a hung or timed-out agent still has its record written. Agents already marked `unavailable` by §1.5.2 timeout get their files written here; they are not waited for again.
 - **Parallel shutdown** — send `shutdown_request` to all spawned agents in parallel (single broadcast pass). Wait up to **30s wall-clock total** (not per agent) for `shutdown_response` replies. Worst-case teardown latency is 30s regardless of team size.
-- **Force-abandon path** — any agent that has not responded within the 30s wall-clock window (e.g., hung on long Bash call, MCP stuck, or already crashed) is marked `abandoned` in its verdict file and skipped. The framing-review teammates are left to be reaped automatically at session end — the abandoned subprocess does not block the next task (Step 2) when one agent refuses to exit cleanly. (Round-0 framing reviewers use distinct `-framing` names so an abandoned one — still occupying its name in the implicit session team until session end — cannot collide with Step 9's same-family Doodlestein re-spawn.) A `[layer1] teardown: <agent> abandoned after 30s` entry is appended to the Layer 1 trace for audit.
+- **Force-abandon path** — any agent that has not responded within the 30s wall-clock window (e.g., hung on long Bash call, MCP stuck, or already crashed) is marked `abandoned` in its verdict file and skipped. The framing-review teammates are left to be reaped automatically at session end — the abandoned subprocess does not block the next task (Step 2) when one agent refuses to exit cleanly. (ALL Round-0 framing reviewers — the 2 Doodlestein AND the 3 cross-family/minimal-change proxies — use distinct `-framing` names so an abandoned one, still occupying its name in the implicit session team until session end, cannot collide with a later same-name re-spawn: the Step-2 council's runtime-resolved proxy names OR Step-9's same-family Doodlestein re-spawn.) A `[layer1] teardown: <agent> abandoned after 30s` entry is appended to the Layer 1 trace for audit.
 
 #### 1.5.5. Boundary to Step 2
 
@@ -708,11 +708,11 @@ Agent(subagent_type: "doodlestein-scope-reducer", name: "doodlestein-scope-reduc
   framing.md # problem statement + round_0 verdict (Step 1/1.5)
   index.md # minimal scaffolding
   round-00/ # Step 1.5 framing review artifacts
-    codex-proxy.md # per-agent verdict (APPROVED / REVISE / unavailable + reason)
-    gemini-proxy.md
-    doodlestein-strategic.md
-    doodlestein-adversarial.md
-    minimal-change-engineer.md
+    codex-proxy-framing.md # per-agent verdict (APPROVED / REVISE / unavailable + reason)
+    gemini-proxy-framing.md
+    doodlestein-strategic-framing.md
+    doodlestein-adversarial-framing.md
+    minimal-change-engineer-framing.md
     dogfood-evidence.md # optional — session evidence for protocol verification
   topic-NN-slug/
     summary.md # current state — agent reads ONLY this each round
