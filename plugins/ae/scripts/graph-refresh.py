@@ -371,6 +371,7 @@ def cmd_add_edges(args):
                 if isinstance(e, dict)}
         edges = []
         tags = set()  # proposal_source values → mutation-log suffix
+        page_edge_targets = set()  # F-078: overlap-validated page edges skip id-in-line
         for r in items:
             # fail fast on kind/target-shape errors — clearer than a post-write
             # lint revert, and the shared tables keep the wording identical
@@ -398,6 +399,38 @@ def cmd_add_edges(args):
                 failures += 1
                 continue
             have.add((r["kind"], str(r["target"])))  # in-batch duplicates skip too
+            # F-078: a relates_to page↔page edge grounds on a SHARED CONCRETE ANCHOR
+            # (both pages cite the same file:line), never an id-in-line body mention —
+            # pages anchor code, not other pages (§4.5). The upstream judge (step 3) is
+            # unchanged and remains the semantic gate; this is the deterministic
+            # admissibility half only. Scoped to page relates_to: feature→feature and
+            # F→syn documented_by keep the id-in-line check.
+            if src_class == "syn" and r["kind"] == "relates_to" \
+                    and graph_common.classify_id(str(r["target"])) == "syn":
+                def _anchors(pidx):
+                    d = parse(pidx)[0] or {}
+                    return {a["source"] for a in (d.get("anchors") or [])
+                            if isinstance(a, dict) and a.get("source")}
+                tgt_entry = node_map.get(str(r["target"]))
+                shared = sorted(_anchors(idx) & _anchors(tgt_entry[1])) \
+                    if tgt_entry and tgt_entry[0] == "syn" else []
+                if not shared:
+                    print(f"[graph-refresh] REJECTED {fid}: relates_to -> {r['target']} "
+                          f"no shared anchor (page edges need overlapping concrete anchors)")
+                    reject(r, "no-shared-anchor")
+                    failures += 1
+                    continue
+                e = {"kind": r["kind"], "id": str(r["target"]),
+                     "evidence": r.get("evidence", ""),
+                     "judge": r.get("rationale", "bootstrap judgment — user-review pending"),
+                     "source": shared[0]}
+                if r.get("written_by"):
+                    e["written_by"] = str(r["written_by"])
+                if r.get("proposal_source"):
+                    tags.add(str(r["proposal_source"]))
+                page_edge_targets.add(str(r["target"]))
+                edges.append(e)
+                continue
             e = {"kind": r["kind"], "id": str(r["target"]),
                  "evidence": r.get("evidence", ""),
                  "judge": r.get("rationale", "bootstrap judgment — user-review pending")}
@@ -429,7 +462,9 @@ def cmd_add_edges(args):
         anchor_ok = True
         new_fm = fm_line_count(idx)
         for e in edges:
-            if "source" in e:
+            # page-edge sources are shared CODE anchors (F-078), validated by
+            # overlap + page-check's resolve_repo_source — not an id-in-line mention
+            if "source" in e and e["id"] not in page_edge_targets:
                 ln = int(e["source"].rsplit(":", 1)[1])
                 lines = open(idx, encoding="utf-8").read().splitlines()
                 if ln <= new_fm or ln > len(lines) or e["id"] not in lines[ln - 1]:
