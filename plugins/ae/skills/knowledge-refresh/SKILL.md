@@ -88,12 +88,23 @@ drop them; a reverted dangling target usually means the mentioned feature has no
 ### 3.5 Re-judge the batch stock (DEFAULT — LLM output is not settled fact)
 
 Everything `written_by: batch` was LLM-generated and may hide judgment errors no
-lint can see. A refresh therefore RE-JUDGES the batch stock every run — the same
-posture the pull gate takes toward anchors, applied to semantics. `written_by:
-human` is the only exemption: a human ruling is never machine-re-judged (and
-`remove-edges` refuses to delete it at the script layer).
+lint can see. A refresh RE-JUDGES batch edges — the same posture the pull gate
+takes toward anchors, applied to semantics — but on the **same incremental
+schedule §4.7 uses, never the full stock every run**: only edges whose node is
+NEW or CHANGED since the last refresh run (log.md records bound the window, exactly
+as §4.7:185-188 bounds its comparison set). A batch edge the judge already ruled
+on, whose node has not changed since, is re-read identically and re-judged
+identically — zero-information churn. **Zero drift → empty re-judge set**: a
+corpus byte-identical since the last run sends nothing to the judge. `written_by:
+human` is exempt regardless (a human ruling is never machine-re-judged; `remove-edges`
+refuses to delete it at the script layer). A **full-stock re-judge** (every batch
+edge, ignoring the window) stays available as an explicit opt-in — a `--full`
+pass, for a deliberate audit or after a judge-method change.
 
-1. Enumerate batch edges: `rg -B2 -A4 'written_by: batch' .ae/features/*/F-*/index.md`.
+1. Enumerate batch edges IN THE WINDOW: of `rg -B2 -A4 'written_by: batch'
+   .ae/features/*/F-*/index.md`, keep only those in a node NEW/CHANGED since the
+   last refresh run (log.md-bounded, per §4.7); an explicit `--full` pass drops
+   the window and enumerates all of them.
 2. Ship the batch to an independent judge (per **Judgment provenance** — and
    re-judging is where cross-family matters MOST: the batch stock was written by
    a same-family session). The judge re-reads each `source` line (and
