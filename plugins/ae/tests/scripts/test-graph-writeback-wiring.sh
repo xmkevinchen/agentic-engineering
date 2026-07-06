@@ -92,7 +92,7 @@ EOF
 out8="$("$PY" "$SCRIPTS/graph-writeback-health.py" --graph-dir "$TMP/graph" 2>&1)"
 case "$out8" in *"queries: 4 (yes: 2, no: 2, undisposed: 0, yes-rate: 50%)"*) ok "yes-rate COMPUTED from the ledger (50%)";; *) notok "yes-rate COMPUTED from the ledger ($out8)";; esac
 case "$out8" in *"lint: 1"*) ok "per-source breakdown: lint counted";; *) notok "per-source breakdown: lint counted";; esac
-case "$out8" in *"writeback: 1"*) ok "per-source breakdown: writeback counted";; *) notok "per-source breakdown: writeback counted";; esac
+case "$out8" in *"writeback: 2"*) ok "per-source breakdown: writeback counts EDGES not events (2)";; *) notok "per-source breakdown: writeback counts EDGES not events (2) ($out8)";; esac
 case "$out8" in *"untagged: 1"*) ok "per-source breakdown: untagged counted";; *) notok "per-source breakdown: untagged counted";; esac
 
 # --- 9. numeric tripwire: 10 batch pages since last dedup → FORCED; a dedup

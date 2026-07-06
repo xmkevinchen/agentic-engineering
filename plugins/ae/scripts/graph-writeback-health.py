@@ -60,6 +60,7 @@ by_skill = {}  # skill → [queries, yes, no] — a per-surface dead hook must n
 edge_src = {"lint": 0, "writeback": 0, "untagged": 0}
 rejected_src = {}  # the resample pool's lint half: durable rejection records
 pages_since_dedup = 0
+seen_pages = set()  # distinct page ids since the last dedup pass (F-078)
 for ln in lines:
     m = re.match(r"^- \S+ query: (\S+)", ln)
     if m:
@@ -74,16 +75,27 @@ for ln in lines:
             row[2] += 1
         continue
     if re.match(r"^- \S+ add-edges: ", ln):
+        # count EDGES, not add-edges log events: the record carries `N edge(s)`.
+        # A multi-source batch attributes N to each listed source (rare; a refresh
+        # batch is normally single-source) — a health heuristic, not an audit.
+        nm = re.search(r"(\d+) edge\(s\)", ln)
+        n = int(nm.group(1)) if nm else 1
         tags = re.search(r"\[([^\]]+)\]\s*$", ln)
         if tags:
             for t in tags.group(1).split(","):
                 t = t.strip()
-                edge_src[t] = edge_src.get(t, 0) + 1
+                edge_src[t] = edge_src.get(t, 0) + n
         else:
-            edge_src["untagged"] += 1
+            edge_src["untagged"] += n
         continue
     if re.match(r"^- \S+ add-page: ", ln):
-        pages_since_dedup += 1
+        # count DISTINCT page ids: a rewritten (delete + re-add) page must not
+        # inflate the dedup tripwire with duplicate add-page events.
+        pm = re.match(r"^- \S+ add-page: (\S+)", ln)
+        pid = pm.group(1) if pm else None
+        if pid and pid not in seen_pages:
+            seen_pages.add(pid)
+            pages_since_dedup += 1
         continue
     m = re.match(r"^- \S+ rejected: .*\[([^\]]+)\]", ln)
     if m:
@@ -91,6 +103,7 @@ for ln in lines:
         continue
     if re.match(r"^- \S+ dedup: ", ln):
         pages_since_dedup = 0
+        seen_pages = set()
 
 undisposed = queries - yes - no
 rate = f"{(100 * yes // (yes + no))}%" if (yes + no) else "n/a"
