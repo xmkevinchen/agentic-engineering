@@ -291,6 +291,21 @@ def cmd_backfill(args):
 
 
 def cmd_candidates(args):
+    # A durable `rejected:` ledger record for a (from, target) pair means the judge
+    # already refused that edge — re-emitting it as a candidate every run re-judges a
+    # settled refusal. Suppress those pairs (kind-agnostic: a mention re-surfaces only
+    # via a NEW target, not a re-judged old one). Accepted limit: a transient rejection
+    # (e.g. no-such-node) keeps suppressing after the target appears; clearing the
+    # ledger record is the manual resurface path. The stderr summary keeps it diagnosable.
+    graph_dir = os.path.join(os.path.realpath(args.root), os.pardir, "graph")
+    log_path = os.path.join(graph_dir, "log.md")
+    rejected = set()
+    if os.path.isfile(log_path):
+        for ln in open(log_path, encoding="utf-8"):
+            rm = re.search(r"rejected: (\S+): \S+ -> (\S+)", ln)
+            if rm:
+                rejected.add((rm.group(1), rm.group(2)))
+    suppressed = 0
     for node_dir, idx in nodes(args.root):
         data, m, text = parse(idx)
         if data is None:
@@ -303,7 +318,13 @@ def cmd_candidates(args):
             for t in set(re.findall(r"\bF-\d{3,}\b", ln)):
                 if t != fid and t not in have and t not in seen:
                     seen.add(t)
+                    if (fid, t) in rejected:
+                        suppressed += 1
+                        continue
                     print(f"{fid}\t{t}\t{fm_lines + i + 1}\t{ln.strip()[:100]}")
+    if suppressed:
+        print(f"[candidates] suppressed {suppressed} previously-rejected pair(s)",
+              file=sys.stderr)
     return 0
 
 
