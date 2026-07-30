@@ -36,9 +36,9 @@ plugins/ae/             # The actual plugin
 
 ## Naming Convention
 
-- SKILL.md `name` field MUST include `ae:` prefix (e.g. `name: ae:plan`)
-- This ensures `/ae:plan` shows in autocomplete, not just `/plan (ae)`
-- Agent names are auto-prefixed by plugin system
+- SKILL.md `name` field is the bare skill segment (e.g. `name: plan`), matching its directory
+- Claude Code prepends the plugin namespace itself, so `name: plan` autocompletes as `/ae:plan`
+- Agent names are auto-prefixed the same way; a `:` in either field is rejected or doubled
 
 ### Internal terminology referenced in skill/agent prose
 

@@ -10,7 +10,7 @@ Source: Claude Code source analysis (Discussion 021, 2026-04-04).
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `name` | string | — | Skill name. AE convention: `ae:` prefix for autocomplete |
+| `name` | string | dir name | Bare skill segment, matching its directory. The host prepends the plugin namespace — a `ae:`-prefixed value doubles it (CC 2.1.216) |
 | `description` | string | — | Short description shown in autocomplete and system reminders |
 | `when_to_use` | string | — | Guidance for when the model should invoke this skill |
 | `allowed-tools` | string[] | all | Tool whitelist for the skill execution context |
