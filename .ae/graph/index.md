@@ -6,7 +6,7 @@ frontmatter (theme/id/title/status + first body paragraph). Do not edit.
 - [ae-self-quality](themes/ae-self-quality.md) — 16 feature(s)
 - [cross-family](themes/cross-family.md) — 1 feature(s)
 - [harness](themes/harness.md) — 17 feature(s)
-- [harness-engineering](themes/harness-engineering.md) — 19 feature(s)
+- [harness-engineering](themes/harness-engineering.md) — 22 feature(s)
 - [knowledge](themes/knowledge.md) — 7 feature(s)
 - [multi-host-port](themes/multi-host-port.md) — 1 feature(s)
 - [platform](themes/platform.md) — 1 feature(s)
@@ -16,6 +16,6 @@ frontmatter (theme/id/title/status + first body paragraph). Do not edit.
 ## Synthesis pages
 
 - syn-knowledge-graph — Knowledge graph subsystem — two persisted domains, one trust skeleton (fresh) ← documents F-069, documents F-072
-- syn-plugin-surface — Plugin surface — marketplace shell, ae plugin core, explicit naming (fresh)
+- syn-plugin-surface — Plugin surface — marketplace shell, ae plugin core, host-supplied namespace (fresh)
 - syn-test-layer — Test layer — runtime fixtures, sh-tap contract, blind protocol (fresh) ← talks_to syn-verification-harness
 - syn-verification-harness — Verification harness — machines measure, LLM judges, the goal is frozen (fresh) ← talks_to syn-knowledge-graph, documents F-048, documents F-065

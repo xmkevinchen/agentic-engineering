@@ -52,7 +52,7 @@ Promoted from BL-128 (2026-06-03)。见 `BL-128.md`(完整 spec)+ `analysis.md`�
 
 Inbound: relates_to F-048, relates_to F-049, relates_to F-059, relates_to F-061
 
-### F-042 — /ae:backlog 编号分配器看不见已 promote 的 BL → 编号复用碰撞(实锤:BL-085、BL-097 各有两个不同 item) (active)
+### F-042 — /ae:backlog 编号分配器看不见已 promote 的 BL → 编号复用碰撞(实锤:BL-085、BL-097 各有两个不同 item) (done)
 
 Promoted from BL-130 (2026-06-03, P2). 见 `BL-130.md`(实锤证据 + 修法)与 `analysis.md`。
 
@@ -101,3 +101,15 @@ F-065's Check 7 — the same isolation discipline its deterministic-AC coverage
 judge already uses, applied to the judge-AC path one bullet down.
 
 Inbound: relates_to F-075
+
+### F-077 — /ae:discuss Step 2 council reuses Round 0's bare agent names (codex-proxy/gemini-proxy/minimal-change-engineer); only framing reviewers get a -framing suffix — give council agents a distinct suffix to prevent name-collision on overlapping spawn/shutdown (done)
+
+Promoted from BL-195 (2026-07-05). See `BL-195.md` (capture) and `analysis.md` (research).
+
+### F-078 — knowledge-refresh: three friction points from the loom dogfood (4 runs, 0.12.3→0.14.0) (done)
+
+Promoted from BL-197 (2026-07-06). See `BL-197.md` (the 4-run dogfood report) and `analysis.md`.
+
+### F-079 — CC 2.1.216 起 plugin skill 的 name frontmatter 不再覆盖插件前缀，导致 24 个 SKILL.md 的 `name: ae:xxx` 在 slash autocomplete 里显示成 `/ae:ae:xxx` 双前缀；需去掉 name 字段里的 `ae:` 前缀并更新 CLAUDE.md 命名约定 (active)
+
+Upstream trigger (verified against the official changelog):

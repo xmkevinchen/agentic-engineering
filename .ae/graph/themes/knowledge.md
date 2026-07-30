@@ -68,3 +68,5 @@ full gap table: syn↔syn structural edges, F↔syn documented_by, cross-domain
 traversal, the five semantic lint classes, and the docs/ rendering split
 (human-facing architecture docs from the topology; .ae graph holds the
 topology itself). No further slicing of the source pattern.
+
+Inbound: relates_to F-078
