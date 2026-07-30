@@ -1,7 +1,7 @@
 ---
-name: ae:dashboard
+name: dashboard
 description: Real-time project pipeline status — GTD feature-level progress view
-user_invocable: true
+user-invocable: true
 ---
 
 # /ae:dashboard — Project Dashboard

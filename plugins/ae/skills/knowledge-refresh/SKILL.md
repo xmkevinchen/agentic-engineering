@@ -1,5 +1,5 @@
 ---
-name: ae:knowledge-refresh
+name: knowledge-refresh
 description: Manually re-sync the knowledge graph with the corpus — backfill missed legacy fields, judge new grounded relationships, lint-gate every write. Idempotent; run whenever the graph may lag reality.
 argument-hint: "[--dry-run]"
 user-invocable: true

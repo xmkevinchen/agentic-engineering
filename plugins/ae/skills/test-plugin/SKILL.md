@@ -1,5 +1,5 @@
 ---
-name: ae:test-plugin
+name: test-plugin
 description: Adversarial behavioral testing for AE plugin skills and agents
 argument-hint: "<skill-name | --recent | --all> [--verbose] [--regression | --refresh]"
 user-invocable: true
@@ -47,7 +47,7 @@ This is a **behavioral contract** (prompt-level separation of concerns), not a t
 ## Input
 
 - `$ARGUMENTS` accepts three modes:
-  - **Skill name** (e.g., `ae:plan`) → read the corresponding SKILL.md, generate targeted tests
+  - **Skill name** (e.g., `plan`) → read the corresponding SKILL.md, generate targeted tests. Bare, not `ae:plan` — resolution builds `plugins/ae/skills/<name>/SKILL.md` from the argument verbatim
   - `--recent` → find recently modified skill/agent files via `git diff HEAD~5 --name-only`. Filter to `plugins/ae/skills/` and `plugins/ae/agents/` paths only.
   - `--all` → scan all `plugins/ae/skills/*/SKILL.md` and `plugins/ae/agents/**/*.md`, generate comprehensive suite
 

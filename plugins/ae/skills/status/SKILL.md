@@ -1,5 +1,5 @@
 ---
-name: ae:status
+name: status
 description: Mid-skill-safe session readout — git context + active features + in-flight teams + recent review verdicts + BLs captured today
 argument-hint: ""
 user-invocable: true

@@ -1,5 +1,5 @@
 ---
-name: ae:retrospect
+name: retrospect
 description: Project-level long-cycle Reflect (GTD Weekly Review) over recently shipped features. Conversational output — no file written.
 argument-hint: "[--since <duration>]"
 user-invocable: true

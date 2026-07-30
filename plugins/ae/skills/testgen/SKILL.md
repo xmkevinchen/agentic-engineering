@@ -1,5 +1,5 @@
 ---
-name: ae:testgen
+name: testgen
 description: Generate comprehensive test suites with edge case coverage for specific code
 argument-hint: "<file, function, or module to test>"
 user-invocable: true

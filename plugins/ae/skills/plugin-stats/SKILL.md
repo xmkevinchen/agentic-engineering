@@ -1,5 +1,5 @@
 ---
-name: ae:plugin-stats
+name: plugin-stats
 description: AE plugin self-development outcome stats (separate from project-level GTD retrospect). Reads `.ae/reviews/*` Outcome Statistics, surfaces trends, and supports comparison reports.
 user-invocable: true
 ---

@@ -1,7 +1,7 @@
 ---
-name: ae:next
+name: next
 description: Suggest the next pipeline step based on project state
-user_invocable: true
+user-invocable: true
 ---
 
 # /ae:next — Next Step Suggestion

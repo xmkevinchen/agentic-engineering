@@ -1,5 +1,5 @@
 ---
-name: ae:roadmap
+name: roadmap
 description: GTD Clarify — promote candidates, dependency analysis, sizing aggregate, roadmap archive prompt
 argument-hint: "[--resize | --legacy | <subcommand>]"
 user-invocable: true

@@ -1,5 +1,5 @@
 ---
-name: ae:analyze
+name: analyze
 description: GTD Organize — promote a BL to a feature dir (or analyze a free-text feature directly into one). Codebase research + structured analysis.
 argument-hint: "<BL-NNN> | <feature description>"
 user-invocable: true

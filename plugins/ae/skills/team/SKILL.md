@@ -1,5 +1,5 @@
 ---
-name: ae:team
+name: team
 description: Ad-hoc Agent Team — auto-selects agents based on context and task
 argument-hint: "<task description>"
 user-invocable: true

@@ -11,6 +11,11 @@
 #   - Wiring `/ae:test-plugin --regression --layer1` to DELEGATE here is a follow-up —
 #     test-plugin/SKILL.md is not yet updated (honest: not yet the single source for BOTH).
 #
+# Scope: the STATIC FRONTMATTER CONTRACT of every SKILL.md — the leading block's
+# structure and the keys whose malformation the host swallows silently. Checks
+# that need to run anything, or that concern content below the frontmatter,
+# belong in tests/scripts/, not here.
+#
 # Usage: ae-test-plugin-regression-layer1.sh [skills-dir]   (default: plugins/ae/skills)
 # Exit 0 = all L1 invariants hold; non-zero = a structural violation (offending file on stderr).
 set -u
@@ -31,9 +36,35 @@ for skill in "$dir"/*/SKILL.md; do
   if [ -z "$close" ]; then
     echo "L1 FAIL: leading frontmatter not closed — $skill" >&2; rc=1; continue
   fi
-  # Invariant: `name: ae:` declared INSIDE the leading block (lines 2..close-1).
-  sed -n "2,$((close - 1))p" "$skill" | grep -q '^name: ae:' \
-    || { echo "L1 FAIL: missing 'name: ae:' in leading frontmatter — $skill" >&2; rc=1; }
+  fm=$(sed -n "2,$((close - 1))p" "$skill")
+  base=$(basename "$(dirname "$skill")")
+  # Invariant: exactly one `name:` inside the leading block, holding the BARE
+  # skill segment — the host prepends the plugin namespace itself, so a value
+  # carrying it renders doubled. Matching the directory subsumes "no colon",
+  # since no directory basename has one. Uniqueness matters because this reads
+  # with sed while the host reads with a YAML parser: on a duplicate key a
+  # first-match check would green a file the host resolves differently.
+  ok=1
+  keys=$(printf '%s\n' "$fm" | grep -c '^name:')
+  if [ "$keys" -eq 0 ]; then
+    echo "L1 FAIL: no 'name:' in leading frontmatter — $skill" >&2; rc=1; ok=0
+  elif [ "$keys" -gt 1 ]; then
+    echo "L1 FAIL: $keys 'name:' keys in leading frontmatter — $skill" >&2; rc=1; ok=0
+  else
+    nm=$(printf '%s\n' "$fm" | sed -n 's/^name: *//p')
+    [ "$nm" = "$base" ] \
+      || { echo "L1 FAIL: name '$nm' != directory '$base' (the bare segment is required; the host prepends the plugin namespace) — $skill" >&2; rc=1; ok=0; }
+  fi
+  # Only the hyphenated spelling is documented. A misspelled key is silently
+  # ignored, and for this one that decides whether the command appears at all.
+  if printf '%s\n' "$fm" | grep -q '^user_invocable:'; then
+    echo "L1 FAIL: 'user_invocable' — the documented key is 'user-invocable' — $skill" >&2; rc=1; ok=0
+  fi
+  [ "$ok" -eq 1 ] || continue
+  # One sh-tap line per skill actually checked. A bare "exit 0" cannot show the
+  # loop examined anything; the per-skill lines are what make the evidence
+  # non-vacuous to /ae:review's collector (parser: sh-tap.v1).
+  echo "ok: $base frontmatter on-contract"
 done
 
 if [ "$n" -eq 0 ]; then echo "L1: no SKILL.md found under $dir" >&2; exit 2; fi

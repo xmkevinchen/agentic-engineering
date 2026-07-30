@@ -1,5 +1,5 @@
 ---
-name: ae:consensus
+name: consensus
 description: Multi-agent structured debate (for/against/neutral) to evaluate proposals and decisions
 argument-hint: "[--quick|--full] <proposal or decision to evaluate>"
 user-invocable: true

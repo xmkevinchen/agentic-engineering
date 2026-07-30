@@ -1,5 +1,5 @@
 ---
-name: ae:agent-teams
+name: agent-teams
 description: "Reference: Agent Teams protocol reference — base rules, debate mode, investigation mode. Used by all skills that spawn Agent Teams."
 user-invocable: true
 ---

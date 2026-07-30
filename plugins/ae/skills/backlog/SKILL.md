@@ -1,5 +1,5 @@
 ---
-name: ae:backlog
+name: backlog
 description: Capture a backlog item — one-line description → BL-NNN file in the inbox
 argument-hint: "<one-line description of the idea, problem, or task>"
 user-invocable: true
