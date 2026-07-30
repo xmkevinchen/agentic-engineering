@@ -110,6 +110,6 @@ Promoted from BL-195 (2026-07-05). See `BL-195.md` (capture) and `analysis.md` (
 
 Promoted from BL-197 (2026-07-06). See `BL-197.md` (the 4-run dogfood report) and `analysis.md`.
 
-### F-079 — CC 2.1.216 起 plugin skill 的 name frontmatter 不再覆盖插件前缀，导致 24 个 SKILL.md 的 `name: ae:xxx` 在 slash autocomplete 里显示成 `/ae:ae:xxx` 双前缀；需去掉 name 字段里的 `ae:` 前缀并更新 CLAUDE.md 命名约定 (active)
+### F-079 — CC 2.1.216 起 plugin skill 的 name frontmatter 不再覆盖插件前缀，导致 24 个 SKILL.md 的 `name: ae:xxx` 在 slash autocomplete 里显示成 `/ae:ae:xxx` 双前缀；需去掉 name 字段里的 `ae:` 前缀并更新 CLAUDE.md 命名约定 (done)
 
 Upstream trigger (verified against the official changelog):
