@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.1 (2026-07-30)
+
+### Every `/ae:` command autocompletes correctly again — F-079
+
+Claude Code 2.1.216 changed how a plugin skill's slash command is derived: the plugin namespace is now prepended unconditionally, where before the frontmatter `name` replaced the whole command. AE's convention had been to write the prefix into `name` explicitly, so after 2.1.216 every command rendered doubled — `/ae:ae:analyze` instead of `/ae:analyze`. Functionally the commands still ran; the autocomplete menu was teaching users a string that no longer matched what they should type.
+
+- **All 24 skills carry the bare segment** — `name: analyze`, not `name: ae:analyze`. The host supplies `ae:`. Upgrade and the menu is correct again.
+- **The enforcement invariant was inverted, not deleted.** The Layer-1 oracle required the prefix; it now requires `name` to equal its own directory, be the only `name:` key in the block (a shell check and the host's YAML parser disagree on duplicates), and it rejects the `user_invocable` underscore spelling — a misspelling the host silently ignores, which for that key decides whether the command appears at all. Two skills carried it.
+- **Two look-alike string families were deliberately left alone**, and are now pinned by a test: agent frontmatter `skills: ae:agent-teams` (a catalog key whose documented form *is* `plugin:skill`) and the trace/writeback literals `"skill":"ae:discuss"` (AE's own log schema, recording command identity). Both resemble the bug; neither is one, and the first fails silently if changed.
+
+Contributors: the naming rule in `CLAUDE.md` is inverted from what it said before. Write the bare name.
+
 ## 0.14.0 (2026-07-05)
 
 ### Knowledge topology — the full LLM-wiki pattern — F-076
