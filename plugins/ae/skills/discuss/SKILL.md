@@ -175,17 +175,18 @@ Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy-framing",
       prompt: "📋 Cast: gemini-proxy-framing
                   Role: framing reviewer (Google angle)
                   Angle: bias anchoring (system-level lens)
-                  Why: cross-family check complements OpenAI angle; gemma4 fallback per CLAUDE.md
+                  Why: cross-family check complements OpenAI angle
 
                framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
-               Review angle: bias anchoring (Google-family lens; if Gemini API
-               unavailable, fall back to local gemma4:26b per CLAUDE.md).
+               Review angle: bias anchoring (Google-family lens).
                Read ONLY the framing file. Report verdict per the 3-state format.
-               If MCP connection fails / times out / rate-limited / quota exhausted
-               (and gemma4 fallback also fails), SendMessage 'unavailable: <reason>'
-               to team-lead and exit. Do not retry.
-               SendMessage verdict to team-lead.")
+               If MCP connection fails / times out / rate-limited / quota exhausted,
+               SendMessage 'unavailable: <reason>' to team-lead and STOP.
+               Do NOT substitute your own analysis for the backend's — a verdict
+               your backend did not produce is same-family output wearing a
+               cross-family label (gemini-proxy.md Graceful degradation).
+               Do not retry. SendMessage verdict to team-lead.")
 
 Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic-framing",
       run_in_background: true,
