@@ -79,3 +79,4 @@
 - 2026-07-30T20:05:24Z add-page: syn-plugin-surface (4 anchor(s))
 - 2026-07-30T20:08:14Z query: review F-079 skill-name prefix strip — write-back candidate: no — the durable understanding (host supplies the namespace; the plugin asserts name==directory rather than spelling the prefix) already landed in the corrected syn-plugin-surface page during Step 4; this review's own findings are transient (a canary deleted, a rationale corrected) and go dead once merged
 - 2026-07-30T20:10:07Z add-page: syn-plugin-surface (4 anchor(s))
+- 2026-08-13T04:11:50Z query: analyze F-080 gemini cross-family path (Antigravity CLI transition; remove / re-host / generalize) — write-back candidate: yes — no syn page covers cross-family and four corpus surfaces name it; deliberately deferred to the /ae:discuss conclusion because the page's durable claim (which families AE reviews with, and why) is exactly what this feature decides
