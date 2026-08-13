@@ -53,10 +53,14 @@ fi
 if [ "$NODE_AVAILABLE" = true ]; then
   GEMINI_SERVER="${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.js"
   if [ -f "$GEMINI_SERVER" ]; then
-    if [ -n "$GEMINI_API_KEY" ] || [ -f "$HOME/.config/gemini/credentials.json" ]; then
+    # Auth is API-key only: the server reads GEMINI_API_KEY and nothing else
+    # (mcp-servers/gemini/src/index.ts initAuth). A credentials file grants AE
+    # nothing, so accepting one here would report AVAILABLE for a server that
+    # then dies at startup.
+    if [ -n "$GEMINI_API_KEY" ]; then
       GEMINI_AVAILABLE=true
     else
-      ISSUES+=("gemini: no API key or credentials found — set GEMINI_API_KEY or run 'gemini auth'")
+      ISSUES+=("gemini: GEMINI_API_KEY not set — export GEMINI_API_KEY to enable the Gemini cross-family path")
     fi
   else
     ISSUES+=("gemini: server not built — run 'cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini && npm run build'")
