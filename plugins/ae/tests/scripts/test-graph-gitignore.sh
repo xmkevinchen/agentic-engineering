@@ -41,10 +41,12 @@ else
   notok "nested synthesis pages tracked"
 fi
 
-if [ "$(git ls-files '.ae/graph/themes/*.md' | wc -l | tr -d ' ')" -ge 1 ]; then
-  ok "nested theme files tracked"
+# two levels deep — themes/ is empty whenever the features root holds no nodes,
+# so the second witness is a directory whose contents do not track the corpus
+if [ "$(git ls-files '.ae/graph/archive/themes/*.md' | wc -l | tr -d ' ')" -ge 1 ]; then
+  ok "two-level-nested files tracked"
 else
-  notok "nested theme files tracked"
+  notok "two-level-nested files tracked"
 fi
 
 # 3. the whole corpus is tracked, not just a couple of riders (15 files at
