@@ -17,6 +17,7 @@ Throughout the skill's run, capture these values into local variables:
 - `families_invoked` — array of `{family, state}` pairs:
   - `family` ∈ `{codex, gemini, oMLX, claude}`
   - `state` ∈ `{full, quota_exhausted, timeout, fallback, unavailable}` (see [trace-schema.md `families_invoked[].state` enum](trace-schema.md#families_invokedstate-enum-full-spec))
+  - `evidence` (OPTIONAL) ∈ `{none, agent_attested, backend_correlated}` — how the participation was established, independent of `state`. `state: full` with `evidence: none` is the normal case for a family with no receipt mechanism, not a contradiction. Omit the field rather than guessing; absence reads as `agent_attested` at best and must not be back-inferred as correlation.
 - `verdicts` — object mapping family or agent name to verdict value
 - `diff_paths` — newline-separated list from `git diff --name-only $INVOCATION_START_HEAD HEAD` (skill captures `$INVOCATION_START_HEAD` via `git rev-parse HEAD` at skill start)
 - `feature_id` — `F-NNN` if invocation bound to a feature (from plan frontmatter `feature:` field or plan path resolution per `ae:agent-teams` § Milestone path resolution), else empty string
@@ -93,6 +94,7 @@ If a new field requires SKILL.md to capture additional state (e.g., new env var)
 | Change type | Pointer doc edit | SKILL.md edit | Schema version bump |
 |---|:-:|:-:|:-:|
 | Add `extend-friendly` field with derivable value | ✅ | ❌ | ✅ (1.X → 1.X+1) |
+| Add optional sub-field **inside** an already-`extend-friendly` array element | ✅ | ❌ | ❌ — no bump. The element already declares itself open to sub-fields (`families_invoked`, row 6), the validator inspects only the array type, and consumers already owe unknown-value tolerance. A bump here would announce a change no consumer can observe. |
 | Add `extend-friendly` field requiring new caller-side state | ✅ | ✅ (7 files) | ✅ |
 | Change `core-locked` field semantics | ⚠️ migration plan needed | ⚠️ | ✅ (1.X → 2.0) — major bump |
 | Remove field | ⚠️ migration plan needed | ⚠️ | ✅ (1.X → 2.0) |
