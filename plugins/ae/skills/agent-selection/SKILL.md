@@ -259,6 +259,35 @@ Default to different angles for each proxy. Same-angle is acceptable only when t
 
 All skills that launch proxy agents MUST include timeout protection and fallback to prevent hangs and preserve cross-family signal.
 
+### Proxy spawn precondition (check BEFORE spawning)
+
+**Do not spawn a cross-family proxy whose backend MCP tool is absent from the TL's tool list.** Treat the family as `unavailable` and run the TL fallback logic below, exactly as if the proxy had reported it.
+
+The TL's tool list is the check: a plugin MCP server that failed to launch registers no tools, so `mcp__plugin_ae_gemini__*` / `mcp__plugin_ae_codex__*` simply are not present. That fact sits in the TL's context at spawn-decision time — before any agent runs, and before any verdict exists to evaluate.
+
+**"Absent" means absent after deferred-tool resolution.** A configured, working MCP tool may not appear in the immediately-callable list until `ToolSearch` surfaces it — deferred tools are listed by name and are resolvable, not missing. Resolve first, conclude absence second. Skipping that step turns a reachable backend into a false `unavailable`, which is the same class of error in the opposite direction.
+
+**Entering the fallback state machine is required, not optional.** "TL fallback logic" below fires `On proxy "unavailable" message` — and a proxy that was never spawned sends no message. A precondition skip MUST therefore enter that logic directly, at step 1, as if the message had arrived.
+
+**The TL writes the failure record itself on a precondition skip.** The WAL's `cross-family-proxy-failure` record is normally written by the proxy at its own failure boundary (see "Proxy prompt suffix") — but a proxy that was never spawned cannot write it. Without a TL-side write, a skip that ends in genuine degradation produces *neither* a failure record nor a covered record: not the "unmatched failure" the WAL is built to detect, but total absence, invisible to any reader. So the TL runs the same script the proxy would have:
+
+```
+mkdir -p "$HOME/.ae/traces" || true; bash "${CLAUDE_PLUGIN_ROOT:-}/scripts/append-cross-family-trace.sh" failure "<skill>" "<feature_id>" "<angle>" "<family>" connection 2>>"$HOME/.ae/traces/append-cross-family.log" || true
+```
+
+`connection` is the correct reason value: the MCP connection was never established (a server that fails to launch is exactly the exit-127 / handshake-`-32000` case). The TL knows all five arguments at skip time. The leading `mkdir` is load-bearing for the same reason it is on the sibling calls — the shell opens the `2>>` redirect before the script runs, so on a fresh `~/.ae/traces/` the open fails, `|| true` swallows it, and the record vanishes silently. A precondition skip is a likely *first* cross-family event of a session, so this path hits that case more often than the others.
+
+Then follow "TL fallback logic" from step 1 as normal — including its step 4 rule that **Claude-family coverage IS the degraded state**: re-covering the angle with a Claude agent still sets `cross_family_degraded`, and still writes NO `covered` record (`covered` is reserved for non-Claude resolution; the unmatched failure record is the durable degraded signal).
+
+**Boundary — what this does NOT cover.** State it here once; do not repeat it at echo sites.
+
+- **Credentials that are present but dead.** The Gemini server's `initAuth` checks only that `GEMINI_API_KEY` is non-empty and makes no network call, so an expired, revoked, or quota-exhausted key launches the server, registers the tools, and passes this precondition. The first real call is what fails.
+- **Mid-session backend death.** A backend reachable at spawn can exhaust quota or time out later in the run. This check fires once, at spawn.
+- **A proxy that has its tool and does not call it.** Presence of a tool is not evidence of its use.
+- **A backend that is slow rather than absent.** Absence of a call artifact at a point in time proves only that no call had completed by then. Distinguishing "not yet" from "never" needs a terminal marker — an explicit `unavailable` report or end-of-turn — not a snapshot.
+
+This precondition closes the backend-absent-at-spawn window only — the window that had no mechanism at all. It is not a provenance guarantee, and reporting it as one would overstate what a tool-list check can establish.
+
 ### Proxy prompt suffix (add to every codex-proxy / gemini-proxy prompt)
 ```
 If MCP connection fails, times out (120s), is rate-limited, or quota is exhausted:

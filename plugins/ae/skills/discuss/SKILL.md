@@ -150,6 +150,8 @@ Reviewers may critique TL-authored framing, but the `## User Question (Frozen)` 
 
 Each spawn prompt below echoes this rule by including the line `Honor the Frozen-field rule defined in §1.5.1 above.` immediately under its `framing_context:` line, so the agent's prompt context carries the constraint without re-stating the full rule.
 
+**Spawn precondition** — do not spawn a cross-family proxy whose backend MCP tool is absent from your tool list (absent *after* `ToolSearch` resolution, not merely unsurfaced); treat that family as `unavailable` and run the TL fallback logic (canonical statement + boundary: `ae:agent-selection` § Proxy spawn precondition).
+
 Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), each with `framing_context:` in the prompt:
 
 ```
