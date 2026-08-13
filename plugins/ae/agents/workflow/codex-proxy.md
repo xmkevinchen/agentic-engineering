@@ -58,7 +58,11 @@ mcp__plugin_ae_codex__codex(
 # No `Reasoning:` line in your spawn prompt → use "medium". No exceptions.
 
 # MUST: after the initial call returns (ok OR failed), BEFORE synthesizing, send the [EFFORT-CONFIRM] receipt — even on failure:
-# SendMessage(to="team-lead", message="[EFFORT-CONFIRM] passed model_reasoning_effort=medium, call ok")   # or "..., call failed: <reason>"
+# SendMessage(to="team-lead", message="[EFFORT-CONFIRM] passed model_reasoning_effort=medium, threadId=<id from the call>, call ok")   # or "..., call failed: <reason>"
+# The threadId is REQUIRED, not decorative: it is the only way TL can check the receipt against
+# ~/.codex/sessions/<date>/rollout-*-<threadId>.jsonl, an artifact you do not write. Without it the
+# receipt is self-report with nothing behind it — correlating by timestamp works only while a single
+# call is in flight and fails silently once two proxies run concurrently.
 # HARD GATE: no receipt sent → you may NOT send findings. Findings without a prior receipt = fabricated attribution (you skipped Codex). There is no task "simple enough" to skip the call — query Codex or report [QUOTA] and STOP.
 
 # Follow up on specific findings (config: not supported on -reply — initial call sets the session reasoning)

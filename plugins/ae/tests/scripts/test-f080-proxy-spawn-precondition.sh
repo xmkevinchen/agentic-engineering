@@ -154,5 +154,30 @@ chk "slow-vs-absent boundary case retained" "yes" \
 chk "Claude-coverage-is-degraded forward ref retained" "yes" \
   "$(grep -q 'still sets `cross_family_degraded`' "$SKILLS/$CANON" && echo yes || echo no)"
 
+# 10. Acceptance rule (step 5). The escape hatch must be present at the CONSUMPTION
+#     site, not merely canonically: without it the rule discards every receipt-less
+#     verdict and collapses quorum, which disables the reviewers it protects.
+#     The rule must be WIRED as a filtering step, not stated beside the rules it
+#     governs — a receipt-less APPROVED otherwise passes quorum, misses Rule 3
+#     (which sees only one proxy `unavailable`), and satisfies Rule 4's
+#     "at least one cross-family proxy returned APPROVED" as full coverage.
+chk "admissibility filter runs before Rule 1" "yes" \
+  "$(grep -q 'runs BEFORE Rule 1' "$SKILLS/$ECHOF" && echo yes || echo no)"
+chk "inadmissible verdicts are reclassified, not merely noted" "yes" \
+  "$(grep -q 'Reclassify it to `unavailable`' "$SKILLS/$ECHOF" && echo yes || echo no)"
+chk "escape hatch at the aggregation site" "yes" \
+  "$(grep -q 'degraded-coverage decision' "$SKILLS/$ECHOF" && echo yes || echo no)"
+
+# 10b. The rule must be absence-detecting only. A presence-verifying form would
+#      assert that a receipt establishes the call happened — it does not, since the
+#      receipt is agent-authored by the same agent that would skip the call.
+chk "no presence-verifying form" "yes" \
+  "$(grep -qiE 'a verdict with a receipt is valid|receipt presence proves it' "$SKILLS/$CANON" && echo no || echo yes)"
+
+# 10c. Echo scoping: the producer inventory and correlator requirement stay canonical.
+#      Padding the consumption site is what step 3 established defeats echoing.
+chk "inventory/correlator stay canonical-only" "yes" \
+  "$(grep -qE 'EFFORT-CONFIRM|thread id' "$SKILLS/$ECHOF" && echo no || echo yes)"
+
 if [ "$fail" -eq 0 ]; then echo "PASS: f080 spawn precondition"; else echo "FAIL: f080 spawn precondition" >&2; fi
 exit "$fail"

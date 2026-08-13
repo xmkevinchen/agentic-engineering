@@ -326,6 +326,28 @@ a proxy that already reported unavailable in this team.
 
 **F-031 cross-family WAL.** The two `append-cross-family-trace.sh` calls above form a paired tombstone-via-omission record. A `cross-family-proxy-failure` (written by the proxy, see "Proxy prompt suffix") with a matching `cross-family-angle-covered` (written here by the TL on non-Claude fallback) = routine fallback, angle covered, NOT degraded. A failure record with NO matching covered record = genuine degradation (uncovered angle, OR the TL never reached this fallback because it was detached/compacted). Consumers join on `(skill, feature_id, angle)` — the failure record names the angle `angle_lost` and the covered record names it `angle`, so normalize `failure.angle_lost == covered.angle` at join time (full reader contract: `docs/references/trace-schema.md` consumer obligation 6). The TL inlines `<skill>`/`<feature_id>`/`<angle>`/`<resolution_family>` as literals (it knows all four). "Tier" (advisory vs gating) is a property of the *consumer* that reads these records, not of the emitter — today the only gating consumer is `ae:work` autopass. See `docs/references/trace-schema.md` rows 4+5.
 
+### Acceptance rule — a verdict without its receipt does not count
+
+**State it as absence-detection, never as presence-verification.** A verdict arriving *without* its receipt is **inadmissible for aggregation: it MUST NOT influence any downstream decision** — quorum, coverage and approval are today's consumers, named as examples and not as an exhaustive list, so a future consumer is not a silent hole.
+
+Receipt **absence** proves the proxy did not report running its backend. Receipt **presence** proves nothing: the receipt is agent-authored, and an agent that would skip the call would equally emit the receipt. A correlator does not authenticate a verdict either — it only removes one way of failing to disqualify one. Nothing in this rule establishes that a call happened; it establishes when a verdict may not be relied upon.
+
+**Admissibility is a filtering step, not a principle.** Consumers MUST partition verdicts into admissible and inadmissible *before* running their own rules, and inadmissible verdicts must be invisible to every subsequent count, threshold and coverage test. A rule stated beside an aggregation state machine rather than wired into it does not fire — see `discuss/SKILL.md` §1.5.3 for the worked wiring.
+
+**Escape hatch — load-bearing, not optional.** A round may still close in the absence of a receipt-backed verdict, by either:
+- another reviewer whose verdict is admissible, or
+- an explicit user-accepted degraded-coverage decision — **explicit** meaning the user was shown which coverage is missing and chose to proceed anyway. An orchestrator deciding on the user's behalf that degraded coverage is acceptable is not this escape hatch; it is the failure the rule exists to prevent, wearing the hatch's name.
+
+Without this, the rule collapses quorum wherever proxies are a counted share of it, and the practical effect is to disable the very cross-family reviewers it is meant to protect.
+
+**Producer inventory — do not imply parity.** Today `codex-proxy` has a receipt mechanism (`[EFFORT-CONFIRM]`, `codex-proxy.md`) and `gemini-proxy` has none at all. A Gemini verdict therefore carries no receipt and cannot alone close a round. That asymmetry is a capability gap, not a ranking, and it is the current state rather than a target state.
+
+**The receipt MUST carry a correlator** — the backend call's own identifier (for Codex, the thread id. A receipt without one cannot be *disqualified* by anything: there is no artifact to contradict it, so it can only be taken on faith. With one, a mismatch against the agent-unwritten artifact is detectable — which is strictly weaker than proof that the call happened. Correlating by timestamp instead works only when a single call is in flight, and silently stops working the moment two proxies run concurrently.
+
+**Recognising the unavailable state.** Two forms are currently documented and BOTH count: `[QUOTA] <Family> unavailable — <reason>` (the agent definitions) and `unavailable: <reason>` (the prompt suffix at `:294`). Accept either. This is tolerance of a known inconsistency, not endorsement — see BL-125.
+
+**A missing artifact is not a failed call.** Absence of a call artifact at a point in time proves only that no call had completed *by then*. Distinguishing "not yet" from "never" requires a terminal marker — an explicit unavailable report, or end-of-turn — never a snapshot of a directory or a tool list. Treating a slow backend as a failed one produces false degradation.
+
 ### Lead/challenger prompt suffix (when proxies are in team)
 ```
 If a proxy has not responded within 120s, notify TL that proxy is unresponsive. TL handles fallback.
