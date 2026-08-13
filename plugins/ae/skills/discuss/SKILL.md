@@ -294,10 +294,10 @@ Canonical statement, producer inventory and correlator requirement: `ae:agent-se
    - **Cancel**: abort discussion
 3. **Cross-family degraded** (precondition: rules 1–2 passed, i.e. quorum met and zero REVISE; at this point all available verdicts are APPROVED) — **no admissible cross-family verdict remains**. That is the trigger: both proxies returning `unavailable` is the common case, but a proxy reclassified by Rule 0 counts identically, and a *single* proxy configuration with that one proxy inadmissible also fires this rule. Do not read it as requiring literally two `unavailable` messages — the question is whether any cross-family verdict survives admissibility, not how many arrived:
    - Bias-anchoring coverage is zero. **Do NOT auto-approve.** Halt and present to user:
-     - Current: 3 Claude-family reviewers all APPROVED; both cross-family reviewers unavailable.
+     - Current: report the ACTUAL roster — how many Claude-family reviewers returned APPROVED, and for each cross-family proxy whether it never answered, reported `unavailable`, or **returned a verdict that Rule 0 ruled inadmissible**. Do not hardcode counts: a preflight-dropped spawn has 2 Claude-family reviewers rather than 3, and a single-proxy configuration has no "both". The three causes read identically in the frontmatter but are not the same news to a user deciding what to do next.
      - Options:
        - **Accept degraded**: log `round_0: approved (cross-family-degraded)` in frontmatter, proceed. User explicitly accepts the reduced bias-anchoring coverage.
-       - **Retry**: re-spawn both proxies (they may recover).
+       - **Retry**: re-spawn the proxies that may recover. A proxy whose backend was unreachable may come back; one whose verdict was ruled inadmissible will produce the same inadmissible verdict again unless its receipt behaviour changed, so say which case each proxy is in rather than offering a blanket retry.
        - **Cancel**: abort discussion.
 4. **Unanimous APPROVED with full coverage** — at least one cross-family proxy returned `APPROVED` AND all non-`unavailable` verdicts are `APPROVED`:
    - Log `round_0: approved` in `framing.md` frontmatter, write per-agent verdict files, proceed to Step 1.6.

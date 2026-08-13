@@ -332,7 +332,9 @@ a proxy that already reported unavailable in this team.
 
 Receipt **absence** proves the proxy did not report running its backend. Receipt **presence** proves nothing: the receipt is agent-authored, and an agent that would skip the call would equally emit the receipt. A correlator does not authenticate a verdict either — it only removes one way of failing to disqualify one. Nothing in this rule establishes that a call happened; it establishes when a verdict may not be relied upon.
 
-**Admissibility is a filtering step, not a principle.** Consumers MUST partition verdicts into admissible and inadmissible *before* running their own rules, and inadmissible verdicts must be invisible to every subsequent count, threshold and coverage test. A rule stated beside an aggregation state machine rather than wired into it does not fire — see `discuss/SKILL.md` §1.5.3 for the worked wiring.
+**Admissibility is a filtering step, not a principle.** Consumers MUST partition verdicts into admissible and inadmissible *before* running their own rules, and inadmissible verdicts must be invisible to every subsequent count, threshold and coverage test. A rule stated beside an aggregation state machine rather than wired into it does not fire — see `discuss/SKILL.md` §1.5.3 Rule 0 for the worked wiring.
+
+**Current coverage — do not read the MUST above as already satisfied everywhere.** Only `ae:discuss` implements the filter today. `ae:review`, `ae:plan-review` and `ae:consensus` aggregate cross-family verdicts without it, deliberately: whether their "approval" surfaces collapse into coverage once this lands is unverified, and extending the filter on an unverified assumption is how a rule ends up stated in more places than it works. The MUST is the contract for a consumer that adopts it, not a claim about present reach.
 
 **Escape hatch — load-bearing, not optional.** A round may still close in the absence of a receipt-backed verdict, by either:
 - another reviewer whose verdict is admissible, or
@@ -340,7 +342,7 @@ Receipt **absence** proves the proxy did not report running its backend. Receipt
 
 Without this, the rule collapses quorum wherever proxies are a counted share of it, and the practical effect is to disable the very cross-family reviewers it is meant to protect.
 
-**Producer inventory — do not imply parity.** Today `codex-proxy` has a receipt mechanism (`[EFFORT-CONFIRM]`, `codex-proxy.md`) and `gemini-proxy` has none at all. A Gemini verdict therefore carries no receipt and cannot alone close a round. That asymmetry is a capability gap, not a ranking, and it is the current state rather than a target state.
+**Producer inventory — do not imply parity.** Today `codex-proxy` has a receipt mechanism (`[EFFORT-CONFIRM]`, `codex-proxy.md`) and `gemini-proxy` has none at all. State the consequence at full strength: a Gemini verdict carries no receipt, is therefore inadmissible under this rule, and **does not count toward quorum at all** — not merely "cannot close a round alone". Until Gemini gains a receipt mechanism, enabling it buys no admissible coverage, and any wording that softens this understates what the rule does to the family it names. That asymmetry is a capability gap, not a ranking, and it is the current state rather than a target state.
 
 **The receipt MUST carry a correlator** — the backend call's own identifier (for Codex, the thread id. A receipt without one cannot be *disqualified* by anything: there is no artifact to contradict it, so it can only be taken on faith. With one, a mismatch against the agent-unwritten artifact is detectable — which is strictly weaker than proof that the call happened. Correlating by timestamp instead works only when a single call is in flight, and silently stops working the moment two proxies run concurrently.
 
