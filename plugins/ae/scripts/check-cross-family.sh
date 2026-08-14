@@ -51,7 +51,9 @@ fi
 
 # Check gemini
 if [ "$NODE_AVAILABLE" = true ]; then
-  GEMINI_SERVER="${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.js"
+  # The committed bundle — the same artifact both manifests exec. Probing anything
+  # else would report on a file nothing launches.
+  GEMINI_SERVER="${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs"
   if [ -f "$GEMINI_SERVER" ]; then
     # Auth is API-key only: the server reads GEMINI_API_KEY and nothing else
     # (mcp-servers/gemini/src/index.ts initAuth). A credentials file grants AE
@@ -63,7 +65,7 @@ if [ "$NODE_AVAILABLE" = true ]; then
       ISSUES+=("gemini: GEMINI_API_KEY not set — export GEMINI_API_KEY to enable the Gemini cross-family path")
     fi
   else
-    ISSUES+=("gemini: server not built — run 'cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini && npm run build'")
+    ISSUES+=("gemini: bundle missing at ${GEMINI_SERVER} — the bundle ships committed, so this means an incomplete plugin install; reinstall the plugin (contributors: cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini && npm run build)")
   fi
 fi
 

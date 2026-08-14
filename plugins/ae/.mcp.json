@@ -6,7 +6,7 @@
     },
     "gemini": {
       "command": "bash",
-      "args": ["-c", "cd \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini\" && npm install --omit=dev --silent >&2 && exec node dist/index.js"],
+      "args": ["-c", "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs\""],
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}"
       }
