@@ -150,6 +150,8 @@ Reviewers may critique TL-authored framing, but the `## User Question (Frozen)` 
 
 Each spawn prompt below echoes this rule by including the line `Honor the Frozen-field rule defined in §1.5.1 above.` immediately under its `framing_context:` line, so the agent's prompt context carries the constraint without re-stating the full rule.
 
+**Spawn precondition** — do not spawn a cross-family proxy whose backend MCP tool is absent from your tool list (absent *after* `ToolSearch` resolution, not merely unsurfaced); treat that family as `unavailable` and run the TL fallback logic (canonical statement + boundary: `ae:agent-selection` § Proxy spawn precondition).
+
 Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), each with `framing_context:` in the prompt:
 
 ```
@@ -175,17 +177,18 @@ Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy-framing",
       prompt: "📋 Cast: gemini-proxy-framing
                   Role: framing reviewer (Google angle)
                   Angle: bias anchoring (system-level lens)
-                  Why: cross-family check complements OpenAI angle; gemma4 fallback per CLAUDE.md
+                  Why: cross-family check complements OpenAI angle
 
                framing_context: <discussion-dir>/framing.md
                Honor the Frozen-field rule defined in §1.5.1 above.
-               Review angle: bias anchoring (Google-family lens; if Gemini API
-               unavailable, fall back to local gemma4:26b per CLAUDE.md).
+               Review angle: bias anchoring (Google-family lens).
                Read ONLY the framing file. Report verdict per the 3-state format.
-               If MCP connection fails / times out / rate-limited / quota exhausted
-               (and gemma4 fallback also fails), SendMessage 'unavailable: <reason>'
-               to team-lead and exit. Do not retry.
-               SendMessage verdict to team-lead.")
+               If MCP connection fails / times out / rate-limited / quota exhausted,
+               SendMessage 'unavailable: <reason>' to team-lead and STOP.
+               Do NOT substitute your own analysis for the backend's — a verdict
+               your backend did not produce is same-family output wearing a
+               cross-family label (gemini-proxy.md Graceful degradation).
+               Do not retry. SendMessage verdict to team-lead.")
 
 Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic-framing",
       run_in_background: true,
@@ -250,6 +253,14 @@ Each verdict is one of three states:
 
 The `target:` field is required on REVISE verdicts and MUST be one of the 3 mutable section names. `target: User Question (Frozen)` is invalid (sacred section is immutable; see §1.5.1 Frozen-field rule). Rule 1.5 below validates this field and the `suggested edit:` content before consolidation.
 
+**Rule 0 — admissibility filter (runs BEFORE Rule 1; not optional).** A cross-family verdict arriving without a receipt carrying its backend call's correlator is **inadmissible**. Reclassify it to `unavailable` *before* any rule below runs, and write the reason into that agent's `round-00/<agent-name>.md` verdict file (§1.5.4 already mandates one per reviewer, including `unavailable` and timed-out entries) — state that the verdict arrived but was inadmissible, and why, so the audit trail distinguishes it from a proxy that never answered. Note the durable-WAL gap: no `cross-family-proxy-failure` record is written for this case and the `reason` enum has no value that fits it (`connection` would be false — a connection *was* established); tracked as BL-203, not closed here. Inadmissible verdicts are then invisible to every count, threshold and coverage test in Rules 1–4 — that reclassification is the whole mechanism, because a rule stated beside these rules rather than inside them does not fire.
+
+Worked example, and the reason Rule 0 exists: three Claude reviewers APPROVE, `codex-proxy-framing` returns a receipt-less `APPROVED`, `gemini-proxy-framing` returns `unavailable`. Without Rule 0, the receipt-less verdict counts toward quorum (Rule 1), Rule 3 does not fire because only *one* proxy said `unavailable`, and Rule 4 reads "at least one cross-family proxy returned APPROVED" as satisfied — so the round is logged `round_0: approved` with *full coverage*, on the strength of the exact verdict this rule was written to reject. With Rule 0 the codex verdict becomes `unavailable`, both proxies are then `unavailable`, and Rule 3 correctly halts for a user decision.
+
+Rule 0 does not dead-end a round. A reclassified verdict routes into Rule 3, whose user-facing options **are** the escape hatch: accept the degraded coverage as an explicit user-accepted degraded-coverage decision, retry the proxies, or cancel. Where reclassification instead drops the round below quorum, Rule 1 halts and asks. Either way a human decides — what Rule 0 forbids is the round closing *silently* on a verdict nothing stands behind.
+
+Canonical statement, producer inventory and correlator requirement: `ae:agent-selection` § Acceptance rule.
+
 **Aggregation rules** — apply in this exact order; first match wins:
 
 1. **Quorum check** (precondition): a majority of **spawned** agents must return `APPROVED` or `REVISE` (non-`unavailable`). Thresholds: ≥3 of 5 (standard spawn), or ≥3 of 4 (preflight dropped minimal-change-engineer). Below the threshold → halt, report to user "framing-review quorum not reached; cannot assess. Retry or skip Round 0?" Stop; no further rules apply.
@@ -281,19 +292,19 @@ The `target:` field is required on REVISE verdicts and MUST be one of the 3 muta
    - **Revise**: TL rewrites `framing.md` per feedback, re-runs Round 0 (will transition `round_0` to `approved` or back to `revise_requested`). TL rewrite — scope, terminology, and structure only. **MUST NOT alter `## User Question (Frozen)` section: byte-for-byte preserved across re-runs.**
    - **Override**: skip Round 0 outcome for this discussion. Log `round_0: overridden` with user-supplied reason. Proceed to Step 1.6.
    - **Cancel**: abort discussion
-3. **Cross-family degraded** (precondition: rules 1–2 passed, i.e. quorum met and zero REVISE; at this point all available verdicts are APPROVED) — BOTH `codex-proxy-framing` and `gemini-proxy-framing` returned `unavailable`:
+3. **Cross-family degraded** (precondition: rules 1–2 passed, i.e. quorum met and zero REVISE; at this point all available verdicts are APPROVED) — **no admissible cross-family verdict remains**. That is the trigger: both proxies returning `unavailable` is the common case, but a proxy reclassified by Rule 0 counts identically, and a *single* proxy configuration with that one proxy inadmissible also fires this rule. Do not read it as requiring literally two `unavailable` messages — the question is whether any cross-family verdict survives admissibility, not how many arrived:
    - Bias-anchoring coverage is zero. **Do NOT auto-approve.** Halt and present to user:
-     - Current: 3 Claude-family reviewers all APPROVED; both cross-family reviewers unavailable.
+     - Current: report the ACTUAL roster — how many Claude-family reviewers returned APPROVED, and for each cross-family proxy whether it never answered, reported `unavailable`, or **returned a verdict that Rule 0 ruled inadmissible**. Do not hardcode counts: a preflight-dropped spawn has 2 Claude-family reviewers rather than 3, and a single-proxy configuration has no "both". The three causes read identically in the frontmatter but are not the same news to a user deciding what to do next.
      - Options:
        - **Accept degraded**: log `round_0: approved (cross-family-degraded)` in frontmatter, proceed. User explicitly accepts the reduced bias-anchoring coverage.
-       - **Retry**: re-spawn both proxies (they may recover).
+       - **Retry**: re-spawn the proxies that may recover. A proxy whose backend was unreachable may come back; one whose verdict was ruled inadmissible will produce the same inadmissible verdict again unless its receipt behaviour changed, so say which case each proxy is in rather than offering a blanket retry.
        - **Cancel**: abort discussion.
 4. **Unanimous APPROVED with full coverage** — at least one cross-family proxy returned `APPROVED` AND all non-`unavailable` verdicts are `APPROVED`:
    - Log `round_0: approved` in `framing.md` frontmatter, write per-agent verdict files, proceed to Step 1.6.
 
 **Rerun limit** (separate from aggregation — applies to the outer loop driven by Rule 2's Revise option): if the user selects **Revise + rerun** 3 consecutive times without the framing converging to APPROVED, escalate to the user rather than looping further. This is not an aggregation rule (single-run aggregation has no loop; all verdicts arrive in one batch).
 
-Rationale for rule order (addresses review-043 P1s): rule 1.5 fires before rule 2 because the mechanical guard (target validation + frozen-section byte-diff) must filter invalid REVISE verdicts before the user-facing halt — otherwise the user sees consolidated feedback derived from invalid REVISE proposals. Rule 2 fires before rule 3/4 so any REVISE is dispositioned cleanly (fast-path integration or contested halt). Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
+Rationale for rule order (addresses review-043 P1s): **Rule 0 fires before all of them** — it is an admissibility filter, not a disposition rule, so it runs upstream and reclassifies rather than deciding. That placement is what makes it work: every rule below counts verdicts, and a rule that merely sat alongside them would leave an inadmissible verdict counted by all four. Rules 1–4 therefore need no reference to it; they simply never see what it removed. Then: rule 1.5 fires before rule 2 because the mechanical guard (target validation + frozen-section byte-diff) must filter invalid REVISE verdicts before the user-facing halt — otherwise the user sees consolidated feedback derived from invalid REVISE proposals. Rule 2 fires before rule 3/4 so any REVISE is dispositioned cleanly (fast-path integration or contested halt). Rule 3 is checked before rule 4 so the "both cross-family down" case is caught explicitly — previously rule 4 was unreachable because its precondition (all APPROVED of available) was already covered by rule 2. Rule 3 is a halt-and-ask, not an auto-approve, because automatically proceeding when bias-anchoring coverage has collapsed to zero defeats Round 0's primary goal.
 
 #### 1.5.4. Per-agent verdict files + teammate shutdown
 

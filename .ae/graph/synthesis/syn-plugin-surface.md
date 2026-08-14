@@ -10,7 +10,7 @@ anchors:
     anchor_hash: "\"name\": \"ae\","
   - source: "CLAUDE.md:39"
     anchor_hash: "- SKILL.md `name` field is the bare skill segment (e.g. `name: plan`), matching its directory"
-    commit: 51f5e9a
+    commit: 9e33b5e
   - source: "CLAUDE.md:40"
     anchor_hash: "- Claude Code prepends the plugin namespace itself, so `name: plan` autocompletes as `/ae:plan`"
   - source: "plugins/ae/scripts/ae-test-plugin-regression-layer1.sh:55"

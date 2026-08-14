@@ -259,6 +259,35 @@ Default to different angles for each proxy. Same-angle is acceptable only when t
 
 All skills that launch proxy agents MUST include timeout protection and fallback to prevent hangs and preserve cross-family signal.
 
+### Proxy spawn precondition (check BEFORE spawning)
+
+**Do not spawn a cross-family proxy whose backend MCP tool is absent from the TL's tool list.** Treat the family as `unavailable` and run the TL fallback logic below, exactly as if the proxy had reported it.
+
+The TL's tool list is the check: a plugin MCP server that failed to launch registers no tools, so `mcp__plugin_ae_gemini__*` / `mcp__plugin_ae_codex__*` simply are not present. That fact sits in the TL's context at spawn-decision time — before any agent runs, and before any verdict exists to evaluate.
+
+**"Absent" means absent after deferred-tool resolution.** A configured, working MCP tool may not appear in the immediately-callable list until `ToolSearch` surfaces it — deferred tools are listed by name and are resolvable, not missing. Resolve first, conclude absence second. Skipping that step turns a reachable backend into a false `unavailable`, which is the same class of error in the opposite direction.
+
+**Entering the fallback state machine is required, not optional.** "TL fallback logic" below fires `On proxy "unavailable" message` — and a proxy that was never spawned sends no message. A precondition skip MUST therefore enter that logic directly, at step 1, as if the message had arrived.
+
+**The TL writes the failure record itself on a precondition skip.** The WAL's `cross-family-proxy-failure` record is normally written by the proxy at its own failure boundary (see "Proxy prompt suffix") — but a proxy that was never spawned cannot write it. Without a TL-side write, a skip that ends in genuine degradation produces *neither* a failure record nor a covered record: not the "unmatched failure" the WAL is built to detect, but total absence, invisible to any reader. So the TL runs the same script the proxy would have:
+
+```
+mkdir -p "$HOME/.ae/traces" || true; bash "${CLAUDE_PLUGIN_ROOT:-}/scripts/append-cross-family-trace.sh" failure "<skill>" "<feature_id>" "<angle>" "<family>" connection 2>>"$HOME/.ae/traces/append-cross-family.log" || true
+```
+
+`connection` is the correct reason value: the MCP connection was never established (a server that fails to launch is exactly the exit-127 / handshake-`-32000` case). The TL knows all five arguments at skip time. The leading `mkdir` is load-bearing for the same reason it is on the sibling calls — the shell opens the `2>>` redirect before the script runs, so on a fresh `~/.ae/traces/` the open fails, `|| true` swallows it, and the record vanishes silently. A precondition skip is a likely *first* cross-family event of a session, so this path hits that case more often than the others.
+
+Then follow "TL fallback logic" from step 1 as normal — including its step 4 rule that **Claude-family coverage IS the degraded state**: re-covering the angle with a Claude agent still sets `cross_family_degraded`, and still writes NO `covered` record (`covered` is reserved for non-Claude resolution; the unmatched failure record is the durable degraded signal).
+
+**Boundary — what this does NOT cover.** State it here once; do not repeat it at echo sites.
+
+- **Credentials that are present but dead.** The Gemini server's `initAuth` checks only that `GEMINI_API_KEY` is non-empty and makes no network call, so an expired, revoked, or quota-exhausted key launches the server, registers the tools, and passes this precondition. The first real call is what fails.
+- **Mid-session backend death.** A backend reachable at spawn can exhaust quota or time out later in the run. This check fires once, at spawn.
+- **A proxy that has its tool and does not call it.** Presence of a tool is not evidence of its use.
+- **A backend that is slow rather than absent.** Absence of a call artifact at a point in time proves only that no call had completed by then. Distinguishing "not yet" from "never" needs a terminal marker — an explicit `unavailable` report or end-of-turn — not a snapshot.
+
+This precondition closes the backend-absent-at-spawn window only — the window that had no mechanism at all. It is not a provenance guarantee, and reporting it as one would overstate what a tool-list check can establish.
+
 ### Proxy prompt suffix (add to every codex-proxy / gemini-proxy prompt)
 ```
 If MCP connection fails, times out (120s), is rate-limited, or quota is exhausted:
@@ -296,6 +325,30 @@ a proxy that already reported unavailable in this team.
 ```
 
 **F-031 cross-family WAL.** The two `append-cross-family-trace.sh` calls above form a paired tombstone-via-omission record. A `cross-family-proxy-failure` (written by the proxy, see "Proxy prompt suffix") with a matching `cross-family-angle-covered` (written here by the TL on non-Claude fallback) = routine fallback, angle covered, NOT degraded. A failure record with NO matching covered record = genuine degradation (uncovered angle, OR the TL never reached this fallback because it was detached/compacted). Consumers join on `(skill, feature_id, angle)` — the failure record names the angle `angle_lost` and the covered record names it `angle`, so normalize `failure.angle_lost == covered.angle` at join time (full reader contract: `docs/references/trace-schema.md` consumer obligation 6). The TL inlines `<skill>`/`<feature_id>`/`<angle>`/`<resolution_family>` as literals (it knows all four). "Tier" (advisory vs gating) is a property of the *consumer* that reads these records, not of the emitter — today the only gating consumer is `ae:work` autopass. See `docs/references/trace-schema.md` rows 4+5.
+
+### Acceptance rule — a verdict without its receipt does not count
+
+**State it as absence-detection, never as presence-verification.** A verdict arriving *without* its receipt is **inadmissible for aggregation: it MUST NOT influence any downstream decision** — quorum, coverage and approval are today's consumers, named as examples and not as an exhaustive list, so a future consumer is not a silent hole.
+
+Receipt **absence** proves the proxy did not report running its backend. Receipt **presence** proves nothing: the receipt is agent-authored, and an agent that would skip the call would equally emit the receipt. A correlator does not authenticate a verdict either — it only removes one way of failing to disqualify one. Nothing in this rule establishes that a call happened; it establishes when a verdict may not be relied upon.
+
+**Admissibility is a filtering step, not a principle.** Consumers MUST partition verdicts into admissible and inadmissible *before* running their own rules, and inadmissible verdicts must be invisible to every subsequent count, threshold and coverage test. A rule stated beside an aggregation state machine rather than wired into it does not fire — see `discuss/SKILL.md` §1.5.3 Rule 0 for the worked wiring.
+
+**Current coverage — do not read the MUST above as already satisfied everywhere.** Only `ae:discuss` implements the filter today. `ae:review`, `ae:plan-review` and `ae:consensus` aggregate cross-family verdicts without it, deliberately: whether their "approval" surfaces collapse into coverage once this lands is unverified, and extending the filter on an unverified assumption is how a rule ends up stated in more places than it works. The MUST is the contract for a consumer that adopts it, not a claim about present reach.
+
+**Escape hatch — load-bearing, not optional.** A round may still close in the absence of a receipt-backed verdict, by either:
+- another reviewer whose verdict is admissible, or
+- an explicit user-accepted degraded-coverage decision — **explicit** meaning the user was shown which coverage is missing and chose to proceed anyway. An orchestrator deciding on the user's behalf that degraded coverage is acceptable is not this escape hatch; it is the failure the rule exists to prevent, wearing the hatch's name.
+
+Without this, the rule collapses quorum wherever proxies are a counted share of it, and the practical effect is to disable the very cross-family reviewers it is meant to protect.
+
+**Producer inventory — do not imply parity.** Today `codex-proxy` has a receipt mechanism (`[EFFORT-CONFIRM]`, `codex-proxy.md`) and `gemini-proxy` has none at all. State the consequence at full strength: a Gemini verdict carries no receipt, is therefore inadmissible under this rule, and **does not count toward quorum at all** — not merely "cannot close a round alone". Until Gemini gains a receipt mechanism, enabling it buys no admissible coverage, and any wording that softens this understates what the rule does to the family it names. That asymmetry is a capability gap, not a ranking, and it is the current state rather than a target state.
+
+**The receipt MUST carry a correlator** — the backend call's own identifier (for Codex, the thread id. A receipt without one cannot be *disqualified* by anything: there is no artifact to contradict it, so it can only be taken on faith. With one, a mismatch against the agent-unwritten artifact is detectable — which is strictly weaker than proof that the call happened. Correlating by timestamp instead works only when a single call is in flight, and silently stops working the moment two proxies run concurrently.
+
+**Recognising the unavailable state.** Two forms are currently documented and BOTH count: `[QUOTA] <Family> unavailable — <reason>` (the agent definitions) and `unavailable: <reason>` (the prompt suffix at `:294`). Accept either. This is tolerance of a known inconsistency, not endorsement — see BL-202.
+
+**A missing artifact is not a failed call.** Absence of a call artifact at a point in time proves only that no call had completed *by then*. Distinguishing "not yet" from "never" requires a terminal marker — an explicit unavailable report, or end-of-turn — never a snapshot of a directory or a tool list. Treating a slow backend as a failed one produces false degradation.
 
 ### Lead/challenger prompt suffix (when proxies are in team)
 ```

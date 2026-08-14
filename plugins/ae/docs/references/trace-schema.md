@@ -92,7 +92,7 @@ No output = no silent degradation in that session.
 | 3 | `skill` | string | core-locked | AE skill name (e.g., `ae:work`, `ae:review`, `ae:discuss`) |
 | 4 | `feature_id` | string \| null | core-locked | `F-NNN` if invocation bound to feature, else `null` (consumer skip semantics for non-feature trace) |
 | 5 | `diff_paths` | Array\<string\> | core-locked | Relative paths (to project_root) of files changed during invocation; `../`-prefixed paths filtered out (security #4) |
-| 6 | `families_invoked` | Array\<{family, state}\> | extend-friendly | family ∈ {codex, gemini, oMLX, claude}; state ∈ {full, quota_exhausted, timeout, fallback, unavailable} — array element may add sub-fields (e.g., `degradation_cause: forced\|elective`) per BL-029 v0.11.x extension |
+| 6 | `families_invoked` | Array\<{family, state}\> | extend-friendly | family ∈ {codex, gemini, oMLX, claude}; state ∈ {full, quota_exhausted, timeout, fallback, unavailable} — array element may add sub-fields (e.g., `degradation_cause: forced\|elective`) per BL-029 v0.11.x extension. **Optional `evidence` sub-field** ∈ {`none`, `agent_attested`, `backend_correlated`} — records how the family's participation was established. **`state` is NOT gated on it**: the two are independent, `state` keeps its existing meaning, and no consumer contract changes. See "evidence sub-field" below. |
 | 7 | `verdicts` | Object\<family_or_agent → verdict_value\> | extend-friendly | Per-family or per-agent verdict (`approved` / `revise` / `unavailable` / etc.) — structure flexible per skill type |
 | 8 | `outcome` | enum (string) | core-locked | One of: `pass` / `fail` / `cancelled` / `unavailable` |
 | 9 | `session_id_source` | enum (string) | core-locked | `explicit` (resolved from AE_SESSION_ID / CLAUDE_CODE_SESSION_ID / CC_SESSION_ID) OR `generated` (uuidgen fallback — join key unreliable) |
@@ -124,6 +124,26 @@ No output = no silent degradation in that session.
 | `unavailable` | Family not enabled in pipeline.yml OR MCP unreachable | ❌ excluded |
 
 Enum is `extend-friendly` — future states (`rate_limited`, `permission_denied`, etc.) may be added without breaking readers that gracefully treat unknown enum values as "non-full → excluded from flip_rate".
+
+### `families_invoked[].evidence` sub-field (optional)
+
+Records **how** a family's participation was established, separately from `state`, which records **what happened**. A run can be `state: full` with `evidence: none` — that combination is not a contradiction, it is the normal case for a family with no receipt mechanism, and it is the point of adding the field.
+
+| value | meaning |
+|---|---|
+| `none` | Nothing corroborates the participation beyond the orchestrator's own bookkeeping. |
+| `agent_attested` | The proxy sent a receipt naming its backend call. The receipt is authored by the same agent that produced the verdict, so this is a claim, not a proof. |
+| `backend_correlated` | The receipt's correlator was checked against an artifact the agent does not write (for Codex, the rollout file named by its thread id). Establishes that a call occurred on that thread — never that the verdict came from it. |
+
+Deliberately **additive and non-gating**:
+
+- No `state` value is conditional on `evidence`. Gating one self-reported field on another self-reported field written by the same author in the same record would establish nothing; both are emitted by the skill itself (`trace-emission-protocol.md`), with no independent producer.
+- No schema version bump. Row 6 is already declared extend-friendly for exactly this, `validate-trace.sh` checks only that `families_invoked` is an array and never inspects elements, and obligation 4 of the **"Consumer contract (v0.11.x)"** list below — *Unknown enum tolerance*, not the identically-numbered *Registry-update discipline* in the multi-emitter contract further up — already requires tolerating unknown values. See also the bump-rule table in `trace-emission-protocol.md`, whose sub-field row covers this case.
+
+**Absence is not `none`.** A record with no `evidence` key means *unreported* — the producer said nothing — which is not the same claim as `evidence: none`, where the producer looked and found no corroboration. Consumers MUST NOT collapse the two. Any future measurement over this field reports **coverage** (how many records carry it at all) separately from the `none` / `agent_attested` / `backend_correlated` breakdown; folding unreported records into `none` would credit producers that never implemented the field with a finding they never made.
+- Records written before this field exists read as **`agent_attested` at best** — the field's absence is not evidence of correlation, and nothing should back-infer one. This replaces any retroactive relabelling of the existing corpus.
+
+**What this field does not do.** It records a claim about provenance; it does not enforce one. Nothing today requires a consumer to check that a `backend_correlated` value was actually correlated (BL-127), and a `cross-family-proxy-failure` WAL record is still not written when a verdict is ruled inadmissible (BL-126). The field makes the distinction *recordable*, which is the prerequisite for measuring it later — the reason the retention question was left open rather than answered.
 
 ## Schema version history
 

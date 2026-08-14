@@ -31,7 +31,7 @@ Every dependency below is classified into one of four failure modes. The class d
 | 6 | `plugin.json` `hooks` block auto-registration | `empirical` (re-verified: 2026-05-20, CC version at T1 ship) | Plugin-level hook installation without manual `~/.claude/settings.json` editing | BL-023 historical concern (see closure evidence below). Empirical observation only — verified for CC version at ship time 2026-05-20; **NOT a contractual commitment** that future CC versions will preserve `plugin.json hooks` semantics. Re-verify on each CC major version bump. If `plugin.json hooks` auto-registration is dropped, fall back to manual settings.json wiring (see #5). |
 | 7 | `userConfig` mechanism (plugin.json `userConfig` block) | `silent-degrade` | Gemini MCP server model selection — `gemini_flash_model` / `gemini_pro_model` map to `CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL` / `CLAUDE_PLUGIN_OPTION_GEMINI_PRO_MODEL` env vars at MCP startup | If removed: hard-code default models in `plugins/ae/mcp-servers/gemini/src/index.ts`, lose user customization. Acceptable degradation (default models still work). |
 | 8 | `mcpServers.*.env` passthrough (plugin.json `mcpServers.gemini.env`) | `silent-degrade` (becomes `fast-fail` on first MCP call when env unbound) | Gemini MCP server credential binding — `"env": {"GEMINI_API_KEY": "${GEMINI_API_KEY}"}` block injects host env var into the MCP server process at startup | If removed: require user to export `GEMINI_API_KEY` directly to the shell that spawns CC (lose declarative env binding); document migration in plugin-level CLAUDE.md. Two-stage failure: declarative bind silently fails at MCP startup (no user signal); first MCP call surfaces `gemini-proxy unavailable` error (visible). |
-| 9 | `CLAUDE_PLUGIN_ROOT` env var | `fast-fail` | plugin.json `mcpServers.gemini.command` uses `cd "${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini"` to locate the bundled MCP server before `npm install` + `node dist/index.js` | If renamed: plugin install fails fast with a visible "command not found" / "no such directory" error. User can self-diagnose and patch plugin.json. Low-severity failure mode. |
+| 9 | `CLAUDE_PLUGIN_ROOT` env var | `fast-fail` | plugin.json `mcpServers.gemini.command` uses `${CLAUDE_PLUGIN_ROOT}` to locate the committed bundle it execs directly (`node "${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs"`) | If renamed: plugin install fails fast with a visible "command not found" / "no such directory" error. User can self-diagnose and patch plugin.json. Low-severity failure mode. |
 | 10 | `outputStyles` plugin.json field | `silent-degrade` | `plugins/ae/.claude-plugin/plugin.json:33` registers `output-styles/ae-structured.md` and `output-styles/ae-compact.md` as user-selectable output style options | If removed: registered output style names disappear from `/output-style` menu; user falls back to CC's default styles. No skill breakage (output styles are presentation-layer only). Mitigation: vendor styles into project-level `.claude/output-styles/` per user if AE-level registration breaks. |
 | 11 | Plugin agent namespace prefix (`ae:` resolution) | `hard` | All 17 built-in agents in `plugins/ae/agents/{review,research,workflow,engineering}/` rely on CC resolving plugin agent IDs with `ae:` namespace prefix (e.g., `ae:review:architecture-reviewer`) for collision avoidance with project agents | If removed: agent name collisions with user's `.claude/agents/` cannot be deterministically resolved; AE built-in agents become unaddressable via `subagent_type:`. No fallback short of bundling AE as a non-plugin (deep refactor). Hard dependency on CC plugin-agent namespace resolution. |
 | 12 | `ToolSearch` (deferred-tool schema lookup) | `silent-degrade` (fail-open) | `ae:work` Pre-check Check 3 probes `Agent` schema for `run_in_background` param to set `AGENT_TEAMS_FULL`; canonical fail-open path documented in `ae:work` SKILL.md (line ~132) | If `ToolSearch` unavailable or times out: `AGENT_TEAMS_FULL = true` (fail-open per spec). AE proceeds assuming full Agent Teams support. Misclassification cost: if Agent actually lacks `run_in_background` but ToolSearch is also down, AE attempts background spawn and fails at call time (visible error, not silent). Acceptable degradation. |
@@ -68,31 +68,34 @@ Re-verified: 2026-05-20 (initial verification at T1 ship; CC version at ship tim
 
 The Gemini MCP server (`plugins/ae/mcp-servers/gemini/`) uses a **dist/-committed** distribution policy:
 
-- Build output `dist/*.js` is committed to git (`.gitignore` line 6 confirms: `# dist/ — committed for plugin distribution (no build step on install)`).
-- Runtime install (per `plugin.json` `mcpServers.gemini.command`): `cd "${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini" && npm install --omit=dev --silent >&2 && exec node dist/index.js`. Production deps install at MCP startup; TypeScript (devDependency) is never installed at install time.
+- Build output `dist/index.mjs` is committed to git — a single self-contained esbuild bundle with every production dependency inlined (`.gitignore` line 6 confirms: `# dist/ — committed for plugin distribution (no build step on install)`).
+- Runtime startup (per `plugin.json` `mcpServers.gemini.command`, and identically in `plugins/ae/.mcp.json`): `exec node "${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs"`. **Nothing installs at startup.** There is no `npm install` on the session path and no `cd` — the `.mjs` extension makes the bundle self-describing as ESM, so it no longer depends on being run from a directory whose `package.json` declares `"type": "module"`.
 
-**Rationale**: keeps install-time fast and free of TypeScript build steps; users get a working MCP server immediately after plugin install. Tradeoff is contributor discipline: dist/src drift is a human-maintained invariant (no current CI check).
+**Rationale**: the previous shape ran `npm install --omit=dev` on *every* session start. That cost a package resolution per launch, made Node a hard startup dependency of an optional component, and could rewrite a user's cached lockfile with no signal (it ran `install`, not `ci`). It also failed hard on a host with no Node at all. Tradeoff is unchanged in kind: dist/src drift is a human-maintained invariant (no current CI check) — but see the widened trigger below, because bundling makes the drift window larger.
 
 ### Contributor workflow
 
-After editing `plugins/ae/mcp-servers/gemini/src/**`:
+After editing `plugins/ae/mcp-servers/gemini/src/**`, **or `package.json`, or `package-lock.json`**:
 
-1. Run `cd plugins/ae/mcp-servers/gemini && npm run build`.
-2. Commit the resulting `dist/` changes **in the same PR / commit** as the `src/` edit.
+1. Run `cd plugins/ae/mcp-servers/gemini && npm run build` (typecheck + bundle).
+2. Commit the resulting `dist/index.mjs` **in the same PR / commit** as the edit.
+
+**Reviewing a bundle change.** `dist/index.mjs` is ~2.1 MB of inlined dependency code and is not reviewable by eye — do not try. **Review `package.json` and `package-lock.json` instead**: those carry the dependency and integrity-hash changes that a bundle diff only reflects. A malicious or compromised dependency is visible there and invisible in the bundle diff. This is a net improvement on the previous shape, where `npm install --omit=dev` resolved semver ranges against whatever the registry served at that moment — an unreviewed resolution per session, with zero bytes in git to diff at all. The bytes that execute are now pinned in history; the reviewable surface is the manifest pair.
+
+**Why dependency changes now trigger a rebuild too.** Before bundling, a dependency bump with no `src/` change still reached users: the runtime `npm install` picked it up at their next session start. Now nothing installs at runtime, so a bumped dependency reaches nobody until someone rebuilds the bundle — a dormant documentation gap turned into a live shipping defect. `src/**` alone is no longer a sufficient trigger.
 
 If you forget to rebuild + commit `dist/`, the change ships with stale build output. A `prepublishOnly` guard in `package.json` will catch this **only if** the repo ever adopts an `npm publish` workflow; until then, dist/src drift is a human-discipline contract enforced at code-review time.
 
 ### Build & runtime command reference
 
 ```sh
-# Build (contributor, after src/ edits):
+# Build (contributor, after src/, package.json or package-lock.json edits):
 cd plugins/ae/mcp-servers/gemini
-npm run build       # → tsc; writes dist/*.js + dist/*.d.ts
+npm run build       # → tsc --noEmit (typecheck) then esbuild; writes dist/index.mjs
 
 # Runtime startup (handled automatically by plugin.json mcpServers.gemini.command):
-cd plugins/ae/mcp-servers/gemini
-npm install --omit=dev --silent >&2
-node dist/index.js
+node "${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs"
+# No install, no cd. Requires only a Node runtime on PATH.
 ```
 
 CI reproducibility check (`git diff --exit-code -- dist/` after clean rebuild) is deferred to v0.11.x schema discipline expansion — same deferral bucket as the cc-plugin-contract.md drift validator below.
