@@ -346,7 +346,7 @@ Without this, the rule collapses quorum wherever proxies are a counted share of 
 
 **The receipt MUST carry a correlator** — the backend call's own identifier (for Codex, the thread id. A receipt without one cannot be *disqualified* by anything: there is no artifact to contradict it, so it can only be taken on faith. With one, a mismatch against the agent-unwritten artifact is detectable — which is strictly weaker than proof that the call happened. Correlating by timestamp instead works only when a single call is in flight, and silently stops working the moment two proxies run concurrently.
 
-**Recognising the unavailable state.** Two forms are currently documented and BOTH count: `[QUOTA] <Family> unavailable — <reason>` (the agent definitions) and `unavailable: <reason>` (the prompt suffix at `:294`). Accept either. This is tolerance of a known inconsistency, not endorsement — see BL-125.
+**Recognising the unavailable state.** Two forms are currently documented and BOTH count: `[QUOTA] <Family> unavailable — <reason>` (the agent definitions) and `unavailable: <reason>` (the prompt suffix at `:294`). Accept either. This is tolerance of a known inconsistency, not endorsement — see BL-202.
 
 **A missing artifact is not a failed call.** Absence of a call artifact at a point in time proves only that no call had completed *by then*. Distinguishing "not yet" from "never" requires a terminal marker — an explicit unavailable report, or end-of-turn — never a snapshot of a directory or a tool list. Treating a slow backend as a failed one produces false degradation.
 
