@@ -119,7 +119,7 @@ Each Engage stage produces artifacts that feed the next. Plans reference analysi
 
 ## Agents
 
-17 specialized agents in four groups:
+18 specialized agents in four groups:
 
 ### Review Agents — the quality gate
 | Agent | Focus |

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.14.2 (2026-08-14)
+
+### The Gemini bridge stops installing packages at session start, and a cross-family verdict now has to show its work — F-080
+
+Every session that enabled Gemini ran `npm install --omit=dev` before the MCP server could start: a package resolution on the startup path, a lockfile the launcher could rewrite with no signal (it ran `install`, not `ci`), and on a machine without Node, a hard failure. That was the visible fault. The one found while fixing it was quieter — a proxy returned a substantive cross-family verdict with its backend provably unreachable, and nothing in the pipeline could tell.
+
+- **The server ships as a committed bundle.** Both `plugin.json` and `.mcp.json` now `exec node dist/index.mjs` directly — no install, no `cd`. The `.mjs` extension is load-bearing: dropping the `cd` also drops the directory whose `package.json` declared `"type": "module"`, so the artifact has to describe its own format. `tsc` typechecks and no longer emits; there is one artifact where there were five.
+- **Bundling is a transformation, not a repackaging.** The first build compiled clean, typechecked clean, and died at startup on a dynamic `require` of `child_process` that the ESM output had stubbed out. A `createRequire` banner fixes it, and a contract test now starts the bundle in a directory containing nothing else and speaks MCP to it — a test that read the source would have passed a bundle that cannot run.
+- **A proxy whose backend is absent is no longer spawned.** The tool list already says so before any agent runs: a plugin MCP server that failed to launch registers no tools. The check enters the existing fallback state machine and writes its own WAL record, since a proxy that was never spawned cannot write one. Scoped honestly — it closes backend-absent-at-spawn and nothing else. A dead key still passes (`initAuth` makes no network call), and a slow backend is not an absent one.
+- **A verdict without a corroborating receipt no longer counts.** Stated as absence-detection only: a missing receipt shows the proxy never reported running its backend; a present one shows nothing, since the same agent authors both. Wired as a filter that runs *before* the aggregation rules, because stated beside them it did not fire — a receipt-less approval passed quorum, missed the degraded check, and satisfied the unanimous-approval rule as full coverage. Rounds still close, via another admissible verdict or a user shown what is missing.
+- **Provenance is recordable.** `families_invoked[]` gains an optional `evidence` sub-field (`none` / `agent_attested` / `backend_correlated`) alongside `state` rather than gating it. `state: full` with `evidence: none` is the normal case for a family with no receipt mechanism, not a contradiction — that combination is why the field exists. Additive, no version bump, no consumer migration.
+- **The preflight stops reporting a green light for a server that will die.** It accepted `~/.config/gemini/credentials.json` as valid auth, but the server reads `GEMINI_API_KEY` and never opens that file. It also pointed users at `gemini auth`, a CLI this plugin has never called.
+
+What this does **not** close, stated because the gap is larger than the fix: the admissibility filter is wired into `/ae:discuss` only. `/ae:review`, `/ae:plan-review` and `/ae:consensus` still aggregate cross-family verdicts without it — including the completion gate this feature's own review passed through. And Gemini has no receipt mechanism at all, so where the rule does apply, its verdicts are inadmissible: retention is currently nominal.
+
+Contributors: the rebuild trigger now covers `package.json` and `package-lock.json`, not just `src/**`. Before, a dependency bump reached users through the runtime install; now nothing installs at runtime, so it reaches nobody until someone rebuilds. Review the manifest pair on a bundle change — `dist/index.mjs` is not reviewable by eye.
+
 ## 0.14.1 (2026-07-30)
 
 ### Every `/ae:` command autocompletes correctly again — F-079
