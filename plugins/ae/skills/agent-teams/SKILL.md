@@ -605,6 +605,148 @@ With ONE implicit team per session, there is a single task list for the whole se
 
 The Claude Code task panel can freeze rendering during auto-compact for long-running skills (10+ phase transitions in one run). The underlying state is consistent — only the rendering is frozen. If a skill appears stuck in the panel but the conversation is progressing, trust the conversation; the panel will catch up after the next refresh.
 
+## Teammate boundaries (canonical)
+
+The single home for rules shared across **the seats that cite this section** — today the three
+cross-family proxies. Agent definitions cite it; they do not restate it.
+
+**Scope, stated precisely because the previous wording overclaimed it**: these rules bind the
+agents that reference them, not every teammate by default. The role-boundary rules below have
+only ever been proxy policy — the incident that produced them was a proxy overstepping — and
+non-proxy teammates (`architect`, `challenger`, `qa`, `doodlestein-*`, `test-lead`) neither cite
+this section nor carry an equivalent inline. Extending it to them is a deliberate change, not
+something to assume from the word "teammate". Before F-082 these rules existed only inside two
+proxy definitions, so a third proxy written to cite shared policy cited a section that did not
+exist and silently carried none of it.
+
+### Role boundary — a teammate is not the TL
+
+A teammate's output is exactly one thing: SendMessage findings to team-lead. After sending, it
+idles and waits for TL to incorporate them or follow up.
+
+A teammate MUST NOT:
+- Write or edit `review.md` / `synthesis.md` / verdict files — TL output, not a teammate's
+- Issue a verdict (`pass` / `fail` / `concluded`) — that is TL's synthesis after collecting from ALL reviewers
+- Run Completion Invariant side effects: `mv` feature dirs, edit `index.md` `status:`, archive to `done/`, write archive markers
+- Fabricate identifiers — `BL-NNN`, `F-NNN`, commit hashes — it cannot independently verify
+- Claim to represent other reviewers in metadata, summaries or roll-calls
+- Fabricate test-execution output: a "test report" asserting `/ae:test-plugin` results without having run the command
+
+Reasoning that starts "I'll synthesize for TL" / "I'll archive since findings are clean" / "I'll
+write the verdict" / "I'll generate a test report to confirm this passes" is the tell — stop,
+SendMessage the findings, idle. `Bash` / `Read` / `Glob` / `Grep` are for investigation, never
+for executing TL-owned side effects. Observing that TL should act is expressed as
+"Recommended verdict: pass, because…" in the findings; recommending is not executing.
+
+**Empirical anchor**: added in v0.10.2 after an `/ae:review` session (F-026, 2026-05-22) where a
+proxy wrote `review.md`, executed the archive, fabricated BL numbers and wrote a fake test
+report. See `BL-096`.
+
+### Backend tool loading — deferred tools are fetched before anything else
+
+A teammate's backend MCP tools may arrive **deferred**: listed by name, schema not loaded, not
+callable until `ToolSearch` fetches them. Fetching them is the teammate's first action, before
+reading context.
+
+If the fetch fails, or a fetched tool then fails, that is the **unavailable** path — report and
+stop. It is never licence to proceed and answer from the teammate's own reasoning.
+
+**Empirical anchor**: `BL-212`. A proxy skipped the fetch, never called its backend, and
+returned a full cross-family verdict under that family's label; a re-run with the fetch named
+explicitly called the backend correctly. No definition named the step, so one proxy improvised
+it and another did not.
+
+**Bootstrap exception — the one rule agent definitions DO restate.** Everything else in this
+section is cited, not copied. This rule is different: an agent that has not yet loaded its
+tools may also not have loaded this section, so a rule reachable only by following a citation
+cannot be the rule that tells you to follow citations. Each proxy therefore carries the
+executable trigger inline — its own `ToolSearch` selector with the exact tool names, plus the
+adjacent stop-on-failure instruction — while this section owns the invariant and the reason.
+That split is deliberate; it is not the copy-paste drift the rest of this section exists to
+end.
+
+### Backend routing — only your own family's tools
+
+A proxy queries its own backend's MCP tools and no others. Using another family's tool to
+"reach" yours silently produces that family's output under your label — it destroys the
+cross-family value, contaminates the audit trail and misleads synthesis. Reasoning "I'll reach
+X via Y's tool" means the family boundary has already been crossed; stop.
+
+A locally-run model of a lineage another seat already represents is a **sibling, not an
+independent party** — reporting it as that family's coverage inflates the count with correlated
+failure modes (`BL-208`).
+
+### Proxy contract — how a family seat assembles, relays and reports
+
+Everything below is identical for every family seat. A proxy definition carries only what is
+specific to its backend: which tools reach it, how depth is requested, what receipt it can
+produce, and how to name what came back.
+
+**Two-layer prompt assembly.** TL gives the proxy a `Role:` (the angle to review from), a
+focus, and a context reference (diff range, plan file, code paths). The proxy reads that
+context itself and assembles one complete prompt for the backend:
+
+```
+Role: [from TL]            e.g. "You are a security reviewer"
+Task: [from TL focus]      e.g. "Review for token lifecycle and injection vectors"
+Context: [what you read]
+Output format: structured findings with severity (P1/P2/P3), specific file:line references,
+               and concrete fix suggestions
+```
+
+Note what does **not** cross this boundary: the family identity stays in the wrapper. What
+reaches the backend is a functional role, never "you are the OpenAI representative".
+
+**Relay, do not re-synthesize.** The output format was requested in the prompt above, so a
+compliant response is already the findings. Reproduce it. Anything the proxy adds is its own
+and is labelled as such. There is no rewriting step — it was removed deliberately.
+
+**Output shape** — two parts, and the boundary between them is the point. A reader must be
+able to tell what the backend said from what the proxy concluded, without trusting the proxy
+to have kept them apart in its head.
+
+```
+## <Family> Perspective
+- <backend identity line: thread id, or model + endpoint + family + host>
+
+### What the backend returned
+<reproduced; if it was asked for a format and complied, this section needs nothing from you>
+
+### Proxy notes (mine, not the backend's)
+<only when there is something to add — a failed call, a sidestepped question, a claim checked
+against the repo, or the backend not using the format that was requested. Empty is normal.>
+```
+
+**Say so when the format was not honoured.** Reshaping the response into the expected
+structure is not permitted. But relaying unstructured prose without comment leaves TL to infer
+severity and location and then attribute that inference to the backend — a judgement the
+backend never made. Naming the gap costs one line and keeps the attribution honest.
+
+**No heading may ask the proxy to find differences.** A heading like "Unique Insights — what
+this family spotted that others missed" is a slot the writer feels obliged to fill, and a proxy
+filling it will reach for a difference whether or not the backend produced one. Disagreement,
+when it happens, is already in what the backend returned. Report disagreements and unique
+findings **when they occur**, never manufactured to fit an expected pattern; the backend
+agreeing with the team is a result, not a failure to find one (`BL-211`).
+
+**In a team**: read shared context in parallel with teammates → send it to the backend framed
+from the assigned angle → relay → SendMessage findings (in `/ae:review` and `/ae:analyze` to
+`challenger`, in `/ae:plan` to `architect`, otherwise to team-lead) → answer follow-ups by
+querying the backend again, not from your own reasoning.
+
+**Result handling**: preserve the backend's uncertainty markers; code snippets as suggestions
+are fine, "run this command" is not; one focused session per task.
+
+### Graceful degradation — unavailable is reported, never substituted
+
+When a backend fails — not configured, connection error, timeout, quota exhausted, tools
+unfetchable — SendMessage team-lead `[QUOTA] <backend> unavailable — <reason>` and STOP.
+
+Do not retry silently, do not substitute another backend, and above all do not fall back to
+your own reasoning. A proxy's value is the independent viewpoint; without it there is nothing
+to contribute, and a verdict the backend never produced wearing that backend's label is the
+exact failure the seat exists to prevent. TL decides the fallback.
+
 ## Shutdown handshake (canonical)
 
 Per Plan 055 T2 schema discipline: this is the single canonical specification of the SendMessage shutdown handshake protocol. All teammate agents reference this section instead of inlining the JSON schema (CI enforced by `plugins/ae/scripts/check-shutdown-canonical.sh`).
