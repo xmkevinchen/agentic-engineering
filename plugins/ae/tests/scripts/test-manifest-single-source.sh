@@ -88,5 +88,39 @@ for dir in "$PLUGIN_DIR"/mcp-servers/*/; do
                    || bad "bundled server '$srv' is in the tree but declared in no manifest"
 done
 
+# 4. No manifest `env` block references a `${CLAUDE_PLUGIN_OPTION_*}` variable.
+#
+#    Measured: an option the user never configured exports nothing, even with a default
+#    declared in `userConfig`. Every `${...}` a manifest names is validated when the plugin is
+#    installed, and one that does not resolve rejects the WHOLE server — so a declared-only
+#    default takes the server down instead of supplying its value. The option is still readable;
+#    it just has to be read in the server's own process, with a fallback, which is what both
+#    bundled servers do.
+#
+#    This is the install-path failure mode: the reload path skips the validation, so the server
+#    comes up for a developer working in the tree and is rejected for everyone who installs it.
+#    Nothing else in the suite looks at the install path, which is why the same error was
+#    observed, written down, and then shipped twice.
+for m in $MANIFESTS; do
+  [ -f "$m" ] || continue
+  refs="$(python3 - "$m" <<'PY'
+import json, re, sys
+with open(sys.argv[1]) as fh:
+    doc = json.load(fh)
+for name, spec in doc.get("mcpServers", {}).items():
+    for var, val in (spec.get("env") or {}).items():
+        if re.search(r"\$\{CLAUDE_PLUGIN_OPTION_[A-Z0-9_]*\}", str(val)):
+            print("%s.env.%s" % (name, var))
+PY
+)"
+  if [ -z "$refs" ]; then
+    ok "$(basename "$m"): no env block references a plugin option"
+  else
+    bad "$(basename "$m"): env block references a plugin option: $(echo "$refs" | tr '\n' ' ')"
+    bad "  an unconfigured option resolves to nothing and the host rejects the whole server"
+    bad "  at install time; read it in-process with a fallback instead"
+  fi
+done
+
 [ "$fail" = 0 ] && echo "test-manifest-single-source: PASS" || echo "test-manifest-single-source: FAIL" >&2
 exit "$fail"

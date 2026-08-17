@@ -74,12 +74,7 @@
       "args": [
         "-c",
         "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/openai-compat/dist/index.mjs\""
-      ],
-      "env": {
-        "AE_OPENAI_COMPAT_ENDPOINT": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_ENDPOINT}",
-        "AE_OPENAI_COMPAT_MODEL": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_MODEL}",
-        "AE_OPENAI_COMPAT_FAMILY": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_FAMILY}"
-      }
+      ]
     }
   },
   "hooks": {
