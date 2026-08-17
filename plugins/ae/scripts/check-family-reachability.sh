@@ -23,7 +23,14 @@ set -u
 
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
 AGENTS="$REPO/plugins/ae/agents/workflow"
-PIPELINE="${AE_PIPELINE:-$REPO/.claude/pipeline.yml}"
+# Project config, not plugin config: on an installed path the two live in different trees, so
+# this resolves from the working directory first (the convention next-bl-id.sh already uses)
+# and only falls back to a repo-relative path for a dev checkout.
+PIPELINE=""
+for cand in "${AE_PIPELINE:-}" ".claude/pipeline.yml" "$REPO/.claude/pipeline.yml"; do
+  [ -n "$cand" ] && [ -f "$cand" ] && { PIPELINE="$cand"; break; }
+done
+[ -n "$PIPELINE" ] || { echo "[reachability] no .claude/pipeline.yml found from $(pwd) — nothing to check"; exit 1; }
 MCP_JSON="$REPO/plugins/ae/.mcp.json"
 SELECTION="$REPO/plugins/ae/skills/agent-selection/SKILL.md"
 READER="$(dirname "$0")/read-family-table.py"

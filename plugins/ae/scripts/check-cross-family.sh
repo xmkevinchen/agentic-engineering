@@ -23,9 +23,17 @@ set -u
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 AE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$SELF_DIR/.." && pwd)}"
-REPO="$(cd "$SELF_DIR/../../.." && pwd)"
-PIPELINE="${AE_PIPELINE:-$REPO/.claude/pipeline.yml}"
 AGENTS="$AE_PLUGIN_ROOT/agents/workflow"
+
+# The table belongs to the PROJECT, the script belongs to the PLUGIN, and on an installed path
+# those are different trees. Deriving the project from this file's own location finds
+# `<plugin-cache>/.claude/pipeline.yml`, which never exists — so every installed user would be
+# told their families were not checked. A SessionStart hook runs with the project as its
+# working directory, which is how `next-bl-id.sh` already locates this same file.
+PIPELINE=""
+for cand in "${AE_PIPELINE:-}" ".claude/pipeline.yml" "$SELF_DIR/../../../.claude/pipeline.yml"; do
+  [ -n "$cand" ] && [ -f "$cand" ] && { PIPELINE="$cand"; break; }
+done
 READER="$SELF_DIR/read-family-table.py"
 export AE_PLUGIN_ROOT
 
@@ -58,7 +66,7 @@ if [ -f "$SETTINGS_FILE" ]; then
 fi
 [ "$AGENT_TEAMS" = false ] && ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }")
 
-if [ -f "$PIPELINE" ] && [ -f "$READER" ] && command -v python3 &>/dev/null; then
+if [ -n "$PIPELINE" ] && [ -f "$READER" ] && command -v python3 &>/dev/null; then
   entries="$(python3 "$READER" "$PIPELINE" --enabled-only 2>/dev/null)"
   while IFS= read -r e; do
     [ -n "$e" ] || continue
@@ -92,7 +100,7 @@ for k in ("label","seat","family","endpoint","model"):
 $entries
 EOF
 else
-  ISSUES+=("cross_family table not readable ($PIPELINE) — no family availability was checked")
+  ISSUES+=("cross_family table not found — looked for .claude/pipeline.yml relative to the working directory; no family availability was checked")
 fi
 
 if [ ${#ISSUES[@]} -gt 0 ]; then
