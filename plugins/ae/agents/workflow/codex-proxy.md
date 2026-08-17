@@ -89,8 +89,11 @@ that exhausts proxy turn budgets on context-heavy tasks. Per-call `config:` is t
 Observed priority chain (2026-06-03 local spike; installed-version behaviour, not universal
 semantics): per-call `config:` > `~/.codex/config.toml`. **Launch-layer `codex mcp-server -c …`
 overrides did NOT propagate into tool sessions** — per-call `config:` is the only reliable
-lever, and `plugin.json`'s launch-layer `-c approval_policy` / `sandbox_mode` args are
-therefore unverified at the tool-call layer. Do not rely on them as enforcement.
+lever. The manifest carried `-c approval_policy=never -c sandbox_mode=read-only` on that
+finding's strength for months; those args were removed once it was clear they assert a
+containment the tool-call layer never applies. A stated control nobody enforces is worse than
+an absent one, because it is read as enforcement. Containment that is actually wanted goes
+through `config:`, per call, where it is observable.
 
 TL picks the level: `low` for lookups and format checks, `medium` for a standard review pass,
 `high` for deep architecture deliberation or security-critical analysis.

@@ -31,7 +31,11 @@ for cand in "${AE_PIPELINE:-}" ".claude/pipeline.yml" "$REPO/.claude/pipeline.ym
   [ -n "$cand" ] && [ -f "$cand" ] && { PIPELINE="$cand"; break; }
 done
 [ -n "$PIPELINE" ] || { echo "[reachability] no .claude/pipeline.yml found from $(pwd) — nothing to check"; exit 1; }
-MCP_JSON="$REPO/plugins/ae/.mcp.json"
+# The manifest the host actually executes. It was `.mcp.json` until F-082 Step 4 converged on
+# a single declaration — and reading the OTHER file was itself the declared-vs-effective defect
+# this check exists to catch: a seat's tools could be registered in the manifest nobody runs and
+# check 2 would report ok.
+MANIFEST="$REPO/plugins/ae/.claude-plugin/plugin.json"
 SELECTION="$REPO/plugins/ae/skills/agent-selection/SKILL.md"
 READER="$(dirname "$0")/read-family-table.py"
 
@@ -83,11 +87,11 @@ while IFS= read -r e; do
       missing=""
       for tool in $declared; do
         srv="$(printf '%s' "$tool" | sed 's/^mcp__plugin_ae_//; s/__.*$//')"
-        grep -q "\"$srv\"" "$MCP_JSON" 2>/dev/null || missing="$missing $srv"
+        grep -q "\"$srv\"" "$MANIFEST" 2>/dev/null || missing="$missing $srv"
       done
       if [ -z "$missing" ]; then report ok "$label" "declared tools match a registered server"
       else report miss "$label" "declared tools match a registered server" \
-        "no server named:$missing in .mcp.json — the agent would hold no backend"; fi
+        "no server named:$missing in plugin.json — the agent would hold no backend"; fi
     fi
   fi
 

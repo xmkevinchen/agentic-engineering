@@ -44,14 +44,24 @@ REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
 MCP_JSON="$REPO/plugins/ae/.mcp.json"
 PLUGIN_JSON="$REPO/plugins/ae/.claude-plugin/plugin.json"
 
-for f in "$MCP_JSON" "$PLUGIN_JSON"; do
-  [ -f "$f" ] || { echo "[precedence] missing manifest: $f"; exit 1; }
-done
+[ -f "$PLUGIN_JSON" ] || { echo "[precedence] missing manifest: $PLUGIN_JSON"; exit 1; }
+
+# `.mcp.json` was removed when Step 4 converged on one declaration, which is the outcome this
+# script was written to make safe. Its absence is success, not a broken run — so the script
+# switches to the question that outlives precedence: is the declaration we KEPT the one the
+# host is running? That is the residual exposure the deletion carries, and it stays checkable.
+if [ ! -f "$MCP_JSON" ]; then
+  SINGLE_SOURCE=1
+else
+  SINGLE_SOURCE=0
+fi
+export SINGLE_SOURCE
 
 python3 - "$MCP_JSON" "$PLUGIN_JSON" "$REPO" <<'PY'
-import json, re, subprocess, sys
+import json, os, re, subprocess, sys
 
 mcp_json, plugin_json, repo = sys.argv[1], sys.argv[2], sys.argv[3]
+single_source = os.environ.get("SINGLE_SOURCE") == "1"
 
 def declarations(path, label):
     with open(path) as fh:
@@ -68,7 +78,7 @@ def declarations(path, label):
         out[name] = (argv, re.compile(r"\A" + pattern + r"\Z"))
     return out
 
-A = declarations(mcp_json, "A")
+A = {} if single_source else declarations(mcp_json, "A")
 B = declarations(plugin_json, "B")
 
 # `ps` is read here rather than piped in: this program arrives on stdin itself (`python3 -`),
@@ -86,7 +96,12 @@ for line in ps_out.splitlines():
     procs.append((pid, started, cmd))
 
 print("[precedence] read-back only — no manifest is modified; argv is the host's own record")
-print("[precedence] manifests: A=plugins/ae/.mcp.json  B=plugins/ae/.claude-plugin/plugin.json")
+if single_source:
+    print("[precedence] single source: plugins/ae/.claude-plugin/plugin.json")
+    print("[precedence] .mcp.json is gone, so there is no precedence left to establish. What")
+    print("             is checked instead: is the retained declaration the one being run?")
+else:
+    print("[precedence] manifests: A=plugins/ae/.mcp.json  B=plugins/ae/.claude-plugin/plugin.json")
 print()
 
 def matches(decl, cmd):
@@ -98,12 +113,14 @@ def matches(decl, cmd):
 # describe the conservative-branch outcome as an absence of data.
 observed = 0
 exclusive = 0
+observable = 0   # single-source mode: entries whose argv survives to be compared at all
 leg = None
 
 # Leg detection runs over every process, not over matched declarations. A `bash -c exec node
 # …` entry replaces itself, so the surviving process carries the node argv rather than the
 # declared one and would never match a manifest line — and the only DISCRIMINATING server here
-# (codex) carries no path at all. What names the leg is the tree any bundled server runs from.
+# is codex, which carries no path at all. What names the leg is the tree a bundled server runs
+# from.
 for _pid, _started, cmd in procs:
     if "/mcp-servers/" not in cmd:
         continue
@@ -114,6 +131,29 @@ for _pid, _started, cmd in procs:
 
 for name in sorted(set(A) | set(B)):
     a, b = A.get(name), B.get(name)
+
+    if single_source:
+        # One declaration: the question is honoured-or-not, and only a positive match counts.
+        # A server the host never spawned is reported as unconfirmed rather than as agreement —
+        # "no contradicting process" is exactly the silence a wrong deletion would produce.
+        if "exec " in b[0]:
+            # The shell `exec`s and the surviving process carries the target's argv, never the
+            # declared line. Absence is structural here, so this entry is outside what argv can
+            # answer — reported as such, not counted as a failure and not counted as a pass.
+            print("  %-16s NOT OBSERVABLE BY ARGV — the entry `exec`s, so the running process"
+                  % name)
+            print("                   carries the target's argv rather than the declared line")
+            continue
+        observable += 1
+        live = [(p, s) for p, s, cmd in procs if matches(b, cmd)]
+        if live:
+            print("  %-16s HONOURED — a live process matches the declaration in full" % name)
+            for p, s in live:
+                print("    observed  pid %-7s %s" % (p, s))
+            observed += 1
+        else:
+            print("  %-16s UNCONFIRMED — no live process matches this declaration" % name)
+        continue
 
     if a is None or b is None:
         print("  %-16s DECLARED IN ONE MANIFEST ONLY (%s) — cannot discriminate"
@@ -179,6 +219,23 @@ elif leg == "installed":
     print("[precedence] install leg: installed — processes exec from ~/.claude/plugins/cache/")
 else:
     print("[precedence] install leg: unknown — no path-bearing server observed; argv alone cannot name it")
+
+if single_source:
+    if observable == 0:
+        print("[precedence] nothing to compare: every declared entry `exec`s, so argv cannot")
+        print("             confirm any of them. Not a pass — the question is unanswerable here.")
+        sys.exit(1)
+    if observed < observable:
+        print("[precedence] %d of %d observable server(s) confirmed. An unconfirmed entry means"
+              % (observed, observable))
+        print("             either the host has not respawned since the manifest changed, or the")
+        print("             retained declaration is not the one honoured — the risk the deletion")
+        print("             carried. Reload, then re-run before reading it as the second.")
+        sys.exit(1)
+    print("[precedence] %d of %d observable server(s) confirmed running from the retained"
+          % (observed, observable))
+    print("             declaration")
+    sys.exit(0)
 
 if observed == 0:
     print("[precedence] nothing observed. Either no manifest declares a discriminating server,")

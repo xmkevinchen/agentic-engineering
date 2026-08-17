@@ -82,7 +82,7 @@ mcp__plugin_ae_gemini__info()
 
 ### Auth
 
-Set `GEMINI_API_KEY` environment variable. The plugin's `.mcp.json` passes it to the server automatically.
+Set `GEMINI_API_KEY` environment variable. The plugin manifest's `mcpServers.gemini.env` block passes it to the server automatically.
 
 ### Usage Principles
 
