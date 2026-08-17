@@ -7,7 +7,7 @@ state: fresh
 anchors:
   - source: "docs/references/verify-by-kinds.md:1"
     anchor_hash: "# `verify_by` kinds — what a runnable check looks like"
-  - source: "plugins/ae/scripts/ae-run-tests.sh:22"
+  - source: "plugins/ae/scripts/ae-run-tests.sh:31"
     anchor_hash: "for t in \"$SUITE\"/test-*.sh; do"
     commit: b4cc996
   - source: "plugins/ae/tests/scripts/test-graph-lint.sh:4"
@@ -23,6 +23,6 @@ edges:
     judge: {value: pass, rationale: "solo — degraded (same-session producer+judge; user-review pending)"}
 ---
 
-Every acceptance criterion in a current-convention plan declares which proof kind enforces it — brownfield plans migrate on touch, not retroactively — and the split is load-bearing: deterministic kinds must name a runnable command while judge kinds must state a rubric, with neither substituting for the other (docs/references/verify-by-kinds.md:1). Judgment, unanchored: the reason is a failure class this project hit repeatedly — an AC whose verifier runs but proves nothing. The suite runner itself only executes test files and trusts exit codes (plugins/ae/scripts/ae-run-tests.sh:22); non-vacuity is proven one level up — AC-referenced tests declare the sh-tap contract so the evidence collector can count their ok-lines, making a checker that proves nothing visibly vacuous at review rather than silently green in the suite (plugins/ae/tests/scripts/test-graph-lint.sh:4).
+Every acceptance criterion in a current-convention plan declares which proof kind enforces it — brownfield plans migrate on touch, not retroactively — and the split is load-bearing: deterministic kinds must name a runnable command while judge kinds must state a rubric, with neither substituting for the other (docs/references/verify-by-kinds.md:1). Judgment, unanchored: the reason is a failure class this project hit repeatedly — an AC whose verifier runs but proves nothing. The suite runner mostly executes test files and trusts exit codes (plugins/ae/scripts/ae-run-tests.sh:31) — with one deliberate exception added when three `check-*.sh` scripts were found enforcing real invariants against nothing, their tests asserting the scripts' logic against synthetic roots while the actual corpus went unchecked: the runner now also invokes a corpus check directly, so a lint that exists is a lint that runs; non-vacuity is otherwise proven one level up — AC-referenced tests declare the sh-tap contract so the evidence collector can count their ok-lines, making a checker that proves nothing visibly vacuous at review rather than silently green in the suite (plugins/ae/tests/scripts/test-graph-lint.sh:4).
 
 The boundary that makes the loop safe to automate: at plan approval the acceptance section is frozen to a separate file, so the executor can edit the live plan's means but never the goal it will be graded against (plugins/ae/skills/plan/SKILL.md:377). Judgment, unanchored: the deepest property is that every mechanism assigns machines the measuring and reserves meaning for the judge — the harness never asks a script to decide whether something is TRUE, only whether it happened.
