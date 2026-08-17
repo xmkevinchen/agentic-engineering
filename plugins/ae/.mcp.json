@@ -2,14 +2,51 @@
   "mcpServers": {
     "codex": {
       "command": "codex",
-      "args": ["mcp-server"]
+      "args": [
+        "mcp-server"
+      ]
     },
     "gemini": {
       "command": "bash",
-      "args": ["-c", "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs\""],
+      "args": [
+        "-c",
+        "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs\""
+      ],
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}"
       }
+    },
+    "openai-compat": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/openai-compat/dist/index.mjs\""
+      ],
+      "env": {
+        "AE_OPENAI_COMPAT_ENDPOINT": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_ENDPOINT}",
+        "AE_OPENAI_COMPAT_MODEL": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_MODEL}",
+        "AE_OPENAI_COMPAT_FAMILY": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_FAMILY}"
+      }
+    }
+  },
+  "families": {
+    "codex": {
+      "transport": "mcp-vendor-cli",
+      "mcp_tool_prefix": "mcp__plugin_ae_codex__",
+      "probe": "command -v codex",
+      "enabled_by": "cross_family.codex"
+    },
+    "gemini": {
+      "transport": "mcp-bundled-sdk",
+      "mcp_tool_prefix": "mcp__plugin_ae_gemini__",
+      "probe": "test -f ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs",
+      "enabled_by": "cross_family.gemini"
+    },
+    "omlx": {
+      "transport": "mcp-openai-compat",
+      "mcp_tool_prefix": "mcp__plugin_ae_openai-compat__",
+      "probe": "curl -sf -m 3 ${AE_OPENAI_COMPAT_ENDPOINT:-http://127.0.0.1:8000/v1}/models",
+      "enabled_by": "cross_family.omlx"
     }
   }
 }

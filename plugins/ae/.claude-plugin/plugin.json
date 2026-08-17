@@ -28,6 +28,24 @@
       "description": "Gemini Pro model name",
       "type": "string",
       "default": "gemini-2.5-pro"
+    },
+    "openai_compat_endpoint": {
+      "title": "OpenAI-compatible endpoint",
+      "description": "Base URL ending in /v1 for any OpenAI-compatible backend (oMLX, Ollama, LM Studio, vLLM, DeepSeek, Gemini's compat layer). The proxy can also pass one per call.",
+      "type": "string",
+      "default": "http://127.0.0.1:8000/v1"
+    },
+    "openai_compat_model": {
+      "title": "OpenAI-compatible model",
+      "description": "Default model id served by that endpoint. Leave empty to require the caller to name one.",
+      "type": "string",
+      "default": ""
+    },
+    "openai_compat_family": {
+      "title": "Model family (weight lineage)",
+      "description": "Lineage of the configured model \u2014 qwen, llama, gemma, deepseek. This is NOT the host it runs on; the distinction is load-bearing for cross-family coverage.",
+      "type": "string",
+      "default": "unknown"
     }
   },
   "outputStyles": [
@@ -37,13 +55,34 @@
   "mcpServers": {
     "codex": {
       "command": "codex",
-      "args": ["mcp-server", "-c", "approval_policy=never", "-c", "sandbox_mode=read-only"]
+      "args": [
+        "mcp-server",
+        "-c",
+        "approval_policy=never",
+        "-c",
+        "sandbox_mode=read-only"
+      ]
     },
     "gemini": {
       "command": "bash",
-      "args": ["-c", "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs\""],
+      "args": [
+        "-c",
+        "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs\""
+      ],
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      }
+    },
+    "openai-compat": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-servers/openai-compat/dist/index.mjs\""
+      ],
+      "env": {
+        "AE_OPENAI_COMPAT_ENDPOINT": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_ENDPOINT}",
+        "AE_OPENAI_COMPAT_MODEL": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_MODEL}",
+        "AE_OPENAI_COMPAT_FAMILY": "${CLAUDE_PLUGIN_OPTION_OPENAI_COMPAT_FAMILY}"
       }
     }
   },
