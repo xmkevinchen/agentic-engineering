@@ -5,6 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { FINDINGS_CONTRACT, checkFindings } from "../../shared/findings-contract.js";
 
 // --- Types ---
 
@@ -150,12 +151,25 @@ server.registerTool(
         .describe(
           "System instruction that persists across the entire conversation",
         ),
+      expect: z
+        .enum(["findings"])
+        .optional()
+        .describe(
+          "Output contract to state to the backend and validate the reply against. 'findings' = AE's review findings shape. A non-compliant reply is reported as such and returned unchanged — never reshaped.",
+        ),
     }),
   },
-  async ({ prompt, model, systemPrompt }) => {
+  async ({ prompt, model, systemPrompt, expect }) => {
     try {
       const history: Message[] = [{ role: "user", text: prompt }];
-      const responseText = await callGemini(model, history, systemPrompt);
+      // Contract goes in the system instruction, appended to the caller's role line — the same
+      // placement the openai-compat bridge uses, and for the same reason: a contract at the tail
+      // of a long task prompt competes with the task for attention.
+      const sys =
+        expect === "findings"
+          ? [systemPrompt, FINDINGS_CONTRACT].filter(Boolean).join("\n\n")
+          : systemPrompt;
+      const responseText = await callGemini(model, history, sys);
 
       history.push({ role: "model", text: responseText });
 
@@ -169,11 +183,22 @@ server.registerTool(
       };
       sessions.set(session.id, session);
 
+      // `responseText` is relayed verbatim in every branch; the compliance verdict is added
+      // beside it, never in place of it. Reshaping a miss into the expected structure would
+      // attribute severity and location to a backend that produced neither.
+      const compliance = expect === "findings" ? checkFindings(responseText) : undefined;
+      const verdict = compliance
+        ? compliance.compliant
+          ? `[contract: findings — compliant, ${compliance.findings.length} finding(s)]\n`
+          : `[contract: findings — NOT compliant: ${compliance.violations.join("; ")}]\n`
+        : "";
+
       return {
+        isError: compliance ? !compliance.compliant : false,
         content: [
           {
             type: "text" as const,
-            text: `[sessionId: ${session.id}]\n[model: ${model}]\n\n${responseText}`,
+            text: `[sessionId: ${session.id}]\n[model: ${model}]\n${verdict}\n${responseText}`,
           },
         ],
       };

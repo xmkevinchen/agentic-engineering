@@ -77,8 +77,14 @@ done
 #    satisfiable by deleting both declarations, which would pass a test whose whole subject is
 #    that servers stay reachable. Bundled servers are enumerated from the tree, not listed here,
 #    so a new one is covered without editing this file.
+#
+#    A server is a directory carrying `dist/index.mjs` — something a manifest can actually exec.
+#    Directory-presence alone was the earlier criterion and it was wrong the moment a shared
+#    library landed beside the servers: `mcp-servers/shared/` holds the findings contract both
+#    bridges import, is not a server, and cannot be declared in a manifest.
 for dir in "$PLUGIN_DIR"/mcp-servers/*/; do
   [ -d "$dir" ] || continue
+  [ -f "$dir/dist/index.mjs" ] || continue
   srv="$(basename "$dir")"
   found=0
   for m in $MANIFESTS; do

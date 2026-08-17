@@ -11,6 +11,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { FINDINGS_CONTRACT, checkFindings } from "../../shared/findings-contract.js";
 
 type Msg = { role: "system" | "user" | "assistant"; content: string };
 
@@ -167,8 +168,14 @@ server.tool(
       .enum(["minimal", "low", "medium", "high"])
       .optional()
       .describe("Passed through as reasoning_effort; rejected by backends that do not support it"),
+    expect: z
+      .enum(["findings"])
+      .optional()
+      .describe(
+        "Output contract to state to the backend and validate the reply against. 'findings' = AE's review findings shape. A non-compliant reply is reported as such and returned unchanged — never reshaped.",
+      ),
   },
-  async ({ prompt, model, endpoint, family, system, reasoning_effort }) => {
+  async ({ prompt, model, endpoint, family, system, reasoning_effort, expect }) => {
     const ep = endpoint || DEFAULT_ENDPOINT;
     const mdl = model || DEFAULT_MODEL;
     if (!mdl) {
@@ -178,7 +185,10 @@ server.tool(
       };
     }
     const history: Msg[] = [];
-    if (system) history.push({ role: "system", content: system });
+    // The contract goes in the system role, appended to whatever role line the caller set. A
+    // contract buried at the end of a long user prompt competes with the task for attention.
+    const sys = expect === "findings" ? [system, FINDINGS_CONTRACT].filter(Boolean).join("\n\n") : system;
+    if (sys) history.push({ role: "system", content: sys });
     history.push({ role: "user", content: prompt });
 
     try {
@@ -193,12 +203,31 @@ server.tool(
         history,
         lastUsed: Date.now(),
       });
+
+      // `content` is returned verbatim in every branch. On non-compliance the caller gets the
+      // reason AND the untouched reply, so it can report the gap and quote what was actually
+      // said — the two things the relay rule asks for.
+      const compliance = expect === "findings" ? checkFindings(content) : undefined;
       return {
+        isError: compliance ? !compliance.compliant : false,
         content: [
           {
             type: "text" as const,
             text: JSON.stringify(
-              { session_id: id, family: family || DEFAULT_FAMILY, endpoint: ep, model: mdl, response_id: raw_id, reasoning, content },
+              {
+                session_id: id,
+                family: family || DEFAULT_FAMILY,
+                endpoint: ep,
+                model: mdl,
+                response_id: raw_id,
+                reasoning,
+                ...(compliance
+                  ? compliance.compliant
+                    ? { contract: "findings", compliant: true, findings: compliance.findings }
+                    : { contract: "findings", compliant: false, violations: compliance.violations }
+                  : {}),
+                content,
+              },
               null,
               2,
             ),

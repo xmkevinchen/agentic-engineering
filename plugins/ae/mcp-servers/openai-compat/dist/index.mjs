@@ -21152,6 +21152,75 @@ var StdioServerTransport = class {
 
 // src/index.ts
 import { randomUUID } from "node:crypto";
+
+// ../shared/findings-contract.ts
+var SEVERITIES = ["P1", "P2", "P3"];
+var FINDINGS_CONTRACT = [
+  "Return ONLY a JSON object, no prose before or after it, in exactly this shape:",
+  '{"findings":[{"severity":"P1|P2|P3","file":"<repo-relative path>","line":<positive integer, omit if the finding is about the whole file>,"summary":"<one sentence>","evidence":"<what in the source supports it, omit if none>"}]}',
+  "",
+  "severity is one of P1, P2, P3 and nothing else:",
+  "  P1 \u2014 blocker: security, data loss, crash",
+  "  P2 \u2014 should fix: logic, performance, maintainability",
+  "  P3 \u2014 minor",
+  'Do not invent another level. If nothing is wrong, return {"findings":[]} \u2014 an empty list is',
+  "a valid answer and is not the same as failing to answer.",
+  "Add no other top-level key. Do not summarise the findings outside the list."
+].join("\n");
+function checkFindings(raw) {
+  const violations = [];
+  let doc;
+  try {
+    doc = JSON.parse(raw.trim());
+  } catch {
+    return {
+      compliant: false,
+      // Deliberately not "extract the JSON from the prose": pulling a JSON object out of a
+      // chatty reply is reshaping, and it silently converts a backend that ignored the contract
+      // into one that honoured it.
+      violations: ["reply is not JSON \u2014 the contract asks for a JSON object and nothing else"]
+    };
+  }
+  if (doc === null || typeof doc !== "object" || Array.isArray(doc)) {
+    return { compliant: false, violations: ["top level is not a JSON object"] };
+  }
+  if (!Object.prototype.hasOwnProperty.call(doc, "findings")) {
+    violations.push("no `findings` key");
+  } else if (!Array.isArray(doc.findings)) {
+    violations.push("`findings` is not an array");
+  }
+  const extra = Object.keys(doc).filter((k) => k !== "findings");
+  if (extra.length) violations.push(`unexpected top-level key(s): ${extra.join(", ")}`);
+  if (Array.isArray(doc.findings)) {
+    doc.findings.forEach((f, i) => {
+      const at = `findings[${i}]`;
+      if (f === null || typeof f !== "object" || Array.isArray(f)) {
+        violations.push(`${at} is not an object`);
+        return;
+      }
+      for (const key of ["severity", "file", "summary"]) {
+        if (!Object.prototype.hasOwnProperty.call(f, key)) violations.push(`${at} has no \`${key}\``);
+      }
+      if (f.severity !== void 0 && !SEVERITIES.includes(f.severity)) {
+        violations.push(`${at}.severity is ${JSON.stringify(f.severity)}, not one of ${SEVERITIES.join("/")}`);
+      }
+      for (const key of ["file", "summary"]) {
+        if (f[key] !== void 0 && (typeof f[key] !== "string" || f[key].length === 0)) {
+          violations.push(`${at}.${key} must be a non-empty string`);
+        }
+      }
+      if (f.line !== void 0 && (typeof f.line !== "number" || !Number.isInteger(f.line) || f.line <= 0)) {
+        violations.push(`${at}.line must be a positive integer when present`);
+      }
+      if (f.evidence !== void 0 && (typeof f.evidence !== "string" || f.evidence.length === 0)) {
+        violations.push(`${at}.evidence must be a non-empty string when present`);
+      }
+    });
+  }
+  return violations.length ? { compliant: false, violations } : { compliant: true, findings: doc.findings };
+}
+
+// src/index.ts
 function env(name) {
   const v = process.env[name];
   if (!v || /^\$\{.*\}$/.test(v.trim())) return "";
@@ -21235,9 +21304,12 @@ server.tool(
     endpoint: external_exports.string().optional().describe("OpenAI-compatible base URL ending in /v1"),
     family: external_exports.string().optional().describe("Weight lineage of this model (e.g. qwen, deepseek, llama) \u2014 NOT the host it runs on"),
     system: external_exports.string().optional().describe("System instruction"),
-    reasoning_effort: external_exports.enum(["minimal", "low", "medium", "high"]).optional().describe("Passed through as reasoning_effort; rejected by backends that do not support it")
+    reasoning_effort: external_exports.enum(["minimal", "low", "medium", "high"]).optional().describe("Passed through as reasoning_effort; rejected by backends that do not support it"),
+    expect: external_exports.enum(["findings"]).optional().describe(
+      "Output contract to state to the backend and validate the reply against. 'findings' = AE's review findings shape. A non-compliant reply is reported as such and returned unchanged \u2014 never reshaped."
+    )
   },
-  async ({ prompt, model, endpoint, family, system, reasoning_effort }) => {
+  async ({ prompt, model, endpoint, family, system, reasoning_effort, expect }) => {
     const ep = endpoint || DEFAULT_ENDPOINT;
     const mdl = model || DEFAULT_MODEL;
     if (!mdl) {
@@ -21247,7 +21319,8 @@ server.tool(
       };
     }
     const history = [];
-    if (system) history.push({ role: "system", content: system });
+    const sys = expect === "findings" ? [system, FINDINGS_CONTRACT].filter(Boolean).join("\n\n") : system;
+    if (sys) history.push({ role: "system", content: sys });
     history.push({ role: "user", content: prompt });
     try {
       const { content, reasoning, raw_id } = await callChat(ep, mdl, history, reasoning_effort);
@@ -21261,12 +21334,23 @@ server.tool(
         history,
         lastUsed: Date.now()
       });
+      const compliance = expect === "findings" ? checkFindings(content) : void 0;
       return {
+        isError: compliance ? !compliance.compliant : false,
         content: [
           {
             type: "text",
             text: JSON.stringify(
-              { session_id: id, family: family || DEFAULT_FAMILY, endpoint: ep, model: mdl, response_id: raw_id, reasoning, content },
+              {
+                session_id: id,
+                family: family || DEFAULT_FAMILY,
+                endpoint: ep,
+                model: mdl,
+                response_id: raw_id,
+                reasoning,
+                ...compliance ? compliance.compliant ? { contract: "findings", compliant: true, findings: compliance.findings } : { contract: "findings", compliant: false, violations: compliance.violations } : {},
+                content
+              },
               null,
               2
             )

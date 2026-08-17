@@ -64,6 +64,29 @@ mcp__plugin_ae_openai-compat__reply(session_id: "<id>", prompt: "<follow-up>")
 mcp__plugin_ae_openai-compat__models()   # what this endpoint currently serves
 ```
 
+## Asking for findings — pass `expect`, do not describe the format yourself
+
+When the task is a review, add `expect: "findings"`. The bridge states the contract to the
+backend and validates the reply:
+
+```
+mcp__plugin_ae_openai-compat__chat(..., expect: "findings")
+→ { …, contract: "findings", compliant: true,  findings: [ … ], content: "<verbatim>" }
+→ { …, contract: "findings", compliant: false, violations: [ … ], content: "<verbatim>" }
+```
+
+`content` is the backend's reply untouched in both cases.
+
+**On `compliant: false`, relay the reply and name the gap — that is what the proxy note is
+for.** Do not repair the JSON, do not map an unexpected severity onto P1/P2/P3, do not
+extract findings from prose. Any of those makes you the author of a severity or a location the
+backend never produced, in a report the reader will attribute to the backend. The `violations`
+list is the note's content; quote it.
+
+Do not write the format into your prompt by hand. A hand-written contract is a second
+statement of the shape that drifts from the one being validated, and the reply would then be
+checked against a contract the backend was not given.
+
 Call `models` first when you were not told which model to use — the endpoint's roster changes,
 and naming a model that is not loaded fails the call rather than falling back.
 

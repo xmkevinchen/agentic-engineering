@@ -60638,6 +60638,75 @@ function getApiKeyFromEnv() {
 
 // src/index.ts
 import { randomUUID } from "node:crypto";
+
+// ../shared/findings-contract.ts
+var SEVERITIES = ["P1", "P2", "P3"];
+var FINDINGS_CONTRACT = [
+  "Return ONLY a JSON object, no prose before or after it, in exactly this shape:",
+  '{"findings":[{"severity":"P1|P2|P3","file":"<repo-relative path>","line":<positive integer, omit if the finding is about the whole file>,"summary":"<one sentence>","evidence":"<what in the source supports it, omit if none>"}]}',
+  "",
+  "severity is one of P1, P2, P3 and nothing else:",
+  "  P1 \u2014 blocker: security, data loss, crash",
+  "  P2 \u2014 should fix: logic, performance, maintainability",
+  "  P3 \u2014 minor",
+  'Do not invent another level. If nothing is wrong, return {"findings":[]} \u2014 an empty list is',
+  "a valid answer and is not the same as failing to answer.",
+  "Add no other top-level key. Do not summarise the findings outside the list."
+].join("\n");
+function checkFindings(raw) {
+  const violations = [];
+  let doc;
+  try {
+    doc = JSON.parse(raw.trim());
+  } catch {
+    return {
+      compliant: false,
+      // Deliberately not "extract the JSON from the prose": pulling a JSON object out of a
+      // chatty reply is reshaping, and it silently converts a backend that ignored the contract
+      // into one that honoured it.
+      violations: ["reply is not JSON \u2014 the contract asks for a JSON object and nothing else"]
+    };
+  }
+  if (doc === null || typeof doc !== "object" || Array.isArray(doc)) {
+    return { compliant: false, violations: ["top level is not a JSON object"] };
+  }
+  if (!Object.prototype.hasOwnProperty.call(doc, "findings")) {
+    violations.push("no `findings` key");
+  } else if (!Array.isArray(doc.findings)) {
+    violations.push("`findings` is not an array");
+  }
+  const extra = Object.keys(doc).filter((k) => k !== "findings");
+  if (extra.length) violations.push(`unexpected top-level key(s): ${extra.join(", ")}`);
+  if (Array.isArray(doc.findings)) {
+    doc.findings.forEach((f3, i2) => {
+      const at = `findings[${i2}]`;
+      if (f3 === null || typeof f3 !== "object" || Array.isArray(f3)) {
+        violations.push(`${at} is not an object`);
+        return;
+      }
+      for (const key of ["severity", "file", "summary"]) {
+        if (!Object.prototype.hasOwnProperty.call(f3, key)) violations.push(`${at} has no \`${key}\``);
+      }
+      if (f3.severity !== void 0 && !SEVERITIES.includes(f3.severity)) {
+        violations.push(`${at}.severity is ${JSON.stringify(f3.severity)}, not one of ${SEVERITIES.join("/")}`);
+      }
+      for (const key of ["file", "summary"]) {
+        if (f3[key] !== void 0 && (typeof f3[key] !== "string" || f3[key].length === 0)) {
+          violations.push(`${at}.${key} must be a non-empty string`);
+        }
+      }
+      if (f3.line !== void 0 && (typeof f3.line !== "number" || !Number.isInteger(f3.line) || f3.line <= 0)) {
+        violations.push(`${at}.line must be a positive integer when present`);
+      }
+      if (f3.evidence !== void 0 && (typeof f3.evidence !== "string" || f3.evidence.length === 0)) {
+        violations.push(`${at}.evidence must be a non-empty string when present`);
+      }
+    });
+  }
+  return violations.length ? { compliant: false, violations } : { compliant: true, findings: doc.findings };
+}
+
+// src/index.ts
 var FALLBACK_MODEL = process.env.CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL || "gemini-2.5-flash";
 var PRO_MODEL = process.env.CLAUDE_PLUGIN_OPTION_GEMINI_PRO_MODEL || "gemini-2.5-pro";
 var SESSION_TTL_MS = 30 * 60 * 1e3;
@@ -60714,13 +60783,17 @@ server.registerTool(
       model: external_exports.string().default(FALLBACK_MODEL).describe("Gemini model (e.g., gemini-2.5-flash, gemini-2.5-pro)"),
       systemPrompt: external_exports.string().optional().describe(
         "System instruction that persists across the entire conversation"
+      ),
+      expect: external_exports.enum(["findings"]).optional().describe(
+        "Output contract to state to the backend and validate the reply against. 'findings' = AE's review findings shape. A non-compliant reply is reported as such and returned unchanged \u2014 never reshaped."
       )
     })
   },
-  async ({ prompt, model, systemPrompt }) => {
+  async ({ prompt, model, systemPrompt, expect }) => {
     try {
       const history = [{ role: "user", text: prompt }];
-      const responseText = await callGemini(model, history, systemPrompt);
+      const sys = expect === "findings" ? [systemPrompt, FINDINGS_CONTRACT].filter(Boolean).join("\n\n") : systemPrompt;
+      const responseText = await callGemini(model, history, sys);
       history.push({ role: "model", text: responseText });
       const session = {
         id: randomUUID(),
@@ -60731,13 +60804,18 @@ server.registerTool(
         lastAccessedAt: Date.now()
       };
       sessions.set(session.id, session);
+      const compliance = expect === "findings" ? checkFindings(responseText) : void 0;
+      const verdict = compliance ? compliance.compliant ? `[contract: findings \u2014 compliant, ${compliance.findings.length} finding(s)]
+` : `[contract: findings \u2014 NOT compliant: ${compliance.violations.join("; ")}]
+` : "";
       return {
+        isError: compliance ? !compliance.compliant : false,
         content: [
           {
             type: "text",
             text: `[sessionId: ${session.id}]
 [model: ${model}]
-
+${verdict}
 ${responseText}`
           }
         ]
