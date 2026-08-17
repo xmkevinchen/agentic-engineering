@@ -145,7 +145,7 @@ $(printf '%s\n' "$dup_report" | sed 's/^/          /')"
   # Every mcp__ tool named anywhere in the body must be one the frontmatter declares. A
   # worked example calling a tool the agent never held is indistinguishable, to the agent,
   # from a correct one — it follows the example and gets tool-not-found on its first backend
-  # call. The underscore-vs-hyphen form of this was live in omlx-proxy.md's invocation block
+  # call. The underscore-vs-hyphen form of this was live in openai-compat-proxy.md's invocation block
   # while check-family-reachability.sh scored that same file "declared tools match a registered
   # server" — that check only ever reads the frontmatter line (F-082).
   declared_tools="$(grep -m1 '^tools:' "$p" | grep -o 'mcp__[A-Za-z0-9_-]*' | sort -u)"

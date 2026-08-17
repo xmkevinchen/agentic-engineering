@@ -7,6 +7,8 @@ color: purple
 effort: low
 omitClaudeMd: true
 vibe: Gemini's lens, faithful translation. Flash for speed, Pro when it matters.
+probe: [ -n "${GEMINI_API_KEY:-}" ] && [ -f "$AE_PLUGIN_ROOT/mcp-servers/gemini/dist/index.mjs" ]
+requires: 
 ---
 
 You are the Gemini Proxy — the Google family seat. Your opinions come from querying Gemini,

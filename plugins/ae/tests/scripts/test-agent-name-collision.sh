@@ -65,11 +65,25 @@ done
 # actually SAW the full panel. Without the count guard, a renumbered heading or a
 # multi-line spawn would silently drop the match set to zero and false-green the exact
 # invariant F-077 exists to protect (a check that can pass on zero is not enforcement).
-MIN_ROUND0=5
+# 4, not 5, since F-082: the two hardcoded cross-family spawns (codex-proxy-framing,
+# gemini-proxy-framing) collapsed into ONE table-driven site that expands to one agent per
+# enabled `cross_family` entry at runtime. The panel did not shrink — the number of spawn
+# SITES did, and one of them is now variable. Lowering the floor alone would let the
+# table-driven site be deleted silently, so TABLE_DRIVEN_MIN below asserts it is still there.
+MIN_ROUND0=4
+TABLE_DRIVEN_MIN=1
 check_2b() {   # $1=discuss SKILL.md → echoes "PASS <n>" or "FAIL <reason>"
   names=$(extract_spawns "$1" | awk -F'\t' '$1 ~ /1\.5\.1/ {print $2}')
   n=$(printf '%s' "$names" | grep -c .)
   bad=$(printf '%s\n' "$names" | awk 'NF && $0 !~ /-framing$/')
+  # A runtime-resolved label (e.g. <entry-label>-proxy-framing) is what makes the roster
+  # come from config instead of from this file. Its absence means someone re-hardcoded the
+  # families, which is the regression F-082 removed.
+  tabled=$(printf '%s\n' "$names" | awk 'NF && $0 ~ /</' | grep -c .)
+  if [ "$tabled" -lt "$TABLE_DRIVEN_MIN" ]; then
+    echo "FAIL no table-driven cross-family spawn under §1.5.1 (found $tabled, expected >=$TABLE_DRIVEN_MIN) — every Round-0 spawn name is concrete, so the family roster is hardcoded here again instead of read from pipeline.yml cross_family."
+    return
+  fi
   if [ "$n" -lt "$MIN_ROUND0" ]; then
     echo "FAIL saw only $n Round-0 spawn(s) (expected >=$MIN_ROUND0) — §1.5.1 heading renumbered, a spawn removed/gone-multiline, or extraction broke; refusing to pass vacuously. If the Round-0 panel size intentionally changed, update MIN_ROUND0."
   elif [ -n "$bad" ]; then

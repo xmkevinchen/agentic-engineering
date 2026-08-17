@@ -38,8 +38,25 @@ These are calibration examples, not exhaustive: the rule is **positive evidence*
 
 1. **Pick 2-4 core agents** from the table. Multiple rows can match — combine.
 2. **Always add challenger** to any team with 3+ agents.
-3. **Cross-family** (codex-proxy / gemini-proxy): external experts brought in for specific review angles.
-   - Read `cross_family` from pipeline.yml to determine which proxies are enabled (none, codex only, gemini only, or both).
+3. **Cross-family**: external experts brought in for specific review angles.
+   - Read the `cross_family` **family-instance table** from pipeline.yml. Each entry's key is
+     an instance label; `seat` names the definition that reaches it
+     (`agents/workflow/<seat>-proxy.md`), `family` is the weight lineage, `host` is where the
+     weights run. Presence means enabled; `enabled: false` switches an entry off.
+   - **Seats are not families.** `codex-proxy` and `gemini-proxy` front one backend each;
+     `openai-compat-proxy` is the generic seat and fronts **any number** of entries, taking
+     `endpoint`, `model` and `family` per call. So the roster is the table's enabled entries,
+     not the set of proxy definition files — and adding a family on the generic seat adds no
+     file and touches no skill.
+   - When spawning an entry on the generic seat, pass its `endpoint`, `model` and `family`
+     through to the proxy; that seat cannot reach a backend without them.
+   - **Coverage counts distinct `family`, never distinct label.** Two entries of one lineage —
+     say a hosted DeepSeek and a local DeepSeek build — are one independent opinion, not two.
+     Counting them separately inflates cross-family coverage with correlated failure modes
+     (`BL-208`). Prefer angles across *different* lineages before adding a second entry of one.
+   - A bare `codex: true` / `gemini: true` map is the legacy form and is still read, treated as
+     `{seat: <label>, family: <label>}`. It cannot express endpoint, host or lineage, so a
+     project on the legacy form can only ever have one entry per seat.
    - TL picks **angles first**, then assigns to available proxies. Angles are about coverage, not about which proxy does it.
    - Give a **specialized prompt with clear focus** — not generic "review this".
    - **One proxy enabled** → assign one angle. **Both enabled** → prefer different angles; same-angle only when there is genuinely no second valuable blind spot.

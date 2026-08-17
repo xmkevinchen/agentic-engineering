@@ -1,89 +1,108 @@
 #!/bin/bash
-# Check cross-family MCP availability and dependencies at session start
+# Check cross-family availability at session start.
 #
-# Registered via plugin.json `hooks.SessionStart`. BL-023 closure empirically
-# verified 2026-05-20 (T1 ship: plugin.json hooks block auto-registers and
-# fires on SessionStart). See `docs/references/cc-plugin-contract.md`
-# BL-023 closure evidence section for verbatim proof.
-# The cross-family-status.json output was never consumed by any skill; removed to avoid
-# dead writes. Check logic and stderr warnings preserved for future use.
+# Registered via plugin.json `hooks.SessionStart`. BL-023 closure empirically verified
+# 2026-05-20 (T1 ship: plugin.json hooks block auto-registers and fires on SessionStart).
+# See `docs/references/cc-plugin-contract.md` BL-023 closure evidence.
+#
+# It is driven by the `cross_family` table and by each seat's own declared probe, so adding a
+# family — or a whole new seat — does not edit this file. The previous version carried one
+# hardcoded block per transport (a Node check, a binary check, a bundle-and-key check), which
+# is the concrete extension cost F-082 set out to remove: the fourth family would have meant a
+# fourth block here.
+#
+# A seat declares its probe in its own frontmatter:
+#     probe: command -v codex >/dev/null 2>&1
+# The probe runs with AE_ENDPOINT / AE_MODEL / AE_FAMILY set from the entry, and
+# AE_PLUGIN_ROOT pointing at the plugin. It is repo-controlled text executed by a
+# repo-controlled hook — the same trust level as the rest of this script.
+#
+# Never fatal: this reports to stderr and exits 0. A session must start even with no backend.
 
-AGENT_TEAMS=false
-CODEX_AVAILABLE=false
-GEMINI_AVAILABLE=false
-NODE_AVAILABLE=false
+set -u
+
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+AE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$SELF_DIR/.." && pwd)}"
+REPO="$(cd "$SELF_DIR/../../.." && pwd)"
+PIPELINE="${AE_PIPELINE:-$REPO/.claude/pipeline.yml}"
+AGENTS="$AE_PLUGIN_ROOT/agents/workflow"
+READER="$SELF_DIR/read-family-table.py"
+export AE_PLUGIN_ROOT
+
 ISSUES=()
 
-# Check Agent Teams experimental flag
+# A probe is author-supplied text, so its own timeout is author-supplied too — and a probe that
+# forgets one blocks SessionStart with nothing to stop it. `timeout(1)` is not present on a
+# stock macOS, so the ceiling is enforced here with a watchdog rather than assumed.
+PROBE_LIMIT_S="${AE_PROBE_TIMEOUT_S:-8}"
+run_probe() { # $1 = probe string; returns probe's status, or 124 if it hit the ceiling
+  bash -c "$1" >/dev/null 2>&1 &
+  local pid=$! rc=0
+  ( sleep "$PROBE_LIMIT_S"; kill -TERM "$pid" 2>/dev/null ) >/dev/null 2>&1 &
+  local wd=$!
+  wait "$pid" 2>/dev/null || rc=$?
+  if kill -0 "$wd" 2>/dev/null; then kill -TERM "$wd" 2>/dev/null; else rc=124; fi
+  wait "$wd" 2>/dev/null
+  return "$rc"
+}
+
+# Agent Teams flag — not family-specific, so it stays here.
 SETTINGS_FILE="$HOME/.claude/settings.json"
+AGENT_TEAMS=false
 if [ -f "$SETTINGS_FILE" ]; then
   if command -v jq &>/dev/null; then
-    AT=$(jq -r '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS // empty' "$SETTINGS_FILE" 2>/dev/null)
-    if [ -n "$AT" ]; then
-      AGENT_TEAMS=true
-    fi
-  else
-    # Fallback: grep for the key
-    if grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS' "$SETTINGS_FILE" 2>/dev/null; then
-      AGENT_TEAMS=true
-    fi
+    [ -n "$(jq -r '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS // empty' "$SETTINGS_FILE" 2>/dev/null)" ] && AGENT_TEAMS=true
+  elif grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS' "$SETTINGS_FILE" 2>/dev/null; then
+    AGENT_TEAMS=true
   fi
 fi
+[ "$AGENT_TEAMS" = false ] && ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }")
 
-if [ "$AGENT_TEAMS" = false ]; then
-  ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }")
-fi
-
-# Check node
-if command -v node &>/dev/null; then
-  NODE_AVAILABLE=true
-  NODE_VERSION=$(node --version 2>/dev/null)
-else
-  ISSUES+=("node not found — gemini MCP server requires Node.js")
-fi
-
-# Check codex
-if command -v codex &>/dev/null; then
-  CODEX_AVAILABLE=true
-else
-  ISSUES+=("codex CLI not found — install with: npm install -g @openai/codex")
-fi
-
-# Check gemini
-if [ "$NODE_AVAILABLE" = true ]; then
-  # The committed bundle — the same artifact both manifests exec. Probing anything
-  # else would report on a file nothing launches.
-  GEMINI_SERVER="${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs"
-  if [ -f "$GEMINI_SERVER" ]; then
-    # Auth is API-key only: the server reads GEMINI_API_KEY and nothing else
-    # (mcp-servers/gemini/src/index.ts initAuth). A credentials file grants AE
-    # nothing, so accepting one here would report AVAILABLE for a server that
-    # then dies at startup.
-    if [ -n "$GEMINI_API_KEY" ]; then
-      GEMINI_AVAILABLE=true
-    else
-      ISSUES+=("gemini: GEMINI_API_KEY not set — export GEMINI_API_KEY to enable the Gemini cross-family path")
+if [ -f "$PIPELINE" ] && [ -f "$READER" ] && command -v python3 &>/dev/null; then
+  entries="$(python3 "$READER" "$PIPELINE" --enabled-only 2>/dev/null)"
+  while IFS= read -r e; do
+    [ -n "$e" ] || continue
+    eval "$(printf '%s' "$e" | python3 -c '
+import json,sys,shlex
+d=json.load(sys.stdin)
+for k in ("label","seat","family","endpoint","model"):
+    print("entry_%s=%s" % (k, shlex.quote(str(d.get(k,"")))))
+')"
+    def="$AGENTS/${entry_seat}-proxy.md"
+    if [ ! -f "$def" ]; then
+      ISSUES+=("$entry_label: no seat definition at $(basename "$def") — entry names a seat nothing implements")
+      continue
     fi
-  else
-    ISSUES+=("gemini: bundle missing at ${GEMINI_SERVER} — the bundle ships committed, so this means an incomplete plugin install; reinstall the plugin (contributors: cd ${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini && npm run build)")
-  fi
+    probe="$(sed -n '/^probe:[[:space:]]*/{s/^probe:[[:space:]]*//p;q;}' "$def")"
+    if [ -z "$probe" ]; then
+      ISSUES+=("$entry_label: seat '$entry_seat' declares no probe: line — its availability is unknown, which reads identically to available")
+      continue
+    fi
+    export AE_ENDPOINT="$entry_endpoint" AE_MODEL="$entry_model" AE_FAMILY="$entry_family"
+    if run_probe "$probe"; then :; else
+      rc=$?
+      if [ "$rc" -eq 124 ]; then
+        ISSUES+=("$entry_label ($entry_family via $entry_seat): probe exceeded ${PROBE_LIMIT_S}s and was killed — a probe must bound its own wait; SessionStart cannot block on a backend")
+      else
+        ISSUES+=("$entry_label ($entry_family via $entry_seat): probe failed${entry_endpoint:+ — $entry_endpoint} — this family will report unavailable")
+      fi
+    fi
+    unset AE_ENDPOINT AE_MODEL AE_FAMILY
+  done <<EOF
+$entries
+EOF
+else
+  ISSUES+=("cross_family table not readable ($PIPELINE) — no family availability was checked")
 fi
 
-# Print issues to stderr (visible in session output if hook is ever wired up)
 if [ ${#ISSUES[@]} -gt 0 ]; then
-  for issue in "${ISSUES[@]}"; do
-    echo "[ae] WARNING: $issue" >&2
-  done
+  for issue in "${ISSUES[@]}"; do echo "[ae] WARNING: $issue" >&2; done
 fi
 
-# Plan 054 Step 1 BL-023 smoke test debug log: removed after AC1 verified
-# (entry ts=2026-05-20T21:45:15Z confirmed hook fires + CLAUDE_CODE_SESSION_ID exposed).
-# Per architecture-reviewer + security-reviewer findings on /ae:review: indefinite
-# /tmp/ae-session-check.log accumulation + session id leak risk → remove.
-
-# Plan 054 review findings: cleanup orphan ~/.ae/traces/*.lockdir from prior SIGKILL'd
-# hook executions (gemini-proxy MF#1 reclassified). 5min stale threshold — write-trace.sh
-# critical section is < 1s; anything older is orphan.
+# Cleanup orphan lockdirs from prior SIGKILL'd hook executions. 5min stale threshold —
+# write-trace.sh's critical section is < 1s; anything older is an orphan.
 if [ -d "$HOME/.ae/traces" ]; then
   find "$HOME/.ae/traces" -maxdepth 1 -name '*.lockdir' -type d -mmin +5 -exec rmdir {} \; 2>/dev/null
 fi
+
+exit 0

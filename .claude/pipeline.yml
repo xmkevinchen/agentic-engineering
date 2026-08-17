@@ -50,6 +50,16 @@ project_agents:
 # ae:engineering:minimal-change-engineer). project_agents entry no longer needed.
 
 # --- Cross-Family ---
+# Family-instance table. The KEY is an instance label, not a family — that is what lets two
+# entries share a lineage (deepseek-api + deepseek-local) or a host without colliding.
+#   seat   which proxy definition and tool set reaches it (agents/workflow/<seat>-proxy.md)
+#   family weight lineage — what makes the opinion independent
+#   host   where the weights run; NOT the family (BL-208)
+# Presence means enabled; keep an entry and set `enabled: false` to switch it off without
+# losing an endpoint and model you spent time getting right.
+# Coverage counts distinct `family`, never distinct label: deepseek-api and deepseek-local
+# are one independent opinion, not two.
 cross_family:
-  codex: true
-  gemini: true
+  codex:      { seat: codex,  family: openai }
+  gemini:     { seat: gemini, family: google }
+  qwen-local: { seat: openai-compat, family: qwen, host: local, endpoint: "http://127.0.0.1:8000/v1", model: "Qwen3.5-35B-A3B-8bit" }

@@ -152,14 +152,22 @@ Each spawn prompt below echoes this rule by including the line `Honor the Frozen
 
 **Spawn precondition** — do not spawn a cross-family proxy whose backend MCP tool is absent from your tool list (absent *after* `ToolSearch` resolution, not merely unsurfaced); treat that family as `unavailable` and run the TL fallback logic (canonical statement + boundary: `ae:agent-selection` § Proxy spawn precondition).
 
-Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), each with `framing_context:` in the prompt:
+Parallel spawn of 5 reviewers (4 if preflight dropped minimal-change-engineer), each with `framing_context:` in the prompt.
+
+**The cross-family spawn is one per ENABLED ENTRY in `pipeline.yml`'s `cross_family` table, not
+one per named family.** TL resolves each entry's seat, endpoint, model and lineage per
+`ae:agent-selection`. This site names no family, which is what lets a family added to the table
+reach Round 0 without editing this skill. Instance labels keep the `-framing` suffix (F-077) so
+a stale shutdown cannot kill a same-named respawn. Assign angles across **distinct lineages**
+first — two entries sharing a `family` are one independent opinion, so a second entry of the
+same lineage gets its own angle only when no unused lineage is left.
 
 ```
-Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy-framing",
+Agent(subagent_type: "<per agent-selection>", name: "<entry-label>-proxy-framing",
       run_in_background: true,
-      prompt: "📋 Cast: codex-proxy-framing
-                  Role: framing reviewer (OpenAI angle)
-                  Angle: bias anchoring
+      prompt: "📋 Cast: <entry-label>-proxy-framing
+                  Role: framing reviewer (<family> lineage, <host> host)
+                  Angle: bias anchoring — <angle assigned to this entry>
                   Why: cross-family check for TL pre-commitments before Round 1 begins
 
                framing_context: <discussion-dir>/framing.md
@@ -168,26 +176,12 @@ Agent(subagent_type: "ae:workflow:codex-proxy", name: "codex-proxy-framing",
                Does this framing embed TL's pre-commitments (specific mechanisms,
                ruled-out alternatives, loaded language)? Report verdict: APPROVED
                / REVISE: <specific issue> | target: <Problem Statement | Scope | Reference Material> | suggested edit: <concrete revision for mutable target only>.
-               If MCP connection fails / times out / rate-limited / quota exhausted,
-               SendMessage 'unavailable: <reason>' to team-lead and exit.
-               Do not retry. SendMessage verdict to team-lead.")
-
-Agent(subagent_type: "ae:workflow:gemini-proxy", name: "gemini-proxy-framing",
-      run_in_background: true,
-      prompt: "📋 Cast: gemini-proxy-framing
-                  Role: framing reviewer (Google angle)
-                  Angle: bias anchoring (system-level lens)
-                  Why: cross-family check complements OpenAI angle
-
-               framing_context: <discussion-dir>/framing.md
-               Honor the Frozen-field rule defined in §1.5.1 above.
-               Review angle: bias anchoring (Google-family lens).
-               Read ONLY the framing file. Report verdict per the 3-state format.
-               If MCP connection fails / times out / rate-limited / quota exhausted,
+               [generic seat only] endpoint: <endpoint>, model: <model>, family: <family>
+               If the backend call fails / times out / is rate-limited / quota exhausted,
                SendMessage 'unavailable: <reason>' to team-lead and STOP.
-               Do NOT substitute your own analysis for the backend's — a verdict
-               your backend did not produce is same-family output wearing a
-               cross-family label (gemini-proxy.md Graceful degradation).
+               Do NOT substitute your own analysis for the backend's — a verdict your
+               backend did not produce is same-family output wearing a cross-family
+               label (`ae:agent-teams` § Graceful degradation).
                Do not retry. SendMessage verdict to team-lead.")
 
 Agent(subagent_type: "ae:workflow:doodlestein-strategic", name: "doodlestein-strategic-framing",

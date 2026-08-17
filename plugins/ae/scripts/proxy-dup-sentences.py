@@ -5,7 +5,7 @@ Granularity history, kept because each step was wrong for a reason worth not rep
 
   1. **Physical lines.** Markdown prose is hand-wrapped, so the same sentence wrapped at
      different columns in two files shares no whole line and a line-set comparison reports
-     zero. Live instance (F-082): omlx-proxy.md carried "a locally-run model of a lineage
+     zero. Live instance (F-082): openai-compat-proxy.md carried "a locally-run model of a lineage
      another seat already represents is not an independent party" word-for-word from the
      canonical section, and the line check passed it.
   2. **Whole sentences.** Also wrong, and it also passed that same instance: the copy was an
@@ -26,7 +26,7 @@ import re
 import sys
 
 # Calibrated, not guessed. Measured against two cases on this tree:
-#   * the copy that must be caught — omlx-proxy's re-flowed sibling sentence, an 11-word
+#   * the copy that must be caught — openai-compat-proxy's re-flowed sibling sentence, an 11-word
 #     verbatim run ("a locally-run model of a lineage another seat already represents is")
 #   * the copy that must NOT be flagged — the documented bootstrap exception, where each proxy
 #     deliberately restates its ToolSearch trigger and stop-on-failure line; those share

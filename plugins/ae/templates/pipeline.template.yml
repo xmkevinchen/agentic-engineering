@@ -138,6 +138,26 @@ work:
 # Enable/disable cross-family proxy agents in Agent Teams.
 # When enabled, the corresponding proxy agent joins every team.
 # When disabled or MCP unavailable, the proxy is simply skipped.
+#
+# The KEY is an instance label, not a family name. That is deliberate: it lets two entries
+# share a lineage or a host without colliding, which a family-keyed map cannot express.
+#   seat     which proxy definition and tool set reaches it — agents/workflow/<seat>-proxy.md
+#   family   weight lineage; this is what makes a second opinion independent
+#   host     where the weights run. NOT the family — a local build of a lineage another entry
+#            already covers is a sibling, not an independent party (BL-208)
+#   enabled  optional; presence means enabled, `enabled: false` switches an entry off while
+#            keeping its endpoint and model
+#
+# Entries on the generic `openai-compat` seat also take `endpoint` and `model`, and may take
+# `api_key_env` naming the variable holding that backend's key. Adding a family on that seat
+# costs one entry here and no new file anywhere.
+#
+# Coverage counts distinct `family`, never distinct label.
 cross_family:
-  codex: true              # Include codex-proxy in teams (requires Codex MCP server)
-  gemini: true             # Include gemini-proxy in teams (requires ae-gemini MCP server)
+  codex:  { seat: codex,  family: openai }   # requires the codex CLI on PATH
+  gemini: { seat: gemini, family: google }   # requires GEMINI_API_KEY
+  # deepseek-api:   { seat: openai-compat, family: deepseek, host: vendor,
+  #                   endpoint: "https://api.deepseek.com/v1", model: deepseek-reasoner,
+  #                   api_key_env: DEEPSEEK_API_KEY }
+  # qwen-local:     { seat: openai-compat, family: qwen, host: local,
+  #                   endpoint: "http://127.0.0.1:8000/v1", model: Qwen3.5-35B-A3B-8bit }
