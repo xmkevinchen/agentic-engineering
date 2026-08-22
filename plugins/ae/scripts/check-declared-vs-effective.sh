@@ -88,9 +88,18 @@ delegate "declared tools + probes"  "$SCRIPTS/check-family-reachability.sh"
 # being explicitly exempt — a new check should not be able to arrive unwired and unnoticed.
 
 # Run against the real tree, every run.
+#   check-relay-attestation.sh is the only entry whose corpus is not the repository: it reads the
+#   host's archived subagent transcripts, which mutate with no commit. What it gates here is the
+#   half that IS in the tree — a seat whose declared tool prefix cannot be read, or an agents
+#   directory that yields no declarations at all, which would let it audit nothing and report
+#   success. What the archive says is reported, not gated; --gate is for asking it deliberately.
+#   Stated plainly because the placement is not free: this lint can only ever redden the machine
+#   that produced the archive, never CI and never a fresh clone, so it is a check on the
+#   developer's own history and should not be read as covering anyone else's.
 CORPUS_LINTS="check-cast-block.sh
 check-shutdown-canonical.sh
-check-family-reachability.sh"
+check-family-reachability.sh
+check-relay-attestation.sh"
 
 # Run only when their feature's own state is present. `check-proxy-residual.sh` hardcodes an
 # F-082 path and asserts a value recorded in a gitignored process file, so it cannot gate a
