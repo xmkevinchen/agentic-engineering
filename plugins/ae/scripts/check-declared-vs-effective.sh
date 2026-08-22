@@ -10,6 +10,15 @@
 # whole point — the defect class is "the check was green because it was not looking", so a
 # missing delegate or an unclassified new check must redden the run rather than pass quietly.
 #
+# One limit on that, stated here rather than only at the entry it applies to, because a contract
+# with an unmentioned exception is the defect this script is named after. Every lint holds to
+# the standard above for anything IN THE TREE. `check-relay-attestation.sh` additionally reads a
+# corpus outside it — the host's archived transcripts, which mutate with no commit — and there it
+# reports rather than fails, because a transcript written weeks ago is history no commit can
+# repair and a permanently red check is one people stop reading. Its reasoning is at its entry in
+# CORPUS_LINTS below. Read "fail closed" as covering everything a commit can change, which is
+# everything this script exists for.
+#
 # The pairs:
 #
 #   1. Manifest declarations are single-source. Delegated to
