@@ -65,29 +65,92 @@ promote a floor, or create completion authority.
 ## 3. Dependency map
 
 ```text
-Runtime-neutral conformance kit
-        ├── effective host/provider attestation
-        ├── workspace mutation vs durable commit authority
-        │       ├── GitHub Agentic Workflows adapter
-        │       ├── OpenHands/ACP sandbox adapter
-        │       └── multi-worktree / multi-writer
-        └── first-class Codex host port
+Bootstrap and semantic convergence
+        ├── runtime-neutral conformance kit
+        ├── BootstrapLock + externally authorized release digest
+        └── proof-work authorization vocabulary
+                ├── portable AE runtime + capsule
+                ├── AE-owned state provider + fenced recorder
+                ├── effective host/provider attestation
+                ├── Claude Code standalone frontend
+                ├── first-class Codex frontend
+                └── replaceable control planes
+                        ├── Loom distributed execution / Pattern runtime
+                        ├── Temporal durable coordinator
+                        ├── A2A seat transport
+                        └── Claude Code Dynamic Workflows bridge
 
-Coordination-only adapters
-        ├── Temporal durable coordinator
-        ├── A2A seat transport
-        └── Claude Code Dynamic Workflows bridge
+Workspace mutation vs durable commit authority
+        ├── deterministic integrator + applied-tree re-proof
+        ├── GitHub Agentic Workflows adapter
+        ├── OpenHands/ACP sandbox adapter
+        └── multi-worktree / multi-writer
 
 Forward learning
         ├── project-wide floor activation
         └── knowledge compounding
-
-All lanes ──→ operator UX and one-surface/many-domains experience
 ```
 
-The first three foundation items should precede any claim of cross-runtime
-equivalence. Otherwise each host will quietly acquire its own meaning of
-Contract, evidence, or done.
+The foundation items R+01 through R+06 should precede any claim of
+cross-runtime equivalence or AE-native distributed execution. Otherwise each
+host or controller will quietly acquire its own meaning of Contract, evidence,
+or done.
+
+### 3.1 Parallel workstreams and convergence
+
+The portable runtime and Loom do not require a serial rewrite. They require a
+short protocol-first convergence point, after which independent workstreams can
+proceed against shared conformance fixtures:
+
+| Workstream | Owns | Must not own |
+|---|---|---|
+| AE 1.0 release | the accepted Claude Code-first implementation and release evidence | a speculative Loom dependency |
+| portable AE runtime | host-neutral proof semantics, provider interfaces, and runtime manifest | scheduling policy, durable truth storage, or a second product surface |
+| AE state provider | canonical blobs, Ledger, recorder fencing, projection head, and Finalizer journal | worker placement or controller recovery state |
+| Claude Code frontend | standalone AE UX and qualified host binding | a private fork of Contract, Ledger, Gate, or Finalizer semantics |
+| Loom control plane | ordering AE-projected open operations, seats, execution domains, retries, recovery, and operator projection | proof-node definition, admission, or lifecycle completion |
+| Codex frontend | Codex-specific host delivery and receipt correlation | translated or reinterpreted proof semantics |
+| provider qualification | last-qualified route facts and post-invocation effective correlation | predeclaring an invocation's effective identity |
+| conformance | shared corpus, fake runtime, fake seat runner, and cross-frontend parity | implementation-specific exceptions hidden as fixtures |
+
+The first shared seam consists of a minimal `BootstrapLock`, a versioned
+`RuntimeManifest`, `ProofWorkRequest`/`SeatConstraints`, `DispatchProposal`,
+`SeatAuthorization`, `SeatReceipt`, `BackendInvocationReceipt`,
+`AdmissionResult`, and `GateProjection`. AE owns their proof and authority
+meaning. Loom may extend its private coordination records, but it may not extend
+an AE proof requirement or interpret a private status as completion.
+
+The authorization handshake has one writer at each step:
+
+```text
+AE -> ProofWorkRequest / SeatConstraints
+Loom -> DispatchProposal
+AE -> immutable SeatAuthorization
+adapter/collector -> raw receipts
+AE recorder -> AdmissionResult -> GateProjection
+```
+
+`SeatAuthorization` binds the `ProofWorkRequest`/`SeatConstraints` digest,
+request/operation/attempt identities, operation kind, kind-specific subject
+identities, proposal digest, producer ACL, and single-use operation token. Loom
+cannot add placement or authority fields after issuance. Redelivery of one
+result may be idempotent; a genuine rerun requires a new AE-issued attempt and
+token.
+
+The earliest vertical slice must deliberately launch a session with no AE
+plugin installed. An external trust policy authorizes the `BootstrapLock`; Loom
+materializes the exact capsule, executes one writer seat, returns a base-bound
+candidate and receipt, launches a fresh judge seat, and consumes only a
+state-head-bound external Gate projection. This is the bootstrap test that
+breaks the plugin-installation dependency without making Loom a proof system.
+
+The dependency schedule is deliberately not a serial rewrite:
+
+1. converge on the bootstrap envelope, R+05 vocabulary, and R+01 golden corpus;
+2. develop runtime extraction, Loom's fake-runtime client, seat collectors,
+   R+06 state, and provider qualification in parallel; then
+3. converge first on a read-only slice, next on candidate writer/judge, and only
+   then on integrator, applied-tree re-proof, and lifecycle Finalizer.
 
 ## 4. Foundation candidates
 
@@ -101,7 +164,9 @@ Contract, evidence, or done.
 - **Smallest experiment:** run the same canonical inputs through the accepted CC
   build and a second adapter with no host-specific imports in the proof kernel.
 - **Required evidence:** byte-identical canonicalization where required and
-  isomorphic proof/lifecycle status plus reason codes everywhere else.
+  isomorphic proof/lifecycle status plus reason codes everywhere else. The
+  baseline is the accepted v1 golden corpus, not two views of the newly
+  extracted implementation.
 - **Admission threshold:** every difference is explained by an explicit host
   capability or `unsupported`, never by a forked Contract, Ledger, Gate, or
   finalization rule.
@@ -132,6 +197,10 @@ Contract, evidence, or done.
 - **Relationship to v1:** strengthens the mutation boundary; it does not replace
   the v1 Finalizer.
 
+For R+33, Loom may allocate and preserve the candidate workspace, but the
+worker receives no durable repository or Finalizer credential. Loom's rescue
+ref or journal entry is not reviewed-tree identity and cannot authorize apply.
+
 This is the structural foundation for hosted runners and future multi-writer
 work. It also makes the desired “Codex plans, Claude works, Codex reviews” split
 a real capability boundary rather than three prompts in one trust domain.
@@ -143,6 +212,14 @@ a real capability boundary rather than three prompts in one trust domain.
   profile, tools, and sandbox that actually ran.
 - **Hypothesis:** each adapter can correlate a backend or host receipt with the
   exact dispatch and raw result, while treating self-report as telemetry.
+- **Prerequisite:** R+05's protocol vocabulary must be stable enough to bind a
+  proposal, authorization, invocation, and result. R+03 may run in parallel
+  with R+04, but R+04 may claim only materialized or declared identity until
+  R+03 qualifies effective correlation.
+- **Protocol relationship:** R+05's raw `BackendInvocationReceipt` is produced
+  by an outer host adapter or collector, not by the agent whose family or tools
+  are being attested. Only the AE recorder may validate and canonicalize it as
+  the v1 `backend_invocation` event.
 - **Smallest experiment:** deliberately trigger model substitution, fallback,
   same-family masquerading, changed tool mapping, missing backend invocation,
   and authorization-route drift.
@@ -152,6 +229,160 @@ a real capability boundary rather than three prompts in one trust domain.
 - **Retreat condition:** the host exposes no independently correlatable fact. In
   that host arm, assurance remains unavailable rather than inferred.
 - **Non-goal:** a universal model-quality tier.
+
+### R+04 — Portable AE runtime and bootstrap capsule
+
+- **State:** `hypothesis`
+- **Problem:** a controller that spawns a clean agent session cannot assume the
+  AE Claude Code plugin is globally installed, active, or the release selected
+  by the feature. Copying Skills into every session would also duplicate
+  normative logic and make effective-version claims unverifiable.
+- **Hypothesis:** Contract, canonical recording, Ledger replay, Gate reduction,
+  lifecycle state, and Finalizer eligibility can run in a headless portable
+  runtime, while host-specific frontends and qualified providers remain thin
+  adapters. A content-addressed capsule can bind the exact runtime, schemas,
+  provider manifests, and non-authoritative method pack used by one run, while
+  a much smaller runtime-independent `BootstrapLock` binds its envelope-schema
+  version, authorized release/capsule-manifest digest, protocol generation, and
+  AE state-provider/namespace binding.
+- **Prerequisites:** R+01 defines semantic parity; converge on the minimal R+05
+  vocabulary before external clients implement it. R+03 is a parallel gate on
+  any effective runtime, provider, or host-identity claim.
+- **Trust root:** content addressing proves which bytes were materialized, not
+  whether those bytes were authorized. A human- or administrator-controlled
+  trust policy selected out of band and outside the writable product boundary
+  must allow the exact `BootstrapLock` digest or full tuple. The lock cannot
+  select its own trust policy. AE owns the lock schema and interpretation; human
+  or administrator policy authorizes an instance. A repository file may propose
+  a lock but cannot authorize it; Contract parsing happens only after runtime
+  selection; cache or bundled copies are retrieval sources, never silent
+  defaults.
+- **Smallest experiment:** extract one read-only Gate replay and one command
+  proof recording path without changing canonical bytes or reason codes; run
+  them through the accepted Claude Code frontend and through a headless CLI
+  launched from a clean environment with no AE plugin installation. Then let a
+  writable repository propose an untrusted release while cache and bundle hold
+  other releases; only the externally allowed digest may start.
+- **Bootstrap receipt:** selected release digest, materialized capsule digest,
+  trust-policy decision, declared/materialized identities, any qualified
+  effective runtime/provider/frontend identities, route snapshot, and terminal
+  status must correlate to the operation.
+- **Fault injections:** missing plugin, wrong global plugin, wrong capsule,
+  unauthorized repository lock, conflicting external policy, missing lock,
+  silent bundled fallback, partial extraction, schema/runtime skew, replaced
+  launcher, missing provider, replay under a different release, and frontend
+  self-report without an external correlator.
+- **Admission threshold:** the standalone frontend and headless runtime produce
+  the same canonical events, Gate projection, and lifecycle result; a clean
+  seat needs no plugin installation; authorization and content identity remain
+  separate; every missing, unauthorized, conflicting, or mismatched release
+  fails closed.
+- **Retreat condition:** extraction requires two normative implementations or
+  the host-independent boundary cannot be stated and tested without weakening
+  the accepted v1 behavior.
+- **Non-goal:** making filesystem, identity, isolation, or human-delivery
+  providers magically host-neutral. Those remain separately qualified.
+
+The Claude Code plugin remains a supported standalone frontend and may bundle
+the runtime. It stops being the only place where AE truth semantics exist.
+
+### R+05 — AE proof-work and seat protocol
+
+- **State:** `hypothesis`
+- **Problem:** feature-level prompts and mutable files do not provide a stable
+  boundary between a proof authority and an external execution controller.
+- **Hypothesis:** AE can project immutable constraints, validate a controller's
+  placement proposal, and issue one immutable authorization while an
+  authority-untrusted but transport-qualified controller returns raw,
+  digest-bound receipts that AE validates before any canonical event is
+  recorded.
+- **Protocol nucleus:**
+  - `ProofWorkRequest`/`SeatConstraints` projects the operation kind, immutable
+    Contract/proof constraints, producer ACL, and required subject identities;
+  - `DispatchProposal` carries Loom's selected route, topology/seat placement,
+    advertised or last-qualified capabilities, budgets, and fallback;
+  - `SeatAuthorization` is minted by AE only after proposal validation and binds
+    the constraints digest, request/operation/attempt identities, operation
+    kind, kind-specific subjects, proposal digest, role, controlled inputs,
+    exclusions, tools, mutation scope, independence/family/assurance, stop
+    conditions, producer ACL, and single-use operation token;
+  - `SeatReceipt` returns input/output digests, raw artifacts, effective
+    backend/session facts, terminal status, and external attestation references;
+  - `BackendInvocationReceipt` is an outer collector's raw correlation input;
+    only the AE recorder may admit it as canonical `backend_invocation`;
+  - `AdmissionResult` reports acceptance or typed rejection of delivery without
+    becoming proof status; and
+  - `GateProjection` is a rebuildable, AE-state-head-bound result consumed by
+    coordinators; it is not truth storage and is not authored by them.
+- **Operation subjects:** a writer binds activation, base, product boundary, and
+  controlled inputs, and returns a candidate; a proof/judge binds an existing
+  candidate or other exact subject plus rubric and source manifest; integration
+  binds candidate, target base, and deterministic apply rules and returns an
+  `AppliedTreeReceipt`; finalization binds applied head, current activation,
+  Ledger head, runtime identity, and locks in a separate
+  `FinalizeRequest/Result`. No pre-writer request requires a nonexistent
+  candidate digest.
+- **Human boundary:** a qualified AE frontend/provider owns `HumanRequest`,
+  `HumanDeliveryReceipt`, and `HumanResponseReceipt`. Loom may route opaque
+  messages, but a UI click or journal record cannot become human proof; the AE
+  recorder assigns only supported `workflow_attested` or `host_verified`
+  assurance.
+- **Initial threat model:** operation tokens provide correlation, scoping, and
+  replay control; a bearer token visible to Loom does not make Loom
+  cryptographically unforgeable. The first admitted path treats Loom and its
+  collector as a qualified faithful-transport TCB and tests crashes,
+  misconfiguration, and accidental faults. Resistance to a malicious
+  controller requires a later independent collector identity/key or qualified
+  OS boundary plus producer-ACL verification.
+- **Smallest experiment:** use a fake runtime and fake seat runner to exercise
+  success, invalid schema, wrong token, missing result, duplicate delivery,
+  stale subject, wrong backend, timeout, human-required outcomes, post-token
+  proposal mutation, and attempted token reuse from both sides of the boundary.
+- **Admission threshold:** delivery retry of the same bytes is idempotent; a
+  genuine rerun requires a new AE attempt/token; private queue or journal state
+  never closes a proof; only the AE recorder can normalize a receipt into a
+  canonical event; unsupported authority fields fail visibly.
+- **Retreat condition:** the protocol leaks host-specific prompt structure into
+  proof meaning or requires Loom, a model, or a queue to implement the Gate.
+- **Non-goal:** a general inter-agent messaging standard. A2A, MCP, stdio, or a
+  local socket may carry the protocol after separate transport qualification.
+
+### R+06 — AE durable state provider and recorder fencing
+
+- **State:** `hypothesis`
+- **Problem:** a portable runtime capsule is executable code, not durable truth
+  state. Deleting a controller cannot leave AE replayable unless canonical
+  bytes, heads, and lifecycle journals have an explicit owner.
+- **Hypothesis:** an `AEStateProvider` can own Contract activations, raw canonical
+  blobs, Ledger, Gate inputs/projection heads, issued authorizations, consumed
+  tokens, durable admission decisions, recorder leases, rollout locks, and
+  Finalizer journal in an AE-controlled state root outside `.loom`, seat
+  worktrees, and controller caches.
+- **Prerequisites:** R+01 and the state/head vocabulary in R+05. R+04 supplies
+  the portable clients but is not the state store.
+- **Write discipline:** raw bytes enter the AE blob store atomically before an
+  event may reference them; each proof subject has one active recorder fenced by
+  provider lease/token and compare-current-head. Authorization issuance is
+  durably journaled before dispatch. First delivery atomically binds token,
+  result digest, admission decision, and any event/head transition; redelivery
+  of the same bytes returns that decision, while different bytes or a rerun need
+  a new token. Stale or concurrent writers fail closed. Loom discovers the
+  provider and current head through the authorized runtime binding after
+  restart.
+- **Smallest experiment:** run two recorder processes against one subject, kill
+  either at every authorization/blob/token/admission/event/head transition,
+  delete all Loom state, and replay Contract, Ledger, Gate projection,
+  authorization/admission decisions, and Finalizer journal from the AE state
+  root alone.
+- **Admission threshold:** no accepted event references missing bytes; exactly
+  one recorder advances a subject head; issued/consumed-token and
+  `AdmissionResult` behavior survives every crash; coordinator loss changes no
+  proof or lifecycle fact; unavailable state pauses execution rather than
+  creating local temporary truth.
+- **Retreat condition:** the provider cannot fence concurrent processes or the
+  state root must live inside a controller/seat authority boundary.
+- **Non-goal:** multi-host consensus. The first scope is one logical recorder
+  and state authority with distributed seats.
 
 ## 5. First-class Codex port
 
@@ -163,7 +394,9 @@ a real capability boundary rather than three prompts in one trust domain.
 - **Hypothesis:** Codex can supply a first-class front end through a dedicated
   host adapter while sharing the same Contract, Ledger, Gate, fixtures, and
   Finalizer semantics.
-- **Prerequisites:** R+01 and R+03; use R+02 before granting product mutation.
+- **Prerequisites:** R+01, R+03, and R+04; use R+05 for seat execution, R+06
+  before authoritative recording or finalization, and R+02 before granting
+  product mutation.
 - **Adapter surface:** capability snapshot, exact instruction delivery, tool
   mapping, human-boundary delivery, dispatch/result correlation, sandbox and
   mutation endpoints, resume semantics, active-release identity, and host
@@ -187,6 +420,11 @@ lineage, human assurance, or durable mutation authority. See the
 4. **Disposable writer:** mutation only through R+02 candidate workspaces.
 5. **Full front end:** recovery and finalization requests after every earlier
    phase passes the shared conformance and live-host matrices.
+
+This is an AE frontend port, not the same deliverable as a Codex worker adapter
+inside Loom. The former supplies qualified host interaction for the shared AE
+runtime; the latter lets Loom choose Codex as one execution provider. They may
+share transport code, but neither may define a Codex-specific meaning of pass.
 
 #### Admission experiment
 
@@ -316,6 +554,111 @@ read-only port does not automatically authorize writer support.
   preregistered task class.
 - **First admissible scope:** read-only research/review, not product writing.
 
+### R+33 — Loom AE-native distributed execution and control plane
+
+- **State:** `hypothesis`
+- **Existing precursor:** [Loom](https://github.com/xmkevinchen/loom) already
+  contains a local feature DAG scheduler, headless Claude Code worker adapter,
+  per-feature worktrees, bounded parallel dispatch, durable run journal,
+  recovery, rescue refs, and operator logs. Those are implementation facts
+  about a pre-alpha coordinator, not evidence that it satisfies this candidate.
+- **Problem:** AE 1.0 can complete one feature in a foreground Claude Code
+  environment, but physical seat separation, cross-feature scheduling, durable
+  retries, resource policy, and operator visibility do not belong in the proof
+  kernel. Loom's current plugin-inside-every-worker bootstrap and mutable
+  `review.md` verdict interface cannot carry the accepted v1 truth boundary.
+- **Hypothesis:** an admitted target Loom can become AE's reference distributed
+  execution and coordination system while the portable AE runtime and R+06
+  state provider retain the single logical truth plane. Distribution applies to
+  sessions, seats, workspaces, backends, time, and eventually hosts—not to
+  Contract, Ledger, Gate, or Finalizer authority.
+- **Prerequisites:** R+01, R+03, R+04, R+05, and R+06. Product mutation also
+  requires R+02.
+- **Authority boundary:** Loom may order and execute AE-projected open
+  operations, propose a route, allocate an execution domain, preserve raw
+  results, retry byte-identical delivery, route an opaque human request, and
+  display an AE state-head-bound Gate projection. It may not define proof nodes,
+  mint proof events, interpret its journal as evidence, weaken a locked
+  constraint, infer pass from process exit or review prose, or write lifecycle
+  completion.
+- **Smallest experiment:** from a clean environment with no AE plugin, Loom
+  resolves an externally authorized `BootstrapLock`; materializes its exact
+  runtime capsule; runs a writer in one session; returns a candidate and
+  receipt; runs a fresh read-only judge in another session; asks an external
+  deterministic integrator to apply the reviewed candidate; reruns affected
+  proofs against the applied identity; and waits for the external AE Gate and
+  lifecycle Finalizer. The current one-session `work → review` prompt and direct
+  `review.md` verdict consumption are absent.
+- **Fault injections:** capsule mismatch, missing runtime, wrong frontend,
+  writer self-authored pass, process exit zero with judge fail, lost or duplicate
+  receipt, stale candidate/base, worktree creation failure, coordinator crash at
+  every handoff, forged journal state, missing Gate, denied human delivery, and
+  Finalizer request replay.
+- **Admission threshold:** a launched seat has no plugin prerequisite; every
+  accepted result binds to an operation and effective session; work and material
+  adjudication are physically distinct where required; Loom recovery produces
+  no duplicate event or completion; coordinator deletion leaves R+06 truth
+  replayable; only qualified faithful-transport behavior is claimed; every
+  unsupported boundary is explicit and fail-closed.
+- **Retreat condition:** Loom must copy Gate logic, require mutable authority
+  files inside seats, or hold Finalizer credentials to make progress.
+- **Non-goals:** Byzantine consensus, an authority federation, multi-user
+  authorization, or a claim that local processes constitute security isolation.
+
+Current Loom is a precursor substrate for a distributed form of AE's Execution
+and Coordination Plane. Only an admitted target Loom may claim that role, and
+it is never a distributed implementation of AE truth. AE must remain usable
+without Loom through its standalone frontend; Loom must remain replaceable
+behind R+05.
+
+### R+34 — Loom Pattern and topology runtime
+
+- **State:** `hypothesis`
+- **Source design:** the AE Agent Patterns study separates worker cognition,
+  workflow control, collaboration topology, judgment, transport, guardrails,
+  and memory. With an explicit control plane, workflow and topology execution
+  belong in Loom rather than becoming new AE lifecycle stages.
+- **Hypothesis:** Loom can select the smallest sufficient topology from an
+  immutable AE constraint projection, recomputable task geometry, and an
+  advertised/last-qualified route snapshot, while AE retains all proof and
+  human authority. Effective backend/model/tool/isolation identity exists only
+  in the post-invocation collector receipts.
+- **Initial static topologies:**
+  1. solo writer;
+  2. writer followed by a fresh read-only judge; and
+  3. read-only fan-out followed by a lossless collector/fan-in; an optional
+     synthesis seat still returns only a raw artifact for AE admission.
+- **Later candidates:** prompt chaining, routing, manager/workers,
+  ReWOO-shaped fan-out/fan-in, bounded Evaluator-Optimizer, independent-first
+  debate, pairwise order swapping, and human interruption. ReAct and TDD remain
+  inside a seat attempt; Loom does not implement a model cognition engine.
+- **Shared boundary:** AE defines proof scope, rubric, source set, mutation
+  authority, required independence/family/assurance, admissible result schema,
+  amendment boundary, open operations, and Gate meaning. Loom defines session
+  placement proposals, controlled context delivery, communication topology,
+  time/resource budgets, retry scheduling, route fallback, lossless collection,
+  and coordination observability. Only the deterministic AE Gate is a reducer.
+- **Smallest experiment:** run the three static topologies against preregistered
+  task classes and the same solo baseline, first with a fake runtime and then
+  through R+33. Record why the topology was chosen, every pre-dispatch route
+  claim, and every post-invocation effective fact without making the dispatch
+  record proof-authoritative.
+- **Fault injections:** missing fresh seat, same-family fallback, invalid/null
+  fan-out result, teammate/result-channel mismatch, overlapping mutation,
+  unchanged findings through the retry cap, debate without competing
+  hypotheses, pairwise order reversal, capability loss, and a mid-run human
+  amendment.
+- **Admission threshold:** the same canonical event set always yields the same
+  Gate result; a topology may change that result only by producing additional
+  admissible events, never through dispatch, journal, or queue state; required
+  degradation is visible; false-pass does not increase; a selected topology
+  shows repeated benefit over solo in its preregistered task class; removing it
+  causes measurable loss greater than its cost.
+- **Retreat condition:** the selector becomes ceremonial, duplicates AE proof
+  semantics, or adds cost without repeatable quality, latency, or operator
+  benefit.
+- **Non-goal:** a general Pattern DSL in the first admitted release.
+
 ## 8. Scale and learning candidates
 
 ### R+40 — Project-wide floor activation
@@ -355,7 +698,9 @@ read-only port does not automatically authorize writer support.
 ### R+42 — Multi-worktree and multi-writer execution
 
 - **State:** `parked`
-- **Prerequisites:** R+02 and a proven integration owner.
+- **Prerequisites:** R+02, R+05, and a proven integration owner. R+33 is the
+  reference experiment vehicle, not a prerequisite for another conforming
+  controller.
 - **Hypothesis:** two strictly disjoint product boundaries may reduce wall time
   if each worker returns an isolated candidate tree and only the merged tree is
   the proof subject.
@@ -386,14 +731,24 @@ read-only port does not automatically authorize writer support.
 - **Admission threshold:** no shadow status or second truth plane; users do not
   manually shuttle authoritative artifacts; every isolation and human boundary
   remains visible.
+- **Reference candidate:** Loom may provide this surface after R+33, but its
+  phase, queue, journal, worker, and recovery views remain coordination
+  projections. The only displayed proof/lifecycle state is rebuilt from AE.
 
 ## 10. Cross-cutting risks
 
 | Risk | Required response |
 |---|---|
 | A transport is mistaken for authority | Keep A2A, ACP, SDK, workflow, and queue status in the Coordination Plane. |
+| Loom becomes a distributed truth plane | Distribute execution only; keep one AE recorder, Gate, and Finalizer authority per subject. |
+| Clean seats depend on a hidden global plugin or self-authorized capsule | Require external `BootstrapLock` trust, materialize its exact R+04 capsule, and reject repository/bundle fallback. |
+| Portable code is mistaken for durable truth state | Require R+06 blob ownership, fenced recorder, current head, and Finalizer journal outside controller state. |
+| Runtime, frontend, and controller select different releases | Bind all three effective identities to the operation and reject any digest mismatch. |
+| Loom duplicates proof semantics to unblock development | Develop against fake-runtime fixtures; never implement a private pass reducer. |
+| A controller-visible bearer token is called adversarial isolation | State the faithful-transport TCB; require an independent collector identity/key or qualified OS boundary for stronger claims. |
+| A controller UI action becomes human proof | Route qualified AE human request/delivery/response receipts; journal state remains non-authoritative. |
 | A sandbox claim is based on configuration text | Qualify the effective runtime and inject boundary failures. |
-| Hosted safe output becomes a second Finalizer | Bind it to an AE candidate tree and retain the sole deterministic commit authority. |
+| Hosted safe output becomes a second integrator or Finalizer | Bind it to an authorized candidate/apply operation, re-prove the applied tree, and retain the sole AE lifecycle Finalizer. |
 | Each host forks proof semantics | Require R+01 before a first-class port. |
 | Model/provider names substitute for lineage proof | Require R+03 correlation; self-report remains telemetry. |
 | Concurrency hides semantic conflicts | Prove merged-tree subject identity and re-run affected proofs. |
@@ -409,6 +764,19 @@ A roadmap change may add or refine a hypothesis. It cannot:
 - turn external product documentation into an AE qualification result;
 - use a successful demo as proof of crash, identity, or authority behavior; or
 - promote a floor or knowledge item into current policy.
+
+Cross-repository ownership follows the authority boundary:
+
+- AE owns `BootstrapLock` semantics, canonical schemas, proof meaning,
+  authorization/token rules, conformance fixtures, state-provider protocol, and
+  the portable runtime release manifest;
+- Loom owns private scheduling schemas, resource policy, topology selection,
+  runtime materialization, session/workspace lifecycle, and operator views;
+- a Loom-only field never becomes an AE proof requirement;
+- an AE protocol change is versioned and proven in the AE repository before
+  Loom consumes it; and
+- Loom may use a fake runtime for parallel development, but the fake runtime
+  returns preregistered projections and never becomes a normative reference.
 
 When an experiment finishes, retain raw evidence and set exactly one state.
 Rejected mechanisms remain in the history with their retreat reason so that a
@@ -429,6 +797,7 @@ candidate product capabilities, not AE assurance:
 - [Temporal platform](https://docs.temporal.io/)
 - [A2A v1.0 specification](https://a2a-protocol.org/dev/specification/)
 - [Claude Code Dynamic Workflows](https://code.claude.com/docs/en/workflows)
+- [Loom source snapshot at `2c048ea`](https://github.com/xmkevinchen/loom/tree/2c048ea0c1a3049b914a10e084b1231c9beb6949)
 
 Recheck every source and pin the exact component version in the experiment
 Contract; preview and host behavior may change.
