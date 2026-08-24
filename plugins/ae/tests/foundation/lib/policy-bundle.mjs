@@ -113,6 +113,20 @@ export function readBundle(pluginRoot) {
 
 export function verifyBundleSources(pluginRoot) {
   const { bundle, bundleBytes, bundleDigest } = readBundle(pluginRoot);
+
+  // Two entries naming one destination is not an ordering question to be settled
+  // by whichever is written first — it is a malformed bundle. Rejecting it here,
+  // before any destination is touched, is what lets materialization promise that a
+  // refused bundle leaves nothing behind.
+  const seenDestinations = new Set();
+  for (const entry of bundle.entries) {
+    if (seenDestinations.has(entry.project_ref)) {
+      fail('duplicate_project_ref',
+        `bundle names ${entry.project_ref} more than once`, { project_ref: entry.project_ref });
+    }
+    seenDestinations.add(entry.project_ref);
+  }
+
   for (const entry of bundle.entries) {
     assertProjectRef(entry.project_ref);
     const sourceAbs = resolvePluginSource(pluginRoot, entry.plugin_source);
@@ -152,8 +166,23 @@ export function materializePolicies({ pluginRoot, projectRoot }) {
   planned.push({ ref: bundleProjectRef(bundleBytes), bytes: bundleBytes });
 
   // Every destination is validated before ANY byte is written, so a rejected
-  // bundle cannot leave a half-materialized policy set behind.
+  // bundle cannot leave a half-materialized policy set behind. That includes the
+  // generated bundle-manifest ref, which is not one of the bundle's own entries and
+  // so would otherwise escape the entry-level uniqueness check above.
   const targets = planned.map(({ ref, bytes }) => ({ ref, bytes, abs: resolveProjectRef(projectRoot, ref) }));
+
+  // Compared on the RESOLVED path, which subsumes exact-duplicate refs and also
+  // catches distinct refs that name one file — a `.`-free, symlink-free pair can
+  // still collide through case folding.
+  const plannedAbs = new Map();
+  for (const { ref, abs } of targets) {
+    const key = process.platform === 'darwin' ? abs.toLowerCase() : abs;
+    if (plannedAbs.has(key)) {
+      fail('duplicate_project_ref',
+        `${ref} and ${plannedAbs.get(key)} resolve to the same destination`, { project_ref: ref });
+    }
+    plannedAbs.set(key, ref);
+  }
 
   const written = [];
   const unchanged = [];

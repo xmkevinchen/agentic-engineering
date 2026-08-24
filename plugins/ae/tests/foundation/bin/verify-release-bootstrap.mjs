@@ -76,9 +76,12 @@ function hashCode(text) {
   return h;
 }
 
-function writeHostRecord(work, name, { activeRoot, digest }) {
+// The record names the active ROOT only. The bridge derives that root's manifest
+// digest from the root itself, so a caller who controls the record can choose an
+// installed release but cannot describe one.
+function writeHostRecord(work, name, { activeRoot }) {
   const path = join(work, `${name}.json`);
-  writeFileSync(path, JSON.stringify({ active_root: activeRoot, active_release_manifest_digest: digest }));
+  writeFileSync(path, JSON.stringify({ active_root: activeRoot }));
   return path;
 }
 
@@ -94,9 +97,7 @@ function expectRejection(checks, id, { work, build, breakIt, expectedCode, expec
     return;
   }
   if (breakIt) breakIt(built);
-  const hostRecord = writeHostRecord(work, `host-${id}`, {
-    activeRoot: releaseRoot, digest: built.manifestDigest,
-  });
+  const hostRecord = writeHostRecord(work, `host-${id}`, { activeRoot: releaseRoot });
   const result = launch(built.launcherPath, { work, hostRecord });
   checks.equal(`${id}/exit-nonzero`, result.status !== 0, true);
   checks.equal(`${id}/code`, result.parsed?.error, expectedCode);
@@ -111,7 +112,7 @@ export async function run() {
     // ---- valid build ----------------------------------------------------
     const rootA = join(work, 'release-a');
     const a = buildRelease({ releaseRoot: rootA, policySourceDir: POLICY_SOURCE });
-    const hostA = writeHostRecord(work, 'host-a', { activeRoot: rootA, digest: a.manifestDigest });
+    const hostA = writeHostRecord(work, 'host-a', { activeRoot: rootA });
 
     checks.ok('manifest-has-no-self-digest',
       !Object.prototype.hasOwnProperty.call(a.manifest, 'self_digest'));
@@ -449,7 +450,7 @@ export async function run() {
       releaseRoot: rootB, policySourceDir: POLICY_SOURCE, releaseVersion: '1.0.1',
     });
     checks.ok('ab/distinct-digests', a.manifestDigest !== b.manifestDigest);
-    const hostB = writeHostRecord(work, 'host-b', { activeRoot: rootB, digest: b.manifestDigest });
+    const hostB = writeHostRecord(work, 'host-b', { activeRoot: rootB });
 
     const bRun = launch(b.launcherPath, { work, hostRecord: hostB });
     checks.equal('ab/active-root-runs', bRun.parsed?.ok, true);
@@ -469,9 +470,7 @@ export async function run() {
     const tB = buildRelease({ releaseRoot: twinB, policySourceDir: POLICY_SOURCE });
     checks.equal('twin/digests-are-identical', tA.manifestDigest, tB.manifestDigest);
 
-    const hostTwinB = writeHostRecord(work, 'host-twin-b', {
-      activeRoot: twinB, digest: tB.manifestDigest,
-    });
+    const hostTwinB = writeHostRecord(work, 'host-twin-b', { activeRoot: twinB });
     const twinBRun = launch(tB.launcherPath, { work, hostRecord: hostTwinB });
     checks.equal('twin/active-twin-runs', twinBRun.parsed?.ok, true);
 
@@ -485,6 +484,28 @@ export async function run() {
     checks.equal('twin/inactive-twin-trace', twinARun.trace.join(','), INACTIVE_ROOT_TRACE.join(','));
     checks.equal('twin/active-twin-matched-root',
       twinBRun.trace.includes('active-root:matched'), true);
+
+    // The record names the active root; the digest is read off that root. A record
+    // that also carries a digest — truthful or not — changes nothing.
+    {
+      const lyingRecord = join(work, 'host-lying-digest.json');
+      writeFileSync(lyingRecord, JSON.stringify({
+        active_root: rootA,
+        active_release_manifest_digest: `sha256:${'e'.repeat(64)}`,
+      }));
+      const lyingRun = launch(a.launcherPath, { work, hostRecord: lyingRecord });
+      checks.equal('host-record/lying-digest-is-ignored', lyingRun.parsed?.ok, true);
+
+      // ...and it cannot make an inactive root look active either.
+      const lyingAboutB = join(work, 'host-lying-about-b.json');
+      writeFileSync(lyingAboutB, JSON.stringify({
+        active_root: rootB,
+        active_release_manifest_digest: a.manifestDigest,
+      }));
+      const lyingRunB = launch(a.launcherPath, { work, hostRecord: lyingAboutB });
+      checks.equal('host-record/lying-digest-cannot-activate-another-root',
+        lyingRunB.parsed?.error, 'release_not_active');
+    }
 
     // ---- capability cannot be constructed from public data ----------------
     // Everything a forger could know — both digests and the schema version — is
@@ -543,11 +564,16 @@ export async function run() {
     process.env.AE_FIXTURE_HOST_RECORD = hostA;
     const verifiedA = launcherA.verifyInstalledRelease();
     const attestationA = bridge.attestActiveRoot({ observedReleaseRoot: rootA });
+    const derivedA = bridge.deriveBootstrapResult({ releaseRoot: rootA });
+    checks.equal('bridge/derives-the-same-bootstrap-result',
+      derivedA.bootstrap_result_digest, verifiedA.bootstrap_result_digest);
+    checks.equal('bridge/derives-the-same-manifest-digest',
+      derivedA.manifest_digest, verifiedA.manifest_digest);
     const realScope = {
       repo: null, feature_id: 'F-100', purpose: 'record_event', host_operation: 'append',
     };
     const realCapability = bridge.mintOperationCapability({
-      attestation: attestationA, bootstrapResult: verifiedA, scope: realScope, issuedAt: 1000, ttlMs: 60000,
+      attestation: attestationA, bootstrapResult: derivedA, scope: realScope, issuedAt: 1000, ttlMs: 60000,
     });
 
     checks.ok('capability/minted-carries-no-bearer',
@@ -561,7 +587,7 @@ export async function run() {
     checks.equal('capability/genuine-accepted',
       coreCode(() => coreA.run({
         capability: realCapability,
-        bootstrapResultDigest: verifiedA.bootstrap_result_digest,
+        bootstrapResultDigest: derivedA.bootstrap_result_digest,
         scope: realScope,
         now: 2000,
       })), 'accepted');
@@ -580,7 +606,7 @@ export async function run() {
       checks.equal(`capability/wrong-scope-${field}`,
         coreCode(() => coreA.run({
           capability: realCapability,
-          bootstrapResultDigest: verifiedA.bootstrap_result_digest,
+          bootstrapResultDigest: derivedA.bootstrap_result_digest,
           scope: { ...realScope, [field]: value },
           now: 2000,
         })), 'capability_scope_mismatch');
@@ -589,7 +615,7 @@ export async function run() {
     checks.equal('capability/expired',
       coreCode(() => coreA.run({
         capability: realCapability,
-        bootstrapResultDigest: verifiedA.bootstrap_result_digest,
+        bootstrapResultDigest: derivedA.bootstrap_result_digest,
         scope: realScope,
         now: 1000 + 60000 + 1,
       })), 'capability_expired');
@@ -602,16 +628,33 @@ export async function run() {
         bootstrapResult: verifiedA,
         scope: realScope,
       })), 'capability_not_minted');
-    checks.equal('capability/mint-refuses-wrong-root-identity',
+    // A bootstrap result the caller wrote is refused however self-consistent it is,
+    // including a shallow copy of a genuine one.
+    checks.equal('capability/mint-refuses-caller-authored-bootstrap-result',
       coreCode(() => bridge.mintOperationCapability({
         attestation: attestationA,
-        bootstrapResult: { ...verifiedA, root_identity: `${rootA}-elsewhere` },
+        bootstrapResult: {
+          schema_version: 'ae.bootstrap-result.v1',
+          fixture_only: true,
+          manifest_digest: derivedA.manifest_digest,
+          root_identity: derivedA.root_identity,
+          member_count: derivedA.member_count,
+          bootstrap_result_digest: derivedA.bootstrap_result_digest,
+        },
         scope: realScope,
-      })), 'release_not_active');
+      })), 'bootstrap_result_not_derived');
+    checks.equal('capability/mint-refuses-copied-bootstrap-result',
+      coreCode(() => bridge.mintOperationCapability({
+        attestation: attestationA, bootstrapResult: { ...derivedA }, scope: realScope,
+      })), 'bootstrap_result_not_derived');
     checks.equal('capability/mint-refuses-missing-bootstrap-result',
       coreCode(() => bridge.mintOperationCapability({
         attestation: attestationA, bootstrapResult: null, scope: realScope,
-      })), 'capability_not_minted');
+      })), 'bootstrap_result_not_derived');
+    // The derivation itself cannot be earned for a release that does not verify.
+    checks.equal('bridge/refuses-to-derive-for-a-missing-root',
+      coreCode(() => bridge.deriveBootstrapResult({ releaseRoot: join(work, 'no-such-release') })),
+      'bootstrap_result_not_derived');
     delete process.env.AE_FIXTURE_HOST_RECORD;
 
     // ---- no host record at all -------------------------------------------

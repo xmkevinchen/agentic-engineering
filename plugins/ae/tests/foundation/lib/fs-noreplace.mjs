@@ -39,7 +39,9 @@ export class NoReplaceError extends Error {
 // Returns 'created' when this call made the file, 'exists' when something was
 // already there. It never overwrites, and it never reports 'created' for a file
 // it did not create.
-export function atomicFileNoReplace({ path, bytes, mode = 0o644 }) {
+// `write` is injectable so a short write can be exercised deterministically; it
+// defaults to the real syscall wrapper.
+export function atomicFileNoReplace({ path, bytes, mode = 0o644, write = writeSync }) {
   mkdirSync(dirname(path), { recursive: true });
 
   let fd;
@@ -63,7 +65,18 @@ export function atomicFileNoReplace({ path, bytes, mode = 0o644 }) {
   }
 
   try {
-    writeSync(fd, bytes);
+    // writeSync may write fewer bytes than asked. Ignoring the return value would
+    // let a short write fsync and report success over a truncated file — the one
+    // failure mode byte-for-byte materialization cannot tolerate.
+    let written = 0;
+    while (written < bytes.length) {
+      const n = write(fd, bytes, written, bytes.length - written, null);
+      if (!(n > 0)) {
+        throw new NoReplaceError('short_write',
+          `write stalled after ${written} of ${bytes.length} bytes`, { path, written });
+      }
+      written += n;
+    }
     fsyncSync(fd);
   } finally {
     closeSync(fd);

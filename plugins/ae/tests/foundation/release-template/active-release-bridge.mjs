@@ -25,6 +25,7 @@
 // finalized/design.md declares, and is not papered over with a fake signature.
 
 import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 
 if (process.env.AE_FIXTURE_IMPORT_LOG) {
@@ -44,6 +45,7 @@ class BridgeError extends Error {
 // `import(core)` unable to present a capability.
 const ATTESTED = new WeakSet();
 const MINTED = new WeakSet();
+const DERIVED_BOOTSTRAP = new WeakSet();
 
 const SCOPE_KEYS = ['repo', 'feature_id', 'purpose', 'host_operation'];
 const DEFAULT_TTL_MS = 60_000;
@@ -59,9 +61,23 @@ function readHostRecord() {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+// The installed manifest is written in canonical form, so its raw bytes ARE its
+// authoritative bytes. Hashing the file directly lets the bridge derive the digest
+// without a second canonicalizer, and a manifest that is not canonical simply
+// fails to match what the launcher computed — fail-closed either way.
+function deriveManifestDigest(rootIdentity) {
+  let bytes;
+  try {
+    bytes = readFileSync(join(rootIdentity, 'release-manifest-v1.json'));
+  } catch {
+    throw new BridgeError('active_release_unavailable', 'active root has no release manifest');
+  }
+  return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+}
+
 export function attestActiveRoot({ observedReleaseRoot }) {
   const record = readHostRecord();
-  if (!record.active_root || !record.active_release_manifest_digest) {
+  if (!record.active_root) {
     throw new BridgeError('active_release_unavailable', 'host record does not identify a unique active root');
   }
   let identity;
@@ -70,13 +86,16 @@ export function attestActiveRoot({ observedReleaseRoot }) {
   } catch {
     throw new BridgeError('active_release_unavailable', 'host active root does not resolve');
   }
-  // No bearer here, and minting is a separate call that cannot be folded in.
+  // The record says WHICH root is active — that is the host's answer and the only
+  // thing this fixture stands in for. What that root's manifest digest is gets read
+  // off the root itself; any digest in the record is ignored, so a caller who
+  // controls the record can pick an installed release but cannot invent one.
   const attestation = Object.freeze({
     schema_version: 'ae.active-release-attestation.v1',
     fixture_only: true,
     active_root: record.active_root,
     active_root_identity: identity,
-    active_release_manifest_digest: record.active_release_manifest_digest,
+    active_release_manifest_digest: deriveManifestDigest(identity),
     observed_release_root: observedReleaseRoot,
     provider_build: 'fixture-bridge-v1',
   });
@@ -84,21 +103,58 @@ export function attestActiveRoot({ observedReleaseRoot }) {
   return attestation;
 }
 
+// Derives the bootstrap result from the installed release rather than accepting one.
+// The launcher computes the same value independently and requires the two to
+// agree, so neither side is trusting the other's arithmetic.
+export function deriveBootstrapResult({ releaseRoot }) {
+  let identity;
+  try {
+    identity = realpathSync(releaseRoot);
+  } catch {
+    throw new BridgeError('bootstrap_result_not_derived', 'release root does not resolve');
+  }
+  const manifestDigest = deriveManifestDigest(identity);
+  let memberCount;
+  try {
+    memberCount = JSON.parse(
+      readFileSync(join(identity, 'release-manifest-v1.json'), 'utf8'),
+    ).members.length;
+  } catch {
+    throw new BridgeError('bootstrap_result_not_derived', 'release manifest is unreadable');
+  }
+  const result = Object.freeze({
+    schema_version: 'ae.bootstrap-result.v1',
+    fixture_only: true,
+    manifest_digest: manifestDigest,
+    root_identity: identity,
+    member_count: memberCount,
+    bootstrap_result_digest: `sha256:${createHash('sha256')
+      .update(`${manifestDigest}|${identity}|${memberCount}`).digest('hex')}`,
+  });
+  DERIVED_BOOTSTRAP.add(result);
+  return result;
+}
+
+export function isDerivedBootstrapResult(value) {
+  return typeof value === 'object' && value !== null && DERIVED_BOOTSTRAP.has(value);
+}
+
 export function mintOperationCapability({ attestation, bootstrapResult, scope, issuedAt, ttlMs }) {
   if (!attestation || typeof attestation !== 'object' || !ATTESTED.has(attestation)) {
     throw new BridgeError('capability_not_minted',
       'capability requires an attestation this bridge produced; a caller-supplied one is not authority');
   }
-  if (!bootstrapResult || typeof bootstrapResult !== 'object') {
-    // The capability may not precede the bootstrap result it is supposed to bind.
-    throw new BridgeError('capability_not_minted', 'capability requires an already-computed bootstrap result');
+  // A bootstrap result the caller wrote is not a bootstrap result, however
+  // self-consistent it looks. Only a value this bridge derived from the installed
+  // release qualifies — and deriving one requires a release whose members actually
+  // hash to their declared digests.
+  if (!isDerivedBootstrapResult(bootstrapResult)) {
+    throw new BridgeError('bootstrap_result_not_derived',
+      'capability requires a bootstrap result derived by this bridge');
   }
 
   const { manifest_digest: manifestDigest, root_identity: rootIdentity } = bootstrapResult;
   const bootstrapResultDigest = bootstrapResult.bootstrap_result_digest;
-  if (!manifestDigest || !rootIdentity || !bootstrapResultDigest) {
-    throw new BridgeError('capability_not_minted', 'bootstrap result is incomplete');
-  }
 
   // Re-checked here rather than trusted: both halves of the active identity must
   // agree with what the host attested, so a fabricated bootstrap result cannot

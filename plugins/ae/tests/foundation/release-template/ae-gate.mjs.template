@@ -274,11 +274,21 @@ export async function bootstrap({ scope = SELF_TEST_SCOPE } = {}) {
   // second guard would mask the loss of this one.
   trace('active-root:matched');
 
-  // 10 — capability is minted only against a bootstrap result that already exists,
-  // and is bound to the scope it may be used for.
+  // 10 — the bridge derives the bootstrap result itself, from the installed
+  // release, and we require it to equal what we computed independently. Handing
+  // the bridge our own object would make the binding a restatement of our claim
+  // rather than a second observation of the release.
+  const derived = bridge.deriveBootstrapResult({ releaseRoot: RELEASE_ROOT });
+  if (derived.manifest_digest !== verified.manifest_digest
+    || derived.root_identity !== verified.root_identity
+    || derived.bootstrap_result_digest !== verified.bootstrap_result_digest) {
+    bail('release_not_active',
+      'the bridge derived a different bootstrap result than this launcher verified');
+  }
+
   const capability = bridge.mintOperationCapability({
     attestation,
-    bootstrapResult: verified,
+    bootstrapResult: derived,
     scope,
   });
   trace('capability:minted');
@@ -288,7 +298,7 @@ export async function bootstrap({ scope = SELF_TEST_SCOPE } = {}) {
   const core = await import(coreUrl.href);
   return core.run({
     capability,
-    bootstrapResultDigest: verified.bootstrap_result_digest,
+    bootstrapResultDigest: derived.bootstrap_result_digest,
     scope,
   });
 }

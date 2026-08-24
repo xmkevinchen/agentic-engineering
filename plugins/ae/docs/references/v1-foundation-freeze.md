@@ -26,7 +26,9 @@ plugins/ae/tests/foundation/
 │   ├── canonical-json.mjs    restricted JCS: strict parse + canonical bytes
 │   ├── tree-snapshot.mjs     ae.tree-snapshot.v1
 │   ├── active-release.mjs    the sealed verified-active-release value
+│   ├── active-release-provider.mjs  fixture producer: derives, never accepts
 │   ├── fs-noreplace.mjs      the no-replace write boundary
+│   ├── fs-move-provider.mjs  fixture producer: plans and performs directory moves
 │   ├── policy-bundle.mjs     materialization + activation/replay split
 │   └── release-build.mjs     fixture release assembly (NOT a mechanism module)
 ├── oracle/               independent canonical-bytes oracle
@@ -46,6 +48,37 @@ plugins/ae/tests/fixtures/v1-foundation/
 Run: `sh plugins/ae/tests/scripts/test-v1-foundation-freeze.sh` (discovered
 automatically by `plugins/ae/scripts/ae-run-tests.sh` through the `test-*.sh`
 convention).
+
+## Provenance is not field agreement
+
+The rule this package enforces everywhere, and the one that took two review
+rounds to get right:
+
+> A value is `observed`, `qualified`, or `verified` because a producer made it by
+> doing the work — never because its own fields say so.
+
+`projection_kind: "observed"`, `qualified: true`, and a `provider_id` of the
+caller's choosing are all things a caller writes, and a caller can always make
+them agree with each other. Internal consistency is not evidence. So each producer
+brands what it makes, and each consumer asks the producer, not the value:
+
+| Value | Producer | Consumer check |
+|---|---|---|
+| observed tree snapshot | `observeTree` (enumerates a real tree) | `isObservedSnapshot` |
+| move plan / result | `fs-move-provider` (probes the filesystem, performs the rename) | `isQualifiedMovePlan` / `isProviderMoveResult` |
+| active-release attestation | `active-release-provider` (reads the root, derives the digest) | `isObservedAttestation` |
+| bootstrap result | `active-release-provider` / the bridge (rehashes every member) | `isVerifiedBootstrapResult` / `isDerivedBootstrapResult` |
+| verified active release | `sealVerifiedActiveRelease` (cross-checks two independent derivations) | `isVerifiedActiveRelease` |
+| operation capability | the bridge (mints against a derived bootstrap result) | membership in the bridge's mint set |
+
+A shallow copy of a genuine value is not the value, and every table row has that
+as an executable negative.
+
+**This is separate from qualification, and stays separate.** Whether a real host
+provider or a real filesystem helper deserves to be believed is P0.7/P0.8. Every
+fixture producer here declares `qualified: false` and `fixture_only: true`. What
+P0.1 owes — and now delivers — is a consumer that cannot be talked into treating
+plain caller data as proof, whoever the eventual producer turns out to be.
 
 ## Ownership
 
@@ -200,21 +233,32 @@ intended target identity. Entries are carried over verbatim; the subject becomes
 the target. Consequently the entry projection digests are equal and the snapshot
 digests differ — both asserted.
 
-"Qualified" is checked, not assumed. This projection is the only place a snapshot
-may describe a tree that was never enumerated, so the plan must name the exact
-operation `atomic_directory_noreplace`, carry a complete qualification binding
-(`provider_id`, `build_digest`, `selector_digest`, `result_ref`, `result_digest`),
-and be accompanied by the successful result *of that plan* — same operation, same
-qualification identity, same endpoints. An ordinary overwriting rename can destroy
-an existing target and can never stand in for it.
+"Observed" and "qualified" are both provenance, not fields. The source must be a
+snapshot `observeTree` produced; the plan and result must come from
+`fs-move-provider`, which probes the filesystem and then performs the rename. On
+top of that the plan must name the exact operation `atomic_directory_noreplace`,
+carry a complete qualification binding (`provider_id`, `build_digest`,
+`selector_digest`, `result_ref`, `result_digest`), and be accompanied by the
+successful result *of that plan* — same operation, same qualification identity,
+same endpoints. An ordinary overwriting rename can destroy an existing target and
+can never stand in for it.
+
+Three negatives make that concrete, and none of them is a malformed value: a
+caller-authored snapshot that claims `projection_kind: "observed"` over paths that
+do not exist; a genuine provider plan for the *file* capability, refused because
+this projection is defined for directory moves; and a genuine provider result
+whose `outcome` is `failed`, refused on the outcome rather than on provenance.
+The provider also refuses to plan at all when the source is missing or the target
+already exists.
 
 Rejections: `move_projection_requires_observed_source`,
+`move_projection_plan_not_qualified`, `move_projection_unqualified_helper`,
 `move_projection_source_mismatch`, `move_projection_same_identity`,
 `move_projection_cross_device`, `move_projection_unsupported_operation`,
 `move_projection_qualification_incomplete`, `move_projection_qualification_mismatch`,
-`move_projection_unqualified_helper`, `move_projection_failed_operation`,
-`move_projection_result_mismatch`. Whether a real helper earns the qualification
-this consumes is P0.8.
+`move_projection_failed_operation`, `move_projection_result_mismatch`. Whether a
+real helper earns qualification is P0.8; that the consumer refuses a self-declared
+one is settled here.
 
 ### Mutation corpus
 
@@ -338,10 +382,19 @@ Two things make that claim true rather than merely stated:
   "no-clobber" means. `lib/fs-noreplace.mjs` performs a single
   `open(O_CREAT|O_EXCL)`: the kernel decides atomically whether this call created
   the file, and O_EXCL additionally refuses to follow a symlink at the final
-  component. The provider declares `qualified: false` on purpose — a real
-  `atomic_file_noreplace` provider needs an immutable passed result bound to
-  OS/filesystem/mount selectors, and earning that is P0.8. Nothing here may read
-  it as qualified.
+  component. `writeSync` may also write fewer bytes than asked, so the write loops
+  until the buffer is exhausted and fails with `short_write` if it stalls —
+  otherwise a short write would fsync and report success over a truncated file.
+  The write syscall is injectable so that path is exercised deterministically. The
+  provider declares `qualified: false` on purpose — a real `atomic_file_noreplace`
+  provider needs an immutable passed result bound to OS/filesystem/mount
+  selectors, and earning that is P0.8. Nothing here may read it as qualified.
+- **Every destination is unique before anything is written.** Two entries naming
+  one target is a malformed bundle, not a race settled by write order, and
+  uniqueness is checked on the *resolved* path so that refs differing only by case
+  collide on a case-insensitive volume. Both the identical-bytes and
+  different-bytes duplicates are rejected with `duplicate_project_ref`, and the
+  corpus asserts zero targets were created.
 - **Path safety is by component, not by string.** A `.ae/policies` symlink
   pointing outside the project passes every lexical test and still lands the bytes
   elsewhere. Both `plugin_source` and `project_ref` are refused if they are
@@ -368,14 +421,24 @@ diagnostic.
 The input naming the current release is a **sealed value**, not a string and not a
 plain manifest object. A string parameter would make the authoritative branch
 whatever the caller types, and with a default applied, whatever the caller omits —
-so there is no default and no string. `lib/active-release.mjs` is the only producer,
-and it seals nothing it cannot re-derive: the manifest must canonicalize to the
-digest claimed for it, and the attestation must agree on both that digest and the
-resolved root identity. The result is frozen and branded, so a structurally perfect
-object literal — even a shallow copy of a real sealed value — is refused with
-`current_release_not_selectable_by_declaration`. The same honest boundary as the
-bridge brand applies: this stops a caller holding only public data, not code
-running as the same OS user.
+so there is no default and no string.
+
+Sealing takes no manifest, no root identity and no digest as parameters, because
+every one of those would be a caller assertion. It takes two producer-made values
+— an attestation from `observeActiveRoot` and a bootstrap result from
+`verifyBootstrap` — and requires them to agree. Those two were derived
+independently: the attestation reads which root the host considers active and then
+reads *that root's* manifest to get its digest, while the bootstrap result
+recomputes every member's raw digest. So a bootstrap result cannot be earned for a
+tampered release, and a caller who controls the host record can choose among
+installed releases but cannot describe one that is not there.
+
+Executable negatives: a plain attestation, a plain bootstrap result, both plain
+and fully self-consistent, a shallow copy of either genuine value, two genuine
+values describing different releases, a tampered release, an unresolvable root,
+and every impostor shape at the selection boundary itself. The honest boundary is
+unchanged: this stops a caller holding only public data, not code running as the
+same OS user, and the fixture provider is not a qualified host provider.
 
 **Epoch.** A current-release change makes an *unactivated* candidate
 `policy_epoch_stale`. It does not reach back into an existing activation: an
@@ -420,7 +483,7 @@ the corpus vocabulary.
 
 ## Error taxonomy
 
-`lib/errors.mjs` groups 62 codes by the mechanism that raises them; a code appears
+`lib/errors.mjs` groups 67 codes by the mechanism that raises them; a code appears
 in exactly one group, and overlap between the lexical and schema groups is the
 defect the split exists to prevent. Callers branch on `code`, never on `message`:
 messages are diagnostics and may gain detail without a version bump, codes may not.
@@ -446,15 +509,16 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested: 27 deliberate defects, each of which must turn it
+The suite is mutation-tested: 40 deliberate defects, each of which must turn it
 red. They cover every guard described above — canonical ordering, duplicate keys,
 the number domain, the `feature_evidence` boundary, symlink rejection, move
 subject/operation/outcome/qualification, member digest recomputation, import
 ordering, `self_digest`, ref canonicality, inode-level duplicate detection, the
 activation-base cross-binding, active-root identity, capability minting and scope,
 policy symlink components, `plugin_source` validation, the no-replace boundary,
-the verified-release brand, snapshot tampering, mode width, and business
-vocabulary in a mechanism module.
+short writes, duplicate and colliding destinations, every provenance brand, the
+derived-rather-than-declared active-release digest, snapshot tampering, mode
+width, and business vocabulary in a mechanism module.
 
 Two checks exist specifically because a mutation run showed they were missing:
 
@@ -466,5 +530,12 @@ Two checks exist specifically because a mutation run showed they were missing:
   launcher's own comparison. Asserting the trace rather than only the error code
   separates them.
 
-Both are worth stating plainly: defense in depth makes a suite look green when one
-layer is removed, and only a mutation run finds that.
+A third came from the same place: the "wrong move operation" guard was
+unreachable while the provider had only one capability, so the provider gained a
+file-move capability and the guard became a real test rather than dead code.
+
+All three are worth stating plainly: defense in depth makes a suite look green
+when one layer is removed, and only a mutation run finds that. Each round of this
+package has produced at least one such finding, which is the argument for keeping
+the mutation corpus alongside the fixtures rather than treating a green suite as
+the result.

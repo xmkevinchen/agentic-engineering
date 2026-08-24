@@ -8,6 +8,7 @@ import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { DIGEST_PATTERN, canonicalDigest, digestBytes } from './canonical-json.mjs';
 import { fail } from './errors.mjs';
+import { isProviderMoveResult, isQualifiedMovePlan } from './fs-move-provider.mjs';
 
 // ---------------------------------------------------------------------------
 // Profiles
@@ -134,6 +135,23 @@ export function finalizeEntries(entries) {
     .sort((a, b) => Buffer.compare(Buffer.from(a.path, 'utf8'), Buffer.from(b.path, 'utf8')));
 }
 
+// Provenance brand for observed snapshots.
+//
+// `projection_kind: 'observed'` is a field, and a field is something a caller
+// writes. Only a snapshot that actually enumerated its subject gets into this
+// set, so a plain object claiming to be observed — over paths that need not even
+// exist — cannot be used to derive an expected_after_move projection.
+const OBSERVED = new WeakSet();
+
+function sealObserved(snapshot) {
+  OBSERVED.add(snapshot);
+  return snapshot;
+}
+
+export function isObservedSnapshot(value) {
+  return typeof value === 'object' && value !== null && OBSERVED.has(value);
+}
+
 const PATH_DECODER = new TextDecoder('utf-8', { fatal: true });
 
 export function validatePathBytes(nameBytes) {
@@ -200,7 +218,7 @@ export function observeTree({ logicalRoot, resolvedRootPath, profile }) {
   }
   const entries = [];
   walk(resolvedRootPath, '', PROFILES[profile], entries);
-  return {
+  return sealObserved({
     schema_version: 'ae.tree-snapshot.v1',
     profile,
     algorithm: ALGORITHM,
@@ -213,7 +231,7 @@ export function observeTree({ logicalRoot, resolvedRootPath, profile }) {
     enumeration_source: null,
     move: null,
     entries: finalizeEntries(entries),
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -243,7 +261,19 @@ function sameSubject(a, b) {
 }
 
 function assertQualifiedMove(movePlan, moveResult) {
-  if (movePlan?.operation !== QUALIFIED_MOVE_OPERATION) {
+  // Provenance before content. Whether these values came from a move provider is
+  // not something their own fields can answer: `qualified: true` and a
+  // `provider_id` of "caller" agree with each other perfectly.
+  if (!isQualifiedMovePlan(movePlan)) {
+    fail('move_projection_plan_not_qualified',
+      'move plan was not produced by a move provider');
+  }
+  if (!isProviderMoveResult(moveResult)) {
+    fail('move_projection_unqualified_helper',
+      'move result was not produced by a move provider');
+  }
+
+  if (movePlan.operation !== QUALIFIED_MOVE_OPERATION) {
     fail('move_projection_unsupported_operation',
       `expected_after_move requires operation ${QUALIFIED_MOVE_OPERATION}`,
       { observed: movePlan?.operation ?? null });
@@ -272,10 +302,6 @@ function assertQualifiedMove(movePlan, moveResult) {
       'move result describes a different operation than the plan',
       { plan: movePlan.operation, result: moveResult?.operation ?? null });
   }
-  if (moveResult.qualified !== true) {
-    fail('move_projection_unqualified_helper',
-      'move result is not from a qualified helper', { qualified: moveResult.qualified ?? null });
-  }
   if (moveResult.outcome !== 'succeeded') {
     fail('move_projection_failed_operation',
       'expected_after_move requires a successful move', { outcome: moveResult.outcome ?? null });
@@ -292,9 +318,12 @@ function assertQualifiedMove(movePlan, moveResult) {
 }
 
 export function projectExpectedAfterMove({ observedSource, movePlan, moveResult, targetSubject }) {
-  if (observedSource.projection_kind !== 'observed') {
+  // An observation is something enumeration produced, not something a snapshot
+  // says about itself. Without this a caller could project from a hand-written
+  // "observed" snapshot over paths that never existed.
+  if (!isObservedSnapshot(observedSource)) {
     fail('move_projection_requires_observed_source',
-      'expected_after_move may only be derived from an observed snapshot');
+      'expected_after_move may only be derived from a snapshot produced by observeTree');
   }
   assertQualifiedMove(movePlan, moveResult);
   if (!sameSubject(observedSource.subject, movePlan.source)) {

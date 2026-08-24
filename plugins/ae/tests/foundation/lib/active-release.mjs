@@ -1,58 +1,66 @@
 // The verified-active-release value.
 //
 // Selecting the current release is an authority decision, so its input cannot be
-// a string a caller chooses or a plain object a caller writes. `sealVerifiedActiveRelease`
-// is the only way to produce one, and it will not seal anything it cannot
-// re-derive:
+// a string a caller chooses, a plain object a caller writes, or a set of plain
+// objects a caller makes agree with each other. Internal consistency is not
+// provenance: an attestation and a bootstrap result that a caller authored will
+// always agree if the caller wants them to.
 //
-//   - the manifest must actually canonicalize to the digest claimed for it;
-//   - the host attestation must agree on BOTH the manifest digest and the
-//     resolved root identity;
-//   - the activation base bundle digest must be the one the manifest carries.
+// So this module seals nothing it did not receive from a producer. Both inputs
+// must carry the provenance brand of lib/active-release-provider.mjs, which
+// derives every field by reading the installed release rather than accepting it.
+// There is no parameter here for the manifest, the root identity, or the
+// bootstrap digest — they come from the bootstrap result, which had to be earned.
 //
-// The result is frozen and branded. A structurally perfect object literal is not
-// a verified active release, and `isVerifiedActiveRelease` says so.
-//
-// Honest boundary: like the bridge brand, this stops a caller holding only public
-// data. Code running as the same OS user can call the sealer itself, and
-// finalized/design.md already places that inside the accepted threat boundary.
+// Honest boundary: the fixture provider stands in for a real host/package
+// provider, and P0.7/P0.8 own that. What is established now is the consumer
+// contract — that plain caller data cannot become `verified` — not that the
+// fixture provider's observation is trustworthy for release.
 
-import { canonicalDigest } from './canonical-json.mjs';
+import { isObservedAttestation, isVerifiedBootstrapResult } from './active-release-provider.mjs';
 import { fail } from './errors.mjs';
 
 const VERIFIED = new WeakSet();
 
-export function sealVerifiedActiveRelease({ manifest, attestation, rootIdentity, bootstrapResultDigest }) {
-  if (!manifest || typeof manifest !== 'object') {
-    fail('current_release_not_selectable_by_declaration', 'no release manifest to verify');
+export function sealVerifiedActiveRelease({ attestation, bootstrapResult }) {
+  if (!isObservedAttestation(attestation)) {
+    fail('attestation_not_observed',
+      'the active-release attestation was not produced by an active-release provider');
   }
-  if (!attestation || typeof attestation !== 'object') {
-    fail('current_release_not_selectable_by_declaration', 'no host attestation to verify against');
+  if (!isVerifiedBootstrapResult(bootstrapResult)) {
+    fail('bootstrap_result_not_derived',
+      'the bootstrap result was not derived by verifying an installed release');
   }
 
-  const manifestDigest = canonicalDigest(manifest);
-  if (attestation.active_release_manifest_digest !== manifestDigest) {
+  // Both were derived independently — from the host's answer and from the release
+  // root respectively — so requiring them to agree is a real cross-check rather
+  // than a restatement of one caller input.
+  if (attestation.active_release_manifest_digest !== bootstrapResult.manifest_digest) {
     fail('current_release_not_selectable_by_declaration',
-      'attested manifest digest does not match the manifest bytes',
-      { attested: attestation.active_release_manifest_digest, computed: manifestDigest });
+      'the attested active release is not the release that was verified',
+      {
+        attested: attestation.active_release_manifest_digest,
+        verified: bootstrapResult.manifest_digest,
+      });
   }
-  if (!rootIdentity || attestation.active_root_identity !== rootIdentity) {
+  if (attestation.active_root_identity !== bootstrapResult.root_identity) {
     fail('current_release_not_selectable_by_declaration',
-      'attested active root is not the verified release root');
+      'the attested active root is not the root that was verified',
+      { attested: attestation.active_root_identity, verified: bootstrapResult.root_identity });
   }
-  if (typeof bootstrapResultDigest !== 'string' || bootstrapResultDigest.length === 0) {
-    fail('current_release_not_selectable_by_declaration', 'no bootstrap result to bind');
-  }
-  if (typeof manifest.activation_base_bundle_digest !== 'string') {
-    fail('current_release_not_selectable_by_declaration', 'manifest carries no activation base bundle digest');
+
+  const activationBaseBundleDigest = bootstrapResult.manifest?.activation_base_bundle_digest;
+  if (typeof activationBaseBundleDigest !== 'string') {
+    fail('current_release_not_selectable_by_declaration',
+      'the verified release manifest carries no activation base bundle digest');
   }
 
   const sealed = Object.freeze({
     schema_version: 'ae.verified-active-release.v1',
-    release_manifest_digest: manifestDigest,
-    activation_base_bundle_digest: manifest.activation_base_bundle_digest,
-    root_identity: rootIdentity,
-    bootstrap_result_digest: bootstrapResultDigest,
+    release_manifest_digest: bootstrapResult.manifest_digest,
+    activation_base_bundle_digest: activationBaseBundleDigest,
+    root_identity: bootstrapResult.root_identity,
+    bootstrap_result_digest: bootstrapResult.bootstrap_result_digest,
   });
   VERIFIED.add(sealed);
   return sealed;
