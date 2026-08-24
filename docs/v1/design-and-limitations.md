@@ -365,8 +365,10 @@ automatic project-wide floor promotion.
 
 ### 12.2 Platform and host scope
 
-- v1 is a Claude Code-first implementation. It does not include a native Codex
-  port, a cross-runtime Core, or a general orchestrator.
+- The frozen v1 target is Claude Code-first. It does not include the candidate
+  portable AE runtime, a native Codex frontend, or an external/distributed
+  execution controller such as Loom. Those are non-normative hypotheses in the
+  [v1+ roadmap](v1-plus-roadmap.md), not v1 behavior.
 - Host behavior can drift. Support is per qualified Claude Code version,
   invocation mode, tool mapping, and result channel; unknown combinations fail
   unavailable.

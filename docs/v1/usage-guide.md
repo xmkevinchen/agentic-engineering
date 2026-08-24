@@ -11,6 +11,13 @@ One foreground Claude Code session may coordinate an AE feature from intent to
 finalization. That does not mean one context implements a change and declares
 its own work correct.
 
+This guide covers only the Claude Code-first v1 path. It does not specify the
+candidate portable runtime, native Codex frontend, or Loom control plane in the
+non-normative [v1+ roadmap](v1-plus-roadmap.md). If current Loom or another
+external scheduler observes a v1 run, its queue, journal, process, rescue-ref,
+or review state remains coordination state; none is proof or lifecycle
+completion authority.
+
 AE keeps five roles and authority boundaries separate:
 
 - a person confirms the exact Acceptance Contract;

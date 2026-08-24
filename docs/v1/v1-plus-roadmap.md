@@ -283,8 +283,9 @@ a real capability boundary rather than three prompts in one trust domain.
 - **Non-goal:** making filesystem, identity, isolation, or human-delivery
   providers magically host-neutral. Those remain separately qualified.
 
-The Claude Code plugin remains a supported standalone frontend and may bundle
-the runtime. It stops being the only place where AE truth semantics exist.
+In this candidate architecture, the Claude Code plugin would remain a
+standalone frontend and could bundle the runtime. It would stop being the only
+place where AE truth semantics exist.
 
 ### R+05 — AE proof-work and seat protocol
 
@@ -562,11 +563,12 @@ read-only port does not automatically authorize writer support.
   per-feature worktrees, bounded parallel dispatch, durable run journal,
   recovery, rescue refs, and operator logs. Those are implementation facts
   about a pre-alpha coordinator, not evidence that it satisfies this candidate.
-- **Problem:** AE 1.0 can complete one feature in a foreground Claude Code
-  environment, but physical seat separation, cross-feature scheduling, durable
-  retries, resource policy, and operator visibility do not belong in the proof
-  kernel. Loom's current plugin-inside-every-worker bootstrap and mutable
-  `review.md` verdict interface cannot carry the accepted v1 truth boundary.
+- **Problem:** the frozen AE 1.0 target coordinates one feature in a foreground
+  Claude Code environment, but physical seat separation, cross-feature
+  scheduling, durable retries, resource policy, and operator visibility do not
+  belong in the proof kernel. Loom's current plugin-inside-every-worker
+  bootstrap and mutable `review.md` verdict interface cannot carry the frozen
+  v1 truth boundary.
 - **Hypothesis:** an admitted target Loom can become AE's reference distributed
   execution and coordination system while the portable AE runtime and R+06
   state provider retain the single logical truth plane. Distribution applies to
@@ -605,10 +607,10 @@ read-only port does not automatically authorize writer support.
 - **Non-goals:** Byzantine consensus, an authority federation, multi-user
   authorization, or a claim that local processes constitute security isolation.
 
-Current Loom is a precursor substrate for a distributed form of AE's Execution
-and Coordination Plane. Only an admitted target Loom may claim that role, and
-it is never a distributed implementation of AE truth. AE must remain usable
-without Loom through its standalone frontend; Loom must remain replaceable
+Current Loom is precursor substrate for a distributed execution layer within
+AE's Coordination Plane. Only an admitted target Loom may claim that role; it
+never becomes a distributed implementation of AE truth. AE must remain usable
+without Loom through its standalone frontend, and Loom must remain replaceable
 behind R+05.
 
 ### R+34 — Loom Pattern and topology runtime

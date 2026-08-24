@@ -14,7 +14,7 @@ one release note:
 | [Design and limitations](design-and-limitations.md) | What was built, where are its trust boundaries, and what does it deliberately not do? | Descriptive as-built record |
 | [Usage guide](usage-guide.md) | How should a person use AE v1 in a Claude Code session? | User guidance; never completion authority |
 | [Acceptance dossier](acceptance-dossier.md) | Which implementation and evidence artifacts justify release? | Evidence index only; Gate/Finalizer retain feature-completion authority, and a separate digest-bound human decision owns release acceptance |
-| [v1+ roadmap](v1-plus-roadmap.md) | What should be investigated after v1, including a Codex port? | Non-normative roadmap |
+| [v1+ roadmap](v1-plus-roadmap.md) | What should be investigated after v1, including a portable AE runtime, native Codex frontend, and Loom distributed-execution/control-plane candidate? | Non-normative roadmap |
 
 ## Publication rule
 
