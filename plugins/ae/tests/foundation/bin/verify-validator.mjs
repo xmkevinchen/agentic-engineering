@@ -20,6 +20,10 @@ import { validateReleaseManifest } from '../../fixtures/v1-foundation/validator/
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VALIDATOR_DIR = join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'validator');
 const BUILD_DIR = join(HERE, '..', 'build');
+const FLOOR = JSON.parse(readFileSync(
+  join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'coverage-floor.json'), 'utf8',
+)).min_corpus_sizes;
+
 
 // JSON-Schema keywords. If any of these appear in the mechanism modules, a second
 // approximate validator has grown up beside Ajv.
@@ -51,6 +55,10 @@ export function run() {
   const checks = new Checks('validator');
   const pin = JSON.parse(readFileSync(join(VALIDATOR_DIR, 'toolchain-pin.json'), 'utf8'));
   const cases = JSON.parse(readFileSync(join(VALIDATOR_DIR, 'manifest-cases.json'), 'utf8'));
+
+  checks.ok('floor/invalid-manifest-cases',
+    cases.invalid.length >= FLOOR.validator_invalid_manifest_cases,
+    `${cases.invalid.length} invalid cases, floor is ${FLOOR.validator_invalid_manifest_cases}`);
 
   // ---- the frozen toolchain ------------------------------------------------
   checks.equal('pin/node-range', pin.node_range, '>=22.12.0 <23.0.0');

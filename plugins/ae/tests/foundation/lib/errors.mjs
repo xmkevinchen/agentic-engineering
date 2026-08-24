@@ -69,6 +69,7 @@ export const CODES = Object.freeze({
     'activation_base_member_mismatch',
     'member_missing',
     'member_digest_mismatch',
+    'member_length_mismatch',
     'launcher_is_member',
     'unsupported_direct_invocation',
     'release_not_active',

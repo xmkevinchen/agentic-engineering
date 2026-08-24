@@ -20,6 +20,10 @@ import { Checks } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const POLICY_SOURCE = join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'policy-bundle', 'release-a');
+const FLOOR = JSON.parse(readFileSync(
+  join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'coverage-floor.json'), 'utf8',
+)).min_corpus_sizes;
+
 
 const EXPECTED_TRACE = [
   'import:validators-v1',
@@ -155,18 +159,21 @@ export async function run() {
       ['policy', 'policies/runner-v1.json'],
       ['policy-bundle', 'policies/bundle-v1.json'],
     ];
+    checks.ok('floor/required-members', REQUIRED.length >= FLOOR.release_required_members,
+      `${REQUIRED.length} required members, floor is ${FLOOR.release_required_members}`);
     for (const [label, ref] of REQUIRED) {
+      // Appending changes the length, so this exercises the declared-length check.
       expectRejection(checks, `tamper-${label}`, {
         work,
         breakIt: (built) => {
           const path = join(built.releaseRoot, ref);
           writeFileSync(path, Buffer.concat([readFileSync(path), Buffer.from('\n// tampered\n')]));
         },
-        expectedCode: 'member_digest_mismatch',
+        expectedCode: 'member_length_mismatch',
       });
-      // Length-preserving tamper. Without it the declared-length check alone
-      // would satisfy every tamper case and the digest recomputation could be
-      // removed without turning this suite red.
+      // Length-preserving tamper, which only the digest recomputation can catch.
+      // The two checks report distinct codes so that neither can stand in for the
+      // other: sharing one code let either be deleted with the suite still green.
       expectRejection(checks, `tamper-same-length-${label}`, {
         work,
         breakIt: (built) => {

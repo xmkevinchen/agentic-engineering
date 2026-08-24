@@ -331,9 +331,6 @@ export function parseNdjson(bytes) {
   if (bytes[bytes.length - 1] !== LF) {
     fail('ndjson_missing_terminator', 'NDJSON must end with a single LF');
   }
-  if (bytes.length >= 2 && bytes[bytes.length - 2] === LF) {
-    fail('ndjson_trailing_terminator', 'NDJSON must not contain a blank line');
-  }
   const out = [];
   let start = 0;
   for (let i = 0; i < bytes.length; i += 1) {

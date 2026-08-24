@@ -564,7 +564,7 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested: 52 deliberate defects, each of which must turn it
+The suite is mutation-tested: 59 deliberate defects, each of which must turn it
 red. They cover every guard described above — canonical ordering, duplicate keys,
 the number domain, the `feature_evidence` boundary, symlink rejection, move
 subject/operation/outcome/qualification, member digest recomputation, import
@@ -599,6 +599,53 @@ shadowed by the value comparison. Two mechanisms for one property is not twice t
 safety — it means either can be deleted with the suite still green, which is how a
 regression later goes unnoticed. Each was resolved by removing the redundancy or
 by asserting on a value nothing else had touched.
+
+### The floor
+
+A green suite says nothing about how much of it ran. Emptying the tree-snapshot
+mutation table deleted 48 checks and reported `ALL PASSED` — *louder-looking* than
+before, because the failures went with them. Every case table here was deletable
+that way, and `manifest-case-count` only looked like protection: both of its
+operands live in the same file.
+
+`fixtures/v1-foundation/coverage-floor.json` is now a checked-in minimum for each
+section's executed-check count and for each corpus's size, asserted by
+`bin/verify-all.mjs` and by the individual verifiers. The floor counts its own
+section too, so deleting it fails as well. Shrinking coverage is now a visible edit
+to a fixture rather than a silent consequence of editing a test — verified by
+re-running the three deletions that used to pass.
+
+### Guards that were bound to nothing
+
+An audit of typed error codes found eight that no check could reach, so the guard
+raising each could be deleted with the suite green. Two causes, both now fixed:
+
+- **Ordering shadowed the branch.** `move_projection_cross_device` sat behind a
+  `sameSubject` comparison that already includes `device_id`, so a cross-device
+  plan was indistinguishable from a mismatched one and the dedicated code could
+  never fire. The device comparison now precedes it.
+- **Provenance shadowed the content rules.** Once plans and results must come from
+  a provider, and a provider builds them correctly by construction, every interior
+  content check became unreachable. `assertMoveContent` and
+  `assertProjectionEndpoints` are exported and tested directly, the same way
+  `resolveMemberRef` is in the launcher.
+
+Two more shared a code with a neighbouring check, which made them unobservable:
+the launcher's declared-length check reported `member_digest_mismatch` like the
+digest comparison below it, and now has `member_length_mismatch` of its own — so
+the append tamper and the length-preserving tamper each exercise exactly one.
+
+### Checks that could not fail
+
+Also from that audit, and repaired: the equivalence-group checks compared
+`cases.json` against itself, so breaking `canonicalize()` outright left all 28
+green — they now group by the digest the implementation computes and require that
+grouping to match the declared one. The digest-form checks were one-sided;
+`DIGEST_PATTERN` could be replaced with `/^/`. Path ordering is specified over raw
+UTF-8 bytes, but every corpus path was ASCII, so swapping the comparator to UTF-16
+changed nothing — the tree corpus now contains U+1F600 and U+FB33, whose byte order
+is the reverse of their code-unit order. The surrogate bounds were tested only at
+the low end of each range, so either could be shifted upward by one.
 
 Applying that same lens deliberately then found a fifth: every rejection case in
 the canonical-bytes corpus reaches the serializer through `parseStrict`, which

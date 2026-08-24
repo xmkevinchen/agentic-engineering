@@ -120,6 +120,15 @@ const REJECT = [
   ['n16-infinity-literal', 'non_finite_number', utf8('{"a":Infinity}')],
   ['n17-lone-high-surrogate-escape', 'lone_surrogate', utf8('{"a":"\\ud800"}')],
   ['n18-lone-low-surrogate-escape', 'lone_surrogate', utf8('{"a":"\\udc00"}')],
+  // The upper ends of both surrogate ranges. Without these, the boundary can be
+  // shifted by one in either direction and every other case still passes.
+  ['n18a-lone-high-surrogate-top', 'lone_surrogate', utf8('{"a":"\\udbff"}')],
+  ['n18b-lone-low-surrogate-top', 'lone_surrogate', utf8('{"a":"\\udfff"}')],
+  // A high surrogate followed by something that is not a low surrogate.
+  ['n18c-high-surrogate-then-bmp', 'lone_surrogate', utf8('{"a":"\\ud83dZ"}')],
+  // A well-formed pair at the very top of the range must still be ACCEPTED — the
+  // boundary has to be exercised from both sides, or it can be widened silently.
+  ['n18d-valid-max-pair-is-not-a-rejection', 'accepted', utf8('{"a":"\\udbff\\udfff"}')],
   ['n19-trailing-content', 'trailing_content', utf8('{"a":1} {"b":2}')],
   ['n20-raw-control-in-string', 'malformed_json', Buffer.concat([utf8('{"a":"'), raw(0x0a), utf8('"}')])],
   ['n21-leading-zero', 'malformed_json', utf8('{"a":01}')],
@@ -176,6 +185,12 @@ for (const [id, group, input] of CANONICAL) {
 
 for (const [id, code, input] of REJECT) {
   const inputRef = write(`inputs/${id}.bin`, input);
+  if (code === 'accepted') {
+    // A boundary case that must NOT be rejected. Kept in this list so the pair of
+    // "just outside" and "just inside" fixtures sit next to each other.
+    cases.push({ id, kind: 'admit', input_ref: inputRef.ref, input_raw_digest: inputRef.digest });
+    continue;
+  }
   cases.push({ id, kind: 'reject', input_ref: inputRef.ref, input_raw_digest: inputRef.digest, expected_code: code });
 }
 

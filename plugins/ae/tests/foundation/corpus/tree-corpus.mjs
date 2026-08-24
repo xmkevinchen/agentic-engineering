@@ -33,6 +33,14 @@ export const FILES = [
   ['ledger/telemetry.ndjson', '{"metric":"tokens","value":1234}\n'],
   ['runs/RUN-001/events/EV-000002.json', '{"payload":"observed"}'],
   ['runs/RUN-001/stdout.txt', 'ok\n'],
+  // Two non-ASCII names whose UTF-8 byte order is the REVERSE of their UTF-16
+  // code-unit order. U+1F600 encodes as F0 9F 98 80 and U+FB33 as EF AC B3, so by
+  // bytes the emoji sorts last; by UTF-16 code units its lead surrogate D83D sorts
+  // before FB33, so it sorts first. Entry ordering is specified over raw UTF-8
+  // bytes, and with an all-ASCII corpus that specification is unfalsifiable —
+  // swapping the comparator to UTF-16 changes nothing.
+  ['runs/RUN-001/\u{1F600}.txt', 'astral\n'],
+  ['runs/RUN-001/\uFB33.txt', 'bmp\n'],
   ['state/status.json', '{"status":"active"}'],
 ];
 

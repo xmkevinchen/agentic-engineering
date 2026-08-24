@@ -12,15 +12,22 @@ import { canonicalDigest } from '../lib/canonical-json.mjs';
 import { isDeeplyFrozen } from '../lib/freeze.mjs';
 import { FoundationError } from '../lib/errors.mjs';
 import {
-  ALGORITHM, PROFILE_NAMES, entriesProjectionDigest, finalizeEntries, isObservedSnapshot,
-  observeTree, projectExpectedAfterMove, snapshotDigest, validatePathBytes,
+  ALGORITHM, PROFILE_NAMES, assertMoveContent, assertProjectionEndpoints,
+  entriesProjectionDigest, finalizeEntries, isObservedSnapshot, observeTree,
+  projectExpectedAfterMove, snapshotDigest, validatePathBytes,
 } from '../lib/tree-snapshot.mjs';
-import { executeDirectoryMove, planDirectoryMove, planFileMove } from '../lib/fs-move-provider.mjs';
+import {
+  FIXTURE_MOVE_PROVIDER, executeDirectoryMove, planDirectoryMove, planFileMove,
+} from '../lib/fs-move-provider.mjs';
 import { LOGICAL_ROOT, materializeTree } from '../corpus/tree-corpus.mjs';
 import { Checks } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'tree-snapshot');
+const FLOOR = JSON.parse(readFileSync(
+  join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'coverage-floor.json'), 'utf8',
+)).min_corpus_sizes;
+
 
 // changed   — the mutation is inside the profile's include set
 // unchanged — the mutation is outside it, and the boundary holds
@@ -152,6 +159,10 @@ export function run() {
 
   try {
     // ---- baseline against the checked-in projections ----------------------
+    checks.ok('floor/mutations', MUTATIONS.length >= FLOOR.tree_snapshot_mutations,
+      `${MUTATIONS.length} mutations, floor is ${FLOOR.tree_snapshot_mutations}`);
+    checks.ok('floor/profiles', PROFILE_NAMES.length >= FLOOR.tree_snapshot_profiles,
+      `${PROFILE_NAMES.length} profiles, floor is ${FLOOR.tree_snapshot_profiles}`);
     checks.equal('algorithm-build-digest', ALGORITHM.build_digest, expected.algorithm.build_digest);
 
     const baseRoot = materializeTree(join(work, 'baseline'));
@@ -284,8 +295,10 @@ export function run() {
 
     checks.equal('move/projection-kind', projected.projection_kind, 'expected_after_move');
     checks.equal('move/subject-is-target', projected.subject.logical_root, targetSubject.logical_root);
-    checks.equal('move/provider-is-not-claimed-qualified',
+    checks.equal('move/qualification-names-the-fixture-provider',
       qualification.provider_id, 'fixture-fs-directory-move-v1');
+    checks.equal('move/fixture-provider-does-not-claim-qualification',
+      FIXTURE_MOVE_PROVIDER.qualified, false);
     checks.equal('move/binds-enumeration-source',
       projected.enumeration_source.snapshot_digest, canonicalDigest(source));
     checks.equal('move/binds-plan', projected.move.plan_digest, canonicalDigest(movePlan));
@@ -466,6 +479,117 @@ export function run() {
         }),
         'move_projection_unsupported_operation');
     }
+
+    // ---- the content and endpoint rules, exercised directly ---------------
+    //
+    // A provider builds well-formed plans by construction, so every branch below is
+    // unreachable through the normal path. Reached only through the exported
+    // helpers, they would otherwise be code no test can execute — which is how a
+    // typed code ends up bound to nothing.
+    const subj = (logical, resolved, device = 1) => ({
+      logical_root: logical, resolved_root: resolved, device_id: device,
+    });
+    const srcSubject = subj('a/F-1', '/src');
+    const tgtSubject = subj('b/F-1', '/tgt');
+    const goodQualification = {
+      provider_id: 'p', build_digest: `sha256:${'1'.repeat(64)}`,
+      selector_digest: `sha256:${'2'.repeat(64)}`, result_ref: 'r',
+      result_digest: `sha256:${'3'.repeat(64)}`,
+    };
+    const basePlan = {
+      operation: 'atomic_directory_noreplace',
+      qualification: goodQualification,
+      source: srcSubject,
+      target: tgtSubject,
+    };
+    const baseResult = {
+      operation: 'atomic_directory_noreplace',
+      outcome: 'succeeded',
+      qualification: goodQualification,
+      source: srcSubject,
+      target: tgtSubject,
+    };
+
+    checks.accepts('content/well-formed-plan-and-result',
+      () => assertMoveContent(basePlan, baseResult));
+
+    for (const [label, plan, result, code] of [
+      ['wrong-operation', { ...basePlan, operation: 'atomic_file_noreplace' }, baseResult,
+        'move_projection_unsupported_operation'],
+      ['no-qualification', { ...basePlan, qualification: undefined }, baseResult,
+        'move_projection_qualification_incomplete'],
+      ['qualification-not-an-object', { ...basePlan, qualification: 'yes' }, baseResult,
+        'move_projection_qualification_incomplete'],
+      ['qualification-missing-field',
+        { ...basePlan, qualification: { ...goodQualification, result_ref: undefined } }, baseResult,
+        'move_projection_qualification_incomplete'],
+      ['qualification-empty-field',
+        { ...basePlan, qualification: { ...goodQualification, provider_id: '' } }, baseResult,
+        'move_projection_qualification_incomplete'],
+      ['qualification-bad-digest-form',
+        { ...basePlan, qualification: { ...goodQualification, build_digest: 'nope' } }, baseResult,
+        'move_projection_qualification_incomplete'],
+      ['result-operation-differs', basePlan, { ...baseResult, operation: 'atomic_file_noreplace' },
+        'move_projection_result_mismatch'],
+      ['result-not-succeeded', basePlan, { ...baseResult, outcome: 'failed' },
+        'move_projection_failed_operation'],
+      ['result-qualification-differs', basePlan,
+        { ...baseResult, qualification: { ...goodQualification, provider_id: 'other' } },
+        'move_projection_qualification_mismatch'],
+      ['result-source-differs', basePlan, { ...baseResult, source: subj('x', '/x') },
+        'move_projection_result_mismatch'],
+      ['result-target-differs', basePlan, { ...baseResult, target: subj('y', '/y') },
+        'move_projection_result_mismatch'],
+    ]) {
+      checks.rejects(`content/${label}`, () => assertMoveContent(plan, result), code);
+    }
+
+    const observedShape = (subject) => ({ subject });
+    checks.accepts('endpoints/well-formed',
+      () => assertProjectionEndpoints({
+        observedSource: observedShape(srcSubject), movePlan: basePlan, targetSubject: tgtSubject,
+      }));
+
+    for (const [label, args, code] of [
+      ['plan-source-is-not-the-observed-subject',
+        { observedSource: observedShape(subj('other', '/other')), movePlan: basePlan, targetSubject: tgtSubject },
+        'move_projection_source_mismatch'],
+      ['plan-target-is-not-the-intended-target',
+        {
+          observedSource: observedShape(srcSubject),
+          movePlan: { ...basePlan, target: subj('z', '/z') },
+          targetSubject: tgtSubject,
+        },
+        'move_projection_source_mismatch'],
+      ['target-on-another-filesystem',
+        {
+          observedSource: observedShape(srcSubject),
+          movePlan: { ...basePlan, target: subj('b/F-1', '/tgt', 2) },
+          targetSubject: subj('b/F-1', '/tgt', 2),
+        },
+        'move_projection_cross_device'],
+      ['target-identity-equals-source',
+        {
+          observedSource: observedShape(srcSubject),
+          movePlan: { ...basePlan, target: srcSubject },
+          targetSubject: srcSubject,
+        },
+        'move_projection_same_identity'],
+    ]) {
+      checks.rejects(`endpoints/${label}`, () => assertProjectionEndpoints(args), code);
+    }
+
+    // ---- observeTree's own preconditions ----------------------------------
+    checks.rejects('observe/unknown-profile',
+      () => observeTree({
+        logicalRoot: 'x', resolvedRootPath: baseRoot, profile: 'everything_please',
+      }), 'schema_invalid');
+    checks.rejects('observe/root-is-a-file',
+      () => observeTree({
+        logicalRoot: 'x',
+        resolvedRootPath: join(baseRoot, 'index.md'),
+        profile: 'origin_complete',
+      }), 'root_not_directory');
 
     // ---- a genuine provider result that FAILED ---------------------------
     // Branded exactly like a success, and still refused — the outcome is what is

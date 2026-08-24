@@ -176,8 +176,13 @@ export function verifyInstalledRelease() {
     } catch {
       bail('member_missing', `member ${member.ref} is not installed`);
     }
+    // Declared length is checked with its own code. Sharing `member_digest_mismatch`
+    // with the branch below made this check unobservable: removing it changed
+    // nothing any test could see, because the digest comparison caught the same
+    // inputs a moment later.
     if (bytes.length !== member.length) {
-      bail('member_digest_mismatch', `member ${member.ref} length ${bytes.length} != declared ${member.length}`);
+      bail('member_length_mismatch',
+        `member ${member.ref} length ${bytes.length} != declared ${member.length}`);
     }
     const digest = rawDigest(bytes);
     if (digest !== member.raw_digest) {

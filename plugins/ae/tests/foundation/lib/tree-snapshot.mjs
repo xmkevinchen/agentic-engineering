@@ -265,10 +265,10 @@ function sameSubject(a, b) {
     && a.device_id === b.device_id;
 }
 
-function assertQualifiedMove(movePlan, moveResult) {
-  // Provenance before content. Whether these values came from a move provider is
-  // not something their own fields can answer: `qualified: true` and a
-  // `provider_id` of "caller" agree with each other perfectly.
+// Provenance before content. Whether these values came from a move provider is
+// not something their own fields can answer: `qualified: true` and a
+// `provider_id` of "caller" agree with each other perfectly.
+export function assertMoveProvenance(movePlan, moveResult) {
   if (!isQualifiedMovePlan(movePlan)) {
     fail('move_projection_plan_not_qualified',
       'move plan was not produced by a move provider');
@@ -277,7 +277,14 @@ function assertQualifiedMove(movePlan, moveResult) {
     fail('move_projection_unqualified_helper',
       'move result was not produced by a move provider');
   }
+}
 
+// The content rules, separated from the provenance check so they can be exercised
+// directly. A provider makes well-formed plans by construction, so through the
+// normal path these branches are unreachable and would be dead code no test could
+// reach — the split is what keeps them honest, the same way resolveMemberRef is
+// exported in the launcher.
+export function assertMoveContent(movePlan, moveResult) {
   if (movePlan.operation !== QUALIFIED_MOVE_OPERATION) {
     fail('move_projection_unsupported_operation',
       `expected_after_move requires operation ${QUALIFIED_MOVE_OPERATION}`,
@@ -322,6 +329,30 @@ function assertQualifiedMove(movePlan, moveResult) {
   }
 }
 
+// Endpoint rules, likewise exported so each branch has a reachable test.
+//
+// Order matters here: the device comparison has to precede the plan-target/intended-
+// target equality check, because sameSubject compares device_id too. Behind that
+// check a cross-device plan is indistinguishable from a mismatched one, and the
+// dedicated code could never fire.
+export function assertProjectionEndpoints({ observedSource, movePlan, targetSubject }) {
+  if (!sameSubject(observedSource.subject, movePlan.source)) {
+    fail('move_projection_source_mismatch',
+      'move plan source identity does not match the enumerated snapshot subject');
+  }
+  if (movePlan.source.device_id !== targetSubject.device_id) {
+    fail('move_projection_cross_device',
+      'expected_after_move is only defined for a same-filesystem move');
+  }
+  if (!sameSubject(movePlan.target, targetSubject)) {
+    fail('move_projection_source_mismatch',
+      'move plan target identity does not match the intended target identity');
+  }
+  if (sameSubject(observedSource.subject, targetSubject)) {
+    fail('move_projection_same_identity', 'move target identity equals the source identity');
+  }
+}
+
 export function projectExpectedAfterMove({ observedSource, movePlan, moveResult, targetSubject }) {
   // An observation is something enumeration produced, not something a snapshot
   // says about itself. Without this a caller could project from a hand-written
@@ -330,22 +361,9 @@ export function projectExpectedAfterMove({ observedSource, movePlan, moveResult,
     fail('move_projection_requires_observed_source',
       'expected_after_move may only be derived from a snapshot produced by observeTree');
   }
-  assertQualifiedMove(movePlan, moveResult);
-  if (!sameSubject(observedSource.subject, movePlan.source)) {
-    fail('move_projection_source_mismatch',
-      'move plan source identity does not match the enumerated snapshot subject');
-  }
-  if (!sameSubject(movePlan.target, targetSubject)) {
-    fail('move_projection_source_mismatch',
-      'move plan target identity does not match the intended target identity');
-  }
-  if (movePlan.source.device_id !== targetSubject.device_id) {
-    fail('move_projection_cross_device',
-      'expected_after_move is only defined for a same-filesystem move');
-  }
-  if (sameSubject(observedSource.subject, targetSubject)) {
-    fail('move_projection_same_identity', 'move target identity equals the source identity');
-  }
+  assertMoveProvenance(movePlan, moveResult);
+  assertMoveContent(movePlan, moveResult);
+  assertProjectionEndpoints({ observedSource, movePlan, targetSubject });
   return deepFreeze({
     schema_version: 'ae.tree-snapshot.v1',
     profile: observedSource.profile,

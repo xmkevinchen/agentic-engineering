@@ -9,7 +9,7 @@
     "digest": "sha256: + 64 lowercase hex over canonical bytes",
     "ndjson": "one canonical object followed by exactly one LF"
   },
-  "case_count": 51,
+  "case_count": 55,
   "cases": [
     {
       "id": "p01-compact-reordered",
@@ -289,6 +289,33 @@
       "input_ref": "inputs/n18-lone-low-surrogate-escape.bin",
       "input_raw_digest": "sha256:05f326659e7c6bbba06066b7512f1f9b14fd2e821289eb12c3d8ed7e06f2d655",
       "expected_code": "lone_surrogate"
+    },
+    {
+      "id": "n18a-lone-high-surrogate-top",
+      "kind": "reject",
+      "input_ref": "inputs/n18a-lone-high-surrogate-top.bin",
+      "input_raw_digest": "sha256:f5b1d6b272ea55412dc3e0e1ce5a29fda98227509d2a3b7406dd75b53e45940e",
+      "expected_code": "lone_surrogate"
+    },
+    {
+      "id": "n18b-lone-low-surrogate-top",
+      "kind": "reject",
+      "input_ref": "inputs/n18b-lone-low-surrogate-top.bin",
+      "input_raw_digest": "sha256:da70efbbed0c3b33958477f77c0f40eab225e0a1186f5bee50588b3a19ba0334",
+      "expected_code": "lone_surrogate"
+    },
+    {
+      "id": "n18c-high-surrogate-then-bmp",
+      "kind": "reject",
+      "input_ref": "inputs/n18c-high-surrogate-then-bmp.bin",
+      "input_raw_digest": "sha256:561ee5ed41b9057160de9abf8ec396690d08ff8c1210cf7ece57f84d2abde45c",
+      "expected_code": "lone_surrogate"
+    },
+    {
+      "id": "n18d-valid-max-pair-is-not-a-rejection",
+      "kind": "admit",
+      "input_ref": "inputs/n18d-valid-max-pair-is-not-a-rejection.bin",
+      "input_raw_digest": "sha256:b6a464b525669137b2e36ef96edb557b07dc0513c91c390fc2eb820102569325"
     },
     {
       "id": "n19-trailing-content",

@@ -23,6 +23,10 @@ import { Checks } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LIB = join(HERE, '..', 'lib');
+const FLOOR = JSON.parse(readFileSync(
+  join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'coverage-floor.json'), 'utf8',
+)).min_corpus_sizes;
+
 
 // Everything in lib/ is a mechanism module and gets scanned — enumerated from the
 // directory rather than listed by hand, so a new lib/ file cannot be added and
@@ -275,6 +279,12 @@ export function run() {
       'the forbidden-token list must match real vocabulary used by the corpus');
 
     checks.equal('rename-mapping-declared', RENAME_MAPPING.length, 5);
+    checks.ok('floor/forbidden-tokens',
+      FORBIDDEN_TOKENS.length >= FLOOR.semantic_blind_forbidden_tokens,
+      `${FORBIDDEN_TOKENS.length} tokens, floor is ${FLOOR.semantic_blind_forbidden_tokens}`);
+    checks.ok('floor/corpus-files',
+      CASE_A_FILES.length >= FLOOR.semantic_blind_corpus_files,
+      `${CASE_A_FILES.length} files, floor is ${FLOOR.semantic_blind_corpus_files}`);
 
 
     return checks;

@@ -26,6 +26,10 @@ import { Checks } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'policy-bundle');
+const FLOOR = JSON.parse(readFileSync(
+  join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'coverage-floor.json'), 'utf8',
+)).min_corpus_sizes;
+
 
 const PROJECT_FILES = [
   '.ae/policies/runner-v1.json',
@@ -48,6 +52,9 @@ export function run() {
     cpSync(join(FIXTURE, 'release-b'), pluginB, { recursive: true });
     cpSync(join(FIXTURE, 'release-c-bad'), pluginBad, { recursive: true });
 
+    checks.ok('floor/policy-trees',
+      Object.keys(index.trees).length >= FLOOR.policy_bundle_trees,
+      `${Object.keys(index.trees).length} trees, floor is ${FLOOR.policy_bundle_trees}`);
     const digestA = index.trees['release-a'].bundle_digest;
     const digestB = index.trees['release-b'].bundle_digest;
 
@@ -307,6 +314,45 @@ export function run() {
     checks.ok('noreplace/short-write-looped', shortWriteCalls > 1, `${shortWriteCalls} write calls`);
     checks.equalBytes('noreplace/short-write-is-byte-for-byte', readFileSync(shortPath), payload);
 
+    // fs-noreplace's own symlink and non-regular-file branches. Through
+    // materializePolicies these are unreachable — the component walk refuses first
+    // — so the boundary is exercised directly or not at all.
+    {
+      const decoyTarget = join(writeProbe, 'decoy-target.json');
+      writeFileSync(decoyTarget, Buffer.from('{"a":1}'));
+      const linkPath = join(writeProbe, 'linked.json');
+      symlinkSync(decoyTarget, linkPath);
+      let linkCode = null;
+      try {
+        atomicFileNoReplace({ path: linkPath, bytes: Buffer.from('{"a":1}') });
+      } catch (error) {
+        linkCode = error instanceof NoReplaceError ? error.code : error.name;
+      }
+      // Note the bytes match the link target exactly: without the lstat the read
+      // would follow the link, compare equal, and report a benign 'exists'.
+      checks.equal('noreplace/symlink-at-destination', linkCode, 'ref_symlink_component');
+
+      const danglingPath = join(writeProbe, 'dangling.json');
+      symlinkSync(join(writeProbe, 'nothing-here.json'), danglingPath);
+      let danglingCode = null;
+      try {
+        atomicFileNoReplace({ path: danglingPath, bytes: Buffer.from('{"a":1}') });
+      } catch (error) {
+        danglingCode = error instanceof NoReplaceError ? error.code : error.name;
+      }
+      checks.equal('noreplace/dangling-symlink-at-destination', danglingCode, 'ref_symlink_component');
+
+      const dirPath = join(writeProbe, 'a-directory');
+      mkdirSync(dirPath, { recursive: true });
+      let dirCode = null;
+      try {
+        atomicFileNoReplace({ path: dirPath, bytes: Buffer.from('{"a":1}') });
+      } catch (error) {
+        dirCode = error instanceof NoReplaceError ? error.code : error.name;
+      }
+      checks.equal('noreplace/directory-at-destination', dirCode, 'integrity_error');
+    }
+
     // A write that makes no progress fails rather than silently truncating.
     let stalledCode = null;
     try {
@@ -514,6 +560,19 @@ export function run() {
     checks.rejects('provider/refuses-tampered-release',
       () => verifyBootstrap({ releaseRoot: tamperedRelease }), 'bootstrap_result_not_derived');
 
+    // An installed manifest that is not in canonical form: its raw bytes and its
+    // authoritative digest would disagree, so nothing downstream is stable.
+    {
+      const nonCanonical = join(work, 'release-non-canonical-manifest');
+      const nc = buildRelease({ releaseRoot: nonCanonical, policySourceDir: join(FIXTURE, 'release-a') });
+      writeFileSync(
+        join(nonCanonical, 'release-manifest-v1.json'),
+        Buffer.from(`${JSON.stringify(nc.manifest, null, 2)}\n`, 'utf8'),
+      );
+      checks.rejects('provider/refuses-non-canonical-manifest',
+        () => verifyBootstrap({ releaseRoot: nonCanonical }), 'active_release_unavailable');
+    }
+
     // ...and not for a root the host does not resolve.
     writeFileSync(hostRecordPath, JSON.stringify({ active_root: join(work, 'no-such-root') }));
     checks.rejects('provider/refuses-unresolvable-root',
@@ -618,8 +677,14 @@ export function run() {
     checks.rejects('replay/local-snapshot-missing',
       () => replayFromLocalSnapshots({ projectRoot: missingProject, activation }), 'snapshot_missing');
 
-    checks.equal('bundle-project-ref-is-pure',
-      bundleProjectRef(Buffer.from('abc')), bundleProjectRef(Buffer.from('abc')));
+    // Content-addressed, so different bytes must land at different paths and the
+    // same bytes at the same one. Comparing one call against another call with the
+    // same input only restates that the function is deterministic.
+    checks.notEqual('bundle-project-ref/differs-for-different-bytes',
+      bundleProjectRef(Buffer.from('abc')), bundleProjectRef(Buffer.from('abd')));
+    checks.equal('bundle-project-ref/is-content-addressed',
+      bundleProjectRef(canonicalize({ schema_version: 'ae.policy-bundle.v1' })),
+      `.ae/policies/bundles/${canonicalDigest({ schema_version: 'ae.policy-bundle.v1' }).replace('sha256:', '')}.json`);
 
     return checks;
   } finally {

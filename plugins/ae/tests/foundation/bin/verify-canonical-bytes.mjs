@@ -4,7 +4,10 @@
 //
 //   runtime  lib/canonical-json.mjs   (strict parser + serializer)
 //   oracle   JSON.parse + oracle/canonical-oracle.mjs (table-driven serializer)
-//   shasum   the system sha256 binary, for the expected digests
+//   shasum   the system sha256 binary — a second implementation of SHA-256 over
+//            the same expected files. It confirms our digest function, NOT that
+//            the expected bytes themselves are right; that comes from their being
+//            hand-authored constants.
 //
 // The runtime and the oracle are never compared to each other as the primary
 // assertion — both are compared to expected/*.bin.
@@ -21,15 +24,32 @@ import { Checks } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORPUS = join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'canonical-bytes');
+const FLOOR = JSON.parse(readFileSync(
+  join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'coverage-floor.json'), 'utf8',
+)).min_corpus_sizes;
+
 
 export function run() {
   const checks = new Checks('canonical-bytes');
   const manifest = JSON.parse(readFileSync(join(CORPUS, 'cases.json'), 'utf8'));
 
   checks.equal('manifest-schema', manifest.schema_version, 'ae.fixture.canonical-bytes.v1');
+  // Self-referential on its own — both operands live in cases.json — so it is
+  // paired with the floor below, which is a separate checked-in constant.
   checks.equal('manifest-case-count', manifest.cases.length, manifest.case_count);
 
-  // ---- expected digests confirmed by a digest implementation that is not ours
+  const byKind = (kind) => manifest.cases.filter((c) => c.kind === kind).length;
+  checks.ok('floor/total-cases', manifest.cases.length >= FLOOR.canonical_bytes_cases,
+    `${manifest.cases.length} cases, floor is ${FLOOR.canonical_bytes_cases}`);
+  checks.ok('floor/reject-cases', byKind('reject') >= FLOOR.canonical_bytes_reject_cases,
+    `${byKind('reject')} reject cases, floor is ${FLOOR.canonical_bytes_reject_cases}`);
+  checks.ok('floor/canonical-cases', byKind('canonical') >= FLOOR.canonical_bytes_canonical_cases,
+    `${byKind('canonical')} canonical cases, floor is ${FLOOR.canonical_bytes_canonical_cases}`);
+  checks.ok('floor/ndjson-cases',
+    byKind('ndjson_accept') + byKind('ndjson_reject') >= FLOOR.canonical_bytes_ndjson_cases,
+    `floor is ${FLOOR.canonical_bytes_ndjson_cases}`);
+
+  // ---- our sha256 agrees with the system's over the expected files
   const expectedRefs = [...new Set(
     manifest.cases.filter((c) => c.expected_ref).map((c) => c.expected_ref),
   )].sort();
@@ -83,6 +103,11 @@ export function run() {
       continue;
     }
 
+    if (testCase.kind === 'admit') {
+      checks.accepts(`admit/${testCase.id}`, () => parseStrict(input));
+      continue;
+    }
+
     if (testCase.kind === 'reject') {
       checks.rejects(`reject/${testCase.id}`, () => parseStrict(input), testCase.expected_code);
       continue;
@@ -105,14 +130,44 @@ export function run() {
   }
 
   // ---- semantic equivalence vs raw-byte identity
+  //
   // Members of an equivalence group are semantically one value and byte-wise
-  // several. Identities over artifacts/sources/members use the raw bytes; only
-  // the semantic JSON digest collapses the group.
-  for (const [group, digests] of canonicalDigestsByGroup) {
-    checks.equal(`group-single-canonical-digest/${group}`, digests.size, 1);
-    const raws = rawDigestsByGroup.get(group);
-    checks.equal(`group-distinct-raw-digests/${group}`, new Set(raws).size, raws.length);
+  // several. Identities over artifacts/sources/members use the raw bytes; only the
+  // semantic JSON digest collapses the group.
+  //
+  // Grouped by the digest the IMPLEMENTATION computes, not by the group label in
+  // cases.json. Comparing the manifest's declared grouping against itself is a
+  // tautology — breaking canonicalize() outright would leave it green.
+  const observedGrouping = new Map();
+  for (const testCase of manifest.cases.filter((c) => c.kind === 'canonical')) {
+    const value = parseStrict(readFileSync(join(CORPUS, testCase.input_ref)));
+    const digest = canonicalDigest(value);
+    if (!observedGrouping.has(digest)) observedGrouping.set(digest, []);
+    observedGrouping.get(digest).push(testCase);
   }
+  for (const [digest, members] of observedGrouping) {
+    const declared = new Set(members.map((m) => m.equivalence_group));
+    checks.equal(`group/one-declared-group-per-computed-digest/${members[0].equivalence_group}`,
+      declared.size, 1,
+      `digest ${digest} spans declared groups ${[...declared].join(', ')}`);
+  }
+  for (const [group, digests] of canonicalDigestsByGroup) {
+    const computed = new Set(
+      manifest.cases
+        .filter((c) => c.equivalence_group === group)
+        .map((c) => canonicalDigest(parseStrict(readFileSync(join(CORPUS, c.input_ref))))),
+    );
+    checks.equal(`group/computed-digest-is-single/${group}`, computed.size, 1);
+    checks.equal(`group/computed-matches-declared/${group}`, [...computed][0], [...digests][0]);
+    const raws = rawDigestsByGroup.get(group);
+    checks.equal(`group/distinct-raw-digests/${group}`, new Set(raws).size, raws.length);
+  }
+
+  // At least one group must have more than one member, or "several byte sequences,
+  // one canonical form" is a claim no fixture makes.
+  const largestGroup = Math.max(...[...rawDigestsByGroup.values()].map((r) => r.length));
+  checks.ok('group/at-least-one-multi-member-group', largestGroup > 1,
+    `largest equivalence group has ${largestGroup} member(s)`);
 
   // Pretty printing and platform line endings are outside the semantic digest;
   // this is the same claim the group above makes, asserted directly.
@@ -121,6 +176,25 @@ export function run() {
   checks.notEqual('crlf-raw-differs', digestBytes(compact), digestBytes(prettyCrlf));
   checks.equal('crlf-semantic-identical',
     canonicalDigest(parseStrict(compact)), canonicalDigest(parseStrict(prettyCrlf)));
+
+  // ---- the digest text form, from both sides -----------------------------
+  //
+  // Only positive assertions existed, so DIGEST_PATTERN could be replaced with /^/
+  // and every one would still pass.
+  for (const [label, text] of [
+    ['uppercase-hex', `sha256:${'A'.repeat(64)}`],
+    ['too-short', `sha256:${'a'.repeat(63)}`],
+    ['too-long', `sha256:${'a'.repeat(65)}`],
+    ['no-prefix', 'a'.repeat(64)],
+    ['wrong-algorithm', `sha512:${'a'.repeat(64)}`],
+    ['non-hex', `sha256:${'g'.repeat(64)}`],
+    ['leading-space', ` sha256:${'a'.repeat(64)}`],
+    ['trailing-newline', `sha256:${'a'.repeat(64)}\n`],
+    ['empty', ''],
+  ]) {
+    checks.equal(`digest-form/rejects/${label}`, isDigest(text), false);
+  }
+  checks.equal('digest-form/accepts-well-formed', isDigest(`sha256:${'0123456789abcdef'.repeat(4)}`), true);
 
   // ---- the serializer's own admission rules ------------------------------
   //
