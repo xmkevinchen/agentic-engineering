@@ -373,7 +373,7 @@
     "description": "Every issued request MUST deny each of these, and none may overlap allowed_paths. Omission or overlap invalidates the request before any work. These are the surfaces where a bootstrap attempt could manufacture authority it does not have.",
     "patterns": [
       ".git/**",
-      ".ae/1.0/finalized/**",
+      "docs/ae-v1-design-history/finalized/**",
       ".ae/features/active/F-083-ae-v1-implementation/plan.md",
       ".ae/features/active/F-083-ae-v1-implementation/goal.frozen.md",
       ".ae/features/active/F-083-ae-v1-implementation/decision-register.md",
