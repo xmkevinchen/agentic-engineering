@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalDigest } from '../lib/canonical-json.mjs';
+import { isDeeplyFrozen } from '../lib/freeze.mjs';
 import { FoundationError } from '../lib/errors.mjs';
 import {
   ALGORITHM, PROFILE_NAMES, entriesProjectionDigest, finalizeEntries, isObservedSnapshot,
@@ -319,6 +320,57 @@ export function run() {
     for (const [label, fn, code] of rejections) {
       checks.rejects(`move/${label}`, fn, code);
     }
+
+    // ---- a brand certifies identity, not content -------------------------
+    //
+    // The corpus previously tested only "a shallow copy is not the value". That
+    // misses the sharper attack: keep the identity, edit the contents. A branded
+    // object that is still mutable certifies nothing, because the WeakSet keys on
+    // the reference and the reference never changed.
+    // Deliberately a FRESH observation: projectExpectedAfterMove deep-freezes the
+    // members it carries over, so asserting on `source` after a projection would
+    // pass even if observeTree itself froze nothing.
+    const untouched = observeTree({
+      logicalRoot: LOGICAL_ROOT,
+      resolvedRootPath: materializeTree(join(work, 'immutability')),
+      profile: 'feature_evidence',
+    });
+    checks.ok('immutability/observed-snapshot-is-deeply-frozen', isDeeplyFrozen(untouched));
+    const originalRoot = untouched.subject.resolved_root;
+    const originalEntryCount = untouched.entries.length;
+    const originalFirstDigest = untouched.entries.find((e) => e.type === 'file')?.digest;
+    for (const [label, mutate] of [
+      ['subject-root', (snap) => { snap.subject.resolved_root = '/somewhere/else'; }],
+      ['subject-logical-root', (snap) => { snap.subject.logical_root = 'claimed/elsewhere'; }],
+      ['append-entry', (snap) => {
+        snap.entries.push({
+          path: 'fabricated.txt', type: 'file', mode: '0644', length: 0,
+          digest: `sha256:${'0'.repeat(64)}`,
+        });
+      }],
+      ['edit-entry-digest', (snap) => { snap.entries[0].digest = `sha256:${'f'.repeat(64)}`; }],
+      ['edit-projection-kind', (snap) => { snap.projection_kind = 'expected_after_move'; }],
+    ]) {
+      let blocked = false;
+      try {
+        mutate(untouched);
+      } catch {
+        blocked = true;
+      }
+      checks.ok(`immutability/observed-snapshot-rejects/${label}`, blocked,
+        'a branded snapshot was mutated in place and stayed branded');
+    }
+    // ...and the contents are actually unchanged, not merely refused loudly.
+    checks.ok('immutability/observed-snapshot-content-intact',
+      !untouched.entries.some((e) => e.path === 'fabricated.txt')
+      && untouched.entries.length === originalEntryCount
+      && untouched.subject.resolved_root === originalRoot
+      && untouched.entries.find((e) => e.type === 'file')?.digest === originalFirstDigest
+      && untouched.projection_kind === 'observed');
+
+    checks.ok('immutability/move-plan-is-deeply-frozen', isDeeplyFrozen(movePlan));
+    checks.ok('immutability/move-result-is-deeply-frozen', isDeeplyFrozen(moveResult));
+    checks.ok('immutability/projection-is-deeply-frozen', isDeeplyFrozen(projected));
 
     // ---- provenance, not field agreement ---------------------------------
     //

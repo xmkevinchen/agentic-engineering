@@ -48,6 +48,16 @@ const MINTED = new WeakSet();
 const DERIVED_BOOTSTRAP = new WeakSet();
 
 const SCOPE_KEYS = ['repo', 'feature_id', 'purpose', 'host_operation'];
+
+// The bridge is a manifest member and cannot import lib/, so it carries its own
+// copy. A brand records identity, not content: a shallowly-frozen capability with
+// a mutable `scope` would stay branded while its scope was rewritten.
+function deepFreezeLocal(value) {
+  if (value === null || typeof value !== 'object') return value;
+  Object.freeze(value);
+  for (const key of Object.getOwnPropertyNames(value)) deepFreezeLocal(value[key]);
+  return value;
+}
 const DEFAULT_TTL_MS = 60_000;
 
 // The host record stands in for the plugin registry / invocation correlation the
@@ -90,7 +100,7 @@ export function attestActiveRoot({ observedReleaseRoot }) {
   // thing this fixture stands in for. What that root's manifest digest is gets read
   // off the root itself; any digest in the record is ignored, so a caller who
   // controls the record can pick an installed release but cannot invent one.
-  const attestation = Object.freeze({
+  const attestation = deepFreezeLocal({
     schema_version: 'ae.active-release-attestation.v1',
     fixture_only: true,
     active_root: record.active_root,
@@ -122,7 +132,7 @@ export function deriveBootstrapResult({ releaseRoot }) {
   } catch {
     throw new BridgeError('bootstrap_result_not_derived', 'release manifest is unreadable');
   }
-  const result = Object.freeze({
+  const result = deepFreezeLocal({
     schema_version: 'ae.bootstrap-result.v1',
     fixture_only: true,
     manifest_digest: manifestDigest,
@@ -173,13 +183,16 @@ export function mintOperationCapability({ attestation, bootstrapResult, scope, i
   }
 
   const now = issuedAt ?? Date.now();
-  const capability = Object.freeze({
+  const capability = deepFreezeLocal({
     schema_version: 'ae.active-release-operation.v1',
     fixture_only: true,
     active_release_manifest_digest: manifestDigest,
     active_root_identity: rootIdentity,
     bootstrap_result_digest: bootstrapResultDigest,
-    scope: Object.freeze(Object.fromEntries(SCOPE_KEYS.map((k) => [k, scope[k]]))),
+    // Frozen by deepFreezeLocal below, not here: two mechanisms for one property
+    // means removing either leaves the suite green and the property intact by
+    // accident, which is how a real regression later goes unnoticed.
+    scope: Object.fromEntries(SCOPE_KEYS.map((k) => [k, scope[k]])),
     nonce: randomBytes(16).toString('hex'),
     issued_at: now,
     expires_at: now + (ttlMs ?? DEFAULT_TTL_MS),
@@ -203,8 +216,17 @@ export function verifyOperationCapability(capability, { bootstrapResultDigest, r
   if (at > capability.expires_at) {
     throw new BridgeError('capability_expired', 'capability has expired');
   }
+  if (!requiredScope || typeof requiredScope !== 'object') {
+    throw new BridgeError('capability_scope_mismatch', 'no scope was requested');
+  }
   for (const key of SCOPE_KEYS) {
-    if (!requiredScope || capability.scope[key] !== requiredScope[key]) {
+    // Presence is checked separately from value. Comparing only values would let
+    // an explicitly-undefined scope entry match an omitted one, so a capability
+    // minted with a hole would verify against a request with a different hole.
+    if (!Object.prototype.hasOwnProperty.call(requiredScope, key)) {
+      throw new BridgeError('capability_scope_mismatch', `requested scope is missing ${key}`);
+    }
+    if (capability.scope[key] !== requiredScope[key]) {
       throw new BridgeError('capability_scope_mismatch',
         `capability scope ${key} does not match the requested operation`);
     }

@@ -79,6 +79,7 @@ export const CODES = Object.freeze({
     'capability_expired',
     'bootstrap_result_not_derived',
     'attestation_not_observed',
+    'release_launcher_not_bound',
   ],
   policy: [
     'integrity_error',

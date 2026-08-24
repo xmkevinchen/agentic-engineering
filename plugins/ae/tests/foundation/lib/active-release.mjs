@@ -19,6 +19,7 @@
 
 import { isObservedAttestation, isVerifiedBootstrapResult } from './active-release-provider.mjs';
 import { fail } from './errors.mjs';
+import { deepFreeze } from './freeze.mjs';
 
 const VERIFIED = new WeakSet();
 
@@ -55,7 +56,7 @@ export function sealVerifiedActiveRelease({ attestation, bootstrapResult }) {
       'the verified release manifest carries no activation base bundle digest');
   }
 
-  const sealed = Object.freeze({
+  const sealed = deepFreeze({
     schema_version: 'ae.verified-active-release.v1',
     release_manifest_digest: bootstrapResult.manifest_digest,
     activation_base_bundle_digest: activationBaseBundleDigest,

@@ -27,6 +27,7 @@ plugins/ae/tests/foundation/
 │   ├── tree-snapshot.mjs     ae.tree-snapshot.v1
 │   ├── active-release.mjs    the sealed verified-active-release value
 │   ├── active-release-provider.mjs  fixture producer: derives, never accepts
+│   ├── freeze.mjs            deep freeze for producer-made values
 │   ├── fs-noreplace.mjs      the no-replace write boundary
 │   ├── fs-move-provider.mjs  fixture producer: plans and performs directory moves
 │   ├── policy-bundle.mjs     materialization + activation/replay split
@@ -73,6 +74,47 @@ brands what it makes, and each consumer asks the producer, not the value:
 
 A shallow copy of a genuine value is not the value, and every table row has that
 as an executable negative.
+
+**A brand certifies identity, not content.** A WeakSet keys on the reference, so a
+branded object that stays mutable certifies nothing: instead of authoring a fake
+value, a caller takes a real one and edits it afterwards, and the brand survives
+because the reference never changed. `Object.freeze` is not enough either — it is
+shallow, and a frozen snapshot with a mutable `subject` and `entries` can be made
+to claim it enumerated a directory it never read. Every producer therefore hands
+out deeply frozen values (`lib/freeze.mjs`; the bridge carries its own copy, since
+a manifest member cannot import `lib/`), and the corpus asserts deep freezing
+directly as well as attempting in-place mutation of each field that matters.
+
+### Two things this does *not* establish
+
+Stated here because the tempting version of each claim is false.
+
+**Input anchoring.** A brand records that a value passed through a producer. It
+records nothing about whether the producer's *own inputs* pointed at something
+trustworthy. `lib/active-release-provider.mjs` takes `releaseRoot` and
+`hostRecordPath` as parameters, so a caller who builds a complete, self-consistent
+release in a directory they control gets a genuinely branded attestation and
+bootstrap result for it — the producer really did do the work, against data the
+caller chose. The launcher does not have this weakness: `RELEASE_ROOT` comes from
+`dirname(dirname(fileURLToPath(import.meta.url)))` and is checked against a
+digest embedded at build time, which is what earns "a caller does not get to say
+which release is running". An in-process helper cannot reproduce that anchor, so
+the two are **different trust classes** and the table above should be read that
+way. What the lib provider does now enforce is that a directory is not a release
+unless its own launcher was built against that exact manifest
+(`release_launcher_not_bound`) — which closes "a bag of files counts as a release"
+without pretending to close "the caller built the release". Anchoring the policy
+path to a self-located root is P1's job when it wires a real consumer.
+
+**Activation.** `candidateEpochStatus` reads `activated` and `policy_epoch`
+straight off a caller-supplied object with no provenance check — everywhere else
+in this package that is the banned pattern. It is admissible only because
+activation is established by the Ledger from a hash-chained `contract_activated`
+event, and the Ledger is P1. The function classifies an epoch given an activation
+state someone else established; it does not decide activation. The parameter is
+named `declaredCandidateState` for that reason and the corpus asserts the
+limitation, so it cannot be mistaken for a guarantee. Wiring it to a real consumer
+without the upstream Ledger check would be the defect.
 
 **This is separate from qualification, and stays separate.** Whether a real host
 provider or a real filesystem helper deserves to be believed is P0.7/P0.8. Every
@@ -496,7 +538,7 @@ the corpus vocabulary.
 
 ## Error taxonomy
 
-`lib/errors.mjs` groups 67 codes by the mechanism that raises them; a code appears
+`lib/errors.mjs` groups 68 codes by the mechanism that raises them; a code appears
 in exactly one group, and overlap between the lexical and schema groups is the
 defect the split exists to prevent. Callers branch on `code`, never on `message`:
 messages are diagnostics and may gain detail without a version bump, codes may not.
@@ -522,7 +564,7 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested: 41 deliberate defects, each of which must turn it
+The suite is mutation-tested: 47 deliberate defects, each of which must turn it
 red. They cover every guard described above — canonical ordering, duplicate keys,
 the number domain, the `feature_evidence` boundary, symlink rejection, move
 subject/operation/outcome/qualification, member digest recomputation, import
@@ -546,6 +588,22 @@ Two checks exist specifically because a mutation run showed they were missing:
 A third came from the same place: the "wrong move operation" guard was
 unreachable while the provider had only one capability, so the provider gained a
 file-move capability and the guard became a real test rather than dead code.
+
+A fourth round of survivors was more instructive still, because none of them was a
+missing guard — each was a guard *masked by a redundant second one*. The
+immutability assertions ran after a projection had already deep-frozen the members
+it carried over, so they would have passed even if enumeration froze nothing; the
+capability's scope was frozen both inline and by the deep freeze, so removing
+either left the property intact by accident; and the scope presence check was
+shadowed by the value comparison. Two mechanisms for one property is not twice the
+safety — it means either can be deleted with the suite still green, which is how a
+regression later goes unnoticed. Each was resolved by removing the redundancy or
+by asserting on a value nothing else had touched.
+
+Not every guard is independently mutable, and the corpus says so rather than
+padding the count: the attestation objects are flat, so shallow and deep freezing
+coincide for them today. They use the deep helper anyway, so a nested field added
+later is covered by construction.
 
 All three are worth stating plainly: defense in depth makes a suite look green
 when one layer is removed, and only a mutation run finds that. Each round of this

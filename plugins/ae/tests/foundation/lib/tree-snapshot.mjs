@@ -8,6 +8,7 @@ import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { DIGEST_PATTERN, canonicalDigest, digestBytes } from './canonical-json.mjs';
 import { fail } from './errors.mjs';
+import { deepFreeze } from './freeze.mjs';
 import { isProviderMoveResult, isQualifiedMovePlan } from './fs-move-provider.mjs';
 
 // ---------------------------------------------------------------------------
@@ -144,6 +145,10 @@ export function finalizeEntries(entries) {
 const OBSERVED = new WeakSet();
 
 function sealObserved(snapshot) {
+  // Frozen before branding, and deeply: `subject` and `entries` are where a
+  // caller would otherwise rewrite what this snapshot claims to have seen, and
+  // the brand would survive because the identity never changed.
+  deepFreeze(snapshot);
   OBSERVED.add(snapshot);
   return snapshot;
 }
@@ -341,7 +346,7 @@ export function projectExpectedAfterMove({ observedSource, movePlan, moveResult,
   if (sameSubject(observedSource.subject, targetSubject)) {
     fail('move_projection_same_identity', 'move target identity equals the source identity');
   }
-  return {
+  return deepFreeze({
     schema_version: 'ae.tree-snapshot.v1',
     profile: observedSource.profile,
     algorithm: ALGORITHM,
@@ -361,7 +366,7 @@ export function projectExpectedAfterMove({ observedSource, movePlan, moveResult,
     },
     // Verbatim: the projection asserts the same content under a new subject.
     entries: observedSource.entries,
-  };
+  });
 }
 
 export function snapshotDigest(snapshot) {

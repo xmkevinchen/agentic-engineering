@@ -593,6 +593,16 @@ export async function run() {
     checks.ok('capability/minted-carries-no-bearer',
       !Object.keys(realCapability).some((k) => k.toLowerCase().includes('bearer')));
 
+    // A brand certifies identity, not content: a mutable scope on a branded
+    // capability would let a caller keep the brand and rewrite what it authorises.
+    let scopeMutationBlocked = false;
+    try { realCapability.scope.purpose = 'finalize'; } catch { scopeMutationBlocked = true; }
+    checks.ok('capability/scope-cannot-be-rewritten-in-place', scopeMutationBlocked);
+    checks.equal('capability/scope-intact-after-attempt', realCapability.scope.purpose, 'record_event');
+    let expiryMutationBlocked = false;
+    try { realCapability.expires_at = 1e15; } catch { expiryMutationBlocked = true; }
+    checks.ok('capability/expiry-cannot-be-rewritten-in-place', expiryMutationBlocked);
+
     const coreA = await import(`file://${join(rootA, 'runtime', 'ae-gate-core.mjs')}`);
     const coreCode = (fn) => {
       try { fn(); return 'accepted'; } catch (error) { return error.code; }
@@ -625,6 +635,33 @@ export async function run() {
           now: 2000,
         })), 'capability_scope_mismatch');
     }
+
+    // The case the value comparison alone cannot see: a capability minted with an
+    // explicitly-undefined scope entry, verified against a request that omits the
+    // key. Both read as `undefined`, so only a presence check separates them.
+    const holedCapability = bridge.mintOperationCapability({
+      attestation: attestationA,
+      bootstrapResult: derivedA,
+      scope: { ...realScope, host_operation: undefined },
+      issuedAt: 1000,
+      ttlMs: 60000,
+    });
+    checks.equal('capability/undefined-scope-value-vs-omitted-key',
+      coreCode(() => coreA.run({
+        capability: holedCapability,
+        bootstrapResultDigest: derivedA.bootstrap_result_digest,
+        scope: { repo: null, feature_id: 'F-100', purpose: 'record_event' },
+        now: 2000,
+      })), 'capability_scope_mismatch');
+
+    // A scope entry that is present-but-undefined must not match an omitted key.
+    checks.equal('capability/scope-omitted-key-is-not-a-match',
+      coreCode(() => coreA.run({
+        capability: realCapability,
+        bootstrapResultDigest: derivedA.bootstrap_result_digest,
+        scope: { repo: null, feature_id: 'F-100', purpose: 'record_event' },
+        now: 2000,
+      })), 'capability_scope_mismatch');
 
     checks.equal('capability/expired',
       coreCode(() => coreA.run({

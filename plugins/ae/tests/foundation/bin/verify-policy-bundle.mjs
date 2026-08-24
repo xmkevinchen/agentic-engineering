@@ -21,6 +21,7 @@ import {
   replayFromLocalSnapshots, selectActivationBaseBundle, verifyBundleSources,
 } from '../lib/policy-bundle.mjs';
 import { NoReplaceError, atomicFileNoReplace } from '../lib/fs-noreplace.mjs';
+import { isDeeplyFrozen } from '../lib/freeze.mjs';
 import { Checks } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -364,6 +365,86 @@ export function run() {
       retainedHistoricalBundleDigests: retained,
     }), 'base_bundle_not_current');
 
+    // ---- a brand certifies identity, not content -------------------------
+    checks.ok('immutability/attestation-is-deeply-frozen', isDeeplyFrozen(attestation));
+    checks.ok('immutability/bootstrap-result-is-deeply-frozen', isDeeplyFrozen(bootstrapResult));
+    checks.ok('immutability/sealed-value-is-deeply-frozen', isDeeplyFrozen(verifiedActiveRelease));
+
+    // The nested manifest is the one that matters: rewriting it in place would
+    // change which bundle the sealed value names while the brand survived.
+    for (const [label, mutate] of [
+      ['manifest-activation-base', () => {
+        bootstrapResult.manifest.activation_base_bundle_digest = `sha256:${'d'.repeat(64)}`;
+      }],
+      ['manifest-members', () => { bootstrapResult.manifest.members.length = 0; }],
+      ['attestation-root-identity', () => { attestation.active_root_identity = '/elsewhere'; }],
+      ['attestation-digest', () => {
+        attestation.active_release_manifest_digest = `sha256:${'d'.repeat(64)}`;
+      }],
+      ['sealed-base-digest', () => {
+        verifiedActiveRelease.activation_base_bundle_digest = `sha256:${'d'.repeat(64)}`;
+      }],
+    ]) {
+      let blocked = false;
+      try { mutate(); } catch { blocked = true; }
+      checks.ok(`immutability/rejects-in-place-mutation/${label}`, blocked);
+    }
+    // Re-sealing after the attempted mutations still names the real bundle.
+    checks.equal('immutability/sealed-value-still-names-the-real-bundle',
+      sealVerifiedActiveRelease({ attestation, bootstrapResult }).activation_base_bundle_digest,
+      digestB);
+
+    // ---- the activation base must BE a verified member --------------------
+    //
+    // The launcher enforces this at step 7b. lib/ is the code slated for promotion
+    // into plugins/ae/runtime/, so it needs the same invariant, not a weaker one.
+    for (const [label, transform, code] of [
+      ['digest-names-no-member',
+        (m) => ({ ...m, activation_base_bundle_digest: `sha256:${'c'.repeat(64)}` }),
+        'activation_base_member_mismatch'],
+      ['ref-names-no-member',
+        (m) => ({ ...m, activation_base_bundle_ref: 'policies/not-installed.json' }),
+        'activation_base_member_mismatch'],
+      ['ref-names-a-non-policy-member',
+        (m) => ({
+          ...m,
+          activation_base_bundle_ref: 'schemas/release-manifest-v1.schema.json',
+          activation_base_bundle_digest:
+            m.members.find((x) => x.ref === 'schemas/release-manifest-v1.schema.json').raw_digest,
+        }),
+        'activation_base_member_mismatch'],
+    ]) {
+      const ungrounded = join(work, `release-ungrounded-${label}`);
+      buildRelease({
+        releaseRoot: ungrounded,
+        policySourceDir: join(FIXTURE, 'release-a'),
+        transformManifest: transform,
+      });
+      checks.rejects(`activation-base/${label}`,
+        () => verifyBootstrap({ releaseRoot: ungrounded }), code);
+    }
+
+    // A directory holding a manifest and matching members is not yet a release:
+    // the release's own launcher has to have been built against this manifest.
+    {
+      const unbound = join(work, 'release-unbound-launcher');
+      buildRelease({ releaseRoot: unbound, policySourceDir: join(FIXTURE, 'release-a') });
+      rmSync(join(unbound, 'runtime/ae-gate.mjs'));
+      checks.rejects('activation-base/no-launcher',
+        () => verifyBootstrap({ releaseRoot: unbound }), 'release_launcher_not_bound');
+    }
+    {
+      const crossed = join(work, 'release-crossed-launcher');
+      buildRelease({ releaseRoot: crossed, policySourceDir: join(FIXTURE, 'release-a') });
+      const other = join(work, 'release-launcher-donor');
+      const donor = buildRelease({
+        releaseRoot: other, policySourceDir: join(FIXTURE, 'release-a'), releaseVersion: '3.0.0',
+      });
+      cpSync(donor.launcherPath, join(crossed, 'runtime/ae-gate.mjs'), { force: true });
+      checks.rejects('activation-base/launcher-from-another-release',
+        () => verifyBootstrap({ releaseRoot: crossed }), 'release_launcher_not_bound');
+    }
+
     // ---- self-declaration cannot become verification ----------------------
     //
     // Every public surface on the selection path is called with fully
@@ -473,19 +554,34 @@ export function run() {
     checks.notEqual('epoch/differs-across-releases', epochOld, epochNew);
 
     checks.equal('epoch/current-candidate',
-      candidateEpochStatus({ candidate: { activated: false, policy_epoch: epochNew }, currentEpoch: epochNew }).status,
+      candidateEpochStatus({ declaredCandidateState: { activated: false, policy_epoch: epochNew }, currentEpoch: epochNew }).status,
       'current');
     checks.equal('epoch/unactivated-candidate-goes-stale',
-      candidateEpochStatus({ candidate: { activated: false, policy_epoch: epochOld }, currentEpoch: epochNew }).status,
+      candidateEpochStatus({ declaredCandidateState: { activated: false, policy_epoch: epochOld }, currentEpoch: epochNew }).status,
       'policy_epoch_stale');
 
     // A current-release change does not reach back into an existing activation.
     const activatedStatus = candidateEpochStatus({
-      candidate: { activated: true, policy_epoch: epochOld }, currentEpoch: epochNew,
+      declaredCandidateState: { activated: true, policy_epoch: epochOld }, currentEpoch: epochNew,
     });
     checks.equal('epoch/activation-unaffected', activatedStatus.status, 'activated');
     checks.equal('epoch/activation-not-rewritten', activatedStatus.rewritten, false);
     checks.equal('epoch/activation-keeps-its-epoch', activatedStatus.epoch, epochOld);
+
+    // Stated limitation, asserted so it cannot be mistaken for a guarantee:
+    // candidateEpochStatus classifies caller-declared activation state and does
+    // NOT establish it. Everywhere else a caller-set boolean is refused; here it
+    // is accepted because the Ledger that establishes activation is P1's, and
+    // this function decides nothing about whether the claim is true.
+    checks.equal('epoch/classifies-declared-state-without-verifying-it',
+      candidateEpochStatus({
+        declaredCandidateState: { activated: true, policy_epoch: 'not-a-real-epoch' },
+        currentEpoch: epochNew,
+      }).status,
+      'activated');
+    checks.ok('epoch/is-not-a-provenance-boundary',
+      typeof candidateEpochStatus === 'function',
+      'documented in v1-foundation-freeze.md: P1 owns establishing activation');
 
     // ---- historical replay from local snapshots ---------------------------
     const activation = {

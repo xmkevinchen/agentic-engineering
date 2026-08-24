@@ -18,6 +18,7 @@ import { lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'no
 import { join } from 'node:path';
 import { canonicalize, digestBytes, parseStrict } from './canonical-json.mjs';
 import { fail } from './errors.mjs';
+import { deepFreeze } from './freeze.mjs';
 
 const ATTESTATIONS = new WeakSet();
 const BOOTSTRAP_RESULTS = new WeakSet();
@@ -75,7 +76,7 @@ export function observeActiveRoot({ hostRecordPath }) {
   // ignored on purpose.
   const { digest } = readManifest(identity);
 
-  const attestation = Object.freeze({
+  const attestation = deepFreeze({
     schema_version: 'ae.active-release-attestation.v1',
     fixture_only: true,
     active_root_identity: identity,
@@ -111,7 +112,52 @@ export function verifyBootstrap({ releaseRoot }) {
     }
   }
 
-  const result = Object.freeze({
+  // The activation base bundle must BE one of the members just rehashed. The
+  // launcher enforces this at its step 7b; without the same check here, `lib/` —
+  // the code slated for promotion into plugins/ae/runtime/ — would hand out a
+  // bootstrap result whose base digest names nothing on disk, and every policy
+  // decision downstream would bind to a number no bytes produced.
+  const baseMembers = (manifest.members ?? [])
+    .filter((m) => m.ref === manifest.activation_base_bundle_ref);
+  if (baseMembers.length !== 1) {
+    fail('activation_base_member_mismatch',
+      `activation_base_bundle_ref ${manifest.activation_base_bundle_ref} matches ${baseMembers.length} members`);
+  }
+  if (baseMembers[0].role !== 'policy') {
+    fail('activation_base_member_mismatch',
+      `activation base bundle member has role ${baseMembers[0].role}, expected policy`);
+  }
+  if (baseMembers[0].raw_digest !== manifest.activation_base_bundle_digest) {
+    fail('activation_base_member_mismatch',
+      'activation_base_bundle_digest does not match its member raw digest',
+      { declared: manifest.activation_base_bundle_digest, member: baseMembers[0].raw_digest });
+  }
+
+  // A directory holding a manifest and matching members is not yet a release: the
+  // release's own launcher must have been built against this exact manifest. This
+  // is the DAG invariant, checked rather than assumed.
+  //
+  // It does NOT establish that the release is trustworthy — a caller who can build
+  // a release can build a matching launcher. See the trust-class note in the freeze
+  // record; anchoring a root to the running process is the launcher's property and
+  // cannot be reproduced by an in-process helper.
+  let launcherSource;
+  try {
+    launcherSource = readFileSync(join(identity, 'runtime', 'ae-gate.mjs'), 'utf8');
+  } catch {
+    fail('release_launcher_not_bound', 'release root has no bootstrap launcher');
+  }
+  const embedded = launcherSource.match(/EXPECTED_RELEASE_MANIFEST_DIGEST = '(sha256:[0-9a-f]{64})'/);
+  if (!embedded) {
+    fail('release_launcher_not_bound', 'launcher carries no embedded manifest digest');
+  }
+  if (embedded[1] !== digest) {
+    fail('release_launcher_not_bound',
+      'launcher was built for a different manifest than the one installed here',
+      { embedded: embedded[1], installed: digest });
+  }
+
+  const result = deepFreeze({
     schema_version: 'ae.bootstrap-result.v1',
     fixture_only: true,
     manifest,

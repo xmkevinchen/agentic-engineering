@@ -21,6 +21,7 @@
 import { lstatSync, renameSync, statSync } from 'node:fs';
 import { canonicalDigest, digestBytes } from './canonical-json.mjs';
 import { fail } from './errors.mjs';
+import { deepFreeze } from './freeze.mjs';
 
 export const FIXTURE_MOVE_PROVIDER = Object.freeze({
   provider_id: 'fixture-fs-directory-move-v1',
@@ -52,7 +53,7 @@ function qualificationFor(selector) {
     provider: FIXTURE_MOVE_PROVIDER,
     selector,
   };
-  return Object.freeze({
+  return deepFreeze({
     provider_id: FIXTURE_MOVE_PROVIDER.provider_id,
     build_digest: canonicalDigest(FIXTURE_MOVE_PROVIDER),
     selector_digest: canonicalDigest(selector),
@@ -66,14 +67,14 @@ function qualificationFor(selector) {
 // A file move is a real, provider-produced plan that the projection must still
 // refuse.
 export function planFileMove({ sourceSubject, targetSubject }) {
-  const plan = Object.freeze({
+  const plan = deepFreeze({
     operation: 'atomic_file_noreplace',
     qualification: qualificationFor({ platform: process.platform, kind: 'file' }),
     source: Object.freeze({ ...sourceSubject }),
     target: Object.freeze({ ...targetSubject }),
   });
   PLANS.add(plan);
-  const result = Object.freeze({
+  const result = deepFreeze({
     operation: plan.operation,
     outcome: 'succeeded',
     diagnostic: null,
@@ -123,7 +124,7 @@ export function planDirectoryMove({ sourceSubject, targetSubject }) {
     target_device: parentDevice,
   };
 
-  const plan = Object.freeze({
+  const plan = deepFreeze({
     operation: FIXTURE_MOVE_PROVIDER.capability,
     qualification: qualificationFor(selector),
     source: Object.freeze({ ...sourceSubject, device_id: sourceStat.dev }),
@@ -164,7 +165,7 @@ export function executeDirectoryMove(plan) {
     outcome = 'failed';
     diagnostic = error.code ?? 'unknown';
   }
-  const result = Object.freeze({
+  const result = deepFreeze({
     operation: plan.operation,
     outcome,
     diagnostic,

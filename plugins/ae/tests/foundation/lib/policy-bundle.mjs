@@ -53,9 +53,15 @@ function assertNoSymlinkComponents(root, parts, label) {
     let stat;
     try {
       stat = lstatSync(current);
-    } catch {
-      // Not created yet; nothing below it can exist either.
-      return;
+    } catch (error) {
+      // Only "does not exist" means there is nothing below to check. Any other
+      // errno is a real problem with the ref — an embedded NUL byte, for
+      // instance, raises ERR_INVALID_ARG_VALUE here, and swallowing it would
+      // classify a malformed path as safe-because-absent.
+      if (error.code === 'ENOENT') return;
+      fail('ref_non_canonical',
+        `${label} could not be resolved: ${error.code ?? error.name}`,
+        { component: current, cause: error.code ?? error.name });
     }
     if (stat.isSymbolicLink()) {
       fail('ref_symlink_component', `${label} traverses a symlink at ${current}`, { component: current });
@@ -257,7 +263,22 @@ export function policyEpoch({ releaseManifestDigest, activationBaseBundleDigest 
 
 // A current-release change makes an *unactivated* candidate stale. It does not
 // reach back into an existing activation and rewrite its questions.
-export function candidateEpochStatus({ candidate, currentEpoch }) {
+//
+// NOT AN AUTHORITY BOUNDARY, deliberately. `activated` and `policy_epoch` below
+// are read straight off a caller-supplied object with no provenance check, which
+// everywhere else in this package would be the banned pattern — a boolean the
+// caller sets can never be evidence.
+//
+// The reason it is admissible here and nowhere else: whether a candidate is
+// activated is established by the Ledger from a hash-chained `contract_activated`
+// event, and the Ledger is P1. This function does not decide activation, it
+// classifies an epoch given an activation state someone else established. Wiring
+// it to a real consumer without that upstream check would be the defect; the
+// corpus asserts the limitation so it cannot be mistaken for a guarantee.
+//
+// The parameter is named for what it is.
+export function candidateEpochStatus({ declaredCandidateState, currentEpoch }) {
+  const candidate = declaredCandidateState;
   if (candidate.activated) {
     return { status: 'activated', epoch: candidate.policy_epoch, rewritten: false };
   }
