@@ -18,7 +18,7 @@ import { buildRelease } from '../lib/release-build.mjs';
 import { canonicalize, canonicalDigest, digestBytes } from '../lib/canonical-json.mjs';
 import {
   bundleProjectRef, candidateEpochStatus, materializePolicies, policyEpoch,
-  replayFromLocalSnapshots, selectActivationBaseBundle, verifyBundleSources,
+  replayFromLocalSnapshots, resolveInside, selectActivationBaseBundle, verifyBundleSources,
 } from '../lib/policy-bundle.mjs';
 import { NoReplaceError, atomicFileNoReplace } from '../lib/fs-noreplace.mjs';
 import { isDeeplyFrozen } from '../lib/freeze.mjs';
@@ -124,7 +124,6 @@ export function run() {
 
     // ---- project ref escapes ---------------------------------------------
     for (const [label, badRef] of [
-      ['dotdot', '../outside.json'],
       ['absolute', '/etc/hosts'],
       ['outside-policy-root', '.ae/features/active/F-100/injected.json'],
     ]) {
@@ -141,6 +140,9 @@ export function run() {
       ['dot-component', '.ae/policies/./runner-v1.json', 'ref_non_canonical'],
       ['empty-component', '.ae/policies//runner-v1.json', 'ref_non_canonical'],
       ['empty-ref', '', 'ref_non_canonical'],
+      ['dotdot-escaping', '../outside.json', 'ref_non_canonical'],
+      // Resolves back inside .ae/policies, so only the lexical rule sees it.
+      ['dotdot-resolving-inside', '.ae/policies/../policies/runner-v1.json', 'ref_non_canonical'],
     ]) {
       const escaping = join(work, `plugin-noncanonical-${label}`);
       cpSync(join(FIXTURE, 'release-a'), escaping, { recursive: true });
@@ -150,13 +152,26 @@ export function run() {
       checks.rejects(`bundle/ref-non-canonical/${label}`, () => verifyBundleSources(escaping), code);
     }
 
+    // The containment guard on its own. Lexically canonical refs cannot reach it
+    // through the normal path, so it is exercised directly or not at all.
+    checks.accepts('containment/admits-a-ref-inside-the-root',
+      () => resolveInside('/root', '.ae/policies/runner-v1.json', 'ref_escapes_project_root', 'ref'));
+    checks.rejects('containment/rejects-a-ref-outside-the-root',
+      () => resolveInside('/root', '../outside.json', 'ref_escapes_project_root', 'ref'),
+      'ref_escapes_project_root');
+    checks.rejects('containment/uses-the-code-it-is-given',
+      () => resolveInside('/root', '../outside.json', 'plugin_source_escapes_plugin_root', 'src'),
+      'plugin_source_escapes_plugin_root');
+
     // ---- plugin_source escapes -------------------------------------------
     // Previously unchecked: a bundle could name bytes outside the installed
     // plugin root and have them materialized as policy, provided the digest matched.
     for (const [label, badSource, code] of [
-      ['dotdot', '../../../etc/hosts', 'plugin_source_escapes_plugin_root'],
+      ['dotdot', '../../../etc/hosts', 'ref_non_canonical'],
       ['absolute', '/etc/hosts', 'plugin_source_escapes_plugin_root'],
       ['dot-component', 'policies/./runner-v1.json', 'ref_non_canonical'],
+      // The same discriminating shape on the plugin-source side.
+      ['dotdot-resolving-inside', 'policies/../policies/runner-v1.json', 'ref_non_canonical'],
     ]) {
       const escaping = join(work, `plugin-source-escape-${label}`);
       cpSync(join(FIXTURE, 'release-a'), escaping, { recursive: true });
@@ -551,6 +566,47 @@ export function run() {
     checks.rejects('seal/attestation-and-bootstrap-disagree', () => sealVerifiedActiveRelease({
       attestation, bootstrapResult: verifyBootstrap({ releaseRoot: otherReleaseRoot }),
     }), 'current_release_not_selectable_by_declaration');
+
+    // The case above differs in BOTH the manifest digest and the root identity, so
+    // either comparison alone catches it and neither is independently exercised.
+    // These two isolate one dimension each.
+    {
+      // Same content at a different path: digests are equal, roots differ.
+      const twinRoot = join(work, 'twin-release');
+      buildRelease({ releaseRoot: twinRoot, policySourceDir: join(FIXTURE, 'release-b') });
+      const twinBootstrap = verifyBootstrap({ releaseRoot: twinRoot });
+      checks.equal('seal/only-root-identity-differs/digests-match',
+        twinBootstrap.manifest_digest, attestation.active_release_manifest_digest);
+      checks.notEqual('seal/only-root-identity-differs/roots-differ',
+        twinBootstrap.root_identity, attestation.active_root_identity);
+      checks.rejects('seal/only-root-identity-differs',
+        () => sealVerifiedActiveRelease({ attestation, bootstrapResult: twinBootstrap }),
+        'current_release_not_selectable_by_declaration');
+
+      // Same path, different content: roots are equal, digests differ. The
+      // attestation is taken first, then the release at that path is rebuilt.
+      const shiftingRoot = join(work, 'shifting-release');
+      buildRelease({ releaseRoot: shiftingRoot, policySourceDir: join(FIXTURE, 'release-a') });
+      const shiftingHost = join(work, 'host-shifting.json');
+      writeFileSync(shiftingHost, JSON.stringify({ active_root: shiftingRoot }));
+      const beforeAttestation = observeActiveRoot({ hostRecordPath: shiftingHost });
+      rmSync(shiftingRoot, { recursive: true, force: true });
+      buildRelease({
+        releaseRoot: shiftingRoot,
+        policySourceDir: join(FIXTURE, 'release-b'),
+        releaseVersion: '4.0.0',
+      });
+      const afterBootstrap = verifyBootstrap({ releaseRoot: shiftingRoot });
+      checks.equal('seal/only-digest-differs/roots-match',
+        afterBootstrap.root_identity, beforeAttestation.active_root_identity);
+      checks.notEqual('seal/only-digest-differs/digests-differ',
+        afterBootstrap.manifest_digest, beforeAttestation.active_release_manifest_digest);
+      checks.rejects('seal/only-digest-differs',
+        () => sealVerifiedActiveRelease({
+          attestation: beforeAttestation, bootstrapResult: afterBootstrap,
+        }),
+        'current_release_not_selectable_by_declaration');
+    }
 
     // The provider will not derive a bootstrap result for a release whose bytes
     // do not match its manifest, so one cannot be earned for a tampered tree.

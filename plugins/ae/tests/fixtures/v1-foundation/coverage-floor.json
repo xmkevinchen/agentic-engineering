@@ -2,15 +2,15 @@
   "schema_version": "ae.fixture.coverage-floor.v1",
   "note": "Minimum executed-check counts per section and minimum corpus sizes. Without these, deleting a whole corpus leaves the suite green and louder-looking than before: emptying the tree-snapshot mutation table removed 48 checks and still reported ALL PASSED. A floor turns silent deletion into a failure. Floors are minimums, so adding checks never breaks them; lowering one is a deliberate, visible edit.",
   "min_checks_per_section": {
-    "canonical-bytes": 323,
+    "canonical-bytes": 331,
     "validator": 48,
-    "tree-snapshot": 140,
-    "release-bootstrap": 156,
-    "policy-bundle": 106,
+    "tree-snapshot": 159,
+    "release-bootstrap": 161,
+    "policy-bundle": 117,
     "semantic-blind": 78,
-    "coverage-floor": 8
+    "coverage-floor": 9
   },
-  "min_total_checks": 859,
+  "min_total_checks": 903,
   "min_corpus_sizes": {
     "canonical_bytes_cases": 55,
     "canonical_bytes_reject_cases": 27,

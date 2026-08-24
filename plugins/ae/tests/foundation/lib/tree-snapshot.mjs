@@ -36,11 +36,17 @@ const FEATURE_EVIDENCE_NAMED_EXCLUSIONS = [
   'state/status.json',
 ];
 
-const ALL_DESCENDANTS = {
-  includes: () => true,
-  mayContain: () => true,
-  exclusions: [],
-};
+// origin_complete and rollout_inventory have identical definitions per the spec —
+// both cover every descendant with zero exclusions — but they are built as two
+// distinct objects rather than one shared reference, so that identity comparisons
+// elsewhere cannot accidentally treat them as the same profile.
+function allDescendants() {
+  return {
+    includes: () => true,
+    mayContain: () => true,
+    exclusions: [],
+  };
+}
 
 function underPrefix(rel, prefix) {
   return rel === prefix || rel.startsWith(`${prefix}/`);
@@ -57,13 +63,18 @@ const FEATURE_EVIDENCE = {
   exclusions: FEATURE_EVIDENCE_NAMED_EXCLUSIONS,
 };
 
-export const PROFILES = Object.freeze({
-  origin_complete: ALL_DESCENDANTS,
-  rollout_inventory: ALL_DESCENDANTS,
+// deepFreeze, not Object.freeze. A shallow freeze leaves each profile's own
+// `includes`/`mayContain` replaceable in place through a value this module
+// publishes as frozen — redefining the include set of a "closed" profile, which is
+// exactly the mutable-content-behind-a-frozen-handle problem freeze.mjs exists to
+// prevent.
+export const PROFILES = deepFreeze({
+  origin_complete: allDescendants(),
+  rollout_inventory: allDescendants(),
   feature_evidence: FEATURE_EVIDENCE,
 });
 
-export const PROFILE_NAMES = Object.freeze(Object.keys(PROFILES));
+export const PROFILE_NAMES = deepFreeze(Object.keys(PROFILES));
 
 // ---------------------------------------------------------------------------
 // Algorithm identity
@@ -104,7 +115,7 @@ const ALGORITHM_SPEC = {
   },
 };
 
-export const ALGORITHM = Object.freeze({
+export const ALGORITHM = deepFreeze({
   id: ALGORITHM_SPEC.id,
   version: ALGORITHM_SPEC.version,
   build_digest: canonicalDigest(ALGORITHM_SPEC),

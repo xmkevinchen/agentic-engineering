@@ -565,7 +565,7 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested: 59 deliberate defects, each of which must turn it
+The suite is mutation-tested: 67 deliberate defects, each of which must turn it
 red. They cover every guard described above — canonical ordering, duplicate keys,
 the number domain, the `feature_evidence` boundary, symlink rejection, move
 subject/operation/outcome/qualification, member digest recomputation, import
@@ -615,6 +615,54 @@ section's executed-check count and for each corpus's size, asserted by
 section too, so deleting it fails as well. Shrinking coverage is now a visible edit
 to a fixture rather than a silent consequence of editing a test — verified by
 re-running the three deletions that used to pass.
+
+### Masked pairs, found mechanically
+
+Reading for masked guards found three instances. Neutering **every** guard and
+freeze site one at a time, then jointly deleting each cluster of survivors, found
+more — and distinguishes the two cases that look identical from a green suite:
+a cluster that still survives joint deletion is genuinely uncovered, while a
+cluster that *fails* jointly though every member survived alone is masking.
+
+Three of the pairs were one structural shape: **a lexical guard masked by a
+resolved-path guard raising the same typed code**, because every negative fixture
+violated both at once. `policies/../policies/runner-v1.json` is the case that
+separates them — it is non-canonical, and it resolves perfectly well inside the
+root, so containment cannot see it. Left unsplit, the lexical guard was deletable
+while green, and one file became addressable under two member refs: precisely the
+aliasing the inode-level duplicate detection exists to prevent, reintroduced by
+spelling.
+
+`..` is therefore now a canonicality failure (`member_ref_non_canonical` /
+`ref_non_canonical`) rather than an escape, and containment keeps
+`member_ref_escapes_root` / `ref_escapes_project_root` for refs that actually land
+outside. Since no canonical ref can resolve outside its root, the containment
+guards are unreachable end to end and are exported for direct testing, as
+`resolveMemberRef` already was.
+
+The fourth pair was the seal comparison in `lib/active-release.mjs`: its single
+test used a genuinely different release, which differs in both manifest digest and
+root identity, so either check alone caught it. Two fixtures now isolate one
+dimension each — a twin release at another path (same digest, different root) and
+a release rebuilt in place (same root, different digest).
+
+### A frozen handle over mutable contents
+
+The same sweep found a live defect the corpus could not see: `PROFILES` used
+`Object.freeze`, so `PROFILES.feature_evidence.includes` was replaceable in place
+through a value the module publishes as frozen. Redefining it turned a closed
+20-entry profile into 26, and nothing in 750 checks noticed. `CODES` had the same
+shape. Both are deep-frozen now, module-level constants carry immutability
+assertions, and the specific mutation is an executable negative — the guidance in
+`freeze.mjs` was right and simply had not been applied to its own module's
+constants.
+
+Two dead declarations were made load-bearing rather than deleted: the profiles'
+`exclusions` field, which nothing read, is now asserted against the observed entry
+set (and each named exclusion is asserted to exist on disk, since an exclusion
+naming nothing proves nothing); and `origin_complete`/`rollout_inventory`, which
+were literally the same object, are now distinct objects with identical
+definitions, as the spec describes them.
 
 ### Guards that were bound to nothing
 

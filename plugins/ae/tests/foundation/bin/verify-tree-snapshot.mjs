@@ -10,9 +10,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalDigest } from '../lib/canonical-json.mjs';
 import { isDeeplyFrozen } from '../lib/freeze.mjs';
+import { ALL_CODES, CODES } from '../lib/errors.mjs';
 import { FoundationError } from '../lib/errors.mjs';
 import {
-  ALGORITHM, PROFILE_NAMES, assertMoveContent, assertProjectionEndpoints,
+  ALGORITHM, PROFILES, PROFILE_NAMES, assertMoveContent, assertProjectionEndpoints,
   entriesProjectionDigest, finalizeEntries, isObservedSnapshot, observeTree,
   projectExpectedAfterMove, snapshotDigest, validatePathBytes,
 } from '../lib/tree-snapshot.mjs';
@@ -381,6 +382,43 @@ export function run() {
       && untouched.entries.find((e) => e.type === 'file')?.digest === originalFirstDigest
       && untouched.projection_kind === 'observed');
 
+    // Module-level constants had no immutability assertion at all, which is how
+    // PROFILES came to be shallow-frozen with its own include predicates
+    // replaceable in place.
+    for (const [label, value] of [
+      ['PROFILES', PROFILES],
+      ['PROFILE_NAMES', PROFILE_NAMES],
+      ['ALGORITHM', ALGORITHM],
+      ['FIXTURE_MOVE_PROVIDER', FIXTURE_MOVE_PROVIDER],
+      ['CODES', CODES],
+      ['ALL_CODES', ALL_CODES],
+    ]) {
+      checks.ok(`immutability/constant-is-deeply-frozen/${label}`, isDeeplyFrozen(value));
+    }
+    // The specific shape that got past a shallow freeze: a profile's predicates.
+    let profileMutationBlocked = false;
+    try { PROFILES.feature_evidence.includes = () => true; } catch { profileMutationBlocked = true; }
+    checks.ok('immutability/profile-predicates-cannot-be-replaced', profileMutationBlocked);
+    checks.equal('immutability/profile-still-excludes-after-attempt',
+      observeTree({
+        logicalRoot: LOGICAL_ROOT,
+        resolvedRootPath: baseRoot,
+        profile: 'feature_evidence',
+      }).entries.length,
+      expected.profiles.feature_evidence.entry_count);
+    checks.ok('profiles/complete-profiles-are-distinct-objects',
+      PROFILES.origin_complete !== PROFILES.rollout_inventory);
+
+    // The declared exclusions are a field nothing read. Asserting them against the
+    // observed entry set makes the declaration load-bearing instead of decorative.
+    const observedPaths = new Set(baseline.feature_evidence.entries.map((e) => e.path));
+    for (const excluded of PROFILES.feature_evidence.exclusions) {
+      checks.ok(`profiles/declared-exclusion-is-excluded/${excluded}`, !observedPaths.has(excluded));
+      checks.ok(`profiles/declared-exclusion-exists-on-disk/${excluded}`,
+        new Set(baseline.origin_complete.entries.map((e) => e.path)).has(excluded),
+        'an exclusion that names nothing present proves nothing');
+    }
+
     checks.ok('immutability/move-plan-is-deeply-frozen', isDeeplyFrozen(movePlan));
     checks.ok('immutability/move-result-is-deeply-frozen', isDeeplyFrozen(moveResult));
     checks.ok('immutability/projection-is-deeply-frozen', isDeeplyFrozen(projected));
@@ -470,6 +508,8 @@ export function run() {
         sourceSubject: source.subject,
         targetSubject: movePlan.target,
       });
+      checks.ok('immutability/file-move-plan-is-deeply-frozen', isDeeplyFrozen(fileMove.plan));
+      checks.ok('immutability/file-move-result-is-deeply-frozen', isDeeplyFrozen(fileMove.result));
       checks.rejects('move/genuine-plan-wrong-capability',
         () => projectExpectedAfterMove({
           observedSource: source,

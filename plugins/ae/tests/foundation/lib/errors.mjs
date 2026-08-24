@@ -13,6 +13,16 @@ export class FoundationError extends Error {
   }
 }
 
+// Deep, so the per-group arrays cannot be extended in place through a frozen
+// handle — the same shallow-freeze shape that let a profile's include set be
+// redefined.
+function deepFreezeCodes(value) {
+  if (value === null || typeof value !== 'object') return value;
+  Object.freeze(value);
+  for (const key of Object.getOwnPropertyNames(value)) deepFreezeCodes(value[key]);
+  return value;
+}
+
 export function fail(code, message, detail) {
   throw new FoundationError(code, message, detail);
 }
@@ -20,7 +30,7 @@ export function fail(code, message, detail) {
 // Codes are grouped by the mechanism that raises them. A code appears in exactly
 // one group; overlap between the lexical layer and the schema layer is the defect
 // the split exists to prevent.
-export const CODES = Object.freeze({
+export const CODES = deepFreezeCodes({
   lexical: [
     'byte_order_mark',
     'invalid_utf8',
@@ -100,4 +110,4 @@ export const CODES = Object.freeze({
   ],
 });
 
-export const ALL_CODES = Object.freeze(Object.values(CODES).flat());
+export const ALL_CODES = deepFreezeCodes(Object.values(CODES).flat());

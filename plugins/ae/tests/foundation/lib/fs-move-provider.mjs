@@ -70,8 +70,8 @@ export function planFileMove({ sourceSubject, targetSubject }) {
   const plan = deepFreeze({
     operation: 'atomic_file_noreplace',
     qualification: qualificationFor({ platform: process.platform, kind: 'file' }),
-    source: Object.freeze({ ...sourceSubject }),
-    target: Object.freeze({ ...targetSubject }),
+    source: { ...sourceSubject },
+    target: { ...targetSubject },
   });
   PLANS.add(plan);
   const result = deepFreeze({
@@ -127,8 +127,8 @@ export function planDirectoryMove({ sourceSubject, targetSubject }) {
   const plan = deepFreeze({
     operation: FIXTURE_MOVE_PROVIDER.capability,
     qualification: qualificationFor(selector),
-    source: Object.freeze({ ...sourceSubject, device_id: sourceStat.dev }),
-    target: Object.freeze({ ...targetSubject, device_id: parentDevice }),
+    source: { ...sourceSubject, device_id: sourceStat.dev },
+    target: { ...targetSubject, device_id: parentDevice },
   });
   PLANS.add(plan);
   return plan;

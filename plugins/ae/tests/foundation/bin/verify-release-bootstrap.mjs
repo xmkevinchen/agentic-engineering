@@ -261,10 +261,14 @@ export async function run() {
     const launcherModule = await import(`file://${a.launcherPath}`);
     for (const [label, badRef, code] of [
       ['absolute', '/etc/hosts', 'member_ref_absolute'],
-      ['dotdot', '../outside/policy.json', 'member_ref_escapes_root'],
+      ['dotdot', '../outside/policy.json', 'member_ref_non_canonical'],
       ['dot-component', 'policies/./runner-v1.json', 'member_ref_non_canonical'],
       ['empty-component', 'policies//runner-v1.json', 'member_ref_non_canonical'],
       ['trailing-slash', 'policies/runner-v1.json/', 'member_ref_non_canonical'],
+      // The discriminating case: `..` that resolves back INSIDE the root. The
+      // containment check cannot see this one, so without it the lexical guard is
+      // deletable while green — and one file becomes addressable under two refs.
+      ['dotdot-resolving-inside', 'policies/../policies/runner-v1.json', 'member_ref_non_canonical'],
     ]) {
       let observed = null;
       try {
@@ -274,6 +278,27 @@ export async function run() {
       }
       checks.equal(`ref-guard-direct/${label}`, observed, code);
     }
+
+    // Each half of the split, exercised on its own. The lexical guard sees a ref
+    // that resolves inside the root; the containment guard sees one that is
+    // lexically canonical and still lands outside.
+    // The launcher raises BootstrapError, which the harness's typed-rejection
+    // helper does not recognise, so these read the code directly.
+    const launcherCode = (fn) => {
+      try { fn(); return 'accepted'; } catch (error) { return error.code ?? error.name; }
+    };
+    checks.equal('ref-guard-split/canonical-rejects-dotdot-inside-root',
+      launcherCode(() => launcherModule.assertCanonicalMemberRef('policies/../policies/runner-v1.json')),
+      'member_ref_non_canonical');
+    checks.equal('ref-guard-split/containment-admits-dotdot-inside-root',
+      launcherCode(() => launcherModule.assertMemberRefInsideRoot('policies/../policies/runner-v1.json')),
+      'accepted');
+    checks.equal('ref-guard-split/canonical-admits-a-plain-ref',
+      launcherCode(() => launcherModule.assertCanonicalMemberRef('policies/runner-v1.json')),
+      'accepted');
+    checks.equal('ref-guard-split/containment-rejects-an-escape',
+      launcherCode(() => launcherModule.assertMemberRefInsideRoot('../outside/policy.json')),
+      'member_ref_escapes_root');
 
     expectRejection(checks, 'ref-dotdot', {
       work,
@@ -285,7 +310,7 @@ export async function run() {
           members: m.members.map((x) => (x.role === 'policy' ? { ...x, ref: '../outside/policy.json' } : x)),
         }),
       }),
-      expectedCode: 'member_ref_escapes_root',
+      expectedCode: 'member_ref_non_canonical',
     });
 
     expectRejection(checks, 'ref-duplicate', {

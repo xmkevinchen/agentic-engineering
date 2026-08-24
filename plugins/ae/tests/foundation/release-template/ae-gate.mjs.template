@@ -66,20 +66,34 @@ function rawDigest(bytes) {
 // `plugin_ref` pattern already refuses absolute refs, so a manifest carrying one
 // never reaches this function in practice — which is exactly why it needs its own
 // test rather than only an end-to-end one.
-export function resolveMemberRef(ref) {
+// Lexical canonicality. `..`, `.` and empty components are aliases, not paths:
+// they let one file be named under several ref strings, which defeats duplicate
+// detection while resolving to the same bytes. `..` belongs here and not with the
+// containment check below, because `policies/../policies/runner-v1.json` resolves
+// perfectly well inside the root — containment cannot see it.
+export function assertCanonicalMemberRef(ref) {
   if (ref.startsWith('/')) bail('member_ref_absolute', `member ref ${ref} is absolute`);
   const parts = ref.split('/');
-  if (parts.includes('..')) bail('member_ref_escapes_root', `member ref ${ref} escapes the release root`);
-  // `.` and empty components are aliases, not paths. Left alone they let one file
-  // be named twice under two different ref strings, which defeats duplicate
-  // detection while resolving to the same bytes.
-  if (parts.some((part) => part === '' || part === '.')) {
+  if (parts.some((part) => part === '' || part === '.' || part === '..')) {
     bail('member_ref_non_canonical', `member ref ${ref} is not in canonical form`);
   }
+  return parts;
+}
+
+// Resolved containment, with its own code. Sharing one code with the lexical rule
+// made each half untestable: every fixture violated both at once, so the harness
+// could not tell which fired and either could be deleted while green.
+export function assertMemberRefInsideRoot(ref) {
   const abs = resolve(RELEASE_ROOT, ref);
   if (abs !== join(RELEASE_ROOT, ref) || !abs.startsWith(RELEASE_ROOT + sep)) {
     bail('member_ref_escapes_root', `member ref ${ref} does not resolve inside the release root`);
   }
+  return abs;
+}
+
+export function resolveMemberRef(ref) {
+  assertCanonicalMemberRef(ref);
+  const abs = assertMemberRefInsideRoot(ref);
   // Every path component must be a real directory/file, never a symlink: a
   // symlinked component would let a verified ref name unverified bytes.
   const relativeParts = ref.split('/');

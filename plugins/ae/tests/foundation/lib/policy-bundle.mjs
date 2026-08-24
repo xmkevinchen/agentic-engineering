@@ -35,8 +35,11 @@ function assertCanonicalRef(ref, escapeCode, label) {
   }
   if (isAbsolute(ref)) fail(escapeCode, `${label} ${ref} is absolute`);
   const parts = ref.split('/');
-  if (parts.includes('..')) fail(escapeCode, `${label} ${ref} contains '..'`);
-  if (parts.some((part) => part === '' || part === '.')) {
+  // `..` is a canonicality failure, not an escape: `.ae/policies/../policies/x`
+  // resolves inside the root, so the containment check below cannot see it. They
+  // previously shared one code, which made each half untestable — every fixture
+  // violated both at once.
+  if (parts.some((part) => part === '' || part === '.' || part === '..')) {
     fail('ref_non_canonical', `${label} ${ref} is not in canonical form`);
   }
   return parts;
@@ -69,7 +72,10 @@ function assertNoSymlinkComponents(root, parts, label) {
   }
 }
 
-function resolveInside(root, ref, escapeCode, label) {
+// Exported for the same reason the launcher's containment guard is: once `..` is
+// refused lexically, no canonical ref can resolve outside its root, so this branch
+// is unreachable end to end and would be a guard no test could execute.
+export function resolveInside(root, ref, escapeCode, label) {
   const abs = resolve(root, ref);
   if (abs !== join(root, ref) || !abs.startsWith(root + sep)) {
     fail(escapeCode, `${ref} does not resolve inside ${root}`);

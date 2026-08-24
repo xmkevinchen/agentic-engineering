@@ -177,6 +177,18 @@ export function run() {
   checks.equal('crlf-semantic-identical',
     canonicalDigest(parseStrict(compact)), canonicalDigest(parseStrict(prettyCrlf)));
 
+  // ---- these take raw bytes, not strings ---------------------------------
+  // Passing a string would decode as UTF-16 and silently change what is hashed.
+  for (const [label, value] of [
+    ['string', '{"a":1}'],
+    ['null', null],
+    ['object', { a: 1 }],
+    ['array-of-bytes', [0x7b, 0x7d]],
+  ]) {
+    checks.rejects(`accepts-bytes-only/parseStrict/${label}`, () => parseStrict(value), 'malformed_json');
+    checks.rejects(`accepts-bytes-only/parseNdjson/${label}`, () => parseNdjson(value), 'malformed_json');
+  }
+
   // ---- the digest text form, from both sides -----------------------------
   //
   // Only positive assertions existed, so DIGEST_PATTERN could be replaced with /^/
