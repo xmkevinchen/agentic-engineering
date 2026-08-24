@@ -1,0 +1,95 @@
+{
+  "schema_version": "ae.fixture.tree-snapshot.v1",
+  "algorithm": {
+    "id": "ae.tree-snapshot.v1",
+    "version": 1,
+    "build_digest": "sha256:95995c12f43113a4fbdf1a36e1341ffecfc29e554962826ec8870a5bb1d878e2"
+  },
+  "logical_root": ".ae/features/active/F-100-billing-export",
+  "profiles": {
+    "origin_complete": {
+      "entry_count": 24,
+      "entries_projection_digest": "sha256:929c2fa1e1a86ffa8e05ed554e49b699c4ec00ef01cb3986a313baa9d2607153",
+      "paths": [
+        "d authority",
+        "f authority/current.json",
+        "d authority/releases",
+        "f authority/releases/deadbeef.json",
+        "d contract",
+        "f contract/contract-v1.json",
+        "d contract/policies",
+        "d contract/policies/extensions",
+        "d contract/policies/extensions/abc",
+        "f contract/policies/extensions/abc/ext.json",
+        "f index.md",
+        "d ledger",
+        "f ledger/events.ndjson",
+        "f ledger/head.json",
+        "f ledger/telemetry.ndjson",
+        "f origin-marker.json",
+        "f plan.md",
+        "d runs",
+        "d runs/RUN-001",
+        "d runs/RUN-001/events",
+        "f runs/RUN-001/events/EV-000002.json",
+        "f runs/RUN-001/stdout.txt",
+        "d state",
+        "f state/status.json"
+      ]
+    },
+    "rollout_inventory": {
+      "entry_count": 24,
+      "entries_projection_digest": "sha256:929c2fa1e1a86ffa8e05ed554e49b699c4ec00ef01cb3986a313baa9d2607153",
+      "paths": [
+        "d authority",
+        "f authority/current.json",
+        "d authority/releases",
+        "f authority/releases/deadbeef.json",
+        "d contract",
+        "f contract/contract-v1.json",
+        "d contract/policies",
+        "d contract/policies/extensions",
+        "d contract/policies/extensions/abc",
+        "f contract/policies/extensions/abc/ext.json",
+        "f index.md",
+        "d ledger",
+        "f ledger/events.ndjson",
+        "f ledger/head.json",
+        "f ledger/telemetry.ndjson",
+        "f origin-marker.json",
+        "f plan.md",
+        "d runs",
+        "d runs/RUN-001",
+        "d runs/RUN-001/events",
+        "f runs/RUN-001/events/EV-000002.json",
+        "f runs/RUN-001/stdout.txt",
+        "d state",
+        "f state/status.json"
+      ]
+    },
+    "feature_evidence": {
+      "entry_count": 18,
+      "entries_projection_digest": "sha256:ae9417235c5c3ddbf2eb404d96d0b474149b577bd55781aa83e943952c8f163b",
+      "paths": [
+        "d authority",
+        "f authority/current.json",
+        "d authority/releases",
+        "f authority/releases/deadbeef.json",
+        "d contract",
+        "f contract/contract-v1.json",
+        "d contract/policies",
+        "d contract/policies/extensions",
+        "d contract/policies/extensions/abc",
+        "f contract/policies/extensions/abc/ext.json",
+        "f ledger/events.ndjson",
+        "f ledger/head.json",
+        "f origin-marker.json",
+        "d runs",
+        "d runs/RUN-001",
+        "d runs/RUN-001/events",
+        "f runs/RUN-001/events/EV-000002.json",
+        "f runs/RUN-001/stdout.txt"
+      ]
+    }
+  }
+}

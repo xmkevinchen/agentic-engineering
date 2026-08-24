@@ -1,0 +1,17 @@
+{
+  "schema_version": "ae.fixture.policy-bundle.v1",
+  "trees": {
+    "release-a": {
+      "bundle_digest": "sha256:7892a40369831b88fdfd2ec6ac1e10dbd4b13cbabc1598afdcf3636d95286dba",
+      "entry_count": 3
+    },
+    "release-b": {
+      "bundle_digest": "sha256:719b25f525655ea35de81ab069df35515ab75d44949bc7f311d13b49740dcae0",
+      "entry_count": 4
+    },
+    "release-c-bad": {
+      "bundle_digest": "sha256:fcf8c22f5e686ab38c84427ce1a47dc2b9dfbb8c3f07f30ee6b608d477d66514",
+      "entry_count": 3
+    }
+  }
+}
