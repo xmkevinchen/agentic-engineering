@@ -30,7 +30,7 @@
 /*__EMBEDDED_BOOTSTRAP_VALIDATOR__*/
 
 import { createHash } from 'node:crypto';
-import { appendFileSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { appendFileSync, lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -68,7 +68,14 @@ function rawDigest(bytes) {
 // test rather than only an end-to-end one.
 export function resolveMemberRef(ref) {
   if (ref.startsWith('/')) bail('member_ref_absolute', `member ref ${ref} is absolute`);
-  if (ref.split('/').includes('..')) bail('member_ref_escapes_root', `member ref ${ref} escapes the release root`);
+  const parts = ref.split('/');
+  if (parts.includes('..')) bail('member_ref_escapes_root', `member ref ${ref} escapes the release root`);
+  // `.` and empty components are aliases, not paths. Left alone they let one file
+  // be named twice under two different ref strings, which defeats duplicate
+  // detection while resolving to the same bytes.
+  if (parts.some((part) => part === '' || part === '.')) {
+    bail('member_ref_non_canonical', `member ref ${ref} is not in canonical form`);
+  }
   const abs = resolve(RELEASE_ROOT, ref);
   if (abs !== join(RELEASE_ROOT, ref) || !abs.startsWith(RELEASE_ROOT + sep)) {
     bail('member_ref_escapes_root', `member ref ${ref} does not resolve inside the release root`);
@@ -126,15 +133,34 @@ export function verifyInstalledRelease() {
       `release manifest failed closed validation: ${first ? `${first.instancePath} ${first.message}` : 'unknown'}`);
   }
 
-  // 6 — ref safety and uniqueness
+  // 6 — ref safety and uniqueness.
+  //
+  // Uniqueness is over the RESOLVED identity, not the ref string. Two distinct
+  // strings can name one file — through a `.` alias, or through case folding on a
+  // case-insensitive volume — and string-level dedup would let one member's bytes
+  // satisfy two declared digests.
   const seenRefs = new Set();
+  const seenIdentities = new Map();
   const resolved = [];
   for (const member of manifest.members) {
     if (seenRefs.has(member.ref)) {
       bail('member_ref_duplicate', `member ref ${member.ref} appears more than once`);
     }
     seenRefs.add(member.ref);
-    resolved.push({ member, abs: resolveMemberRef(member.ref) });
+    const abs = resolveMemberRef(member.ref);
+    // Identity is the inode, not the resolved path string. realpath does not fold
+    // case, so on a case-insensitive volume two differently-cased refs resolve to
+    // two different strings and the same file; device+inode is what actually
+    // answers "is this the same bytes under another name", and it catches `.`
+    // aliases and hardlinked members too.
+    const st = statSync(abs);
+    const identity = `${st.dev}:${st.ino}`;
+    if (seenIdentities.has(identity)) {
+      bail('member_ref_duplicate',
+        `member refs ${seenIdentities.get(identity)} and ${member.ref} resolve to the same file`);
+    }
+    seenIdentities.set(identity, member.ref);
+    resolved.push({ member, abs });
   }
 
   // The launcher is not a member of the manifest it validates.
@@ -159,16 +185,41 @@ export function verifyInstalledRelease() {
     }
   }
 
+  // 7b — the singleton activation base bundle must BE one of the members just
+  // verified. Without this cross-binding the manifest can advertise a base digest
+  // that belongs to no installed file, and every downstream policy decision binds
+  // to a number nothing produced.
+  const baseMembers = manifest.members.filter((m) => m.ref === manifest.activation_base_bundle_ref);
+  if (baseMembers.length !== 1) {
+    bail('activation_base_member_mismatch',
+      `activation_base_bundle_ref ${manifest.activation_base_bundle_ref} matches ${baseMembers.length} members`);
+  }
+  if (baseMembers[0].role !== 'policy') {
+    bail('activation_base_member_mismatch',
+      `activation base bundle member has role ${baseMembers[0].role}, expected policy`);
+  }
+  if (baseMembers[0].raw_digest !== manifest.activation_base_bundle_digest) {
+    bail('activation_base_member_mismatch',
+      `activation_base_bundle_digest ${manifest.activation_base_bundle_digest} `
+      + `does not match its member's raw digest ${baseMembers[0].raw_digest}`);
+  }
+
   const byRole = (role) => {
     const found = manifest.members.filter((m) => m.role === role);
     if (found.length !== 1) bail('schema_invalid', `expected exactly one ${role} member, found ${found.length}`);
     return found[0];
   };
 
+  const rootIdentity = realpathSync(RELEASE_ROOT);
   return {
     manifest,
     manifest_digest: observedDigest,
-    bootstrap_result_digest: rawDigest(Buffer.from(`${observedDigest}|${manifest.members.length}`, 'utf8')),
+    // The bootstrap result binds the root identity as well as the manifest, so two
+    // byte-identical installations do not share one.
+    bootstrap_result_digest: rawDigest(
+      Buffer.from(`${observedDigest}|${rootIdentity}|${manifest.members.length}`, 'utf8'),
+    ),
+    root_identity: rootIdentity,
     roles: {
       standalone_validator: byRole('standalone_validator'),
       active_release_bridge: byRole('active_release_bridge'),
@@ -177,7 +228,16 @@ export function verifyInstalledRelease() {
   };
 }
 
-export async function bootstrap() {
+// The scope this launcher's self-test operates under. A capability minted for one
+// scope is inert in another.
+const SELF_TEST_SCOPE = Object.freeze({
+  repo: null,
+  feature_id: null,
+  purpose: 'bootstrap_selftest',
+  host_operation: 'verify_installed_release',
+});
+
+export async function bootstrap({ scope = SELF_TEST_SCOPE } = {}) {
   const verified = verifyInstalledRelease();
 
   // 8 — import the verified validator, then the verified bridge. Nothing above
@@ -191,23 +251,46 @@ export async function bootstrap() {
   // The launcher's own path, the environment, and any caller claim are not inputs.
   const attestation = bridge.attestActiveRoot({ observedReleaseRoot: RELEASE_ROOT });
   trace('attestation:obtained');
+
+  // BOTH halves of the identity must match. Comparing only the manifest digest
+  // would make two byte-identical installations indistinguishable, so an inactive
+  // root could run whenever its twin was the active one.
   if (attestation.active_release_manifest_digest !== verified.manifest_digest) {
     bail('release_not_active',
-      'the host active release does not match the release this launcher verified');
+      'the host active release manifest digest does not match the release this launcher verified');
   }
+  let attestedIdentity;
+  try {
+    attestedIdentity = realpathSync(attestation.active_root);
+  } catch {
+    bail('release_not_active', 'the host active root does not resolve');
+  }
+  if (attestedIdentity !== verified.root_identity) {
+    bail('release_not_active',
+      `the host active root ${attestedIdentity} is not this release root ${verified.root_identity}`);
+  }
+  // Traced so this comparison is observable in its own right. The bridge refuses
+  // to mint against a mismatched root as well, and without a separate signal that
+  // second guard would mask the loss of this one.
+  trace('active-root:matched');
 
-  // 10 — capability is minted only against a bootstrap result that already exists
+  // 10 — capability is minted only against a bootstrap result that already exists,
+  // and is bound to the scope it may be used for.
   const capability = bridge.mintOperationCapability({
     attestation,
-    bootstrap_result_digest: verified.bootstrap_result_digest,
-    active_release_manifest_digest: verified.manifest_digest,
+    bootstrapResult: verified,
+    scope,
   });
   trace('capability:minted');
 
   // 11 — core last
   const coreUrl = pathToFileURL(join(RELEASE_ROOT, verified.roles.runtime_core.ref));
   const core = await import(coreUrl.href);
-  return core.run({ capability, bootstrap_result_digest: verified.bootstrap_result_digest });
+  return core.run({
+    capability,
+    bootstrapResultDigest: verified.bootstrap_result_digest,
+    scope,
+  });
 }
 
 // argv[1] is resolved through realpath before comparing: module URLs are already

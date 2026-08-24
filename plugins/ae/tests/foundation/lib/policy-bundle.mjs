@@ -12,10 +12,12 @@
 //     else. An old bundle that the project still holds is retained to replay
 //     history, not to be selected.
 
-import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { lstatSync, readFileSync } from 'node:fs';
+import { isAbsolute, join, resolve, sep } from 'node:path';
+import { isVerifiedActiveRelease } from './active-release.mjs';
 import { canonicalDigest, digestBytes, parseStrict } from './canonical-json.mjs';
 import { fail } from './errors.mjs';
+import { NoReplaceError, atomicFileNoReplace } from './fs-noreplace.mjs';
 
 const PROJECT_POLICY_ROOT = '.ae/policies';
 
@@ -23,20 +25,73 @@ export function bundleProjectRef(bundleBytes) {
   return `${PROJECT_POLICY_ROOT}/bundles/${digestBytes(bundleBytes).replace('sha256:', '')}.json`;
 }
 
+// Lexical safety, applied identically to plugin sources and project refs. A ref
+// that is not in canonical form is refused rather than normalized: normalizing
+// would let two spellings name one file, which is how duplicate detection and
+// no-clobber both get defeated.
+function assertCanonicalRef(ref, escapeCode, label) {
+  if (typeof ref !== 'string' || ref.length === 0) {
+    fail('ref_non_canonical', `${label} is empty`);
+  }
+  if (isAbsolute(ref)) fail(escapeCode, `${label} ${ref} is absolute`);
+  const parts = ref.split('/');
+  if (parts.includes('..')) fail(escapeCode, `${label} ${ref} contains '..'`);
+  if (parts.some((part) => part === '' || part === '.')) {
+    fail('ref_non_canonical', `${label} ${ref} is not in canonical form`);
+  }
+  return parts;
+}
+
+// Resolved safety: every existing component of the path must be a real directory
+// or file, never a symlink. Checking only the resolved string is not enough — a
+// `.ae/policies` symlink pointing outside the project passes every lexical test
+// and still lands the bytes somewhere else entirely.
+function assertNoSymlinkComponents(root, parts, label) {
+  let current = root;
+  for (const part of parts) {
+    current = join(current, part);
+    let stat;
+    try {
+      stat = lstatSync(current);
+    } catch {
+      // Not created yet; nothing below it can exist either.
+      return;
+    }
+    if (stat.isSymbolicLink()) {
+      fail('ref_symlink_component', `${label} traverses a symlink at ${current}`, { component: current });
+    }
+  }
+}
+
+function resolveInside(root, ref, escapeCode, label) {
+  const abs = resolve(root, ref);
+  if (abs !== join(root, ref) || !abs.startsWith(root + sep)) {
+    fail(escapeCode, `${ref} does not resolve inside ${root}`);
+  }
+  return abs;
+}
+
 function assertProjectRef(ref) {
-  if (isAbsolute(ref)) fail('ref_escapes_project_root', `policy project ref ${ref} is absolute`);
-  if (ref.split('/').includes('..')) fail('ref_escapes_project_root', `policy project ref ${ref} contains '..'`);
+  const parts = assertCanonicalRef(ref, 'ref_escapes_project_root', 'policy project ref');
   if (ref !== PROJECT_POLICY_ROOT && !ref.startsWith(`${PROJECT_POLICY_ROOT}/`)) {
     fail('ref_escapes_project_root', `policy project ref ${ref} is outside ${PROJECT_POLICY_ROOT}`);
   }
-  return ref;
+  return parts;
 }
 
-function resolveInside(root, ref) {
-  const abs = resolve(root, ref);
-  if (abs !== join(root, ref) || !abs.startsWith(root + sep)) {
-    fail('ref_escapes_project_root', `${ref} does not resolve inside ${root}`);
-  }
+// Plugin sources were previously unchecked, which let a bundle name bytes outside
+// the installed plugin root as long as the digest matched.
+function resolvePluginSource(pluginRoot, ref) {
+  const parts = assertCanonicalRef(ref, 'plugin_source_escapes_plugin_root', 'bundle plugin_source');
+  const abs = resolveInside(pluginRoot, ref, 'plugin_source_escapes_plugin_root', 'plugin_source');
+  assertNoSymlinkComponents(pluginRoot, parts, `plugin_source ${ref}`);
+  return abs;
+}
+
+function resolveProjectRef(projectRoot, ref) {
+  const parts = assertProjectRef(ref);
+  const abs = resolveInside(projectRoot, ref, 'ref_escapes_project_root', 'project ref');
+  assertNoSymlinkComponents(projectRoot, parts, `project ref ${ref}`);
   return abs;
 }
 
@@ -60,9 +115,10 @@ export function verifyBundleSources(pluginRoot) {
   const { bundle, bundleBytes, bundleDigest } = readBundle(pluginRoot);
   for (const entry of bundle.entries) {
     assertProjectRef(entry.project_ref);
+    const sourceAbs = resolvePluginSource(pluginRoot, entry.plugin_source);
     let bytes;
     try {
-      bytes = readFileSync(join(pluginRoot, entry.plugin_source));
+      bytes = readFileSync(sourceAbs);
     } catch {
       fail('bundle_source_missing', `bundle entry ${entry.plugin_source} is not installed`, { entry });
     }
@@ -79,17 +135,6 @@ export function verifyBundleSources(pluginRoot) {
 // Materialization
 // ---------------------------------------------------------------------------
 
-function writeDurable(absPath, bytes) {
-  mkdirSync(dirname(absPath), { recursive: true });
-  writeFileSync(absPath, bytes);
-  const fd = openSync(absPath, 'r');
-  try { fsyncSync(fd); } finally { closeSync(fd); }
-  // The parent directory entry has to reach disk too, or the file can survive
-  // as an unreferenced inode.
-  const dirFd = openSync(dirname(absPath), 'r');
-  try { fsyncSync(dirFd); } finally { closeSync(dirFd); }
-}
-
 // Byte-for-byte, no-clobber. Same path with the same bytes is idempotent; same
 // path with different bytes is an integrity error and never a silent upgrade.
 // An upgrade ships new content at a new versioned path.
@@ -97,36 +142,41 @@ export function materializePolicies({ pluginRoot, projectRoot }) {
   const { bundle, bundleBytes } = verifyBundleSources(pluginRoot);
 
   const planned = bundle.entries.map((entry) => ({
-    ref: assertProjectRef(entry.project_ref),
-    bytes: readFileSync(join(pluginRoot, entry.plugin_source)),
+    ref: entry.project_ref,
+    bytes: readFileSync(resolvePluginSource(pluginRoot, entry.plugin_source)),
   }));
   // The bundle manifest is materialized alongside the files it lists; it cannot
   // be one of its own entries. Its project path is content-addressed, because a
   // fixed path would make every legitimate bundle upgrade collide with the
   // previous bundle — and the old bundle has to stay readable for replay.
-  planned.push({ ref: assertProjectRef(bundleProjectRef(bundleBytes)), bytes: bundleBytes });
+  planned.push({ ref: bundleProjectRef(bundleBytes), bytes: bundleBytes });
+
+  // Every destination is validated before ANY byte is written, so a rejected
+  // bundle cannot leave a half-materialized policy set behind.
+  const targets = planned.map(({ ref, bytes }) => ({ ref, bytes, abs: resolveProjectRef(projectRoot, ref) }));
 
   const written = [];
   const unchanged = [];
-  for (const { ref, bytes } of planned) {
-    const abs = resolveInside(projectRoot, ref);
-    let existing = null;
+  for (const { ref, bytes, abs } of targets) {
+    let result;
     try {
-      if (statSync(abs).isFile()) existing = readFileSync(abs);
-    } catch { /* absent */ }
+      result = atomicFileNoReplace({ path: abs, bytes });
+    } catch (error) {
+      if (error instanceof NoReplaceError) fail(error.code, error.message, error.detail);
+      throw error;
+    }
 
-    if (existing === null) {
-      writeDurable(abs, bytes);
+    if (result.outcome === 'created') {
       written.push(ref);
       continue;
     }
-    if (existing.equals(bytes)) {
+    if (result.existing.equals(bytes)) {
       unchanged.push(ref);
       continue;
     }
     fail('integrity_error',
       `project policy ${ref} already exists with different bytes; an upgrade requires a new versioned path`,
-      { ref, existing_digest: digestBytes(existing), incoming_digest: digestBytes(bytes) });
+      { ref, existing_digest: digestBytes(result.existing), incoming_digest: digestBytes(bytes) });
   }
   return {
     written,
@@ -140,22 +190,23 @@ export function materializePolicies({ pluginRoot, projectRoot }) {
 // Base bundle selection for a NEW candidate
 // ---------------------------------------------------------------------------
 
-// Only a verified, host-attested active release can name the current epoch. The
-// rollout lock records the epoch at cutover for audit; the launcher's own claim
-// and any caller-supplied value are not authority.
-const AUTHORITATIVE_SOURCE = 'verified_active_release';
-
+// Only a verified, host-attested active release can name the current epoch.
+//
+// The input is the sealed value from lib/active-release.mjs, never a string
+// naming a source and never a plain manifest object. A string parameter would
+// mean the authoritative branch is whatever the caller types — and with a default
+// applied, whatever the caller omits.
 export function selectActivationBaseBundle({
-  activeReleaseManifest,
+  verifiedActiveRelease,
   requestedBaseBundleDigest,
-  declaredBy = AUTHORITATIVE_SOURCE,
   retainedHistoricalBundleDigests = [],
 }) {
-  if (declaredBy !== AUTHORITATIVE_SOURCE) {
+  if (!isVerifiedActiveRelease(verifiedActiveRelease)) {
     fail('current_release_not_selectable_by_declaration',
-      `${declaredBy} cannot select the current release`, { declared_by: declaredBy });
+      'the current release can only be named by a sealed verified-active-release value',
+      { received: verifiedActiveRelease === undefined ? 'undefined' : typeof verifiedActiveRelease });
   }
-  const singleton = activeReleaseManifest.activation_base_bundle_digest;
+  const singleton = verifiedActiveRelease.activation_base_bundle_digest;
   if (requestedBaseBundleDigest !== singleton) {
     fail('base_bundle_not_current',
       'a new candidate may select only the activation base bundle of the currently active release',
@@ -197,8 +248,7 @@ export function candidateEpochStatus({ candidate, currentEpoch }) {
 export function replayFromLocalSnapshots({ projectRoot, activation }) {
   const resolved = [];
   for (const snapshot of activation.policy_snapshots) {
-    assertProjectRef(snapshot.project_ref);
-    const abs = resolveInside(projectRoot, snapshot.project_ref);
+    const abs = resolveProjectRef(projectRoot, snapshot.project_ref);
     let bytes;
     try {
       bytes = readFileSync(abs);

@@ -25,6 +25,8 @@ plugins/ae/tests/foundation/
 │   ├── errors.mjs            typed error taxonomy
 │   ├── canonical-json.mjs    restricted JCS: strict parse + canonical bytes
 │   ├── tree-snapshot.mjs     ae.tree-snapshot.v1
+│   ├── active-release.mjs    the sealed verified-active-release value
+│   ├── fs-noreplace.mjs      the no-replace write boundary
 │   ├── policy-bundle.mjs     materialization + activation/replay split
 │   └── release-build.mjs     fixture release assembly (NOT a mechanism module)
 ├── oracle/               independent canonical-bytes oracle
@@ -83,7 +85,10 @@ indistinguishable from `0`/`1`, and exponent forms are normalized away. This is 
 load-bearing.
 
 **Corpus.** `fixtures/v1-foundation/canonical-bytes/` holds 51 cases: 17 positive
-canonicalizations, 24 rejections, 3 NDJSON acceptances, 7 NDJSON rejections. Four
+canonicalizations, 24 rejections, 3 NDJSON acceptances, 7 NDJSON rejections. The
+`.bin` fixtures are marked binary in `.gitattributes`: several deliberately encode
+CRLF terminators, trailing whitespace, blank lines at EOF, invalid UTF-8 and a BOM,
+which a text filter would "fix" and `git diff --check` would otherwise report. Four
 of the positive cases form one equivalence group — four distinct byte sequences
 with one canonical form — which is what makes "pretty printing, mtime and platform
 line endings are outside the semantic digest, while artifact identity uses raw
@@ -147,8 +152,9 @@ Implements `design.md` §6.0 (`ae.tree-snapshot.v1`) and G0.20.
 
 Entries are `{path, type, mode}` for directories and
 `{path, type, mode, length, digest}` for files, sorted by **raw UTF-8 path bytes**
-(not UTF-16 code units — paths are byte strings on the wire). `mode` is the
-four-digit octal of the low 12 permission bits.
+(not UTF-16 code units — paths are byte strings on the wire). `mode` is the low 12
+mode bits as exactly four octal digits, zero-padded — setuid, setgid and sticky
+included, and asserted for each so the field cannot widen to five characters.
 
 `algorithm.build_digest` is the canonical digest of the algorithm *contract*
 object — the include/exclude sets, entry field lists, sort rule and rejection
@@ -192,13 +198,28 @@ On the reference corpus the complete profiles yield 24 entries and
 observed source snapshot, a qualified same-filesystem move plan/result, and the
 intended target identity. Entries are carried over verbatim; the subject becomes
 the target. Consequently the entry projection digests are equal and the snapshot
-digests differ — both asserted. Rejections: `move_projection_requires_observed_source`,
+digests differ — both asserted.
+
+"Qualified" is checked, not assumed. This projection is the only place a snapshot
+may describe a tree that was never enumerated, so the plan must name the exact
+operation `atomic_directory_noreplace`, carry a complete qualification binding
+(`provider_id`, `build_digest`, `selector_digest`, `result_ref`, `result_digest`),
+and be accompanied by the successful result *of that plan* — same operation, same
+qualification identity, same endpoints. An ordinary overwriting rename can destroy
+an existing target and can never stand in for it.
+
+Rejections: `move_projection_requires_observed_source`,
 `move_projection_source_mismatch`, `move_projection_same_identity`,
-`move_projection_cross_device`.
+`move_projection_cross_device`, `move_projection_unsupported_operation`,
+`move_projection_qualification_incomplete`, `move_projection_qualification_mismatch`,
+`move_projection_unqualified_helper`, `move_projection_failed_operation`,
+`move_projection_result_mismatch`. Whether a real helper earns the qualification
+this consumes is P0.8.
 
 ### Mutation corpus
 
-16 mutations across the three profiles: file bytes, file mode, directory mode,
+16 mutations across the three profiles, plus five mode-encoding vectors: file
+bytes, file mode, directory mode,
 path rename, missing descendant, unexpected file in an included root, file→directory
 type change, five exclusion-boundary cases, symlink inside and outside the include
 set, hardlink, and a FIFO. Rejections are typed and deterministic.
@@ -234,24 +255,59 @@ Frozen order, asserted by an observable trace rather than by exit status alone:
 3. refuse `self_digest`;
 4. recompute `SHA-256(JCS(manifest))`, compare to the embedded constant;
 5. closed schema validation;
-6. resolve every member ref — plugin-relative, no `..`, no symlink component, unique;
+6. resolve every member ref — plugin-relative, canonical (no `..`, no `.`, no
+   empty component), no symlink component, and unique by **device+inode** rather
+   than by ref string;
 7. recompute every installed member's raw digest;
-8. import the verified validator, then the verified bridge;
-9. obtain host active-root attestation, require it to equal our own verified digest;
-10. mint the operation capability, bound to the bootstrap result that already exists;
-11. only now import and call the core.
+8. require the singleton `activation_base_bundle_ref`/`digest` to name exactly one
+   verified policy member and match its raw digest;
+9. import the verified validator, then the verified bridge;
+10. obtain host active-root attestation; require **both** the manifest digest and
+    the resolved root identity to equal our own;
+11. mint the operation capability, bound to the bootstrap result that already
+    exists and to the exact scope it may be used for;
+12. only now import and call the core.
 
 Every rejection case asserts the typed code **and an empty import trace**. Exit
 status alone would not distinguish "refused before importing anything" from
 "imported the core, then noticed", and the second is the failure that matters.
 
+Two identity rules deserve their own note, because the obvious version of each is
+wrong:
+
+- **Member uniqueness is by inode, not by path string.** `policies/./runner-v1.json`
+  and `policies/runner-v1.json` are two ref strings for one file, and on a
+  case-insensitive volume so are `runner-v1.json` and `RUNNER-V1.json`. `realpath`
+  does not fold case, so it cannot settle the second; `st_dev`+`st_ino` settles
+  both, and catches hardlinked members as well. Non-canonical components are
+  refused outright on top of that.
+- **Active release is manifest digest AND root identity.** Two byte-identical
+  installations have the same manifest digest by construction. Comparing only the
+  digest makes them indistinguishable, so an inactive root would run whenever its
+  twin was the active one.
+
 Corpus: valid build; byte-identical rebuild; six required members each tampered
 (twice — appended and length-preserving) and each removed; manifest tamper;
-`self_digest`; unknown field; duplicate keys; absolute / `..` / symlink /
-duplicate refs; launcher listed as a member; direct core CLI invocation; direct
-core import with no capability; and a two-root A/B fixture where the host reports
-B active — A's launcher verifies its own members, asks the host, and stops at
-`release_not_active` without importing the core.
+`self_digest`; unknown field; duplicate keys; absolute / `..` / `.` / empty-component
+/ symlink / string-duplicate / inode-duplicate refs; activation base digest not
+matching its member, naming no member, and naming a non-policy member; launcher
+listed as a member; direct core CLI invocation; a two-root A/B fixture with
+distinct digests; and a **byte-identical twin** fixture where only the root
+identity separates them.
+
+**Capabilities cannot be built from public data.** Everything a forger knows — both
+digests, the scope, the schema version — is public, so a capability is accepted
+only if this bridge instance minted it, tracked by a module-private brand. Minting
+requires an attestation the bridge itself produced and a bootstrap result whose
+manifest digest *and* root identity it re-checks against that attestation; the
+bearer never leaves the bridge. A genuine capability is still inert outside the
+bootstrap result, scope, and lifetime it was issued for, and the corpus exercises
+forged, replayed, wrong-scope and expired cases plus a direct `import(core)`.
+
+**Honest boundary.** This defends against a caller holding only public data. It
+does not defend against code running as the same OS user that simply calls the
+bridge itself — that remains inside the threat boundary `design.md` declares, and
+is not papered over with a fabricated signature.
 
 **Nothing here mints a real active-release capability.** The bridge and core are
 fixture-scoped templates that read a fixture host record and mark every
@@ -268,12 +324,35 @@ Implements `design.md` §policy layers and G1.17.
 Two decisions that look like one:
 
 **Materialization.** Plugin policy sources are verified against `bundle-v1.json`
-and copied byte-for-byte into the project's `.ae/policies/**`, with `fsync` on both
-the file and its parent directory. Same path with the same bytes is idempotent;
-same path with different bytes is `integrity_error` and never a silent upgrade. An
-upgrade ships new content at a new versioned path — `release-b` in the corpus does
-exactly that (`runner-v2.json` alongside an untouched `runner-v1.json`), and
-`release-c-bad` publishes v2 content over the v1 path and is refused.
+and copied byte-for-byte into the project's `.ae/policies/**`. Same path with the
+same bytes is idempotent; same path with different bytes is `integrity_error` and
+never a silent upgrade. An upgrade ships new content at a new versioned path —
+`release-b` in the corpus does exactly that (`runner-v2.json` alongside an
+untouched `runner-v1.json`), and `release-c-bad` publishes v2 content over the v1
+path and is refused.
+
+Two things make that claim true rather than merely stated:
+
+- **No-clobber is one operation, not a check followed by a write.** An existence
+  check and then `writeFileSync` is a TOCTOU window, and it is not what
+  "no-clobber" means. `lib/fs-noreplace.mjs` performs a single
+  `open(O_CREAT|O_EXCL)`: the kernel decides atomically whether this call created
+  the file, and O_EXCL additionally refuses to follow a symlink at the final
+  component. The provider declares `qualified: false` on purpose — a real
+  `atomic_file_noreplace` provider needs an immutable passed result bound to
+  OS/filesystem/mount selectors, and earning that is P0.8. Nothing here may read
+  it as qualified.
+- **Path safety is by component, not by string.** A `.ae/policies` symlink
+  pointing outside the project passes every lexical test and still lands the bytes
+  elsewhere. Both `plugin_source` and `project_ref` are refused if they are
+  absolute, contain `..`, contain a `.` or empty component, escape their root, or
+  traverse a symlink at *any* existing component. Every destination is validated
+  before any byte is written, so a rejected bundle cannot leave a half-materialized
+  policy set behind. Codes: `ref_escapes_project_root`, `ref_non_canonical`,
+  `ref_symlink_component`, `plugin_source_escapes_plugin_root`.
+
+`fsync` is called on the file and its parent directory. **Crash and power-loss
+durability is not claimed** and remains P0.7/P0.8.
 
 The bundle manifest itself materializes to a **content-addressed** path,
 `.ae/policies/bundles/<digest>.json`. This is a **frozen implementation choice**: a
@@ -284,9 +363,19 @@ bundle, and the old bundle has to remain readable for replay.
 `activation_base_bundle_digest` of the currently active verified release. An older
 bundle the project still holds is retained to replay history, not to be selected —
 requesting it is `base_bundle_not_current`, with `retained_for_replay_only` in the
-diagnostic. Only a verified, host-attested active release names the current epoch:
-a rollout lock, a caller claim, a self-declaration, or a plugin-root environment
-string all get `current_release_not_selectable_by_declaration`.
+diagnostic.
+
+The input naming the current release is a **sealed value**, not a string and not a
+plain manifest object. A string parameter would make the authoritative branch
+whatever the caller types, and with a default applied, whatever the caller omits —
+so there is no default and no string. `lib/active-release.mjs` is the only producer,
+and it seals nothing it cannot re-derive: the manifest must canonicalize to the
+digest claimed for it, and the attestation must agree on both that digest and the
+resolved root identity. The result is frozen and branded, so a structurally perfect
+object literal — even a shallow copy of a real sealed value — is refused with
+`current_release_not_selectable_by_declaration`. The same honest boundary as the
+bridge brand applies: this stops a caller holding only public data, not code
+running as the same OS user.
 
 **Epoch.** A current-release change makes an *unactivated* candidate
 `policy_epoch_stale`. It does not reach back into an existing activation: an
@@ -296,9 +385,6 @@ activated candidate keeps its own epoch and `rewritten` is false.
 deletes every installed plugin tree and replays again, requiring an identical
 effective digest. A missing local snapshot is `snapshot_missing` and a tampered one
 is `snapshot_tampered` — the current plugin's bytes never stand in for history.
-
-`fsync` is called on the write path. **Crash and power-loss durability is not
-claimed** and remains P0.7/P0.8.
 
 ## 6. Semantic blindness
 
@@ -334,7 +420,7 @@ the corpus vocabulary.
 
 ## Error taxonomy
 
-`lib/errors.mjs` groups 45 codes by the mechanism that raises them; a code appears
+`lib/errors.mjs` groups 62 codes by the mechanism that raises them; a code appears
 in exactly one group, and overlap between the lexical and schema groups is the
 defect the split exists to prevent. Callers branch on `code`, never on `message`:
 messages are diagnostics and may gain detail without a version bump, codes may not.
@@ -360,12 +446,25 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested. Thirteen deliberate defects — unsorted canonical
-keys, admitted duplicate keys, admitted floats, a widened `feature_evidence`
-include set, admitted symlinks, a move projection that keeps the source subject,
-skipped member-digest recomputation, a core imported before verification, a
-tolerated `self_digest`, removed no-clobber, a selectable old bundle, tolerated
-snapshot tampering, and a feature ID leaked into a mechanism module — each turn the
-suite red. The length-preserving member tamper in §4 exists because the first
-mutation run showed the append-only tamper was satisfied by the declared-length
-check alone, leaving digest recomputation unexercised.
+The suite is mutation-tested: 27 deliberate defects, each of which must turn it
+red. They cover every guard described above — canonical ordering, duplicate keys,
+the number domain, the `feature_evidence` boundary, symlink rejection, move
+subject/operation/outcome/qualification, member digest recomputation, import
+ordering, `self_digest`, ref canonicality, inode-level duplicate detection, the
+activation-base cross-binding, active-root identity, capability minting and scope,
+policy symlink components, `plugin_source` validation, the no-replace boundary,
+the verified-release brand, snapshot tampering, mode width, and business
+vocabulary in a mechanism module.
+
+Two checks exist specifically because a mutation run showed they were missing:
+
+- the **length-preserving** member tamper in §4, because the append-only tamper
+  was already satisfied by the declared-length check, leaving digest
+  recomputation unexercised;
+- the `active-root:matched` trace event in §4, because the bridge refuses to mint
+  against a mismatched root too, and that second guard masked the removal of the
+  launcher's own comparison. Asserting the trace rather than only the error code
+  separates them.
+
+Both are worth stating plainly: defense in depth makes a suite look green when one
+layer is removed, and only a mutation run finds that.

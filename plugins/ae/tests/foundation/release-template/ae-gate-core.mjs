@@ -6,11 +6,15 @@
 //
 //   - it has no supported standalone CLI;
 //   - every entry point independently re-verifies the capability and the exact
-//     bootstrap result, so importing the module directly buys nothing.
+//     bootstrap result through the bridge, so importing the module directly buys
+//     nothing. The verification is delegated to the already-verified bridge
+//     precisely because the bridge holds the issue-time brand; a check the core
+//     could perform on its own from the capability's own fields would be a check
+//     a forger could satisfy.
 
 import { appendFileSync, realpathSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { verifyOperationCapability } from './active-release-bridge.mjs';
 
 if (process.env.AE_FIXTURE_IMPORT_LOG) {
   appendFileSync(process.env.AE_FIXTURE_IMPORT_LOG, 'import:ae-gate-core\n');
@@ -24,27 +28,21 @@ class CoreError extends Error {
   }
 }
 
-function requireCapability(capability, bootstrapResultDigest) {
-  if (!capability || capability.schema_version !== 'ae.active-release-operation.v1') {
-    throw new CoreError('release_not_active', 'core entry point requires an active-release capability');
-  }
-  if (capability.bootstrap_result_digest !== bootstrapResultDigest) {
-    throw new CoreError('release_not_active', 'capability is not bound to this bootstrap result');
-  }
-  const expected = createHash('sha256')
-    .update(`${capability.active_release_manifest_digest}|${capability.bootstrap_result_digest}`)
-    .digest('hex');
-  if (capability.__bearer !== expected) {
-    throw new CoreError('release_not_active', 'capability bearer does not verify');
+function requireCapability(capability, bootstrapResultDigest, scope, now) {
+  try {
+    verifyOperationCapability(capability, { bootstrapResultDigest, requiredScope: scope, now });
+  } catch (error) {
+    throw new CoreError(error.code ?? 'release_not_active', error.message);
   }
 }
 
-export function run({ capability, bootstrap_result_digest }) {
-  requireCapability(capability, bootstrap_result_digest);
+export function run({ capability, bootstrapResultDigest, scope, now }) {
+  requireCapability(capability, bootstrapResultDigest, scope, now);
   return {
     ok: true,
     fixture_only: true,
     active_release_manifest_digest: capability.active_release_manifest_digest,
+    scope: capability.scope,
   };
 }
 

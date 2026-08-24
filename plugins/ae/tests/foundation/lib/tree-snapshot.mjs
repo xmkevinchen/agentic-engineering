@@ -6,7 +6,7 @@
 
 import { lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
-import { canonicalDigest, digestBytes } from './canonical-json.mjs';
+import { DIGEST_PATTERN, canonicalDigest, digestBytes } from './canonical-json.mjs';
 import { fail } from './errors.mjs';
 
 // ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ const ALGORITHM_SPEC = {
     directory: ['path', 'type', 'mode'],
     file: ['path', 'type', 'mode', 'length', 'digest'],
   },
-  mode_form: 'four-digit octal of the low 12 permission bits',
+  mode_form: 'four octal digits of the low 12 mode bits, zero-padded',
   file_digest: 'sha256 over raw file bytes',
   rejections: [
     'invalid_utf8_path',
@@ -112,8 +112,11 @@ export const ALGORITHM = Object.freeze({
 // Entries
 // ---------------------------------------------------------------------------
 
+// Four octal digits, always. Padding to three and prefixing a literal `0` would
+// widen to five characters as soon as setuid/setgid/sticky is set, silently
+// breaking the fixed-width form the contract declares.
 function modeOf(stat) {
-  return `0${(stat.mode & 0o7777).toString(8).padStart(3, '0')}`;
+  return (stat.mode & 0o7777).toString(8).padStart(4, '0');
 }
 
 // Sorting is over raw UTF-8 bytes, not code units: paths are byte strings on the
@@ -216,15 +219,76 @@ export function observeTree({ logicalRoot, resolvedRootPath, profile }) {
 // ---------------------------------------------------------------------------
 // expected_after_move projection
 //
-// Derivable from exactly three things: the observed source snapshot, a qualified
-// same-filesystem move plan/result, and the intended target identity. It does
-// not assert that the target exists.
+// Derivable from exactly three things: the observed source snapshot, a QUALIFIED
+// same-filesystem atomic directory move plan/result, and the intended target
+// identity. It does not assert that the target exists.
+//
+// "Qualified" is load-bearing and is checked, not assumed. The projection is the
+// only place a snapshot may describe a tree that was never enumerated, so a plan
+// that names an ordinary overwriting rename, a result that failed, or a helper
+// that self-reports without a qualification binding must not be able to mint one.
 // ---------------------------------------------------------------------------
 
+// The one operation the projection is defined for. An overwriting rename can
+// destroy an existing target, so it can never stand in for this.
+export const QUALIFIED_MOVE_OPERATION = 'atomic_directory_noreplace';
+
+const QUALIFICATION_FIELDS = ['provider_id', 'build_digest', 'selector_digest', 'result_ref', 'result_digest'];
+
 function sameSubject(a, b) {
-  return a.logical_root === b.logical_root
+  return Boolean(a) && Boolean(b)
+    && a.logical_root === b.logical_root
     && a.resolved_root === b.resolved_root
     && a.device_id === b.device_id;
+}
+
+function assertQualifiedMove(movePlan, moveResult) {
+  if (movePlan?.operation !== QUALIFIED_MOVE_OPERATION) {
+    fail('move_projection_unsupported_operation',
+      `expected_after_move requires operation ${QUALIFIED_MOVE_OPERATION}`,
+      { observed: movePlan?.operation ?? null });
+  }
+
+  const qualification = movePlan.qualification;
+  if (!qualification || typeof qualification !== 'object') {
+    fail('move_projection_qualification_incomplete', 'move plan carries no qualification binding');
+  }
+  for (const field of QUALIFICATION_FIELDS) {
+    const value = qualification[field];
+    if (typeof value !== 'string' || value.length === 0) {
+      fail('move_projection_qualification_incomplete',
+        `move plan qualification is missing ${field}`, { field });
+    }
+  }
+  for (const field of ['build_digest', 'selector_digest', 'result_digest']) {
+    if (!DIGEST_PATTERN.test(qualification[field])) {
+      fail('move_projection_qualification_incomplete',
+        `move plan qualification ${field} is not a sha256 digest`, { field });
+    }
+  }
+
+  if (moveResult?.operation !== movePlan.operation) {
+    fail('move_projection_result_mismatch',
+      'move result describes a different operation than the plan',
+      { plan: movePlan.operation, result: moveResult?.operation ?? null });
+  }
+  if (moveResult.qualified !== true) {
+    fail('move_projection_unqualified_helper',
+      'move result is not from a qualified helper', { qualified: moveResult.qualified ?? null });
+  }
+  if (moveResult.outcome !== 'succeeded') {
+    fail('move_projection_failed_operation',
+      'expected_after_move requires a successful move', { outcome: moveResult.outcome ?? null });
+  }
+  // The result must be the result *of this plan*: same qualification identity and
+  // the same endpoints. Otherwise a real success elsewhere could be replayed here.
+  if (canonicalDigest(qualification) !== canonicalDigest(moveResult.qualification ?? null)) {
+    fail('move_projection_qualification_mismatch',
+      'move result qualification identity does not match the plan');
+  }
+  if (!sameSubject(moveResult.source, movePlan.source) || !sameSubject(moveResult.target, movePlan.target)) {
+    fail('move_projection_result_mismatch', 'move result endpoints do not match the plan');
+  }
 }
 
 export function projectExpectedAfterMove({ observedSource, movePlan, moveResult, targetSubject }) {
@@ -232,6 +296,7 @@ export function projectExpectedAfterMove({ observedSource, movePlan, moveResult,
     fail('move_projection_requires_observed_source',
       'expected_after_move may only be derived from an observed snapshot');
   }
+  assertQualifiedMove(movePlan, moveResult);
   if (!sameSubject(observedSource.subject, movePlan.source)) {
     fail('move_projection_source_mismatch',
       'move plan source identity does not match the enumerated snapshot subject');
@@ -258,6 +323,8 @@ export function projectExpectedAfterMove({ observedSource, movePlan, moveResult,
       projection_kind: 'observed',
     },
     move: {
+      operation: movePlan.operation,
+      qualification: movePlan.qualification,
       plan_digest: canonicalDigest(movePlan),
       result_digest: canonicalDigest(moveResult),
       source: observedSource.subject,

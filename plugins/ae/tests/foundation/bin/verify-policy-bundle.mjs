@@ -5,11 +5,14 @@
 // different one. A project keeps old bundles so it can replay history — never so
 // a new candidate can pick one.
 
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { canonicalize, digestBytes } from '../lib/canonical-json.mjs';
+import { sealVerifiedActiveRelease } from '../lib/active-release.mjs';
+import { canonicalize, canonicalDigest, digestBytes } from '../lib/canonical-json.mjs';
 import {
   bundleProjectRef, candidateEpochStatus, materializePolicies, policyEpoch,
   replayFromLocalSnapshots, selectActivationBaseBundle, verifyBundleSources,
@@ -122,37 +125,166 @@ export function run() {
         () => verifyBundleSources(escaping), 'ref_escapes_project_root');
     }
 
+    for (const [label, badRef, code] of [
+      ['dot-component', '.ae/policies/./runner-v1.json', 'ref_non_canonical'],
+      ['empty-component', '.ae/policies//runner-v1.json', 'ref_non_canonical'],
+      ['empty-ref', '', 'ref_non_canonical'],
+    ]) {
+      const escaping = join(work, `plugin-noncanonical-${label}`);
+      cpSync(join(FIXTURE, 'release-a'), escaping, { recursive: true });
+      const bundle = JSON.parse(readFileSync(join(escaping, 'policies/bundle-v1.json'), 'utf8'));
+      bundle.entries[0].project_ref = badRef;
+      writeFileSync(join(escaping, 'policies/bundle-v1.json'), canonicalize(bundle));
+      checks.rejects(`bundle/ref-non-canonical/${label}`, () => verifyBundleSources(escaping), code);
+    }
+
+    // ---- plugin_source escapes -------------------------------------------
+    // Previously unchecked: a bundle could name bytes outside the installed
+    // plugin root and have them materialized as policy, provided the digest matched.
+    for (const [label, badSource, code] of [
+      ['dotdot', '../../../etc/hosts', 'plugin_source_escapes_plugin_root'],
+      ['absolute', '/etc/hosts', 'plugin_source_escapes_plugin_root'],
+      ['dot-component', 'policies/./runner-v1.json', 'ref_non_canonical'],
+    ]) {
+      const escaping = join(work, `plugin-source-escape-${label}`);
+      cpSync(join(FIXTURE, 'release-a'), escaping, { recursive: true });
+      const bundle = JSON.parse(readFileSync(join(escaping, 'policies/bundle-v1.json'), 'utf8'));
+      bundle.entries[0].plugin_source = badSource;
+      writeFileSync(join(escaping, 'policies/bundle-v1.json'), canonicalize(bundle));
+      checks.rejects(`bundle/plugin-source-escape/${label}`, () => verifyBundleSources(escaping), code);
+    }
+
+    // A symlinked plugin source is refused even though it resolves inside the
+    // plugin root lexically.
+    const linkedPlugin = join(work, 'plugin-symlinked-source');
+    cpSync(join(FIXTURE, 'release-a'), linkedPlugin, { recursive: true });
+    {
+      const realTarget = join(work, 'outside-source.json');
+      writeFileSync(realTarget, readFileSync(join(linkedPlugin, 'policies/runner-v1.json')));
+      rmSync(join(linkedPlugin, 'policies/runner-v1.json'));
+      symlinkSync(realTarget, join(linkedPlugin, 'policies/runner-v1.json'));
+      checks.rejects('bundle/plugin-source-symlink',
+        () => verifyBundleSources(linkedPlugin), 'ref_symlink_component');
+    }
+
+    // ---- materialization never writes through a symlink -------------------
+    // `.ae/policies` pointing outside the project passes every lexical test and
+    // still lands the bytes elsewhere. This is the case that motivated moving the
+    // write onto an explicit no-replace boundary.
+    const escapeProject = join(work, 'project-symlink-escape');
+    const escapeTarget = join(work, 'outside-project');
+    mkdirSync(join(escapeProject, '.ae'), { recursive: true });
+    mkdirSync(escapeTarget, { recursive: true });
+    symlinkSync(escapeTarget, join(escapeProject, '.ae/policies'));
+    checks.rejects('materialize/symlinked-policy-root',
+      () => materializePolicies({ pluginRoot: pluginA, projectRoot: escapeProject }),
+      'ref_symlink_component');
+    checks.equal('materialize/symlinked-policy-root-wrote-nothing',
+      readdirSync(escapeTarget).length, 0);
+
+    // ...and the same for a symlink deeper in the path.
+    const deepEscape = join(work, 'project-deep-symlink');
+    const deepTarget = join(work, 'outside-floors');
+    mkdirSync(join(deepEscape, '.ae/policies'), { recursive: true });
+    mkdirSync(deepTarget, { recursive: true });
+    symlinkSync(deepTarget, join(deepEscape, '.ae/policies/floors'));
+    checks.rejects('materialize/symlinked-subdirectory',
+      () => materializePolicies({ pluginRoot: pluginA, projectRoot: deepEscape }),
+      'ref_symlink_component');
+    checks.equal('materialize/symlinked-subdirectory-wrote-nothing',
+      readdirSync(deepTarget).length, 0);
+    // Destinations are validated before any byte is written, so the entries that
+    // would have succeeded are absent too.
+    checks.equal('materialize/rejection-is-all-or-nothing',
+      existsSync(join(deepEscape, '.ae/policies/runner-v1.json')), false);
+
+    // A symlink standing where a policy file belongs is refused rather than
+    // followed, even when the target's bytes would have compared equal.
+    const linkedFile = join(work, 'project-symlinked-file');
+    mkdirSync(join(linkedFile, '.ae/policies'), { recursive: true });
+    const decoy = join(work, 'decoy-runner-v1.json');
+    writeFileSync(decoy, readFileSync(join(pluginA, 'policies/runner-v1.json')));
+    symlinkSync(decoy, join(linkedFile, '.ae/policies/runner-v1.json'));
+    checks.rejects('materialize/symlink-in-place-of-policy-file',
+      () => materializePolicies({ pluginRoot: pluginA, projectRoot: linkedFile }),
+      'ref_symlink_component');
+
     // ---- base bundle selection for a NEW candidate ------------------------
     // The active release is B. A is still on disk, for replay only.
     const activeReleaseManifest = {
-      activation_base_bundle_digest: digestB,
+      schema_version: 'ae.release-manifest.v1',
       release_id: 'ae-gate-fixture',
+      activation_base_bundle_digest: digestB,
     };
+    const rootIdentity = '/fixture/active/root';
+    const attestation = {
+      active_release_manifest_digest: canonicalDigest(activeReleaseManifest),
+      active_root_identity: rootIdentity,
+    };
+    const verifiedActiveRelease = sealVerifiedActiveRelease({
+      manifest: activeReleaseManifest,
+      attestation,
+      rootIdentity,
+      bootstrapResultDigest: `sha256:${'8'.repeat(64)}`,
+    });
     const retained = [digestA, digestB];
 
     checks.accepts('select/current-singleton', () => selectActivationBaseBundle({
-      activeReleaseManifest, requestedBaseBundleDigest: digestB, retainedHistoricalBundleDigests: retained,
+      verifiedActiveRelease, requestedBaseBundleDigest: digestB, retainedHistoricalBundleDigests: retained,
     }));
 
     checks.rejects('select/old-retained-bundle-downgrade', () => selectActivationBaseBundle({
-      activeReleaseManifest, requestedBaseBundleDigest: digestA, retainedHistoricalBundleDigests: retained,
+      verifiedActiveRelease, requestedBaseBundleDigest: digestA, retainedHistoricalBundleDigests: retained,
     }), 'base_bundle_not_current');
 
     checks.rejects('select/unknown-bundle', () => selectActivationBaseBundle({
-      activeReleaseManifest,
+      verifiedActiveRelease,
       requestedBaseBundleDigest: `sha256:${'9'.repeat(64)}`,
       retainedHistoricalBundleDigests: retained,
     }), 'base_bundle_not_current');
 
-    // Neither the rollout lock nor anything self-reported picks the current release.
-    for (const source of ['rollout_lock', 'caller', 'self_declaration', 'plugin_root_env']) {
-      checks.rejects(`select/not-selectable-by/${source}`, () => selectActivationBaseBundle({
-        activeReleaseManifest,
+    // Nothing that is merely *shaped* like a verified active release can select
+    // the current one. In particular there is no default: omitting the argument
+    // must fail closed rather than fall through to an authoritative branch.
+    const impostors = [
+      ['omitted', undefined],
+      ['null', null],
+      ['plain-manifest-object', activeReleaseManifest],
+      ['structurally-perfect-literal', {
+        schema_version: 'ae.verified-active-release.v1',
+        release_manifest_digest: canonicalDigest(activeReleaseManifest),
+        activation_base_bundle_digest: digestB,
+        root_identity: rootIdentity,
+        bootstrap_result_digest: `sha256:${'8'.repeat(64)}`,
+      }],
+      ['shallow-copy-of-a-sealed-value', { ...verifiedActiveRelease }],
+      ['string-naming-the-source', 'verified_active_release'],
+    ];
+    for (const [label, impostor] of impostors) {
+      checks.rejects(`select/not-selectable-by/${label}`, () => selectActivationBaseBundle({
+        verifiedActiveRelease: impostor,
         requestedBaseBundleDigest: digestB,
-        declaredBy: source,
         retainedHistoricalBundleDigests: retained,
       }), 'current_release_not_selectable_by_declaration');
     }
+
+    // Sealing is itself checked, so a caller cannot mint the sealed value from
+    // mismatched parts.
+    checks.rejects('seal/manifest-does-not-match-attested-digest', () => sealVerifiedActiveRelease({
+      manifest: { ...activeReleaseManifest, release_id: 'other' },
+      attestation,
+      rootIdentity,
+      bootstrapResultDigest: `sha256:${'8'.repeat(64)}`,
+    }), 'current_release_not_selectable_by_declaration');
+    checks.rejects('seal/root-identity-does-not-match', () => sealVerifiedActiveRelease({
+      manifest: activeReleaseManifest,
+      attestation,
+      rootIdentity: '/somewhere/else',
+      bootstrapResultDigest: `sha256:${'8'.repeat(64)}`,
+    }), 'current_release_not_selectable_by_declaration');
+    checks.rejects('seal/no-bootstrap-result', () => sealVerifiedActiveRelease({
+      manifest: activeReleaseManifest, attestation, rootIdentity, bootstrapResultDigest: '',
+    }), 'current_release_not_selectable_by_declaration');
 
     // ---- policy epoch staleness ------------------------------------------
     const epochOld = policyEpoch({

@@ -234,6 +234,27 @@ export function run() {
     }
     checks.equal('synthetic/path-collision', collisionCode, 'path_collision');
 
+    // ---- mode encoding ----------------------------------------------------
+    // Four octal digits regardless of setuid/setgid/sticky. A three-digit pad with
+    // a literal `0` prefix silently widens to five for exactly these modes.
+    const modeRoot = materializeTree(join(work, 'modes'));
+    for (const [label, bits, expectedMode] of [
+      ['setuid', 0o4755, '4755'],
+      ['setgid', 0o2644, '2644'],
+      ['sticky', 0o1644, '1644'],
+      ['plain', 0o644, '0644'],
+      ['read-only', 0o400, '0400'],
+    ]) {
+      chmodSync(join(modeRoot, 'contract/contract-v1.json'), bits);
+      const snapshot = observeTree({
+        logicalRoot: LOGICAL_ROOT, resolvedRootPath: modeRoot, profile: 'feature_evidence',
+      });
+      const entry = snapshot.entries.find((e) => e.path === 'contract/contract-v1.json');
+      checks.equal(`mode/${label}`, entry.mode, expectedMode);
+      checks.equal(`mode/${label}/width`, entry.mode.length, 4);
+    }
+    chmodSync(join(modeRoot, 'contract/contract-v1.json'), 0o644);
+
     // ---- expected_after_move projection -----------------------------------
     const source = baseline.feature_evidence;
     const targetSubject = {
@@ -241,12 +262,30 @@ export function run() {
       resolved_root: source.subject.resolved_root.replace('baseline', 'committed'),
       device_id: source.subject.device_id,
     };
+    // The projection is defined only for a qualified atomic directory no-replace
+    // move, so the plan must carry the qualification binding and the result must be
+    // the successful result of THAT plan.
+    const qualification = {
+      provider_id: 'fixture-fs-helper-v1',
+      build_digest: `sha256:${'1'.repeat(64)}`,
+      selector_digest: `sha256:${'2'.repeat(64)}`,
+      result_ref: '.ae/policies/qualifications/filesystem/abc.json',
+      result_digest: `sha256:${'3'.repeat(64)}`,
+    };
     const movePlan = {
       operation: 'atomic_directory_noreplace',
+      qualification,
       source: source.subject,
       target: targetSubject,
     };
-    const moveResult = { helper_build: 'fixture-fs-helper-v1', outcome: 'prepared' };
+    const moveResult = {
+      operation: 'atomic_directory_noreplace',
+      outcome: 'succeeded',
+      qualified: true,
+      qualification,
+      source: source.subject,
+      target: targetSubject,
+    };
 
     const projected = projectExpectedAfterMove({
       observedSource: source, movePlan, moveResult, targetSubject,
@@ -258,6 +297,9 @@ export function run() {
       projected.enumeration_source.snapshot_digest, canonicalDigest(source));
     checks.equal('move/binds-plan', projected.move.plan_digest, canonicalDigest(movePlan));
     checks.equal('move/binds-result', projected.move.result_digest, canonicalDigest(moveResult));
+    checks.equal('move/binds-operation', projected.move.operation, 'atomic_directory_noreplace');
+    checks.equal('move/binds-qualification',
+      canonicalDigest(projected.move.qualification), canonicalDigest(qualification));
 
     // The two claims that together define the projection: same content, different
     // subject. Entry projection identical, snapshot digests necessarily different.
@@ -273,19 +315,24 @@ export function run() {
           observedSource: projected, movePlan, moveResult, targetSubject,
         }),
         'move_projection_requires_observed_source'],
+      // These patch the plan AND the result together, so each isolates the
+      // condition it names instead of tripping the endpoint-consistency check.
       ['source-mismatch',
-        () => projectExpectedAfterMove({
-          observedSource: source,
-          movePlan: { ...movePlan, source: { ...source.subject, logical_root: 'somewhere/else' } },
-          moveResult,
-          targetSubject,
-        }),
+        () => {
+          const otherSource = { ...source.subject, logical_root: 'somewhere/else' };
+          return projectExpectedAfterMove({
+            observedSource: source,
+            movePlan: { ...movePlan, source: otherSource },
+            moveResult: { ...moveResult, source: otherSource },
+            targetSubject,
+          });
+        },
         'move_projection_source_mismatch'],
       ['same-identity',
         () => projectExpectedAfterMove({
           observedSource: source,
           movePlan: { ...movePlan, target: source.subject },
-          moveResult,
+          moveResult: { ...moveResult, target: source.subject },
           targetSubject: source.subject,
         }),
         'move_projection_same_identity'],
@@ -295,13 +342,59 @@ export function run() {
           return projectExpectedAfterMove({
             observedSource: source,
             movePlan: { ...movePlan, target: otherDevice },
-            moveResult,
+            moveResult: { ...moveResult, target: otherDevice },
             targetSubject: otherDevice,
           });
         },
         'move_projection_cross_device'],
     ];
     for (const [label, fn, code] of rejections) {
+      checks.rejects(`move/${label}`, fn, code);
+    }
+
+    // The projection may not be minted from an unqualified, failed, or
+    // wrong-operation move. An overwriting rename can destroy an existing target,
+    // so it can never stand in for the no-replace directory move.
+    const withPlan = (planPatch, resultPatch) => () => projectExpectedAfterMove({
+      observedSource: source,
+      movePlan: { ...movePlan, ...planPatch },
+      moveResult: { ...moveResult, ...resultPatch },
+      targetSubject,
+    });
+
+    const qualificationRejections = [
+      ['ordinary-overwriting-rename',
+        withPlan({ operation: 'ordinary_overwriting_rename' }, {}),
+        'move_projection_unsupported_operation'],
+      ['atomic-file-move-is-not-a-directory-move',
+        withPlan({ operation: 'atomic_file_noreplace' }, {}),
+        'move_projection_unsupported_operation'],
+      ['self-reported-failed-unqualified',
+        withPlan({ operation: 'ordinary_overwriting_rename' },
+          { qualified: false, outcome: 'failed', self_declared: true }),
+        'move_projection_unsupported_operation'],
+      ['no-qualification-binding', withPlan({ qualification: undefined }, {}),
+        'move_projection_qualification_incomplete'],
+      ['incomplete-qualification',
+        withPlan({ qualification: { ...qualification, build_digest: undefined } }, {}),
+        'move_projection_qualification_incomplete'],
+      ['qualification-digest-not-a-digest',
+        withPlan({ qualification: { ...qualification, result_digest: 'not-a-digest' } }, {}),
+        'move_projection_qualification_incomplete'],
+      ['result-operation-mismatch', withPlan({}, { operation: 'atomic_file_noreplace' }),
+        'move_projection_result_mismatch'],
+      ['unqualified-helper', withPlan({}, { qualified: false }), 'move_projection_unqualified_helper'],
+      ['helper-qualified-absent', withPlan({}, { qualified: undefined }), 'move_projection_unqualified_helper'],
+      ['failed-outcome', withPlan({}, { outcome: 'failed' }), 'move_projection_failed_operation'],
+      ['prepared-not-succeeded', withPlan({}, { outcome: 'prepared' }), 'move_projection_failed_operation'],
+      ['qualification-identity-mismatch',
+        withPlan({}, { qualification: { ...qualification, provider_id: 'someone-else-v1' } }),
+        'move_projection_qualification_mismatch'],
+      ['result-endpoints-mismatch',
+        withPlan({}, { target: { ...targetSubject, logical_root: 'elsewhere' } }),
+        'move_projection_result_mismatch'],
+    ];
+    for (const [label, fn, code] of qualificationRejections) {
       checks.rejects(`move/${label}`, fn, code);
     }
 

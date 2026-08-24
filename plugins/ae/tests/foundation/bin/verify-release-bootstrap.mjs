@@ -24,8 +24,18 @@ const EXPECTED_TRACE = [
   'import:validators-v1',
   'import:active-release-bridge',
   'attestation:obtained',
+  'active-root:matched',
   'capability:minted',
   'import:ae-gate-core',
+];
+
+// What a launcher gets through when the host says a DIFFERENT root is active: it
+// verifies its own members, imports the bridge to ask, and stops. Crucially it
+// never reaches 'active-root:matched'.
+const INACTIVE_ROOT_TRACE = [
+  'import:validators-v1',
+  'import:active-release-bridge',
+  'attestation:obtained',
 ];
 
 function listFiles(root, prefix = '') {
@@ -243,6 +253,9 @@ export async function run() {
     for (const [label, badRef, code] of [
       ['absolute', '/etc/hosts', 'member_ref_absolute'],
       ['dotdot', '../outside/policy.json', 'member_ref_escapes_root'],
+      ['dot-component', 'policies/./runner-v1.json', 'member_ref_non_canonical'],
+      ['empty-component', 'policies//runner-v1.json', 'member_ref_non_canonical'],
+      ['trailing-slash', 'policies/runner-v1.json/', 'member_ref_non_canonical'],
     ]) {
       let observed = null;
       try {
@@ -328,7 +341,107 @@ export async function run() {
       '}',
     ].join('\n'));
     const importRun = launch(importPath, { work, hostRecord: hostA });
-    checks.equal('direct-import/code', importRun.parsed?.error, 'release_not_active');
+    checks.equal('direct-import/code', importRun.parsed?.error, 'capability_not_minted');
+
+    // ---- activation base bundle must BE a verified member -----------------
+    expectRejection(checks, 'base-digest-not-a-member', {
+      work,
+      build: (releaseRoot) => buildRelease({
+        releaseRoot,
+        policySourceDir: POLICY_SOURCE,
+        transformManifest: (m) => ({ ...m, activation_base_bundle_digest: `sha256:${'0'.repeat(64)}` }),
+      }),
+      expectedCode: 'activation_base_member_mismatch',
+    });
+    expectRejection(checks, 'base-ref-names-no-member', {
+      work,
+      build: (releaseRoot) => buildRelease({
+        releaseRoot,
+        policySourceDir: POLICY_SOURCE,
+        transformManifest: (m) => ({ ...m, activation_base_bundle_ref: 'policies/not-installed.json' }),
+      }),
+      expectedCode: 'activation_base_member_mismatch',
+    });
+    expectRejection(checks, 'base-ref-names-a-non-policy-member', {
+      work,
+      build: (releaseRoot) => buildRelease({
+        releaseRoot,
+        policySourceDir: POLICY_SOURCE,
+        transformManifest: (m) => ({
+          ...m,
+          activation_base_bundle_ref: 'schemas/release-manifest-v1.schema.json',
+          activation_base_bundle_digest:
+            m.members.find((x) => x.ref === 'schemas/release-manifest-v1.schema.json').raw_digest,
+        }),
+      }),
+      expectedCode: 'activation_base_member_mismatch',
+    });
+
+    // ---- one file, two member refs ----------------------------------------
+    // A `.` component makes one file addressable under two ref strings, which
+    // string-level duplicate detection cannot see.
+    expectRejection(checks, 'ref-dot-alias', {
+      work,
+      build: (releaseRoot) => buildRelease({
+        releaseRoot,
+        policySourceDir: POLICY_SOURCE,
+        transformManifest: (m) => ({
+          ...m,
+          members: [...m.members, {
+            ...m.members.find((x) => x.ref === 'policies/runner-v1.json'),
+            ref: 'policies/./runner-v1.json',
+          }],
+        }),
+      }),
+      expectedCode: 'member_ref_non_canonical',
+    });
+    expectRejection(checks, 'ref-empty-component', {
+      work,
+      build: (releaseRoot) => buildRelease({
+        releaseRoot,
+        policySourceDir: POLICY_SOURCE,
+        transformManifest: (m) => ({
+          ...m,
+          members: [...m.members, {
+            ...m.members.find((x) => x.ref === 'policies/runner-v1.json'),
+            ref: 'policies//runner-v1.json',
+          }],
+        }),
+      }),
+      // Refused by the closed schema's plugin_ref pattern before the launcher's
+      // canonicality guard sees it; the guard itself is asserted directly below.
+      expectedCode: 'schema_invalid',
+    });
+
+    // Case folding produces the same aliasing on a case-insensitive volume, and
+    // no lexical rule can catch it — only resolved identity can. Skipped loudly
+    // where the filesystem is case-sensitive rather than passed silently.
+    const caseProbe = join(work, 'CaseProbe');
+    writeFileSync(caseProbe, 'probe');
+    let caseInsensitive = false;
+    try {
+      readFileSync(join(work, 'caseprobe'));
+      caseInsensitive = true;
+    } catch { /* case-sensitive volume */ }
+    if (!caseInsensitive) {
+      checks.skip('ref-case-alias', 'filesystem is case-sensitive; alias cannot be constructed here');
+    } else {
+      expectRejection(checks, 'ref-case-alias', {
+        work,
+        build: (releaseRoot) => buildRelease({
+          releaseRoot,
+          policySourceDir: POLICY_SOURCE,
+          transformManifest: (m) => ({
+            ...m,
+            members: [...m.members, {
+              ...m.members.find((x) => x.ref === 'policies/runner-v1.json'),
+              ref: 'policies/RUNNER-V1.json',
+            }],
+          }),
+        }),
+        expectedCode: 'member_ref_duplicate',
+      });
+    }
 
     // ---- A/B: two complete roots, host says B is active -------------------
     const rootB = join(work, 'release-b');
@@ -345,8 +458,161 @@ export async function run() {
     checks.equal('ab/inactive-root-refused', aWhileBActive.parsed?.error, 'release_not_active');
     // The inactive root verified its own members and imported the bridge to ask
     // the host — and then stopped. The core was never imported.
-    checks.equal('ab/inactive-root-trace', aWhileBActive.trace.join(','),
-      ['import:validators-v1', 'import:active-release-bridge', 'attestation:obtained'].join(','));
+    checks.equal('ab/inactive-root-trace', aWhileBActive.trace.join(','), INACTIVE_ROOT_TRACE.join(','));
+
+    // ---- two BYTE-IDENTICAL roots, host says one of them ------------------
+    // Identical content means identical manifest digests, so digest comparison
+    // alone cannot tell these apart. Only the resolved root identity can.
+    const twinA = join(work, 'twin-a');
+    const twinB = join(work, 'twin-b');
+    const tA = buildRelease({ releaseRoot: twinA, policySourceDir: POLICY_SOURCE });
+    const tB = buildRelease({ releaseRoot: twinB, policySourceDir: POLICY_SOURCE });
+    checks.equal('twin/digests-are-identical', tA.manifestDigest, tB.manifestDigest);
+
+    const hostTwinB = writeHostRecord(work, 'host-twin-b', {
+      activeRoot: twinB, digest: tB.manifestDigest,
+    });
+    const twinBRun = launch(tB.launcherPath, { work, hostRecord: hostTwinB });
+    checks.equal('twin/active-twin-runs', twinBRun.parsed?.ok, true);
+
+    const twinARun = launch(tA.launcherPath, { work, hostRecord: hostTwinB });
+    checks.equal('twin/inactive-twin-refused', twinARun.parsed?.error, 'release_not_active');
+    checks.equal('twin/inactive-twin-no-core-import',
+      twinARun.trace.includes('import:ae-gate-core'), false);
+    // The identity comparison is the step that must refuse here. Asserting the
+    // trace rather than only the error code keeps the bridge's own mint-time
+    // check from masking the loss of this one.
+    checks.equal('twin/inactive-twin-trace', twinARun.trace.join(','), INACTIVE_ROOT_TRACE.join(','));
+    checks.equal('twin/active-twin-matched-root',
+      twinBRun.trace.includes('active-root:matched'), true);
+
+    // ---- capability cannot be constructed from public data ----------------
+    // Everything a forger could know — both digests and the schema version — is
+    // public. The capability is accepted only if this bridge instance minted it.
+    const capabilityCases = [
+      ['null-capability', 'null', 'capability_not_minted'],
+      ['forged-plain-object', `{
+        schema_version: 'ae.active-release-operation.v1',
+        fixture_only: true,
+        active_release_manifest_digest: MANIFEST_DIGEST,
+        active_root_identity: ROOT_IDENTITY,
+        bootstrap_result_digest: BOOTSTRAP_DIGEST,
+        scope: SCOPE,
+        nonce: 'deadbeef'.repeat(4),
+        issued_at: 0,
+        expires_at: 1e15,
+      }`, 'capability_not_minted'],
+      ['forged-with-bearer-shaped-field', `{
+        schema_version: 'ae.active-release-operation.v1',
+        active_release_manifest_digest: MANIFEST_DIGEST,
+        bootstrap_result_digest: BOOTSTRAP_DIGEST,
+        scope: SCOPE,
+        expires_at: 1e15,
+        __bearer: require('node:crypto').createHash('sha256')
+          .update(MANIFEST_DIGEST + '|' + BOOTSTRAP_DIGEST).digest('hex'),
+      }`, 'capability_not_minted'],
+    ];
+
+    for (const [label, expr, expectedCode] of capabilityCases) {
+      const probe = join(work, `cap-${label}.mjs`);
+      writeFileSync(probe, [
+        "import { createRequire } from 'node:module';",
+        'const require = createRequire(import.meta.url);',
+        `const MANIFEST_DIGEST = ${JSON.stringify(a.manifestDigest)};`,
+        `const ROOT_IDENTITY = ${JSON.stringify(rootA)};`,
+        `const BOOTSTRAP_DIGEST = ${JSON.stringify(`sha256:${'7'.repeat(64)}`)};`,
+        "const SCOPE = { repo: null, feature_id: null, purpose: 'bootstrap_selftest', "
+          + "host_operation: 'verify_installed_release' };",
+        `const core = await import(${JSON.stringify(join(rootA, 'runtime', 'ae-gate-core.mjs'))});`,
+        'try {',
+        `  const out = core.run({ capability: ${expr}, bootstrapResultDigest: BOOTSTRAP_DIGEST, scope: SCOPE });`,
+        '  process.stdout.write(JSON.stringify({ unexpected: out }));',
+        '} catch (error) {',
+        '  process.stdout.write(JSON.stringify({ error: error.code }));',
+        '  process.exit(1);',
+        '}',
+      ].join('\n'));
+      const probeRun = launch(probe, { work, hostRecord: hostA });
+      checks.equal(`capability/${label}`, probeRun.parsed?.error, expectedCode);
+    }
+
+    // A genuinely minted capability is still inert outside the bootstrap result,
+    // the scope, and the lifetime it was issued for.
+    const bridge = await import(`file://${join(rootA, 'runtime', 'active-release-bridge.mjs')}`);
+    const launcherA = await import(`file://${a.launcherPath}`);
+    process.env.AE_FIXTURE_HOST_RECORD = hostA;
+    const verifiedA = launcherA.verifyInstalledRelease();
+    const attestationA = bridge.attestActiveRoot({ observedReleaseRoot: rootA });
+    const realScope = {
+      repo: null, feature_id: 'F-100', purpose: 'record_event', host_operation: 'append',
+    };
+    const realCapability = bridge.mintOperationCapability({
+      attestation: attestationA, bootstrapResult: verifiedA, scope: realScope, issuedAt: 1000, ttlMs: 60000,
+    });
+
+    checks.ok('capability/minted-carries-no-bearer',
+      !Object.keys(realCapability).some((k) => k.toLowerCase().includes('bearer')));
+
+    const coreA = await import(`file://${join(rootA, 'runtime', 'ae-gate-core.mjs')}`);
+    const coreCode = (fn) => {
+      try { fn(); return 'accepted'; } catch (error) { return error.code; }
+    };
+
+    checks.equal('capability/genuine-accepted',
+      coreCode(() => coreA.run({
+        capability: realCapability,
+        bootstrapResultDigest: verifiedA.bootstrap_result_digest,
+        scope: realScope,
+        now: 2000,
+      })), 'accepted');
+
+    checks.equal('capability/replayed-onto-another-bootstrap-result',
+      coreCode(() => coreA.run({
+        capability: realCapability,
+        bootstrapResultDigest: `sha256:${'4'.repeat(64)}`,
+        scope: realScope,
+        now: 2000,
+      })), 'capability_bootstrap_mismatch');
+
+    for (const [field, value] of [
+      ['purpose', 'finalize'], ['host_operation', 'move'], ['feature_id', 'F-999'],
+    ]) {
+      checks.equal(`capability/wrong-scope-${field}`,
+        coreCode(() => coreA.run({
+          capability: realCapability,
+          bootstrapResultDigest: verifiedA.bootstrap_result_digest,
+          scope: { ...realScope, [field]: value },
+          now: 2000,
+        })), 'capability_scope_mismatch');
+    }
+
+    checks.equal('capability/expired',
+      coreCode(() => coreA.run({
+        capability: realCapability,
+        bootstrapResultDigest: verifiedA.bootstrap_result_digest,
+        scope: realScope,
+        now: 1000 + 60000 + 1,
+      })), 'capability_expired');
+
+    // Minting also refuses a fabricated attestation and a fabricated bootstrap
+    // result: both halves of the active identity are re-checked at mint time.
+    checks.equal('capability/mint-refuses-forged-attestation',
+      coreCode(() => bridge.mintOperationCapability({
+        attestation: { ...attestationA },
+        bootstrapResult: verifiedA,
+        scope: realScope,
+      })), 'capability_not_minted');
+    checks.equal('capability/mint-refuses-wrong-root-identity',
+      coreCode(() => bridge.mintOperationCapability({
+        attestation: attestationA,
+        bootstrapResult: { ...verifiedA, root_identity: `${rootA}-elsewhere` },
+        scope: realScope,
+      })), 'release_not_active');
+    checks.equal('capability/mint-refuses-missing-bootstrap-result',
+      coreCode(() => bridge.mintOperationCapability({
+        attestation: attestationA, bootstrapResult: null, scope: realScope,
+      })), 'capability_not_minted');
+    delete process.env.AE_FIXTURE_HOST_RECORD;
 
     // ---- no host record at all -------------------------------------------
     const noHost = launch(a.launcherPath, { work, hostRecord: null });
