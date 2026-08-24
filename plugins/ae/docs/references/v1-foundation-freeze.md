@@ -564,7 +564,7 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested: 47 deliberate defects, each of which must turn it
+The suite is mutation-tested: 52 deliberate defects, each of which must turn it
 red. They cover every guard described above — canonical ordering, duplicate keys,
 the number domain, the `feature_evidence` boundary, symlink rejection, move
 subject/operation/outcome/qualification, member digest recomputation, import
@@ -599,6 +599,16 @@ shadowed by the value comparison. Two mechanisms for one property is not twice t
 safety — it means either can be deleted with the suite still green, which is how a
 regression later goes unnoticed. Each was resolved by removing the redundancy or
 by asserting on a value nothing else had touched.
+
+Applying that same lens deliberately then found a fifth: every rejection case in
+the canonical-bytes corpus reaches the serializer through `parseStrict`, which
+refuses bad numbers and lone surrogates first — so the serializer's own admission
+rules were never exercised and could be deleted with all 750 checks still green.
+They are not redundant, because `canonicalize()` is called on in-memory values
+throughout this package (algorithm identity, policy epochs, snapshot digests), and
+there the serializer is the only thing between a float and a silently wrong
+digest. Seventeen direct cases now cover that path, nested inside arrays and
+objects to prove the whole value is walked.
 
 Not every guard is independently mutable, and the corpus says so rather than
 padding the count: the attestation objects are flat, so shallow and deep freezing

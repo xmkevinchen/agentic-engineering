@@ -122,6 +122,44 @@ export function run() {
   checks.equal('crlf-semantic-identical',
     canonicalDigest(parseStrict(compact)), canonicalDigest(parseStrict(prettyCrlf)));
 
+  // ---- the serializer's own admission rules ------------------------------
+  //
+  // Every case above reaches the serializer through parseStrict, which refuses
+  // these first — so the serializer's guards are never exercised by that path and
+  // could be deleted with the corpus still green. They are not redundant, though:
+  // canonicalize() is called on in-memory values all over this package (algorithm
+  // identity, policy epochs, snapshot digests), and there the serializer is the
+  // only thing between a bad value and a silently wrong digest.
+  const inMemory = [
+    ['float', { a: 1.5 }, 'non_integer_number'],
+    ['float-whole', { a: 2.0000000001 }, 'non_integer_number'],
+    ['negative-zero', { a: -0 }, 'negative_zero'],
+    ['infinity', { a: Infinity }, 'non_finite_number'],
+    ['negative-infinity', { a: -Infinity }, 'non_finite_number'],
+    ['nan', { a: NaN }, 'non_finite_number'],
+    ['above-safe-integer', { a: 2 ** 53 }, 'number_out_of_range'],
+    ['below-safe-integer', { a: -(2 ** 53) }, 'number_out_of_range'],
+    ['lone-high-surrogate', { a: '\ud800' }, 'lone_surrogate'],
+    ['lone-low-surrogate', { a: '\udc00' }, 'lone_surrogate'],
+    ['undefined-value', { a: undefined }, 'malformed_json'],
+    ['function-value', { a: () => 1 }, 'malformed_json'],
+    ['bigint-value', { a: 1n }, 'malformed_json'],
+    ['symbol-value', { a: Symbol('x') }, 'malformed_json'],
+    // Nested, to prove the whole value is walked rather than just its top level.
+    ['float-in-array', { a: [1, 2.5] }, 'non_integer_number'],
+    ['float-deep', { a: { b: { c: [{ d: 0.5 }] } } }, 'non_integer_number'],
+    ['lone-surrogate-in-key', { '\ud800': 1 }, 'lone_surrogate'],
+  ];
+  for (const [id, value, code] of inMemory) {
+    checks.rejects(`serializer-admission/${id}`, () => canonicalize(value), code);
+  }
+
+  // Positive control: the same path accepts a well-formed in-memory value, so the
+  // rejections above are not a serializer that refuses everything.
+  checks.equalBytes('serializer-admission/accepts-valid-in-memory-value',
+    canonicalize({ b: [1, -1, 0], a: 'ok' }),
+    Buffer.from('{"a":"ok","b":[1,-1,0]}', 'utf8'));
+
   // NFC and NFD are distinct values: no private normalization anywhere.
   const nfc = readFileSync(join(CORPUS, 'expected/nfc-precomposed.bin'));
   const nfd = readFileSync(join(CORPUS, 'expected/nfd-decomposed.bin'));
