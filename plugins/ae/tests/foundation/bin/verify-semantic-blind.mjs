@@ -11,7 +11,7 @@
 //                grep: it establishes which files are production code rather than
 //                assuming it.
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,15 +24,21 @@ import { Checks } from './harness.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LIB = join(HERE, '..', 'lib');
 
-// The modules that would ship inside a release. release-build.mjs is deliberately
-// NOT here: it assembles fixture releases and is expected to reference fixture
-// paths. The assertion below is that nothing in this closed set reaches it.
-const MECHANISM_ENTRY_POINTS = [
-  'canonical-json.mjs',
-  'errors.mjs',
-  'tree-snapshot.mjs',
-  'policy-bundle.mjs',
-];
+// Everything in lib/ is a mechanism module and gets scanned — enumerated from the
+// directory rather than listed by hand, so a new lib/ file cannot be added and
+// silently escape the scan by not happening to be imported from a curated root.
+//
+// release-build.mjs is the sole exclusion: it assembles fixture releases and is
+// expected to reference fixture paths. It is named here rather than inferred, so
+// removing it from the exclusion list is a visible edit.
+const NOT_A_MECHANISM = ['release-build.mjs'];
+
+function mechanismEntryPoints() {
+  return readdirSync(LIB)
+    .filter((name) => name.endsWith('.mjs'))
+    .filter((name) => !NOT_A_MECHANISM.includes(name))
+    .sort();
+}
 
 // Business vocabulary and fixture identity. Protocol constants (`.ae/policies`,
 // `contract/`, `ledger/events.ndjson`) are injected by the versioned protocol and
@@ -225,9 +231,17 @@ export function run() {
     }
 
     // ---- structural half --------------------------------------------------
-    const graph = resolveImportGraph(MECHANISM_ENTRY_POINTS);
-    checks.ok('graph/resolved', graph.length >= MECHANISM_ENTRY_POINTS.length,
-      `resolved ${graph.length} modules`);
+    const entryPoints = mechanismEntryPoints();
+    const graph = resolveImportGraph(entryPoints);
+
+    // Completeness, asserted rather than assumed: the scanned set is exactly the
+    // mechanism files on disk. `graph.length >= entryPoints.length` would be
+    // satisfied trivially and would not notice a file that no root imports.
+    const scanned = graph.map((m) => relative(LIB, m)).sort();
+    checks.equal('graph/scans-every-mechanism-module', scanned.join(','), entryPoints.join(','));
+    checks.ok('graph/is-not-empty', entryPoints.length > 0);
+    checks.ok('graph/excludes-the-fixture-release-builder',
+      !scanned.includes('release-build.mjs'));
 
     // The closed mechanism set must not reach fixture, corpus, or harness code.
     for (const modulePath of graph) {
@@ -237,7 +251,7 @@ export function run() {
         `mechanism graph reaches non-library module ${rel}`);
       checks.ok(`graph/excludes-fixture-harness/${rel}`,
         !rel.includes('release-build'),
-        'mechanism graph reaches the fixture release builder');
+        'a mechanism module imports the fixture release builder');
     }
 
     // Now scan exactly the resolved set — not a directory glob, and not the
@@ -261,6 +275,7 @@ export function run() {
       'the forbidden-token list must match real vocabulary used by the corpus');
 
     checks.equal('rename-mapping-declared', RENAME_MAPPING.length, 5);
+
 
     return checks;
   } finally {

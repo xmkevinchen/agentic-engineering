@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalize } from '../lib/canonical-json.mjs';
 import { buildRelease } from '../lib/release-build.mjs';
+import { verifyBootstrap } from '../lib/active-release-provider.mjs';
 import { Checks } from './harness.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -569,6 +570,19 @@ export async function run() {
       derivedA.bootstrap_result_digest, verifiedA.bootstrap_result_digest);
     checks.equal('bridge/derives-the-same-manifest-digest',
       derivedA.manifest_digest, verifiedA.manifest_digest);
+
+    // The derivation exists in three places: this launcher, the bridge it cross-
+    // checks against, and lib/active-release-provider.mjs, which exists so the
+    // policy corpus can seal a verified active release in-process without spawning
+    // the whole bootstrap. The first two check each other at run time by design;
+    // this is what stops the third drifting away from that pair unnoticed.
+    const libDerived = verifyBootstrap({ releaseRoot: rootA });
+    checks.equal('lib-provider/agrees-with-the-bridge',
+      libDerived.bootstrap_result_digest, derivedA.bootstrap_result_digest);
+    checks.equal('lib-provider/agrees-on-manifest-digest',
+      libDerived.manifest_digest, derivedA.manifest_digest);
+    checks.equal('lib-provider/agrees-on-root-identity',
+      libDerived.root_identity, derivedA.root_identity);
     const realScope = {
       repo: null, feature_id: 'F-100', purpose: 'record_event', host_operation: 'append',
     };

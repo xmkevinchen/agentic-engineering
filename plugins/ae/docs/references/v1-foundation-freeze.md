@@ -90,6 +90,19 @@ assert an installed release exists, which is exactly what the scope boundary
 forbids. `release-build.mjs`, `release-template/`, and everything under `corpus/`
 and `bin/` are fixture machinery and are not candidates for promotion.
 
+Two modules look like duplicates and are not.
+`lib/active-release-provider.mjs` and `release-template/active-release-bridge.mjs`
+both observe a root and derive a bootstrap result, because they are exercised
+through different surfaces: the lib module lets the policy corpus seal a verified
+active release in-process, while the bridge is a manifest member that must be
+imported through the real launcher boundary in a subprocess. The bridge and the
+launcher cross-check each other's derivation at run time by design; a test asserts
+the lib module agrees with that pair, so the third copy cannot drift.
+
+The semantic-blindness scan enumerates `lib/` from disk rather than from a
+hand-maintained root list, so a new mechanism module is scanned whether or not
+anything imports it yet. `release-build.mjs` is the one named exclusion.
+
 ## 1. Canonical bytes
 
 Implements `finalized/design.md` §6.0 (canonical bytes and digest) and
@@ -509,7 +522,7 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested: 40 deliberate defects, each of which must turn it
+The suite is mutation-tested: 41 deliberate defects, each of which must turn it
 red. They cover every guard described above — canonical ordering, duplicate keys,
 the number domain, the `feature_evidence` boundary, symlink rejection, move
 subject/operation/outcome/qualification, member digest recomputation, import
