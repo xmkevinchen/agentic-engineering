@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ae:cc-host/e3-preregistration.schema.json",
+  "title": "e3_preregistration_v1",
+  "description": "What E3 will ask, and what would count as an answer, written down before any arm runs. The E3 result this supersedes claimed a capability-tier and prompt-density cause from arms that differed in more than one way at once, and that claim was then used to set model/tools/effort policy — so the correction is not a better analysis of the same runs, it is a contrast designed in advance and unable to be reinterpreted afterwards. Arm IDs are assigned here, before observation, so no arm can be selected for what it showed. Held-constant fields are enumerated per axis and checked to be genuinely equal across that axis's arms, because 'we held the prompt constant' is exactly the kind of claim that is true until someone edits a prompt. The invalid arm exists only inside a disposable profile, cache, temp repository and isolated plugin copy: the production definitions stay valid, and a defect deliberately reintroduced anywhere reachable would be the experiment damaging the thing it measures. `results_observed` must be false and `external_calls_made` must be 0 here — a preregistration written after the data is not one. Read by validate-preregistration.sh.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_kind", "artifact_version", "authority", "feature_id", "work_package", "attempt_id",
+    "registered_at", "results_observed", "external_calls_made", "bindings", "axes",
+    "unavoidable_differences", "prohibited_conclusions", "human_gate"
+  ],
+  "properties": {
+    "artifact_kind": { "const": "e3_preregistration_v1" },
+    "artifact_version": { "const": 1 },
+    "authority": { "const": "bootstrap_non_authoritative" },
+    "feature_id": { "const": "F-083" },
+    "work_package": { "type": "string", "pattern": "^WP-[A-Za-z0-9._-]+$" },
+    "attempt_id": { "type": "string", "pattern": "^A-[0-9]{3}$" },
+    "registered_at": { "type": "string", "minLength": 1 },
+    "results_observed": {
+      "description": "Must be false. A preregistration is a commitment, and a commitment made after the outcome is a description.",
+      "const": false
+    },
+    "external_calls_made": {
+      "description": "Must be 0. The attempt that writes this protocol spends nothing on it; the arms belong to the attempt after the human gate.",
+      "const": 0
+    },
+    "bindings": {
+      "description": "The exact bytes this protocol was designed against. If any of them change, the protocol was written for a different experiment.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan", "frozen_goal", "definitions", "corrected_e3_record"],
+      "properties": {
+        "plan": { "$ref": "#/$defs/identity" },
+        "frozen_goal": { "$ref": "#/$defs/identity" },
+        "definitions": { "type": "array", "minItems": 6, "items": { "$ref": "#/$defs/identity" } },
+        "corrected_e3_record": { "$ref": "#/$defs/identity" }
+      }
+    },
+    "axes": {
+      "description": "Exactly the two contrasts the plan names. One isolates the definition state against a fixed host-attested profile; the other varies the host-attested profile against a fixed valid definition. Neither alone supports a causal claim; together they say which of the two explanations the earlier result confounded.",
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/axis" }
+    },
+    "unavoidable_differences": {
+      "description": "Differences that cannot be held constant, recorded in advance rather than discovered in the writeup. An empty list is a claim of perfect control and is allowed only if it is true.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["difference", "axis_id", "why_unavoidable", "effect_on_inference"],
+        "properties": {
+          "difference": { "type": "string", "minLength": 1 },
+          "axis_id": { "type": "string", "minLength": 1 },
+          "why_unavoidable": { "type": "string", "minLength": 1 },
+          "effect_on_inference": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "prohibited_conclusions": {
+      "description": "Conclusions this design cannot support no matter what the arms show, written before the arms run so they cannot be argued into afterwards.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "why_unsupported"],
+        "properties": {
+          "claim": { "type": "string", "minLength": 1 },
+          "why_unsupported": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "human_gate": {
+      "description": "The named checkpoint no arm may cross without an exact recorded decision.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "status", "what_the_human_approves"],
+      "properties": {
+        "code": { "const": "E3_HUMAN_GATE" },
+        "status": { "enum": ["pending", "approved"] },
+        "what_the_human_approves": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["axis_id", "question", "varies", "held_constant", "arms"],
+      "properties": {
+        "axis_id": { "type": "string", "pattern": "^AX-[0-9]{2}$" },
+        "question": { "type": "string", "minLength": 1 },
+        "varies": {
+          "description": "The single arm field this axis changes. More than one and the contrast is the confound the original E3 result had.",
+          "enum": ["definition_state", "model_profile"]
+        },
+        "held_constant": {
+          "description": "Arm fields that must be byte-equal across this axis's arms. Named here and checked, rather than asserted in prose.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["definition_state", "model_profile", "prompt_sha256", "source_sha256",
+                     "repo_state_sha256", "invocation_mode", "session_construction"]
+          }
+        },
+        "arms": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/arm" } }
+      }
+    },
+    "arm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["arm_id", "definition_state", "model_profile", "prompt_sha256", "source_sha256",
+                   "repo_state_sha256", "invocation_mode", "session_construction", "isolation"],
+      "properties": {
+        "arm_id": {
+          "description": "Assigned here, before any arm runs, so an arm cannot be added, dropped, or renamed once its outcome is known.",
+          "type": "string", "pattern": "^E3-[A-Z0-9-]+$"
+        },
+        "definition_state": { "enum": ["valid", "isolated_invalid"] },
+        "model_profile": { "type": "string", "minLength": 1 },
+        "prompt_sha256": {
+          "description": "SHA-256 of the exact prompt bytes this arm will send, UTF-8, no trailing newline. Committed now so the prompt cannot be adjusted between arms — the edit that produces a difference nobody meant to introduce.",
+          "type": "string", "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_sha256": {
+          "description": "SHA-256 over the canonical newline-joined `<sha256>  <repo-relative path>` listing of every source byte the arm reads, in byte order of path. A single value for a set, so two arms reading different sources cannot claim to have read the same ones.",
+          "type": "string", "pattern": "^[0-9a-f]{64}$"
+        },
+        "repo_state_sha256": {
+          "description": "SHA-256 over the same canonical listing form, covering the experiment-relevant repository state: the six definitions plus the plan and frozen goal. Deliberately not a whole-worktree digest — that changes with every unrelated evidence file and would make 'same repo state' unachievable rather than merely unverified.",
+          "type": "string", "pattern": "^[0-9a-f]{64}$"
+        },
+        "invocation_mode": { "type": "string", "minLength": 1 },
+        "session_construction": { "type": "string", "minLength": 1 },
+        "isolation": { "$ref": "#/$defs/isolation" }
+      }
+    },
+    "isolation": {
+      "description": "Where the arm runs. A `valid` arm may run against the production tree read-only; an `isolated_invalid` arm may not exist anywhere reachable, because the defect it carries is the one this feature just repaired.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disposable", "profile_root", "cache_root", "repo_root", "plugin_copy_root",
+                   "cleanup_manifest"],
+      "properties": {
+        "disposable": { "type": "boolean" },
+        "profile_root": { "type": "string", "minLength": 1 },
+        "cache_root": { "type": "string", "minLength": 1 },
+        "repo_root": { "type": "string", "minLength": 1 },
+        "plugin_copy_root": { "type": "string", "minLength": 1 },
+        "cleanup_manifest": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Generate a feature plan with acceptance criteria + plan review. Recommended: Sonnet or above
+description: "Generate a feature plan with acceptance criteria + plan review. Recommended: Sonnet or above"
 argument-hint: "<feature description>"
 user-invocable: true
 model: opus

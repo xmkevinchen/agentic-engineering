@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ae:cc-host/e3/execution-result.schema.json",
+  "title": "e3_execution_result_v1",
+  "description": "M5 deferred scaffold: the bootstrap verifier accepts only inconclusive contrasts; supports/refutes requires a future qualified P0.7/P0.8 host producer. This describes what deterministic arms produced, in the shape that keeps three different questions apart. Did the arm RUN; can the host ATTEST what it ran under; and does the pair SUPPORT, refute, or fail to reach a causal claim. The E3 result this replaces collapsed all three: arms ran, so the difference between them was read as a cause, and the missing attestation never appeared in the write-up as a limit. So `runtime_attestation` is a required per-arm field with only two honest values, and a contrast whose arms lack it may only be `inconclusive` — a verdict that satisfies the evidence obligation and supports no policy change. Read by verify-execution.sh.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_kind",
+    "artifact_version",
+    "authority",
+    "feature_id",
+    "work_package",
+    "attempt_id",
+    "protocol",
+    "external_calls_made",
+    "arms",
+    "contrasts",
+    "prohibited_conclusions"
+  ],
+  "properties": {
+    "artifact_kind": { "const": "e3_execution_result_v1" },
+    "artifact_version": { "const": 1 },
+    "authority": { "const": "bootstrap_non_authoritative" },
+    "feature_id": { "type": "string", "pattern": "^F-[0-9]{3}$" },
+    "work_package": { "type": "string", "pattern": "^WP-[A-Za-z0-9._-]+$" },
+    "attempt_id": { "type": "string", "pattern": "^A-[0-9]{3}$" },
+    "protocol": { "$ref": "#/$defs/identity" },
+    "external_calls_made": { "type": "integer" },
+    "arms": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["arm_id", "axis_id", "status", "exit_code", "raw_output",
+                     "runtime_attestation", "backend_correlation", "confounders"],
+        "properties": {
+          "arm_id": { "type": "string", "minLength": 1 },
+          "axis_id": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["completed", "failed", "not_run"] },
+          "exit_code": { "type": ["integer", "null"] },
+          "raw_output": { "$ref": "#/$defs/identity" },
+          "runtime_attestation": { "$ref": "#/$defs/attestation" },
+          "backend_correlation": { "$ref": "#/$defs/attestation" },
+          "confounders": {
+            "description": "Differences that were not eliminated. An empty list is a claim, so it is recorded rather than omitted.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["difference", "effect_on_inference"],
+              "properties": {
+                "difference": { "type": "string", "minLength": 1 },
+                "effect_on_inference": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "contrasts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["axis_id", "arm_ids", "claim", "verdict", "basis"],
+        "properties": {
+          "axis_id": { "type": "string", "minLength": 1 },
+          "arm_ids": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+          "claim": { "type": "string", "minLength": 1 },
+          "verdict": { "enum": ["supports", "refutes", "inconclusive"] },
+          "basis": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "prohibited_conclusions": {
+      "description": "Carried forward from the preregistration verbatim. A conclusion the design ruled out cannot be reinstated by a result that no longer mentions it.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "why_unsupported"],
+        "properties": {
+          "claim": { "type": "string", "minLength": 1 },
+          "why_unsupported": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "attestation": {
+      "description": "Two values, because a third would be used. `available` needs a host-generated record that names THIS arm and the values in force; `unavailable` needs the facts that make it so. A model reporting on itself, a re-read declaration, or a session-wide field with no arm correlation is neither.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "producer", "record", "correlated_arm_id", "values", "facts"],
+      "properties": {
+        "status": { "enum": ["available", "unavailable"] },
+        "producer": { "type": ["string", "null"] },
+        "record": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["path", "sha256"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        },
+        "correlated_arm_id": { "type": ["string", "null"] },
+        "values": { "type": ["object", "null"] },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fact", "observed_in"],
+            "properties": {
+              "fact": { "type": "string", "minLength": 1 },
+              "observed_in": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
