@@ -42,18 +42,18 @@ Fable 顶层“合流版”明确读取并吸收了 finalized/Codex，不是第�
 
 ### 2.2 最强的贡献
 
-1. **问题不是模型不会做，而是声明没有独立证明。** [哲学命题](../claude/philosophy.md#二一条命题)准确指出 AE 的产品价值，不依赖某一代模型能力。
-2. **本仓取证而非抽象批评。** collector 从未正确运行、self-check 豁免 harness、硬编码 feature 路径、人类确认缺席和 executor waiver 均有具体代码证据，见 [evidence §1](../claude/evidence.md#1-诊断的三处取证)。
-3. **方法学诚实。** 对混淆变量、错误的 BL-212 诊断和错误的同族 Debate 判断均主动更正，见 [evidence §10.4–10.7](../claude/evidence.md#104-方法学记录)。
-4. **Instruction Delivery 是真实边界，但原因果归因必须撤销。** Backend 未达而输出仍形似正常，以及声明配置与 effective 配置可能分离，足以要求 canonical Seat/input/host binding；但 Fable 终审发现 gemini-proxy frontmatter 在实验前已解析失败，因此“模型档位/任务密度导致首要动作被挤掉”的 E3 归因无效，必须修复后重测，见 [`../fable-v1/evidence.md`](../fable-v1/evidence.md)。
-5. **Recipe 被识别为代码执行边界。** [执行计划阶段 1](../claude/plan.md#阶段-1--一条最小纵向切片)把 sandbox、timeout、网络/密钥、cwd 与破坏性命令策略提到前置位置，这是 Codex 初稿没有充分强调的风险。
+1. **问题不是模型不会做，而是声明没有独立证明。** [哲学命题](../../ae-v1-design-history/claude/philosophy.md#二一条命题)准确指出 AE 的产品价值，不依赖某一代模型能力。
+2. **本仓取证而非抽象批评。** collector 从未正确运行、self-check 豁免 harness、硬编码 feature 路径、人类确认缺席和 executor waiver 均有具体代码证据，见 [evidence §1](../../ae-v1-design-history/claude/evidence.md#1-诊断的三处取证)。
+3. **方法学诚实。** 对混淆变量、错误的 BL-212 诊断和错误的同族 Debate 判断均主动更正，见 [evidence §10.4–10.7](../../ae-v1-design-history/claude/evidence.md#104-方法学记录)。
+4. **Instruction Delivery 是真实边界，但原因果归因必须撤销。** Backend 未达而输出仍形似正常，以及声明配置与 effective 配置可能分离，足以要求 canonical Seat/input/host binding；但 Fable 终审发现 gemini-proxy frontmatter 在实验前已解析失败，因此“模型档位/任务密度导致首要动作被挤掉”的 E3 归因无效，必须修复后重测，见 [`../fable-v1/evidence.md`](../../ae-v1-design-history/fable-v1/evidence.md)。
+5. **Recipe 被识别为代码执行边界。** [执行计划阶段 1](../../ae-v1-design-history/claude/plan.md#阶段-1--一条最小纵向切片)把 sandbox、timeout、网络/密钥、cwd 与破坏性命令策略提到前置位置，这是 Codex 初稿没有充分强调的风险。
 6. **删除纪律与能力/常态区分。** 先保存历史 fail 档案、替代后逐项删除，以及 `〔能〕/〔常〕` 两类退出条件，能防止一次性演示冒充稳定工作流。
 
 ### 2.3 不能原样进入最终版的硬问题
 
-1. **不是自包含规范。** [Claude design §1](../claude/design.md#1-主干四个核心对象)把 schema、reducer 和 finalizer 继续外链到旧 Codex 目录；多处 D 编号也已失配。
-2. **绝对棘轮剥夺人类最终权限。** [哲学中的“AC 可加不可删”](../claude/philosophy.md#贯穿五者的一条棘轮)与错误 AC、material amendment 和范围可变同时成立不了。最终修正为“当前 revision 内不可弱化；人类确认的新 revision 可向任意方向变更，历史永久保留”。
-3. **仍让 Agent 证明自己遵守了指令。** [Cast 棘轮](../claude/design.md#32-cast-棘轮)依赖被覆盖的 Agent 自己拒绝；frontmatter 静默失效和 backend 未达都说明 declared prompt/metadata 与 effective delivery 不能由席位自证，自述只能增加可见性，不能成为 proof。
+1. **不是自包含规范。** [Claude design §1](../../ae-v1-design-history/claude/design.md#1-主干四个核心对象)把 schema、reducer 和 finalizer 继续外链到旧 Codex 目录；多处 D 编号也已失配。
+2. **绝对棘轮剥夺人类最终权限。** [哲学中的“AC 可加不可删”](../../ae-v1-design-history/claude/philosophy.md#贯穿五者的一条棘轮)与错误 AC、material amendment 和范围可变同时成立不了。最终修正为“当前 revision 内不可弱化；人类确认的新 revision 可向任意方向变更，历史永久保留”。
+3. **仍让 Agent 证明自己遵守了指令。** [Cast 棘轮](../../ae-v1-design-history/claude/design.md#32-cast-棘轮)依赖被覆盖的 Agent 自己拒绝；frontmatter 静默失效和 backend 未达都说明 declared prompt/metadata 与 effective delivery 不能由席位自证，自述只能增加可见性，不能成为 proof。
 4. **没有关闭 AC 与 recipe 的共同自证。** 同一上下文可能起草 Intent→AC→rubric→recipe，独立 judge 只能判断证据是否满足这套窄定义，无法发现定义本身漏掉了用户意图。
 5. **缺实时 host state。** fan-out/Teams 讨论没有处理当前 CC 的 named Agent→teammate、return/mailbox 差异、一 session 一 Team、resume 不恢复 teammate、Task 状态滞后等事实。[官方 Agent Teams](https://code.claude.com/docs/en/agent-teams)
 6. **Recipe 安全只写了工作项，没有攻击验收。** symlink/path traversal、写 Contract/Ledger、输出炸弹、timeout/fork、网络/secret、并发污染、sandbox 不可用等没有唯一预期。
@@ -143,7 +143,7 @@ Codex 方案的优势是规范闭合：immutable Contract、typed proof、统一
 
 ### 7.1 定位
 
-[`../fable-v1/README.md`](../fable-v1/README.md) 自己把顶层方案定义为读取 finalized/Codex 后的“合流版”，所以它适合做 adversarial cross-review，不适合重新成为第三套 authority。`blind/` 可以保留为研究档案，但“没有读过什么”不能由产出者自证；它只提供候选问题，不能为 finalized 的正确性加票。
+[`../fable-v1/README.md`](../../ae-v1-design-history/fable-v1/README.md) 自己把顶层方案定义为读取 finalized/Codex 后的“合流版”，所以它适合做 adversarial cross-review，不适合重新成为第三套 authority。`blind/` 可以保留为研究档案，但“没有读过什么”不能由产出者自证；它只提供候选问题，不能为 finalized 的正确性加票。
 
 Fable 的最大价值不是另一套架构，而是把已有主干上的 omission/producer-confusion 问题说得更尖锐；其最大风险则是用一组较弱的 Ledger、runner 与 finalizer 重新实现已经闭合的 Kernel，并把关键正确性依赖延期。
 
@@ -173,7 +173,7 @@ Fable 的最大价值不是另一套架构，而是把已有主干上的 omissio
 
 ### 7.4 Fable 终审后的再裁决
 
-Fable 最终自评在 [`../fable-v1/cross-review.md`](../fable-v1/cross-review.md) 中正式撤回 `count_rule`，承认 producer ACL + operation token、canonical coverage author anchor 与 finalized 的 Ledger/finalizer 强于其方案；这些更正提高了该评审记录的方法学价值，但不提升其 authority。
+Fable 最终自评在 [`../fable-v1/cross-review.md`](../../ae-v1-design-history/fable-v1/cross-review.md) 中正式撤回 `count_rule`，承认 producer ACL + operation token、canonical coverage author anchor 与 finalized 的 Ledger/finalizer 强于其方案；这些更正提高了该评审记录的方法学价值，但不提升其 authority。
 
 终审新增四项按事实处理：
 

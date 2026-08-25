@@ -3,7 +3,7 @@
 > F-083 / WP-P0.1. Records the concrete implementation choices behind the five
 > foundational mechanisms and points at the executable corpus that holds them.
 
-This document is **not** a second authority. `docs/ae-v1-design-history/finalized/`
+This document is **not** a second authority. `docs/references/finalized/`
 is the archived v1 specification; every section below cites the clause it
 implements and records only what the specification leaves to the implementer:
 exact versions, file formats, build order, error codes, and ownership. Where a

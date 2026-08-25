@@ -22,7 +22,7 @@ retry / re-plan / amendment / human / finalize
 
 ## 规范权威
 
-`finalized/` 是设计定稿时的唯一 v1 规范；相邻的 `../claude/`、`../codex/` 与补充方案 [`../fable-v1/`](../fable-v1/) 只是来源/审计档案。
+`finalized/` 是设计定稿时的唯一 v1 规范；相邻的 `../claude/`、`../codex/` 与补充方案 [`../fable-v1/`](../../ae-v1-design-history/fable-v1/) 只是来源/审计档案。
 
 发生冲突时按以下顺序解释：
 

@@ -6,18 +6,18 @@
 
 ## 阅读顺序
 
-1. 先读 [`finalized/README.md`](finalized/README.md)，了解定稿结论与文档权威顺序；
-2. 再读 [`finalized/source-evaluation.md`](finalized/source-evaluation.md)，了解各来源被采纳、修正或拒绝的原因；
+1. 先读 [`docs/references/finalized/README.md`](../references/finalized/README.md)，了解定稿结论与文档权威顺序；
+2. 再读 [`docs/references/finalized/source-evaluation.md`](../references/finalized/source-evaluation.md)，了解各来源被采纳、修正或拒绝的原因；
 3. 需要追溯原始论证时，再进入 `claude/`、`codex/` 与 `fable-v1/`。
 
 ## 档案构成
 
 | 目录 | 性质 | 是否具有规范权威 |
 |---|---|---|
-| [`claude/`](claude/) | Claude/CC 原始研究、实测与方案 | 否，仅作来源与审计记录 |
-| [`codex/`](codex/) | Codex 原始设计、实施计划与 Patterns 研究 | 否，仅作来源与审计记录 |
-| [`fable-v1/`](fable-v1/) | 盲写方案、合流方案与最后一次 cross-review | 否，仅作补充来源与审计记录 |
-| [`finalized/`](finalized/) | 各方经事实核对与冲突裁决后的 AE 1.0 设计定稿 | **是，本档案在定稿时采用的规范** |
+| [`claude/`](./claude/) | Claude/CC 原始研究、实测与方案 | 否，仅作来源与审计记录 |
+| [`codex/`](./codex/) | Codex 原始设计、实施计划与 Patterns 研究 | 否，仅作来源与审计记录 |
+| [`fable-v1/`](./fable-v1/) | 盲写方案、合流方案与最后一次 cross-review | 否，仅作补充来源与审计记录 |
+| [`docs/references/finalized/`](../references/finalized/) | 各方经事实核对与冲突裁决后的 AE 1.0 设计定稿 | **是，且仍在生效**；因此不留在本档案里，见 [`docs/references/`](../references/) |
 
 `claude/`、`codex/` 与 `fable-v1/` 保留原始表述，不再并行演进。除归档入口和相对链接修复外，来源材料不作追溯性改写。
 
