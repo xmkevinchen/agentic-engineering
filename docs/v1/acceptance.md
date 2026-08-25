@@ -22,7 +22,7 @@ AE v1 is releasable when all six hold:
 | 2 | The V2 Agent Teams flow has completed at least one real feature including a finding that required rework and re-review. |
 | 3 | The Kernel integrity criteria in §3 all fail closed. |
 | 4 | The Agent Teams handoff criteria in §4 hold, including under lost coordination state. |
-| 5 | **If** a Contract declares cross-family, the seat behaves per §5 — including reporting `unavailable` rather than substituting a same-family reviewer. A provider that is simply unavailable does not block release; a silent substitution does. |
+| 5 | One **negative arm must actually run** before release: a Contract that declares cross-family, with the provider forced unavailable, reports `unavailable`, performs no same-family substitution, and reaches a human decision. Owned by V1 (§5). A *successful* cross-family invocation stays optional with V3. |
 | 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
 **V3, V4, and V5 are not release prerequisites.** V3 adds an optional seat —
@@ -103,8 +103,10 @@ individually; the failure is claiming a property AE did not observe.
 ## 6. Knowledge non-authority criteria
 
 These are not deferred to V4. A knowledge surface **already exists** — the
-`.ae/graph` corpus and the skills that read it — so N1–N5 are testable from V1
-onward, against that surface. Were they scoped to V4 only, they would be
+`.ae/graph` corpus and the skills that read it — so N1–N6 are testable from V1
+onward, against that surface, and [V1 owns that test](implementation-plan.md#v1--minimal-kernel--solo-workflow).
+A criterion whose only implementer sits in a non-prerequisite slice is a hidden
+release blocker, which is the same defect in a different place. Were they scoped to V4 only, they would be
 vacuously true for any release that skips V4, which is precisely the shape of
 false assurance this document exists to avoid.
 
@@ -113,7 +115,7 @@ false assurance this document exists to avoid.
 | N1 | No knowledge output modifies an active Contract. |
 | N2 | No knowledge output satisfies an Evidence obligation. |
 | N3 | No Gate result changes because history says a case usually passes. |
-| N4 | An agent's own summary is never ingested as a learned fact. |
+| N4 | An agent's own summary may serve as advisory background only. It never becomes a repository fact, an Evidence Package field, or a Gate input without a producer that observed the thing being claimed. |
 | N5 | Every suggestion reaches a Contract or a policy only through review and a human decision, and that decision is recorded. |
 | N6 | The existing `.ae/graph` corpus contributes nothing to any Gate status. Deleting it changes no proof result. |
 
@@ -123,7 +125,7 @@ These need a decision and are not resolvable from the code or the handoff.
 
 | # | Item | Why it needs a person |
 |---|---|---|
-| 1 | ~~Confirm the minimum v1 scope.~~ **Confirmed 2026-08-24.** Scope is settled; V0's other exit — independent review of the consolidation — is not, so V1 has not started. | Resolved. |
+| 1 | **Re-confirm the minimum v1 scope.** The 2026-08-24 confirmation is superseded: review found three obligations that had no home, and all three landed in V1 — formation provenance inside the Contract, the cross-family unavailable arm, and the `.ae/graph` isolation tests including N6's delete-differential. Each is defensible on its own (see the linked reasoning), but together they are a material widening of what was confirmed. | Scope is the human's to set. A widening that arrives through review findings is still a widening, and V0 must not exit on a stale confirmation. |
 | 2 | **F-084/F-085 were untracked to restore the gitignore guard** (`80cff4b`); the files stay on disk and on their source branch. Confirm that is the disposition you want, rather than keeping them tracked and relaxing the guard. | The consolidation chose the policy-conformant option to keep the suite green; reversing it is the user's call. |
 | 3 | **F-082 duplicate identity across the live/done inventory.** Carried forward, still unresolved, from the earlier plan's open blockers. | It is a data-disposition decision. It no longer blocks anything in v1, because rollout is deferred. |
 | 4 | **Whether the archived `finalized/**` specification should stay in `docs/`** now that it is a design input rather than the plan. | It is 3,159 lines of archived normative prose. Keeping it is defensible; so is moving it beside the other design history. |

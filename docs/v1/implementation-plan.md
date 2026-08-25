@@ -94,14 +94,31 @@ human intent
   vocabulary in [`design.md` §3.4](design.md#34-gate-status-vocabulary).
 - One completion writer over `atomicFileNoReplace`: `O_EXCL` no-clobber, short-
   write detection, `fsync` of both the file and its parent directory, and
-  symlink refusal. **No staging.** A failed write leaves an empty or truncated
+  **final-component** symlink refusal — that is all `O_EXCL` gives. The primitive
+  does **not** walk the parent path, so a parent directory swapped for a symlink
+  redirects the write. V1's writer therefore runs a component-by-component
+  preflight before calling it, reusing the pattern `policy-bundle.mjs`
+  already implements and tests (`assertNoSymlinkComponents`), with its own
+  negative fixture. **No staging.** A failed write leaves an empty or truncated
   file rather than unlinking a path this call may not own; that is detectable on
   the next read, because the content will not match its digest. Staging via
   temp-file-plus-`link` would change the frozen mechanism, not repair it, and is
   deferred with the rest of durability work.
 
+- **The cross-family unavailable arm.** A Contract that declares a cross-family
+  proof, with the provider forced unavailable, must reach `unavailable` and a
+  human decision, with no same-family substitution. This needs no reviewer seat —
+  only a Gate that refuses to turn a missing capability into a pass — so it
+  belongs here rather than waiting for V3, which is optional. It is the owner of
+  [`acceptance.md` criterion 5](acceptance.md#1-release-criteria).
+- **Knowledge isolation tests.** The `.ae/graph` corpus already exists, so V1
+  proves it contributes nothing to any Gate status — including N6's differential:
+  delete the corpus, and no proof result changes. Owner of
+  [`acceptance.md` §6](acceptance.md#6-knowledge-non-authority-criteria).
+
 **Explicitly not in V1:** Ledger event families beyond what this slice emits,
-crash recovery, rollout, migration, provider qualification, Team topology.
+crash recovery, rollout, migration, provider qualification, Team topology, and
+any *successful* cross-family invocation — V1 owns only the unavailable branch.
 
 **Exit:** at least one real change to this repository goes from intent to
 accepted through this path, and the run is recorded — including what it cost and

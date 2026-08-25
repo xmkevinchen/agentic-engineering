@@ -12,10 +12,13 @@ preceded it; where each of those went is recorded in
 ## What AE v1 is
 
 A workflow product for running non-trivial engineering work through Claude Code,
-built so that "done" means something a human actually agreed to. Four
-components: **Contract Formation**, a **Workflow Harness** on top of Claude Code
-Agent Teams, an optional **agent-proxy** cross-family seat, and a small
-deterministic **Kernel** that decides admissibility.
+built so that "done" means something a human actually agreed to.
+
+Four components sit on the completion path: **Contract Formation**, a **Workflow
+Harness** on top of Claude Code Agent Teams, an optional **agent-proxy**
+cross-family seat, and a small deterministic **Kernel** that decides
+admissibility. A fifth — **Knowledge Feedback** — sits beside it, learning from
+completed work and proposing, with no authority over any of them.
 
 Start with [`design.md`](design.md) §1.
 
@@ -53,7 +56,7 @@ Full reading order and the reason for each status is in
 |---|---|
 | Slice reached | **V0** — consolidation and product boundary |
 | Production behavior changed by V0 | none |
-| Next | Scope confirmed 2026-08-24. **V0 has not exited:** the independent cross-family review returned `REVISE`; its findings are being corrected, and re-review is required before [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow) starts. |
+| Next | **V0 has not exited.** Two review rounds returned `REVISE`; round-2 findings are corrected. Two things remain: the human must re-confirm the minimum v1 scope, which review findings materially widened ([`acceptance.md` §7](acceptance.md#7-open-items-for-the-human)), and the corrections need a third review before [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow) starts. |
 | Open decisions | [`acceptance.md` §7](acceptance.md#7-open-items-for-the-human) |
 
 The plugin's shipped behavior is described by the repository's
