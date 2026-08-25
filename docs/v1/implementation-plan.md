@@ -78,12 +78,27 @@ human intent
 - `Contract`, `Assignment`, `Evidence Package`, `Acceptance` — only these four
   objects; `Review` and `Finding Disposition` arrive with V2.
 - Contract identity: exact bytes, canonical digest, human-approved revision.
+- **Formation provenance inside the Contract** ([`design.md` §7.2](design.md#72-the-rules)),
+  canonicalized and digested with it. Without it V1's own retreat condition —
+  "the trace caught nothing" — has nothing to evaluate, and CF-01…CF-08 cannot be
+  reconstructed after the forming session is gone.
+- **Review-free Acceptance.** V1 Contracts declare no independence requirement,
+  so their Acceptance records *"no independent review required by this
+  Contract"* and the Gate checks that statement against the Contract. An
+  Acceptance missing a review the Contract *did* require is `invalid`. This is
+  what lets V1 terminate without the `Review` object.
 - Evidence binding: Contract revision, assignment, attempt, producer, artifact.
 - Command evidence with a non-vacuity check — a run that exercised nothing is
   not a pass.
 - The Gate as a pure reduction over accepted facts, producing the status
   vocabulary in [`design.md` §3.4](design.md#34-gate-status-vocabulary).
-- One completion writer, with ordinary no-clobber write safety.
+- One completion writer over `atomicFileNoReplace`: `O_EXCL` no-clobber, short-
+  write detection, `fsync` of both the file and its parent directory, and
+  symlink refusal. **No staging.** A failed write leaves an empty or truncated
+  file rather than unlinking a path this call may not own; that is detectable on
+  the next read, because the content will not match its digest. Staging via
+  temp-file-plus-`link` would change the frozen mechanism, not repair it, and is
+  deferred with the rest of durability work.
 
 **Explicitly not in V1:** Ledger event families beyond what this slice emits,
 crash recovery, rollout, migration, provider qualification, Team topology.
@@ -143,9 +158,19 @@ Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
   same-family reviewer;
 - the same `Review` shape as a same-family seat.
 
-**Exit:** one Contract that declares a high-risk cross-family review runs
-through the bridge and is accepted; and one run with the provider deliberately
-unavailable reports `unavailable` and reaches a human decision.
+**Exit (of the slice, not of the release):** both branches are demonstrated —
+one Contract that declares a high-risk cross-family review runs through the
+bridge and is accepted, and one run with the provider deliberately unavailable
+reports `unavailable` and reaches a human decision. Both are needed because the
+slice is only correct if *both* branches are, and the unavailable branch is the
+one that silently degraded before.
+
+**V3 is not a release prerequisite.** Cross-family is optional by design. What
+[`acceptance.md` §1](acceptance.md#1-release-criteria) requires of a release is
+that *if* a Contract declares cross-family, the seat behaves per §5 — including
+reporting `unavailable` rather than substituting. A provider being unavailable
+at release time does not block the release; a provider being silently swapped
+for a same-family reviewer does.
 
 **Retreat:** if correlation cannot be observed well enough to distinguish a real
 cross-family invocation from a same-family fallback, report cross-family as

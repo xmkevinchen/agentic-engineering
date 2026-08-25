@@ -53,7 +53,7 @@ Full reading order and the reason for each status is in
 |---|---|
 | Slice reached | **V0** — consolidation and product boundary |
 | Production behavior changed by V0 | none |
-| Next | The user confirms the minimum v1 scope; an independent cross-family review checks this consolidation. Then [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow). |
+| Next | Scope confirmed 2026-08-24. **V0 has not exited:** the independent cross-family review returned `REVISE`; its findings are being corrected, and re-review is required before [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow) starts. |
 | Open decisions | [`acceptance.md` §7](acceptance.md#7-open-items-for-the-human) |
 
 The plugin's shipped behavior is described by the repository's

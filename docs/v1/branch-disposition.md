@@ -57,7 +57,7 @@ Statuses used below: `merged`, `referenced`, `superseded`, `deferred`,
 under a gitignored path (`.ae/*`) that `test-graph-gitignore.sh` asserts stays
 excluded — only `.ae/graph/` is version-controlled. Merging the branch tracked
 them and turned that guard red, so they were untracked on the consolidation
-branch (`8641610`). The files remain on disk as ordinary gitignored process
+branch (`80cff4b`). The files remain on disk as ordinary gitignored process
 artifacts, the source branch keeps them, and the merge ancestry still carries
 them. Their bytes were never edited, `status: active` frontmatter included: this
 document is the authority on their disposition, not their frontmatter.

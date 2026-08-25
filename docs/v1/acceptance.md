@@ -22,11 +22,13 @@ AE v1 is releasable when all six hold:
 | 2 | The V2 Agent Teams flow has completed at least one real feature including a finding that required rework and re-review. |
 | 3 | The Kernel integrity criteria in §3 all fail closed. |
 | 4 | The Agent Teams handoff criteria in §4 hold, including under lost coordination state. |
-| 5 | The cross-family seat behaves per §5 — or is honestly reported as unavailable, which is also a pass. |
-| 6 | Knowledge holds no authority per §6. |
+| 5 | **If** a Contract declares cross-family, the seat behaves per §5 — including reporting `unavailable` rather than substituting a same-family reviewer. A provider that is simply unavailable does not block release; a silent substitution does. |
+| 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
-V4 and V5 are not release prerequisites. V4 improves the product over time; V5
-responds to failures that, by definition, have not happened yet.
+**V3, V4, and V5 are not release prerequisites.** V3 adds an optional seat —
+criterion 5 governs how it must behave *when used*, not that it must be used.
+V4 improves the product over time. V5 responds to failures that, by definition,
+have not happened yet.
 
 ## 2. The user-observable flow
 
@@ -100,6 +102,12 @@ individually; the failure is claiming a property AE did not observe.
 
 ## 6. Knowledge non-authority criteria
 
+These are not deferred to V4. A knowledge surface **already exists** — the
+`.ae/graph` corpus and the skills that read it — so N1–N5 are testable from V1
+onward, against that surface. Were they scoped to V4 only, they would be
+vacuously true for any release that skips V4, which is precisely the shape of
+false assurance this document exists to avoid.
+
 | # | Criterion |
 |---|---|
 | N1 | No knowledge output modifies an active Contract. |
@@ -107,6 +115,7 @@ individually; the failure is claiming a property AE did not observe.
 | N3 | No Gate result changes because history says a case usually passes. |
 | N4 | An agent's own summary is never ingested as a learned fact. |
 | N5 | Every suggestion reaches a Contract or a policy only through review and a human decision, and that decision is recorded. |
+| N6 | The existing `.ae/graph` corpus contributes nothing to any Gate status. Deleting it changes no proof result. |
 
 ## 7. Open items for the human
 
@@ -114,8 +123,8 @@ These need a decision and are not resolvable from the code or the handoff.
 
 | # | Item | Why it needs a person |
 |---|---|---|
-| 1 | **Confirm the minimum v1 scope.** V0 cannot exit without it. | This is the scope reduction itself. |
-| 2 | **F-084/F-085 were untracked to restore the gitignore guard** (`8641610`); the files stay on disk and on their source branch. Confirm that is the disposition you want, rather than keeping them tracked and relaxing the guard. | The consolidation chose the policy-conformant option to keep the suite green; reversing it is the user's call. |
+| 1 | ~~Confirm the minimum v1 scope.~~ **Confirmed 2026-08-24.** Scope is settled; V0's other exit — independent review of the consolidation — is not, so V1 has not started. | Resolved. |
+| 2 | **F-084/F-085 were untracked to restore the gitignore guard** (`80cff4b`); the files stay on disk and on their source branch. Confirm that is the disposition you want, rather than keeping them tracked and relaxing the guard. | The consolidation chose the policy-conformant option to keep the suite green; reversing it is the user's call. |
 | 3 | **F-082 duplicate identity across the live/done inventory.** Carried forward, still unresolved, from the earlier plan's open blockers. | It is a data-disposition decision. It no longer blocks anything in v1, because rollout is deferred. |
 | 4 | **Whether the archived `finalized/**` specification should stay in `docs/`** now that it is a design input rather than the plan. | It is 3,159 lines of archived normative prose. Keeping it is defensible; so is moving it beside the other design history. |
 | 5 | **Whether v1 ships as `0.15.x` or `1.0.0`** of the `ae` plugin (currently `0.14.2`). | The name "AE v1" and the plugin's semver are not the same thing, and conflating them would be a release claim. |

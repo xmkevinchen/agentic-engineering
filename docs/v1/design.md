@@ -17,7 +17,7 @@ saying so.
 It answers one question honestly: **did this work actually satisfy what the
 human agreed it had to satisfy?**
 
-Four components, and no more:
+Four components on the completion path, and one beside it:
 
 ```text
                          Knowledge Feedback
@@ -47,6 +47,14 @@ Human Intent → Contract Formation → Workflow Harness
   one seat when the Contract asks for it.
 - **Kernel** is the small, boring, deterministic part that decides whether the
   finished work is admissible.
+
+And off the path:
+
+- **Knowledge Feedback** learns from completed work and proposes. It is a fifth
+  component, deliberately drawn above the chain rather than inside it, because
+  nothing it produces may reach a Contract or a Gate except through a human
+  decision (§6). Counting it among the four would suggest it participates in
+  deciding completion. It does not.
 
 The value proposition is the Harness. The credibility of that value is the
 Kernel. Everything else in v1 exists to serve one of those two.
@@ -328,9 +336,13 @@ product failure of the same kind as a lost constraint.
 
 ### 7.2 The rules
 
-1. **One shared formation basis.** A single object and a single human-readable
-   view, reused by every skill that contributes to it. Not one artifact family
-   per skill.
+1. **One shared formation basis, carried by the Contract.** A single structure
+   and a single human-readable view, reused by every skill that contributes to
+   it — not one artifact family per skill, and not a sixth durable object. It is
+   a section of the Contract, canonicalized and digested with it, so the trace
+   survives context loss and approving the Contract approves the trace. CF-01…
+   CF-08 are checkable only because of this; a formation record that lived
+   beside the Contract could drift from it.
 2. **Bidirectional trace.** Every material input is either carried into the
    Contract or given a visible, typed disposition; every material Contract
    statement derives from an input or from a visible agent proposal.
@@ -406,7 +418,10 @@ consume. Each must be justified by a real producer and a real consumer in the
 slice that introduces it. Nothing here is frozen for the sake of future-proofing.
 
 **`Contract`** — intent; scope and non-goals; acceptance criteria; required
-Evidence; independence requirement; final signer.
+Evidence; independence requirement; final signer; **formation provenance**
+(§7.2). The provenance travels inside the Contract rather than beside it: it is
+the one shared formation basis, canonicalized with the Contract and covered by
+the same digest, so approving a Contract approves the trace that produced it.
 
 **`Assignment`** — task ID; owner role/session; dependencies; allowed change
 boundary; the exact Contract identity it serves.
@@ -420,8 +435,15 @@ Contract and artifact reviewed.
 **`Finding Disposition`** — one of `fixed`, `rejected-with-reason`,
 `human-accepted-risk`, `superseded-by-amendment`.
 
-**`Acceptance`** — the exact Contract; the exact deliverable; the accepted
-review; the human's final decision.
+**`Acceptance`** — the exact Contract; the exact deliverable; the human's final
+decision; and the accepted `Review` **where the Contract's independence
+requirement called for one**.
+
+A Contract that requires no independent review — the solo case — produces an
+Acceptance that records *"no independent review required by this Contract"*, and
+that statement is checked against the Contract's independence requirement. It is
+a stated absence, never an unfilled slot: an Acceptance missing a review that the
+Contract *did* require is `invalid`.
 
 The same Review shape is used whether the reviewer is a same-family Claude seat
 or a cross-family seat reached through agent-proxy.
