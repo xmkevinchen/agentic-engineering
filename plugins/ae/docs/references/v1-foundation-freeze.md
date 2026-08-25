@@ -489,13 +489,19 @@ that fails on entry one has no earlier write to leave behind.
 **That is the whole of the claim.** Materialization is not transactional. Preflight
 answers what every destination already holds; it cannot predict a write that fails
 at the syscall. When one does, earlier targets are already created and fsynced and
-nothing rolls them back. What *is* handled is narrower and worth stating exactly:
-`O_CREAT|O_EXCL` makes the destination before any byte reaches it, so a failed
-write would otherwise leave an empty or truncated file at a path that is supposed
-to hold exact bytes — and a later retry would read that as an integrity conflict
-against content that was never written. The file this call created is removed on
-failure. That is not a rollback and it does not survive a crash; real durability
-is P0.7/P0.8.
+nothing rolls them back.
+
+Nor is the failing target itself cleaned up. `O_CREAT|O_EXCL` makes the
+destination before any byte reaches it, so a failed write leaves an empty or
+truncated file at a path meant to hold exact bytes, and a later retry reads that
+as an integrity conflict against content never written. Both halves of that are
+asserted rather than left for a caller to discover. Removing the file was
+implemented and reverted: `unlink` names a path, not the inode the call opened, so
+anything that replaced the pathname in between is what gets deleted — and
+destroying a file this call did not create is a worse outcome than leaving an
+empty one, because no-clobber is the whole promise. Writing to a temporary and
+`link`ing it into place would avoid both, and that is a change to the frozen
+mechanism rather than a repair to this one.
 
 `fsync` is called on the file and its parent directory. **Crash and power-loss
 durability is not claimed** and remains P0.7/P0.8.
@@ -818,13 +824,21 @@ listed as a member with its true digest and length, a declared length wrong whil
 the digest still matches. Role cardinality needed its own case because the schema
 enumerates roles without saying how many of each a release may carry.
 
-The same lens deleted rather than bound three guards. The provider's ref-escape
-check could not fire, because containment already follows from canonicality; its
-duplicate-ref-string check could not, because two spellings of one ref and one
-spelling twice both resolve to a single inode; and the destination classifier's
-symlink branch could not, because the ref walk inspects every component,
-final one included, before the target list exists. A guard that cannot fire is not
+The same lens deleted rather than bound two guards. The provider's ref-escape
+check could not fire, because containment already follows from canonicality; and
+its duplicate-ref-string check could not, because two spellings of one ref and one
+spelling twice both resolve to a single inode. A guard that cannot fire is not
 defense in depth — it reads as coverage while testing nothing.
+
+A third deletion was wrong and was reverted, which is the more useful half of the
+lesson. The destination classifier's symlink branch looked equally unreachable:
+`materializePolicies` walks every component of a ref, final one included, before
+the target list exists. But the classifier is *exported* — exported precisely so
+its branches could be exercised directly — and a direct caller has no walk in
+front of it. Reachability is a property of the surface a function actually
+presents, not of the one call site that happens to exist today. The branch is
+restored and typed, and every branch of the classifier is now asserted directly:
+symlink, non-regular file, existing-different-bytes, absent, identical.
 
 Not every guard is independently mutable, and the corpus says so rather than
 padding the count: the attestation objects are flat, so shallow and deep freezing

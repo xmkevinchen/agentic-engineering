@@ -6,7 +6,8 @@
 // a new candidate can pick one.
 
 import {
-  cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
+  cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync,
+  writeFileSync,
 } from 'node:fs';
 import { writeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -440,13 +441,23 @@ export function run() {
       stalledCode = error instanceof NoReplaceError ? error.code : error.name;
     }
     checks.equal('noreplace/stalled-write-fails', stalledCode, 'short_write');
-    // O_CREAT|O_EXCL makes the destination before any byte is written, so failing
-    // the write without removing it leaves an empty file where exact bytes are
-    // supposed to be — and a retry would then read it as an integrity conflict
-    // against content that was never written.
-    checks.ok('noreplace/stalled-write-leaves-no-file',
-      !existsSync(join(writeProbe, 'stalled.json')),
-      'a failed write left its partially created destination behind');
+    // O_CREAT|O_EXCL makes the destination before any byte is written, so a failed
+    // write leaves an empty file where exact bytes are supposed to be, and a retry
+    // reads it as an integrity conflict against content never written. That
+    // residue is asserted rather than left unstated: removing it would mean
+    // unlinking a pathname this call no longer knows it owns.
+    checks.ok('noreplace/stalled-write-leaves-an-empty-file',
+      existsSync(join(writeProbe, 'stalled.json'))
+        && statSync(join(writeProbe, 'stalled.json')).size === 0,
+      'the residue of a failed write is not what the mechanism says it is');
+    // The consequence, stated as a test rather than left for a caller to discover:
+    // retrying that write finds the empty residue and reports the path as already
+    // holding different bytes, against content that was never written.
+    const retry = atomicFileNoReplace({ path: join(writeProbe, 'stalled.json'), bytes: payload });
+    checks.equal('noreplace/retry-after-stalled-write-sees-residue', retry.outcome, 'exists');
+    checks.ok('noreplace/retry-residue-is-not-the-payload',
+      !retry.existing.equals(payload),
+      'the retry read back the payload it never managed to write');
 
     // ---- base bundle selection for a NEW candidate ------------------------
     //

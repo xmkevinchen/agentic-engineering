@@ -6,11 +6,11 @@
     "validator": 48,
     "tree-snapshot": 162,
     "release-bootstrap": 207,
-    "policy-bundle": 127,
+    "policy-bundle": 129,
     "semantic-blind": 82,
     "coverage-floor": 9
   },
-  "min_total_checks": 958,
+  "min_total_checks": 960,
   "min_corpus_sizes": {
     "canonical_bytes_cases": 55,
     "canonical_bytes_reject_cases": 27,
@@ -37,7 +37,9 @@
     "coverage-floor/total",
     "coverage-floor/section/coverage-floor",
     "coverage-floor/report-scores-a-withheld-section",
-    "coverage-floor/report-scores-a-withheld-check"
+    "coverage-floor/report-scores-a-withheld-check",
+    "coverage-floor/fixture-declares-every-section",
+    "coverage-floor/fixture-declares-every-required-floor-check"
   ],
   "expected_sections": [
     "canonical-bytes",

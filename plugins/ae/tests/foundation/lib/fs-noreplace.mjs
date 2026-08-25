@@ -15,9 +15,7 @@
 // carry an immutable passed result bound to OS/filesystem/mount selectors, and
 // earning that is P0.8. Nothing in this package may read it as qualified.
 
-import {
-  closeSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync,
-} from 'node:fs';
+import { closeSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, writeSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export const FIXTURE_PROVIDER = Object.freeze({
@@ -41,6 +39,14 @@ export class NoReplaceError extends Error {
 // Returns 'created' when this call made the file, 'exists' when something was
 // already there. It never overwrites, and it never reports 'created' for a file
 // it did not create.
+//
+// A failed write leaves the created file in place, empty or truncated. Removing
+// it was tried and reverted: `unlink` names a path, not the inode this call
+// opened, so anything that replaced the pathname in between would be the thing
+// deleted — and destroying a file this call did not create is a worse failure
+// than leaving an empty one, since no-clobber is the whole promise. Writing to a
+// temporary and `link`ing it into place would avoid both; that is a change to the
+// frozen mechanism, not a repair to this one.
 // `write` is injectable so a short write can be exercised deterministically; it
 // defaults to the real syscall wrapper.
 export function atomicFileNoReplace({ path, bytes, mode = 0o644, write = writeSync }) {
@@ -80,16 +86,9 @@ export function atomicFileNoReplace({ path, bytes, mode = 0o644, write = writeSy
       written += n;
     }
     fsyncSync(fd);
-  } catch (error) {
-    // O_CREAT|O_EXCL created the destination before any byte was written, so a
-    // failed write leaves an empty or truncated file at a path that is supposed
-    // to hold exact bytes. Remove it. This is not transactional and does not
-    // survive a crash — it removes the file this call created, nothing more.
+  } finally {
     closeSync(fd);
-    try { unlinkSync(path); } catch { /* the caller's error is the one that matters */ }
-    throw error;
   }
-  closeSync(fd);
   // The parent directory entry has to reach disk too, or the file can survive as
   // an unreferenced inode. Durability across a real crash is not claimed — that
   // is P0.7/P0.8.

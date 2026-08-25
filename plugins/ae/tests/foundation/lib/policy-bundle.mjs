@@ -211,10 +211,12 @@ export function materializePolicies({ pluginRoot, projectRoot }) {
   // previous bundle — and the old bundle has to stay readable for replay.
   planned.push({ ref: bundleProjectRef(bundleBytes), bytes: bundleBytes });
 
-  // Every destination is validated before ANY byte is written, so a rejected
-  // bundle cannot leave a half-materialized policy set behind. That includes the
-  // generated bundle-manifest ref, which is not one of the bundle's own entries and
-  // so would otherwise escape the entry-level uniqueness check above.
+  // Every destination is resolved and classified before ANY byte is written, so a
+  // bundle rejected for a reason preflight can see leaves nothing behind. A write
+  // that fails at the syscall is not such a reason: earlier targets are already
+  // created and nothing rolls them back. That includes the generated
+  // bundle-manifest ref, which is not one of the bundle's own entries and so would
+  // otherwise escape the entry-level uniqueness check above.
   const targets = planned.map(({ ref, bytes }) => ({ ref, bytes, abs: resolveProjectRef(projectRoot, ref) }));
 
   // Compared on the RESOLVED path, which subsumes exact-duplicate refs and also

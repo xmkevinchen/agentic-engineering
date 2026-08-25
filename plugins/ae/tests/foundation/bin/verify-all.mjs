@@ -96,6 +96,30 @@ floorChecks.ok('section/coverage-floor',
 // `report`, not from inside this section — a check cannot observe its own
 // deletion, so the observer has to sit outside the thing it observes.
 
+// The inventories `report` enforces live in a fixture, so an empty or absent one
+// would disable enforcement while every check still passed — the guard would be
+// switched off by editing the file that describes it. Both are required to exist
+// and to name what actually ran, derived from the section table rather than from
+// a second checked-in list.
+const requiredFloorIds = [
+  'coverage-floor/total',
+  'coverage-floor/every-corpus-section-accounted-for',
+  'coverage-floor/section/coverage-floor',
+  ...CORPUS_SECTIONS.map(([name]) => `coverage-floor/section/${name}`),
+];
+floorChecks.ok('fixture-declares-every-section',
+  Array.isArray(FLOOR.expected_sections)
+    && sections.every((s) => FLOOR.expected_sections.includes(s.section))
+    && FLOOR.expected_sections.includes('coverage-floor')
+    && new Set(FLOOR.expected_sections).size === FLOOR.expected_sections.length,
+  `expected_sections is ${JSON.stringify(FLOOR.expected_sections)}`);
+floorChecks.ok('fixture-declares-every-required-floor-check',
+  Array.isArray(FLOOR.expected_floor_check_ids)
+    && requiredFloorIds.every((id) => FLOOR.expected_floor_check_ids.includes(id))
+    && new Set(FLOOR.expected_floor_check_ids).size === FLOOR.expected_floor_check_ids.length,
+  `expected_floor_check_ids is missing ${JSON.stringify(
+    requiredFloorIds.filter((id) => !(FLOOR.expected_floor_check_ids ?? []).includes(id)))}`);
+
 sections.push(floorChecks);
 
 // The inventory rules are themselves guards, so they are exercised rather than
@@ -118,5 +142,5 @@ floorChecks.ok('report-scores-a-withheld-check',
 process.exit(report(sections, {
   verbose: process.argv.includes('--verbose'),
   expectedSections: FLOOR.expected_sections,
-  requiredIds: { 'coverage-floor': FLOOR.expected_floor_check_ids },
+  requiredIds: { 'coverage-floor': FLOOR.expected_floor_check_ids ?? [] },
 }) === 0 ? 0 : 1);
