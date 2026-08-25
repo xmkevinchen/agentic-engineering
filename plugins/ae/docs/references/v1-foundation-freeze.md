@@ -641,10 +641,21 @@ width, and business vocabulary in a mechanism module.
 The launcher's missing-manifest branch was live, typed and untested for exactly
 that reason — every corpus case removed *members*, so nothing ever removed the
 manifest, and the sweep inherited the corpus's blind spot rather than correcting
-it. Two rules follow, and both are applied above: a guard reached only through a
-`catch` needs a case that produces the error, not merely one that avoids it; and a
-rejection case must pin the code, because a fixture broken in two ways at once is
-refused either way and says nothing about which rule ran.
+it. The bridge had a cluster of the same kind: the launcher refuses earlier than
+several of its guards, so no end-to-end case reached them.
+
+Three rules came out of that, and all three are applied above.
+
+- A guard reached only through a `catch` needs a case that produces the error, not
+  merely one that avoids it.
+- A rejection case must isolate one rule. A fixture broken in two ways at once is
+  refused either way and says nothing about which rule ran — releases A and B
+  differ in both manifest digest and root identity, so the pair proves neither
+  cross-binding. A byte-identical twin at a second root isolates the root binding;
+  a manifest changed after attestation, at the same root, isolates the digest one.
+- Where two guards legitimately share one typed code, the code cannot say which
+  fired, and the message is asserted too. Both attestation guards return
+  `active_release_unavailable`, and each is otherwise satisfied by the other.
 
 Two checks exist specifically because a mutation run showed they were missing:
 

@@ -8,7 +8,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
-  mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync,
+  mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -748,6 +748,11 @@ export async function run() {
     const coreCode = (fn) => {
       try { fn(); return 'accepted'; } catch (error) { return error.code; }
     };
+    // Two guards can share one typed code, and then the code alone cannot say
+    // which fired. Where that is true the message is asserted as well.
+    const coreMessage = (fn) => {
+      try { fn(); return 'accepted'; } catch (error) { return error.message; }
+    };
 
     checks.equal('capability/genuine-accepted',
       coreCode(() => coreA.run({
@@ -847,6 +852,103 @@ export async function run() {
     checks.equal('bridge/refuses-to-derive-for-a-missing-root',
       coreCode(() => bridge.deriveBootstrapResult({ releaseRoot: join(work, 'no-such-release') })),
       'bootstrap_result_not_derived');
+    // Bridge paths the launcher never reaches, because it refuses earlier. They
+    // are live and typed, so they are exercised here rather than left to be
+    // discovered by a regression.
+    const rootlessDir = join(work, 'root-without-manifest');
+    mkdirSync(rootlessDir, { recursive: true });
+    checks.equal('bridge/refuses-to-derive-without-a-manifest',
+      coreCode(() => bridge.deriveBootstrapResult({ releaseRoot: rootlessDir })),
+      'active_release_unavailable');
+
+    // Resolves, has a manifest, but the manifest is not readable as a member list.
+    const unreadableDir = join(work, 'root-with-bad-manifest');
+    mkdirSync(unreadableDir, { recursive: true });
+    writeFileSync(join(unreadableDir, 'release-manifest-v1.json'), 'not json at all');
+    checks.equal('bridge/refuses-to-derive-from-an-unreadable-manifest',
+      coreCode(() => bridge.deriveBootstrapResult({ releaseRoot: unreadableDir })),
+      'bootstrap_result_not_derived');
+
+    // The host record names a root that no longer resolves.
+    const goneRecord = writeHostRecord(work, 'host-gone', { activeRoot: join(work, 'never-existed') });
+    process.env.AE_FIXTURE_HOST_RECORD = goneRecord;
+    checks.equal('bridge/refuses-to-attest-an-unresolvable-root',
+      coreCode(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
+      'active_release_unavailable');
+    checks.equal('bridge/unresolvable-root-says-which-rule-fired',
+      coreMessage(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
+      'host active root does not resolve');
+
+    // The host record identifies no unique active root.
+    const emptyRecord = join(work, 'host-empty.json');
+    writeFileSync(emptyRecord, JSON.stringify({}));
+    process.env.AE_FIXTURE_HOST_RECORD = emptyRecord;
+    checks.equal('bridge/refuses-a-record-with-no-active-root',
+      coreCode(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
+      'active_release_unavailable');
+    checks.equal('bridge/no-active-root-says-which-rule-fired',
+      coreMessage(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
+      'host record does not identify a unique active root');
+
+    // Two genuine values that describe different releases. Neither is forged, so
+    // provenance passes and only the cross-binding can refuse them.
+    process.env.AE_FIXTURE_HOST_RECORD = hostA;
+    const attestationForA = bridge.attestActiveRoot({ observedReleaseRoot: rootA });
+    const derivedForB = bridge.deriveBootstrapResult({ releaseRoot: rootB });
+    checks.equal('capability/mint-refuses-two-genuine-values-for-different-releases',
+      coreCode(() => bridge.mintOperationCapability({
+        attestation: attestationForA, bootstrapResult: derivedForB, scope: realScope,
+      })), 'release_not_active');
+    // A and B differ in BOTH digest and root, so that case cannot say which of the
+    // two cross-bindings refused it — either alone would give the same code. These
+    // two separate them.
+    const twinRoot = join(work, 'release-twin');
+    buildRelease({ releaseRoot: twinRoot, policySourceDir: POLICY_SOURCE });
+    const derivedTwin = bridge.deriveBootstrapResult({ releaseRoot: twinRoot });
+    checks.equal('capability/twin-differs-only-in-root',
+      derivedTwin.manifest_digest, derivedA.manifest_digest);
+    checks.notEqual('capability/twin-root-really-differs',
+      derivedTwin.root_identity, derivedA.root_identity);
+    checks.equal('capability/mint-refuses-a-matching-digest-at-another-root',
+      coreMessage(() => bridge.mintOperationCapability({
+        attestation: attestationA, bootstrapResult: derivedTwin, scope: realScope,
+      })), 'attested active root is not the verified release root');
+
+    // Same root, manifest changed after attestation: only the digest binding differs.
+    const driftRoot = join(work, 'release-drift');
+    buildRelease({ releaseRoot: driftRoot, policySourceDir: POLICY_SOURCE });
+    const driftRecord = writeHostRecord(work, 'host-drift', { activeRoot: driftRoot });
+    process.env.AE_FIXTURE_HOST_RECORD = driftRecord;
+    const attestationBeforeDrift = bridge.attestActiveRoot({ observedReleaseRoot: driftRoot });
+    const driftManifest = join(driftRoot, 'release-manifest-v1.json');
+    const drifted = JSON.parse(readFileSync(driftManifest, 'utf8'));
+    writeFileSync(driftManifest, canonicalize({ ...drifted, release_version: '9.9.9' }));
+    const derivedAfterDrift = bridge.deriveBootstrapResult({ releaseRoot: driftRoot });
+    checks.equal('capability/drift-keeps-the-same-root',
+      derivedAfterDrift.root_identity, attestationBeforeDrift.active_root_identity);
+    checks.notEqual('capability/drift-really-changes-the-digest',
+      derivedAfterDrift.manifest_digest, attestationBeforeDrift.active_release_manifest_digest);
+    checks.equal('capability/mint-refuses-a-changed-manifest-at-the-attested-root',
+      coreMessage(() => bridge.mintOperationCapability({
+        attestation: attestationBeforeDrift, bootstrapResult: derivedAfterDrift, scope: realScope,
+      })), 'attested digest does not match the verified manifest digest');
+    process.env.AE_FIXTURE_HOST_RECORD = hostA;
+
+    // A scope missing one required key. Every other input is genuine, so the scope
+    // rule is the only one left that can fire.
+    for (const key of bridge.CAPABILITY_SCOPE_KEYS) {
+      const partial = { ...realScope };
+      delete partial[key];
+      checks.equal(`capability/mint-refuses-scope-missing-${key}`,
+        coreCode(() => bridge.mintOperationCapability({
+          attestation: attestationA, bootstrapResult: derivedA, scope: partial,
+        })), 'capability_scope_mismatch');
+    }
+    checks.equal('capability/mint-refuses-absent-scope',
+      coreCode(() => bridge.mintOperationCapability({
+        attestation: attestationA, bootstrapResult: derivedA, scope: null,
+      })), 'capability_scope_mismatch');
+
     delete process.env.AE_FIXTURE_HOST_RECORD;
 
     // ---- no host record at all -------------------------------------------

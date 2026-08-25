@@ -151,5 +151,11 @@ floorChecks.ok('report-scores-a-withheld-check',
 process.exit(report(sections, {
   verbose: process.argv.includes('--verbose'),
   expectedSections: FLOOR.expected_sections,
-  requiredIds: { 'coverage-floor': FLOOR.expected_floor_check_ids ?? [] },
+  // Both lists, not just the fixture's. The code-derived enumeration is what
+  // keeps the check that compares them from deleting itself: its own ID is in
+  // `requiredFloorIds`, so removing the check and its fixture entry together
+  // still leaves the report asking for it.
+  requiredIds: {
+    'coverage-floor': [...new Set([...requiredFloorIds, ...(FLOOR.expected_floor_check_ids ?? [])])],
+  },
 }) === 0 ? 0 : 1);
