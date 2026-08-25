@@ -56,7 +56,7 @@ Full reading order and the reason for each status is in
 |---|---|
 | Slice reached | **V0** — consolidation and product boundary |
 | Production behavior changed by V0 | none |
-| Next | **V0 has not exited.** Two review rounds returned `REVISE`; round-2 findings are corrected. Two things remain: the human must re-confirm the minimum v1 scope, which review findings materially widened ([`acceptance.md` §7](acceptance.md#7-open-items-for-the-human)), and the corrections need a third review before [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow) starts. |
+| Next | Scope re-confirmed 2026-08-25, widened ([`acceptance.md` §7](acceptance.md#7-open-items-for-the-human)). Three review rounds returned `REVISE`; all findings are corrected. **V0 exits when one narrow final review confirms the last correction**, after which [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow) starts. |
 | Open decisions | [`acceptance.md` §7](acceptance.md#7-open-items-for-the-human) |
 
 The plugin's shipped behavior is described by the repository's
