@@ -146,10 +146,15 @@ export function observeActiveRoot({ hostRecordPath }) {
   try {
     record = JSON.parse(readFileSync(hostRecordPath, 'utf8'));
   } catch {
-    fail('active_release_unavailable', 'no host active-release record available');
+    // `guard` names which rule refused, because the next one shares this code and
+    // would otherwise stand in for it. The message is a diagnostic and the
+    // taxonomy allows it to gain detail, so nothing asserts on the prose.
+    fail('active_release_unavailable', 'no host active-release record available',
+      { guard: 'no_host_record' });
   }
   if (!record.active_root) {
-    fail('active_release_unavailable', 'host record does not identify a unique active root');
+    fail('active_release_unavailable', 'host record does not identify a unique active root',
+      { guard: 'no_unique_active_root' });
   }
 
   let identity;

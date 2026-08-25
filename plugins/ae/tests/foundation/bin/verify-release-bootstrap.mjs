@@ -749,9 +749,10 @@ export async function run() {
       try { fn(); return 'accepted'; } catch (error) { return error.code; }
     };
     // Two guards can share one typed code, and then the code alone cannot say
-    // which fired. Where that is true the message is asserted as well.
-    const coreMessage = (fn) => {
-      try { fn(); return 'accepted'; } catch (error) { return error.message; }
+    // which fired. The guard tag is the stable discriminator for that case; the
+    // message is a diagnostic and the taxonomy allows it to gain detail.
+    const coreGuard = (fn) => {
+      try { fn(); return 'accepted'; } catch (error) { return error.guard ?? null; }
     };
 
     checks.equal('capability/genuine-accepted',
@@ -852,6 +853,27 @@ export async function run() {
     checks.equal('bridge/refuses-to-derive-for-a-missing-root',
       coreCode(() => bridge.deriveBootstrapResult({ releaseRoot: join(work, 'no-such-release') })),
       'bootstrap_result_not_derived');
+    // The launcher's active-identity comparison, exercised directly. Through
+    // `bootstrap` its three branches cannot be separated: the host record either
+    // names this root, so both halves agree, or names another, so the root branch
+    // reaches the same verdict first. Every branch shares one code, so the guard
+    // tag is what says which refused.
+    const identityGuard = (attestation) => {
+      try { launcherA.assertActiveIdentity(attestation, verifiedA); return 'accepted'; }
+      catch (error) { return error.guard ?? error.code; }
+    };
+    checks.equal('launcher/identity-accepts-the-genuine-attestation',
+      identityGuard(attestationA), 'accepted');
+    checks.equal('launcher/identity-refuses-a-different-digest',
+      identityGuard({ ...attestationA, active_release_manifest_digest: `sha256:${'0'.repeat(64)}` }),
+      'digest_mismatch');
+    checks.equal('launcher/identity-refuses-an-unresolvable-attested-root',
+      identityGuard({ ...attestationA, active_root: join(work, 'never-existed-either') }),
+      'attested_root_unresolvable');
+    checks.equal('launcher/identity-refuses-another-root',
+      identityGuard({ ...attestationA, active_root: rootB }),
+      'root_mismatch');
+
     // Bridge paths the launcher never reaches, because it refuses earlier. They
     // are live and typed, so they are exercised here rather than left to be
     // discovered by a regression.
@@ -876,8 +898,8 @@ export async function run() {
       coreCode(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
       'active_release_unavailable');
     checks.equal('bridge/unresolvable-root-says-which-rule-fired',
-      coreMessage(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
-      'host active root does not resolve');
+      coreGuard(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
+      'active_root_unresolvable');
 
     // The host record identifies no unique active root.
     const emptyRecord = join(work, 'host-empty.json');
@@ -887,8 +909,8 @@ export async function run() {
       coreCode(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
       'active_release_unavailable');
     checks.equal('bridge/no-active-root-says-which-rule-fired',
-      coreMessage(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
-      'host record does not identify a unique active root');
+      coreGuard(() => bridge.attestActiveRoot({ observedReleaseRoot: rootA })),
+      'no_unique_active_root');
 
     // Two genuine values that describe different releases. Neither is forged, so
     // provenance passes and only the cross-binding can refuse them.
@@ -910,9 +932,9 @@ export async function run() {
     checks.notEqual('capability/twin-root-really-differs',
       derivedTwin.root_identity, derivedA.root_identity);
     checks.equal('capability/mint-refuses-a-matching-digest-at-another-root',
-      coreMessage(() => bridge.mintOperationCapability({
+      coreCode(() => bridge.mintOperationCapability({
         attestation: attestationA, bootstrapResult: derivedTwin, scope: realScope,
-      })), 'attested active root is not the verified release root');
+      })), 'release_not_active');
 
     // Same root, manifest changed after attestation: only the digest binding differs.
     const driftRoot = join(work, 'release-drift');
@@ -929,9 +951,9 @@ export async function run() {
     checks.notEqual('capability/drift-really-changes-the-digest',
       derivedAfterDrift.manifest_digest, attestationBeforeDrift.active_release_manifest_digest);
     checks.equal('capability/mint-refuses-a-changed-manifest-at-the-attested-root',
-      coreMessage(() => bridge.mintOperationCapability({
+      coreCode(() => bridge.mintOperationCapability({
         attestation: attestationBeforeDrift, bootstrapResult: derivedAfterDrift, scope: realScope,
-      })), 'attested digest does not match the verified manifest digest');
+      })), 'release_not_active');
     process.env.AE_FIXTURE_HOST_RECORD = hostA;
 
     // A scope missing one required key. Every other input is genuine, so the scope
@@ -948,6 +970,17 @@ export async function run() {
       coreCode(() => bridge.mintOperationCapability({
         attestation: attestationA, bootstrapResult: derivedA, scope: null,
       })), 'capability_scope_mismatch');
+    // Verification has its own absent-scope rule, separate from minting's. The
+    // existing verification cases all pass a scope with one key changed or
+    // omitted, so none of them reaches it.
+    for (const [label, requiredScope] of [['null', null], ['not-an-object', 'record_event']]) {
+      checks.equal(`capability/verify-refuses-absent-scope-${label}`,
+        coreCode(() => bridge.verifyOperationCapability(realCapability, {
+          bootstrapResultDigest: derivedA.bootstrap_result_digest,
+          requiredScope,
+          now: 1000,
+        })), 'capability_scope_mismatch');
+    }
 
     delete process.env.AE_FIXTURE_HOST_RECORD;
 

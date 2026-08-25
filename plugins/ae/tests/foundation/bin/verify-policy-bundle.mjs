@@ -717,6 +717,28 @@ export function run() {
     writeFileSync(hostRecordPath, JSON.stringify({ active_root: join(work, 'no-such-root') }));
     checks.rejects('provider/refuses-unresolvable-root',
       () => observeActiveRoot({ hostRecordPath }), 'active_release_unavailable');
+    // The record itself being absent or unreadable is a separate rule from the
+    // record naming no root, and no case reached it.
+    checks.rejects('provider/refuses-a-missing-host-record',
+      () => observeActiveRoot({ hostRecordPath: join(work, 'no-such-host-record.json') }),
+      'active_release_unavailable');
+    const unreadableRecord = join(work, 'unreadable-host-record.json');
+    writeFileSync(unreadableRecord, 'not json');
+    checks.rejects('provider/refuses-an-unreadable-host-record',
+      () => observeActiveRoot({ hostRecordPath: unreadableRecord }),
+      'active_release_unavailable');
+    // Both rules answer with the same code, so the code alone cannot say which
+    // refused and either would be deletable behind the other.
+    const observeGuard = (path) => {
+      try { observeActiveRoot({ hostRecordPath: path }); return 'accepted'; }
+      catch (error) { return error.detail?.guard ?? null; }
+    };
+    checks.equal('provider/missing-host-record-says-which-rule-fired',
+      observeGuard(join(work, 'no-such-host-record.json')), 'no_host_record');
+    const rootlessRecord = join(work, 'rootless-host-record.json');
+    writeFileSync(rootlessRecord, JSON.stringify({}));
+    checks.equal('provider/rootless-host-record-says-which-rule-fired',
+      observeGuard(rootlessRecord), 'no_unique_active_root');
 
     // Nothing that is merely *shaped* like a sealed value can select the current
     // release either. In particular there is no default: omitting the argument must

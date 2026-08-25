@@ -42,14 +42,15 @@ const EXPECTED_RELEASE_MANIFEST_DIGEST = '__EXPECTED_RELEASE_MANIFEST_DIGEST__';
 const RELEASE_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 class BootstrapError extends Error {
-  constructor(code, message) {
+  constructor(code, message, guard = null) {
     super(message);
     this.name = 'BootstrapError';
     this.code = code;
+    this.guard = guard;
   }
 }
 
-const bail = (code, message) => { throw new BootstrapError(code, message); };
+const bail = (code, message, guard = null) => { throw new BootstrapError(code, message, guard); };
 
 // Fixture instrumentation: records the observable order of side effects so a test
 // can assert the sequence above, not merely the process exit status.
@@ -256,6 +257,35 @@ const SELF_TEST_SCOPE = Object.freeze({
   host_operation: 'verify_installed_release',
 });
 
+// BOTH halves of the identity must match. Comparing only the manifest digest would
+// make two byte-identical installations indistinguishable, so an inactive root
+// could run whenever its twin was the active one.
+//
+// Exported because end to end the digest branch cannot be isolated: the host
+// record either names this root, in which case both halves agree, or names
+// another, in which case the root branch reaches the same verdict. There is no
+// arrangement where only the digest differs, so through `bootstrap` the digest
+// comparison is deletable while every case stays green. `guard` names which half
+// refused, since all three share one code.
+export function assertActiveIdentity(attestation, verified) {
+  if (attestation.active_release_manifest_digest !== verified.manifest_digest) {
+    bail('release_not_active',
+      'the host active release manifest digest does not match the release this launcher verified',
+      'digest_mismatch');
+  }
+  let attestedIdentity;
+  try {
+    attestedIdentity = realpathSync(attestation.active_root);
+  } catch {
+    bail('release_not_active', 'the host active root does not resolve', 'attested_root_unresolvable');
+  }
+  if (attestedIdentity !== verified.root_identity) {
+    bail('release_not_active',
+      `the host active root ${attestedIdentity} is not this release root ${verified.root_identity}`,
+      'root_mismatch');
+  }
+}
+
 export async function bootstrap({ scope = SELF_TEST_SCOPE } = {}) {
   const verified = verifyInstalledRelease();
 
@@ -271,23 +301,7 @@ export async function bootstrap({ scope = SELF_TEST_SCOPE } = {}) {
   const attestation = bridge.attestActiveRoot({ observedReleaseRoot: RELEASE_ROOT });
   trace('attestation:obtained');
 
-  // BOTH halves of the identity must match. Comparing only the manifest digest
-  // would make two byte-identical installations indistinguishable, so an inactive
-  // root could run whenever its twin was the active one.
-  if (attestation.active_release_manifest_digest !== verified.manifest_digest) {
-    bail('release_not_active',
-      'the host active release manifest digest does not match the release this launcher verified');
-  }
-  let attestedIdentity;
-  try {
-    attestedIdentity = realpathSync(attestation.active_root);
-  } catch {
-    bail('release_not_active', 'the host active root does not resolve');
-  }
-  if (attestedIdentity !== verified.root_identity) {
-    bail('release_not_active',
-      `the host active root ${attestedIdentity} is not this release root ${verified.root_identity}`);
-  }
+  assertActiveIdentity(attestation, verified);
   // Traced so this comparison is observable in its own right. The bridge refuses
   // to mint against a mismatched root as well, and without a separate signal that
   // second guard would mask the loss of this one.

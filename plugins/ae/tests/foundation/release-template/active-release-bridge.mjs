@@ -33,10 +33,14 @@ if (process.env.AE_FIXTURE_IMPORT_LOG) {
 }
 
 class BridgeError extends Error {
-  constructor(code, message) {
+  // `guard` names which rule refused, for the cases where two rules legitimately
+  // share one code. It is a stable tag; the message is a diagnostic and may gain
+  // detail without a version bump, so nothing asserts on the prose.
+  constructor(code, message, guard = null) {
     super(message);
     this.name = 'BridgeError';
     this.code = code;
+    this.guard = guard;
   }
 }
 
@@ -88,13 +92,15 @@ function deriveManifestDigest(rootIdentity) {
 export function attestActiveRoot({ observedReleaseRoot }) {
   const record = readHostRecord();
   if (!record.active_root) {
-    throw new BridgeError('active_release_unavailable', 'host record does not identify a unique active root');
+    throw new BridgeError('active_release_unavailable',
+      'host record does not identify a unique active root', 'no_unique_active_root');
   }
   let identity;
   try {
     identity = realpathSync(record.active_root);
   } catch {
-    throw new BridgeError('active_release_unavailable', 'host active root does not resolve');
+    throw new BridgeError('active_release_unavailable',
+      'host active root does not resolve', 'active_root_unresolvable');
   }
   // The record says WHICH root is active — that is the host's answer and the only
   // thing this fixture stands in for. What that root's manifest digest is gets read

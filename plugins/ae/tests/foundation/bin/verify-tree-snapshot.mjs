@@ -683,6 +683,18 @@ export function run() {
       }),
       'move_projection_plan_not_qualified');
 
+    // A source that exists but is not a directory. The nonexistent-source case
+    // above cannot reach this rule — it fails one branch earlier — so without
+    // this the directory check is deletable while the suite stays green.
+    const fileSource = join(work, 'a-file-not-a-directory');
+    writeFileSync(fileSource, 'not a feature tree');
+    checks.rejects('provider/refuses-a-non-directory-source',
+      () => planDirectoryMove({
+        sourceSubject: { logical_root: 'x', resolved_root: fileSource, device_id: 1 },
+        targetSubject: { logical_root: 'y', resolved_root: join(work, 'nowhere'), device_id: 1 },
+      }),
+      'move_projection_plan_not_qualified');
+
     return checks;
   } finally {
     rmSync(work, { recursive: true, force: true });

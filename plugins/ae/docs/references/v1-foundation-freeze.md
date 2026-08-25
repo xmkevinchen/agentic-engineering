@@ -654,8 +654,27 @@ Three rules came out of that, and all three are applied above.
   cross-binding. A byte-identical twin at a second root isolates the root binding;
   a manifest changed after attestation, at the same root, isolates the digest one.
 - Where two guards legitimately share one typed code, the code cannot say which
-  fired, and the message is asserted too. Both attestation guards return
-  `active_release_unavailable`, and each is otherwise satisfied by the other.
+  fired, and each is otherwise satisfied by the other. The discriminator is a
+  stable `guard` tag on the error, not its message: the taxonomy in
+  `lib/errors.mjs` says messages are diagnostics and may gain detail without a
+  version bump, so asserting the prose would make wording contractual and buy no
+  safety. Tagged this way: both attestation guards and both host-record guards
+  (`active_release_unavailable`), and the launcher's three active-identity
+  branches (`release_not_active`).
+
+Applying the second rule to the older cases found the same masking in four more
+places, all now isolated: the launcher's active-identity comparison, the
+bridge's own absent-scope rule at *verification* rather than minting, the
+provider's missing-versus-rootless host record, and the move provider's
+non-directory source, which the nonexistent-source case cannot reach because it
+fails one branch earlier.
+
+The launcher's comparison is the interesting one, because no end-to-end
+arrangement can isolate it. The host record either names this root — and then both
+halves agree — or names another, and then the root branch reaches the same verdict
+first. There is no case where only the digest differs. So the guard is exported
+and exercised directly, the same way `assertMoveContent` and the launcher's own
+`resolveMemberRef` are, rather than left deletable behind a green suite.
 
 Two checks exist specifically because a mutation run showed they were missing:
 
