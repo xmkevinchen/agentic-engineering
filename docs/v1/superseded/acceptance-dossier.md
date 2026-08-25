@@ -65,7 +65,7 @@ this dossier.
 | 4 | Philosophy: design principles | **RELEASE-BLOCKER** | **RELEASE-BLOCKER** |
 | 5 | Migration map: pre-v1 implementation facts | **RELEASE-BLOCKER** | **RELEASE-BLOCKER** |
 
-The [v1+ roadmap](v1-plus-roadmap.md) is explicitly excluded from this baseline
+The [v1+ roadmap](../v1-plus-roadmap.md) is explicitly excluded from this baseline
 and cannot satisfy or waive a v1 release requirement.
 
 ## 4. Canonical evidence row
@@ -231,7 +231,7 @@ proof requirements to improve the metric.
 |---|---|---|---|
 | [Design and limitations](design-and-limitations.md) | **RELEASE-BLOCKER** | as-built mapping and limitation audit | **RELEASE-BLOCKER** |
 | [Usage guide](usage-guide.md) | **RELEASE-BLOCKER** | clean-session replay of supported paths | **RELEASE-BLOCKER** |
-| [v1+ roadmap](v1-plus-roadmap.md) | Optional publication digest; excluded from v1 acceptance | non-authority/exclusion check only | excluded from v1 acceptance |
+| [v1+ roadmap](../v1-plus-roadmap.md) | Optional publication digest; excluded from v1 acceptance | non-authority/exclusion check only | excluded from v1 acceptance |
 | This dossier | external digest after freeze | clean-clone ref/digest verification | no self-verdict |
 
 Documentation acceptance must confirm that current released behavior is not

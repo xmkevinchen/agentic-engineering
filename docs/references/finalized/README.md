@@ -1,5 +1,16 @@
 # AE 1.0 Finalized
 
+> **Status: no longer the current plan.** This was the sole v1 specification when
+> it was frozen on 2026-08-23. It is now a normative design input and audit
+> record. The current pair is [`docs/v1/design.md`](../../v1/design.md) and
+> [`docs/v1/implementation-plan.md`](../../v1/implementation-plan.md); where they
+> disagree with this specification, they are current, and each difference is
+> recorded in
+> [`docs/v1/mechanism-disposition.md`](../../v1/mechanism-disposition.md).
+>
+> The specification documents in this directory are unchanged. Read the original
+> framing below as it stood at the freeze.
+
 > 唯一规范 · Claude Code 首发实现 · 2026-08-23
 
 ## 一句话

@@ -1,54 +1,62 @@
-# AE v1 documentation set
+# AE v1
 
-> **Pre-acceptance draft.** This documentation set was prepared from the
-> frozen AE 1.0 specification before implementation and release acceptance
-> were complete. It does not claim that AE v1 is implemented, accepted, or
-> released.
+> **AE v1 is not released.** Nothing in this directory claims that v1 is
+> implemented, accepted, or available. It is the current design and plan for
+> building it.
 
-This directory is the publication staging area for AE v1's post-implementation
-documentation. It separates four questions that should not be collapsed into
-one release note:
+This directory is the single current source for AE v1's design and
+implementation plan. It replaces the several per-branch authorities that
+preceded it; where each of those went is recorded in
+[`branch-disposition.md`](branch-disposition.md).
 
-| Document | Question it answers | Authority after release |
-|---|---|---|
-| [Design and limitations](design-and-limitations.md) | What was built, where are its trust boundaries, and what does it deliberately not do? | Descriptive as-built record |
-| [Usage guide](usage-guide.md) | How should a person use AE v1 in a Claude Code session? | User guidance; never completion authority |
-| [Acceptance dossier](acceptance-dossier.md) | Which implementation and evidence artifacts justify release? | Evidence index only; Gate/Finalizer retain feature-completion authority, and a separate digest-bound human decision owns release acceptance |
-| [v1+ roadmap](v1-plus-roadmap.md) | What should be investigated after v1, including a portable AE runtime, native Codex frontend, and Loom distributed-execution/control-plane candidate? | Non-normative roadmap |
+## What AE v1 is
 
-## Publication rule
+A workflow product for running non-trivial engineering work through Claude Code,
+built so that "done" means something a human actually agreed to. Four
+components: **Contract Formation**, a **Workflow Harness** on top of Claude Code
+Agent Teams, an optional **agent-proxy** cross-family seat, and a small
+deterministic **Kernel** that decides admissibility.
 
-Until all release placeholders are resolved, the repository's released-version
-documentation remains the description of current product behavior. These files
-must not be linked as the default quickstart or presented as shipped behavior.
+Start with [`design.md`](design.md) §1.
 
-Publication requires all of the following:
+## Current documents
 
-- every `RELEASE-BLOCKER` marker is replaced with an observed value or an
-  explicit, accepted limitation;
-- the design's implementation map points to the released code, schemas, and
-  build identities;
-- the usage guide is replayed against every supported Claude Code invocation
-  mode;
-- the acceptance dossier contains the final scorecard and raw evidence links;
-- a separate release-acceptance record binds the exact candidate and frozen
-  dossier digests;
-- the roadmap remains clearly outside the v1 Contract and release Gate; and
-- a final documentation review confirms that normative intent is not phrased
-  as observed implementation fact.
+| Document | Question it answers |
+|---|---|
+| [`design.md`](design.md) | What is AE v1, what does the Kernel guarantee, and what does it explicitly not? |
+| [`implementation-plan.md`](implementation-plan.md) | How does it get built, in what order, and what can be run at each step? |
+| [`mechanism-disposition.md`](mechanism-disposition.md) | Which older mechanisms are kept, simplified, deferred, or removed — and why? |
+| [`branch-disposition.md`](branch-disposition.md) | Where did each source branch's thinking go? |
+| [`acceptance.md`](acceptance.md) | What would have to be true to call v1 released? |
+| [`history.md`](history.md) | Where is the earlier design material, and how should it be read? |
+| [`v1-plus-roadmap.md`](v1-plus-roadmap.md) | What is worth investigating **after** v1? Non-normative; holds no authority. |
 
-## Source of truth while drafting
+`design.md` and `implementation-plan.md` are the current pair. If anything else
+in the repository appears to contradict them about what v1 is or how it is
+built, they are current and the other document is historical.
 
-The frozen AE 1.0 specification is the normative design source. This directory
-is deliberately downstream of that specification:
+## Historical material
 
-1. the frozen design defines required semantics;
-2. implementation and qualification produce observable facts;
-3. this set records the resulting as-built behavior and its limitations; and
-4. the deterministic Gate and sole Finalizer decide completion, not these
-   Markdown files.
+| Location | Status |
+|---|---|
+| [`superseded/`](superseded/) | The pre-acceptance documentation set — the larger v1's design/limitations, usage guide, and acceptance dossier. Retained verbatim; not current guidance. |
+| [`../references/finalized/`](../references/finalized/) | The frozen AE 1.0 specification. **Demoted** from sole current specification to normative design input and audit record. |
+| [`../ae-v1-design-history/`](../ae-v1-design-history/) | How that specification was formed: three independent proposals and their cross-review. No authority. |
+| Branch `docs/ae-v1-implementation-thinking` @ `8d8b1cc` | F-083 bootstrap reasoning. Preserved, deliberately unmerged. |
 
-If the released implementation differs from the frozen specification, record
-the difference in the design's deviation table with evidence, residual risk,
-and disposition. Do not silently edit the as-built description to resemble the
-specification.
+Full reading order and the reason for each status is in
+[`history.md`](history.md).
+
+## Status
+
+| | |
+|---|---|
+| Slice reached | **V0** — consolidation and product boundary |
+| Production behavior changed by V0 | none |
+| Next | The user confirms the minimum v1 scope; an independent cross-family review checks this consolidation. Then [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow). |
+| Open decisions | [`acceptance.md` §7](acceptance.md#7-open-items-for-the-human) |
+
+The plugin's shipped behavior is described by the repository's
+[README](../../README.md) and [CHANGELOG](../../CHANGELOG.md). This directory
+describes work that has not shipped, and must not be linked as a quickstart or
+presented as current product behavior.
