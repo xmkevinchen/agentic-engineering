@@ -22,7 +22,7 @@ AE v1 is releasable when all six hold:
 | 2 | The V2 Agent Teams flow has completed at least one real feature including a finding that required rework and re-review. |
 | 3 | The Kernel integrity criteria in §3 all fail closed. |
 | 4 | The Agent Teams handoff criteria in §4 hold, including under lost coordination state. |
-| 5 | One **negative arm must actually run** before release: a Contract that declares cross-family, with the provider forced unavailable, reports `unavailable`, performs no same-family substitution, and reaches a human decision. Owned by V1 (§5). A *successful* cross-family invocation stays optional with V3. |
+| 5 | One **negative arm must actually run** before release: a Contract declaring `cross_family_required`, with the provider forced unavailable, reports `unavailable`, performs no same-family substitution, and records the human's `wait`/`stop`/`amend` decision bound to that Contract revision and run. The arm produces no Acceptance — `unavailable` is not `passed` — and needs none. Owned by V1 (§5). A *successful* cross-family invocation stays optional with V3. |
 | 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
 **V3, V4, and V5 are not release prerequisites.** V3 adds an optional seat —

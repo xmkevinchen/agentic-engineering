@@ -82,11 +82,19 @@ human intent
   canonicalized and digested with it. Without it V1's own retreat condition —
   "the trace caught nothing" — has nothing to evaluate, and CF-01…CF-08 cannot be
   reconstructed after the forming session is gone.
-- **Review-free Acceptance.** V1 Contracts declare no independence requirement,
-  so their Acceptance records *"no independent review required by this
-  Contract"* and the Gate checks that statement against the Contract. An
-  Acceptance missing a review the Contract *did* require is `invalid`. This is
-  what lets V1 terminate without the `Review` object.
+- **Review-free Acceptance.** V1's *terminating* Contracts — the dogfood and
+  production ones — declare no independence requirement, so their Acceptance
+  records *"no independent review required by this Contract"* and the Gate checks
+  that statement against the Contract. An Acceptance missing a review the
+  Contract *did* require is `invalid`. This is what lets V1 terminate without the
+  `Review` object.
+
+  V1's test corpus additionally holds one **non-terminating** Contract that
+  *does* declare independence — see the unavailable arm below. The two are
+  different populations, and conflating them was a real defect in an earlier
+  draft of this list: cross-family **is** a source-independence requirement
+  ([`design.md` §3.3](design.md#33-independence)), so a Contract that declares it
+  cannot also be a Contract that declares none.
 - Evidence binding: Contract revision, assignment, attempt, producer, artifact.
 - Command evidence with a non-vacuity check — a run that exercised nothing is
   not a pass.
@@ -105,12 +113,24 @@ human intent
   temp-file-plus-`link` would change the frozen mechanism, not repair it, and is
   deferred with the rest of durability work.
 
-- **The cross-family unavailable arm.** A Contract that declares a cross-family
-  proof, with the provider forced unavailable, must reach `unavailable` and a
-  human decision, with no same-family substitution. This needs no reviewer seat —
-  only a Gate that refuses to turn a missing capability into a pass — so it
-  belongs here rather than waiting for V3, which is optional. It is the owner of
-  [`acceptance.md` criterion 5](acceptance.md#1-release-criteria).
+- **The cross-family unavailable arm.** One Contract in the test corpus declares
+  `cross_family_required` — a genuine source-independence requirement — and runs
+  with the provider forced unavailable. It must reach `unavailable` with no
+  same-family substitution.
+
+  **This arm never produces an Acceptance, by construction.** `unavailable` is
+  not `passed`, so the run has no terminal state and needs none: what it proves
+  is that a missing capability does not become a pass. It therefore needs no
+  reviewer seat and no `Review` object, which is why it belongs in V1 rather than
+  in the optional V3.
+
+  What must be durable is the human's decision. The Harness appends one record —
+  the choice (`wait` | `stop` | `amend`), bound to the exact Contract revision and
+  run identity — to the same event log V1 already appends and replays. It is not a
+  seventh durable object; it is an event, and without it "a human decided" is a
+  claim with nothing behind it.
+
+  Owner of [`acceptance.md` criterion 5](acceptance.md#1-release-criteria).
 - **Knowledge isolation tests.** The `.ae/graph` corpus already exists, so V1
   proves it contributes nothing to any Gate status — including N6's differential:
   delete the corpus, and no proof result changes. Owner of
