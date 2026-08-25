@@ -610,7 +610,13 @@ that way, and `manifest-case-count` only looked like protection: both of its
 operands live in the same file.
 
 `fixtures/v1-foundation/coverage-floor.json` is now a checked-in minimum for each
-section's executed-check count and for each corpus's size, asserted by
+section's *present* check count and for each corpus's size. Skips count toward it:
+a skip is not a deletion, and excluding them made skipping impossible rather than
+merely visible — it turned the documented toolchain-absent skip into a hard failure
+on any clone that had not run `npm ci`, which is the state the suite header
+promises to support. The floor section is scored from its own observed results
+rather than from the table, so the one section whose job is detecting deletion is
+not the one section whose deletion is invisible, asserted by
 `bin/verify-all.mjs` and by the individual verifiers. The floor counts its own
 section too, so deleting it fails as well. Shrinking coverage is now a visible edit
 to a fixture rather than a silent consequence of editing a test — verified by

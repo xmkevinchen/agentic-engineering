@@ -12,6 +12,7 @@ import { canonicalDigest } from '../lib/canonical-json.mjs';
 import { isDeeplyFrozen } from '../lib/freeze.mjs';
 import { ALL_CODES, CODES } from '../lib/errors.mjs';
 import { FoundationError } from '../lib/errors.mjs';
+import { FIXTURE_PROVIDER } from '../lib/fs-noreplace.mjs';
 import {
   ALGORITHM, PROFILES, PROFILE_NAMES, assertMoveContent, assertProjectionEndpoints,
   entriesProjectionDigest, finalizeEntries, isObservedSnapshot, observeTree,
@@ -159,6 +160,30 @@ export function run() {
   const work = mkdtempSync(join(tmpdir(), 'ae-tree-'));
 
   try {
+    // ---- module constants, asserted before ANY observation ----------------
+    //
+    // Order is load-bearing here. A snapshot carries `algorithm: ALGORITHM` — the
+    // same object — so taking a baseline observation first deep-freezes ALGORITHM
+    // transitively, and an assertion placed after that would pass even with its own
+    // freeze removed. Asserted first, each constant is scored on its own freeze.
+    for (const [label, value] of [
+      ['PROFILES', PROFILES],
+      ['PROFILE_NAMES', PROFILE_NAMES],
+      ['ALGORITHM', ALGORITHM],
+      ['FIXTURE_MOVE_PROVIDER', FIXTURE_MOVE_PROVIDER],
+      ['FIXTURE_PROVIDER', FIXTURE_PROVIDER],
+      ['CODES', CODES],
+      ['ALL_CODES', ALL_CODES],
+    ]) {
+      checks.ok(`immutability/constant-is-deeply-frozen/${label}`, isDeeplyFrozen(value));
+    }
+    // The specific shape that got past a shallow freeze: a profile's predicates.
+    let profileMutationBlocked = false;
+    try { PROFILES.feature_evidence.includes = () => true; } catch { profileMutationBlocked = true; }
+    checks.ok('immutability/profile-predicates-cannot-be-replaced', profileMutationBlocked);
+    checks.ok('profiles/complete-profiles-are-distinct-objects',
+      PROFILES.origin_complete !== PROFILES.rollout_inventory);
+
     // ---- baseline against the checked-in projections ----------------------
     checks.ok('floor/mutations', MUTATIONS.length >= FLOOR.tree_snapshot_mutations,
       `${MUTATIONS.length} mutations, floor is ${FLOOR.tree_snapshot_mutations}`);
@@ -382,23 +407,6 @@ export function run() {
       && untouched.entries.find((e) => e.type === 'file')?.digest === originalFirstDigest
       && untouched.projection_kind === 'observed');
 
-    // Module-level constants had no immutability assertion at all, which is how
-    // PROFILES came to be shallow-frozen with its own include predicates
-    // replaceable in place.
-    for (const [label, value] of [
-      ['PROFILES', PROFILES],
-      ['PROFILE_NAMES', PROFILE_NAMES],
-      ['ALGORITHM', ALGORITHM],
-      ['FIXTURE_MOVE_PROVIDER', FIXTURE_MOVE_PROVIDER],
-      ['CODES', CODES],
-      ['ALL_CODES', ALL_CODES],
-    ]) {
-      checks.ok(`immutability/constant-is-deeply-frozen/${label}`, isDeeplyFrozen(value));
-    }
-    // The specific shape that got past a shallow freeze: a profile's predicates.
-    let profileMutationBlocked = false;
-    try { PROFILES.feature_evidence.includes = () => true; } catch { profileMutationBlocked = true; }
-    checks.ok('immutability/profile-predicates-cannot-be-replaced', profileMutationBlocked);
     checks.equal('immutability/profile-still-excludes-after-attempt',
       observeTree({
         logicalRoot: LOGICAL_ROOT,
@@ -406,9 +414,6 @@ export function run() {
         profile: 'feature_evidence',
       }).entries.length,
       expected.profiles.feature_evidence.entry_count);
-    checks.ok('profiles/complete-profiles-are-distinct-objects',
-      PROFILES.origin_complete !== PROFILES.rollout_inventory);
-
     // The declared exclusions are a field nothing read. Asserting them against the
     // observed entry set makes the declaration load-bearing instead of decorative.
     const observedPaths = new Set(baseline.feature_evidence.entries.map((e) => e.path));

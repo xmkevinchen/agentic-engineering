@@ -53,13 +53,16 @@ function qualificationFor(selector) {
     provider: FIXTURE_MOVE_PROVIDER,
     selector,
   };
-  return deepFreeze({
+  // Not frozen here: every caller embeds this in a plan or result that is
+  // deep-frozen as a whole, so freezing again would be a second mechanism holding
+  // up one property — either removable with the suite still green.
+  return {
     provider_id: FIXTURE_MOVE_PROVIDER.provider_id,
     build_digest: canonicalDigest(FIXTURE_MOVE_PROVIDER),
     selector_digest: canonicalDigest(selector),
     result_ref: `fixture:qualifications/filesystem/${FIXTURE_MOVE_PROVIDER.provider_id}`,
     result_digest: canonicalDigest(record),
-  });
+  };
 }
 
 // A second capability, so that "this projection is only defined for a DIRECTORY
