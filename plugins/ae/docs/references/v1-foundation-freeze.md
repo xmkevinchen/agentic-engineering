@@ -626,8 +626,8 @@ Deliberately out of scope, and not claimed anywhere in the corpus:
 
 ## Keeping the corpus honest
 
-The suite is mutation-tested: 67 deliberate defects, each of which must turn it
-red. They cover every guard described above — canonical ordering, duplicate keys,
+The suite is mutation-tested: deliberate defects, each of which must turn it red.
+They cover the guards described above — canonical ordering, duplicate keys,
 the number domain, the `feature_evidence` boundary, symlink rejection, move
 subject/operation/outcome/qualification, member digest recomputation, import
 ordering, `self_digest`, ref canonicality, inode-level duplicate detection, the
@@ -636,6 +636,15 @@ policy symlink components, `plugin_source` validation, the no-replace boundary,
 short writes, duplicate and colliding destinations, every provenance brand, the
 derived-rather-than-declared active-release digest, snapshot tampering, mode
 width, and business vocabulary in a mechanism module.
+
+**What that does not say.** A sweep covers the guards someone thought to sweep.
+The launcher's missing-manifest branch was live, typed and untested for exactly
+that reason — every corpus case removed *members*, so nothing ever removed the
+manifest, and the sweep inherited the corpus's blind spot rather than correcting
+it. Two rules follow, and both are applied above: a guard reached only through a
+`catch` needs a case that produces the error, not merely one that avoids it; and a
+rejection case must pin the code, because a fixture broken in two ways at once is
+refused either way and says nothing about which rule ran.
 
 Two checks exist specifically because a mutation run showed they were missing:
 

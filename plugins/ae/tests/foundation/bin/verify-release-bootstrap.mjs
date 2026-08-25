@@ -231,6 +231,16 @@ export async function run() {
     // self_digest and unknown fields are rejected in a *consistently built*
     // release — the launcher embeds the digest of the bad manifest, so the
     // rejection cannot be explained away as a digest mismatch.
+    // A release root with no manifest at all. The launcher types this separately
+    // from a manifest that parses badly, and nothing exercised that branch: the
+    // corpus removed members but never the manifest itself.
+    expectRejection(checks, 'manifest-missing', {
+      providerCode: 'active_release_unavailable',
+      work,
+      breakIt: (built) => rmSync(join(built.releaseRoot, 'release-manifest-v1.json')),
+      expectedCode: 'manifest_unreadable',
+    });
+
     expectRejection(checks, 'self-digest', {
       providerCode: 'manifest_has_self_digest',
       work,

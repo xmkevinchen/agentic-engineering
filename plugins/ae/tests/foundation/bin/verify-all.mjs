@@ -101,10 +101,19 @@ floorChecks.ok('section/coverage-floor',
 // switched off by editing the file that describes it. Both are required to exist
 // and to name what actually ran, derived from the section table rather than from
 // a second checked-in list.
+// Every check this section always emits, not a subset of them. A subset left the
+// cycle breakable: a floor check and its fixture entry could be deleted together,
+// and nothing named the check that was supposed to be there. `section-present/*`
+// is deliberately absent — it is emitted only when a section fails to run at all.
 const requiredFloorIds = [
-  'coverage-floor/total',
+  'coverage-floor/harness-refuses-duplicate-ids',
   'coverage-floor/every-corpus-section-accounted-for',
+  'coverage-floor/total',
   'coverage-floor/section/coverage-floor',
+  'coverage-floor/report-scores-a-withheld-section',
+  'coverage-floor/report-scores-a-withheld-check',
+  'coverage-floor/fixture-declares-every-section',
+  'coverage-floor/fixture-declares-every-required-floor-check',
   ...CORPUS_SECTIONS.map(([name]) => `coverage-floor/section/${name}`),
 ];
 floorChecks.ok('fixture-declares-every-section',
