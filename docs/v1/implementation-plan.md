@@ -195,19 +195,22 @@ Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
   same-family reviewer;
 - the same `Review` shape as a same-family seat.
 
-**Exit (of the slice, not of the release):** both branches are demonstrated —
-one Contract that declares a high-risk cross-family review runs through the
-bridge and is accepted, and one run with the provider deliberately unavailable
-reports `unavailable` and reaches a human decision. Both are needed because the
-slice is only correct if *both* branches are, and the unavailable branch is the
-one that silently degraded before.
+**Exit (of the slice, not of the release):** one Contract that declares a
+high-risk cross-family review runs through the bridge with a provider that
+actually answers, and is accepted — [`acceptance.md` X1](acceptance.md#5-cross-family-criteria).
+V1 already proved the unavailable branch, so V3 does not re-demonstrate it; what
+V3 must additionally show is that adding a real provider introduced no second
+workflow and no second Gate (X4).
 
-**V3 is not a release prerequisite.** Cross-family is optional by design. What
-[`acceptance.md` §1](acceptance.md#1-release-criteria) requires of a release is
-that *if* a Contract declares cross-family, the seat behaves per §5 — including
-reporting `unavailable` rather than substituting. A provider being unavailable
-at release time does not block the release; a provider being silently swapped
-for a same-family reviewer does.
+**V3 is not a release prerequisite — but only the successful path is optional.**
+The negative arm is mandatory and belongs to V1, not here: release criterion 5
+requires it to have actually run ([`acceptance.md` §1](acceptance.md#1-release-criteria),
+[§5](acceptance.md#5-cross-family-criteria)). What V3 adds on top is X1 — a real
+provider answering — and that is the part a release may ship without.
+
+So: a provider being unavailable at release time does not block the release,
+because V1 already proved the unavailable branch. A provider being silently
+swapped for a same-family reviewer blocks it, and always did.
 
 **Retreat:** if correlation cannot be observed well enough to distinguish a real
 cross-family invocation from a same-family fallback, report cross-family as

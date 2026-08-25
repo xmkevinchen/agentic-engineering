@@ -25,8 +25,12 @@ AE v1 is releasable when all six hold:
 | 5 | One **negative arm must actually run** before release: a Contract declaring `cross_family_required`, with the provider forced unavailable, reports `unavailable`, performs no same-family substitution, and records the human's `wait`/`stop`/`amend` decision bound to that Contract revision and run. The arm produces no Acceptance — `unavailable` is not `passed` — and needs none. Owned by V1 (§5). A *successful* cross-family invocation stays optional with V3. |
 | 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
-**V3, V4, and V5 are not release prerequisites.** V3 adds an optional seat —
-criterion 5 governs how it must behave *when used*, not that it must be used.
+**V3, V4, and V5 are not release prerequisites** — but read that precisely for
+V3. What V3 adds is a *successful* cross-family invocation, and that stays
+optional. Criterion 5's negative arm is **not** optional: it is owned by V1 and
+must have run before release. Using a cross-family seat in production is a
+choice; proving that a missing one cannot become a pass is not.
+
 V4 improves the product over time. V5 responds to failures that, by definition,
 have not happened yet.
 
@@ -88,17 +92,22 @@ Plus two properties:
 | H5 | Where the Contract requires independence, the reviewing seat is a fresh context, and the implementer is not the sole reviewer of its own material claim. |
 | H6 | Exactly one seat holds product mutation for a feature at any time. |
 
-## 5. Cross-family criteria (optional)
+## 5. Cross-family criteria
 
-Cross-family is optional by design. Both outcomes below are acceptable
-individually; the failure is claiming a property AE did not observe.
+*Using* a cross-family seat is optional. *Proving it cannot degrade silently* is
+not. The failure this section guards is claiming a property AE never observed —
+and that failure is reachable whether or not anyone ever runs a successful
+cross-family invocation.
 
-| # | Criterion |
-|---|---|
-| X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. |
-| X2 | `requested`, `observed`, and `effective` identity stay distinct end to end. A request field is never reported as an effective-family claim. |
-| X3 | With the provider unavailable, the proof reports `unavailable` and reaches a human decision. No silent same-family substitution. |
-| X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. |
+| # | Criterion | Required for release | Owner |
+|---|---|---|---|
+| X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | **Optional** — this is the successful path | V3 |
+| X2 | `requested`, `observed`, and `effective` identity stay distinct end to end. A request field is never reported as an effective-family claim. | **Yes** | V1 |
+| X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | **Yes** — this is release criterion 5's negative arm | V1 |
+| X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | **Yes** | V1 |
+
+Only X1 needs a provider that actually answers. X2, X3, and X4 are provable
+with the provider forced unavailable, which is why they do not wait for V3.
 
 ## 6. Knowledge non-authority criteria
 
