@@ -13,7 +13,7 @@
 // assertion — both are compared to expected/*.bin.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -48,6 +48,13 @@ export function run() {
   checks.ok('floor/ndjson-cases',
     byKind('ndjson_accept') + byKind('ndjson_reject') >= FLOOR.canonical_bytes_ndjson_cases,
     `floor is ${FLOOR.canonical_bytes_ndjson_cases}`);
+  // The checked-in expected bytes are the whole point of this section — runtime
+  // and oracle are compared against them rather than against each other — and
+  // this floor was declared without anything reading it.
+  const expectedOutputs = readdirSync(join(CORPUS, 'expected')).filter((f) => f.endsWith('.bin')).length;
+  checks.ok('floor/expected-outputs',
+    expectedOutputs >= FLOOR.canonical_bytes_expected_outputs,
+    `${expectedOutputs} expected outputs, floor is ${FLOOR.canonical_bytes_expected_outputs}`);
 
   // ---- our sha256 agrees with the system's over the expected files
   const expectedRefs = [...new Set(

@@ -1,16 +1,16 @@
 {
   "schema_version": "ae.fixture.coverage-floor.v1",
-  "note": "Minimum PRESENT check counts per section and minimum corpus sizes. Skips count: a skip is not a deletion, and excluding them made the documented toolchain-absent skip a hard failure on any clone that had not run `npm ci`. Without a floor at all, deleting a whole corpus left the suite green and louder-looking than before: emptying the tree-snapshot mutation table removed 48 checks and still reported ALL PASSED. The coverage-floor section is scored from its own observed results, not from this table, so its own shrinkage is visible too.",
+  "note": "Minimum PRESENT check counts per section, minimum corpus sizes, and the exact inventory of the floor section's own checks. Skips count: a skip is not a deletion, and excluding them made the documented toolchain-absent skip a hard failure on any clone that had not run `npm ci`. Without a floor at all, deleting a whole corpus left the suite green and louder-looking than before: emptying the tree-snapshot mutation table removed 48 checks and still reported ALL PASSED. Counts alone are paddable and nettable, so the harness refuses duplicate check IDs and expected_floor_check_ids pins which floor assertions must have run.",
   "min_checks_per_section": {
-    "canonical-bytes": 331,
+    "canonical-bytes": 332,
     "validator": 48,
-    "tree-snapshot": 160,
-    "release-bootstrap": 161,
-    "policy-bundle": 117,
-    "semantic-blind": 78,
-    "coverage-floor": 8
+    "tree-snapshot": 162,
+    "release-bootstrap": 207,
+    "policy-bundle": 121,
+    "semantic-blind": 82,
+    "coverage-floor": 9
   },
-  "min_total_checks": 895,
+  "min_total_checks": 952,
   "min_corpus_sizes": {
     "canonical_bytes_cases": 55,
     "canonical_bytes_reject_cases": 27,
@@ -24,5 +24,17 @@
     "semantic_blind_forbidden_tokens": 9,
     "semantic_blind_corpus_files": 13,
     "policy_bundle_trees": 3
-  }
+  },
+  "expected_floor_check_ids": [
+    "coverage-floor/harness-refuses-duplicate-ids",
+    "coverage-floor/section/canonical-bytes",
+    "coverage-floor/section/validator",
+    "coverage-floor/section/tree-snapshot",
+    "coverage-floor/section/release-bootstrap",
+    "coverage-floor/section/policy-bundle",
+    "coverage-floor/section/semantic-blind",
+    "coverage-floor/every-corpus-section-accounted-for",
+    "coverage-floor/total",
+    "coverage-floor/section/coverage-floor"
+  ]
 }

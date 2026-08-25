@@ -44,6 +44,16 @@ const sections = [
 const floorChecks = new Checks('coverage-floor');
 let totalRan = 0;
 
+// The floor scores `results.length`, so the harness's uniqueness promise is what
+// keeps a count from being paddable. Asserted here, beside the thing that depends
+// on it, using a throwaway harness instance.
+const probe = new Checks('probe');
+probe.ok('same-id', true);
+probe.ok('same-id', true);
+floorChecks.ok('harness-refuses-duplicate-ids',
+  probe.results.length === 2 && probe.results[0].ok === true && probe.results[1].ok === false,
+  'a repeated check ID was accepted, so any section floor can be padded with no-ops');
+
 // The floor covers the corpus sections; its own section is scored separately below
 // so that its count is observed rather than derived from this table.
 const CORPUS_SECTIONS = Object.entries(FLOOR.min_checks_per_section)
@@ -79,6 +89,21 @@ const ownChecks = floorChecks.results.length;
 floorChecks.ok('section/coverage-floor',
   ownChecks >= FLOOR.min_checks_per_section['coverage-floor'],
   `${ownChecks} floor checks ran, floor is ${FLOOR.min_checks_per_section['coverage-floor']}`);
+
+// A count is not an inventory. Counting alone, deleting one floor check and adding
+// an unrelated one nets to zero, and the harness only guarantees the IDs are
+// unique — not that they are the intended ones. The expected set is checked in, so
+// removing any single floor assertion names itself in the failure.
+//
+// Honest boundary: this comparison is the last thing that runs, and nothing
+// observes ITS absence. Deleting the outermost check is always invisible to the
+// thing being deleted; what this buys is that everything inside it is covered.
+const expectedFloorIds = [...FLOOR.expected_floor_check_ids].sort();
+const observedFloorIds = floorChecks.results.map((r) => r.id).sort();
+floorChecks.ok('floor-inventory',
+  expectedFloorIds.length === observedFloorIds.length
+    && expectedFloorIds.every((id, i) => id === observedFloorIds[i]),
+  `expected ${expectedFloorIds.join(',')}; observed ${observedFloorIds.join(',')}`);
 
 sections.push(floorChecks);
 

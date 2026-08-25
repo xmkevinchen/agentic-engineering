@@ -181,6 +181,15 @@ export function run() {
     let profileMutationBlocked = false;
     try { PROFILES.feature_evidence.includes = () => true; } catch { profileMutationBlocked = true; }
     checks.ok('immutability/profile-predicates-cannot-be-replaced', profileMutationBlocked);
+    // isDeeplyFrozen answers for the predicates themselves, not just the object
+    // holding them. It used to return true for any function, because functions
+    // are not typeof 'object' — so the assertions above were satisfied by a
+    // property the helper never looked at.
+    checks.ok('immutability/deep-freeze-sees-functions',
+      !isDeeplyFrozen({ predicate: () => true }),
+      'isDeeplyFrozen reports an unfrozen function as deeply frozen');
+    checks.ok('immutability/profile-predicates-are-themselves-frozen',
+      Object.values(PROFILES).every((p) => typeof p.includes !== 'function' || Object.isFrozen(p.includes)));
     checks.ok('profiles/complete-profiles-are-distinct-objects',
       PROFILES.origin_complete !== PROFILES.rollout_inventory);
 

@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalize, digestBytes, parseStrict } from '../lib/canonical-json.mjs';
 import { Checks } from './harness.mjs';
-import { validateReleaseManifest } from '../../fixtures/v1-foundation/validator/release-manifest-v1.validator.mjs';
+import { validateReleaseManifest } from '../lib/release-manifest-v1.validator.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VALIDATOR_DIR = join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'validator');
@@ -73,7 +73,7 @@ export function run() {
     `frozen range is ${pin.node_range}; this host runs ${process.versions.node}`);
 
   // ---- the checked-in artifacts match the pin ------------------------------
-  const validatorBytes = readFileSync(join(VALIDATOR_DIR, 'release-manifest-v1.validator.mjs'));
+  const validatorBytes = readFileSync(join(HERE, '..', 'lib', 'release-manifest-v1.validator.mjs'));
   const schemaBytes = readFileSync(join(VALIDATOR_DIR, 'release-manifest-v1.schema.json'));
   const output = pin.outputs['release-manifest-v1.validator.mjs'];
   checks.equal('pin/validator-digest', digestBytes(validatorBytes), output.validator_digest);
@@ -128,8 +128,13 @@ export function run() {
   checks.ok('split/schema-layer-refuses-wrong-shape', !validateReleaseManifest(admitted));
 
   // ---- no second, approximate validator ------------------------------------
+  // The Ajv standalone output is the sanctioned validator and necessarily spells
+  // the keywords it compiled. It is named here rather than pattern-matched, so
+  // exempting a second file is a visible edit.
+  const GENERATED_VALIDATOR = 'release-manifest-v1.validator.mjs';
   for (const dir of ['lib', 'oracle']) {
-    for (const name of readdirSync(join(HERE, '..', dir)).filter((f) => f.endsWith('.mjs'))) {
+    for (const name of readdirSync(join(HERE, '..', dir))
+      .filter((f) => f.endsWith('.mjs') && f !== GENERATED_VALIDATOR)) {
       const text = readFileSync(join(HERE, '..', dir, name), 'utf8');
       const found = SCHEMA_KEYWORDS.filter((keyword) => text.includes(keyword));
       checks.ok(`no-second-validator/${dir}/${name}`, found.length === 0,

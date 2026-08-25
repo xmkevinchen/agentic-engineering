@@ -109,6 +109,44 @@ export function run() {
       readFileSync(join(project, '.ae/policies/runner-v1.json')),
       readFileSync(join(pluginA, 'policies/runner-v1.json')));
 
+    // The case above conflicts on its FIRST planned target, so it says nothing
+    // about partial materialization: there was never an earlier write to leave
+    // behind. Here the conflict is second, which is the arrangement that used to
+    // create and fsync target one before rejecting the bundle.
+    const partialPlugin = join(work, 'plugin-partial');
+    cpSync(join(FIXTURE, 'release-c-bad'), partialPlugin, { recursive: true });
+    const partialBundle = JSON.parse(readFileSync(join(partialPlugin, 'policies/bundle-v1.json'), 'utf8'));
+    const freshBytes = readFileSync(join(partialPlugin, 'policies/adapters-v1.json'));
+    partialBundle.entries = [
+      {
+        plugin_source: 'policies/adapters-v1.json',
+        project_ref: '.ae/policies/fresh-v1.json',
+        raw_digest: digestBytes(freshBytes),
+        length: freshBytes.length,
+      },
+      partialBundle.entries.find((e) => e.project_ref === '.ae/policies/runner-v1.json'),
+    ];
+    writeFileSync(join(partialPlugin, 'policies/bundle-v1.json'), canonicalize(partialBundle));
+    checks.rejects('materialize/conflict-after-a-writable-target',
+      () => materializePolicies({ pluginRoot: partialPlugin, projectRoot: project }),
+      'integrity_error');
+    checks.ok('materialize/rejected-created-nothing',
+      !existsSync(join(project, '.ae/policies/fresh-v1.json')),
+      'a rejected bundle created its first target before failing on the second');
+
+    // Same arrangement for a symlinked destination. O_EXCL refuses to follow a
+    // link at the final component, but that happens at write time — by which
+    // point an earlier target is already on disk unless the preflight saw it.
+    const symlinkProject = join(work, 'project-symlink-second');
+    mkdirSync(join(symlinkProject, '.ae/policies'), { recursive: true });
+    symlinkSync(join(work, 'elsewhere.json'), join(symlinkProject, '.ae/policies/runner-v1.json'));
+    checks.rejects('materialize/symlink-destination-after-a-writable-target',
+      () => materializePolicies({ pluginRoot: partialPlugin, projectRoot: symlinkProject }),
+      'ref_symlink_component');
+    checks.ok('materialize/symlink-rejection-created-nothing',
+      !existsSync(join(symlinkProject, '.ae/policies/fresh-v1.json')),
+      'a bundle rejected for a symlinked destination created its earlier target first');
+
     // ---- bundle source integrity -----------------------------------------
     const tampered = join(work, 'plugin-tampered');
     cpSync(join(FIXTURE, 'release-a'), tampered, { recursive: true });
@@ -612,7 +650,13 @@ export function run() {
     // do not match its manifest, so one cannot be earned for a tampered tree.
     const tamperedRelease = join(work, 'tampered-release');
     buildRelease({ releaseRoot: tamperedRelease, policySourceDir: join(FIXTURE, 'release-a') });
-    writeFileSync(join(tamperedRelease, 'policies/runner-v1.json'), '{"tampered":true}');
+    // Length-preserving, so the digest check is what refuses it. A tamper that
+    // also changed the length would be caught one check earlier and this case
+    // would no longer exercise the rule it names.
+    const tamperTarget = join(tamperedRelease, 'policies/runner-v1.json');
+    const tamperedBytes = Buffer.from(readFileSync(tamperTarget));
+    tamperedBytes[tamperedBytes.length - 2] ^= 0x20;
+    writeFileSync(tamperTarget, tamperedBytes);
     checks.rejects('provider/refuses-tampered-release',
       () => verifyBootstrap({ releaseRoot: tamperedRelease }), 'bootstrap_result_not_derived');
 

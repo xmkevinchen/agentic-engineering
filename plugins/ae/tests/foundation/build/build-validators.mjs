@@ -25,6 +25,11 @@ import { vendorRuntime } from './vendor-runtime.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NODE_MODULES = join(HERE, 'node_modules');
 const VALIDATOR_DIR = join(HERE, '..', '..', 'fixtures', 'v1-foundation', 'validator');
+// The generated validator is not fixture data. It is a mechanism dependency: the
+// in-process release provider validates manifests with it, and the tree that gets
+// promoted into the runtime cannot import a module out of tests/fixtures/. The
+// schema stays with the corpus; only the compiled output lands in lib/.
+const VALIDATOR_OUT_DIR = join(HERE, '..', 'lib');
 
 const TARGETS = [
   { schema: 'release-manifest-v1.schema.json', output: 'release-manifest-v1.validator.mjs', exportName: 'validateReleaseManifest' },
@@ -54,7 +59,7 @@ let drift = 0;
 
 for (const target of TARGETS) {
   const { code: generated, vendored } = generate(target.schema, target.exportName);
-  const outputPath = join(VALIDATOR_DIR, target.output);
+  const outputPath = join(VALIDATOR_OUT_DIR, target.output);
   if (checkOnly) {
     const existing = readFileSync(outputPath, 'utf8');
     if (existing !== generated) {

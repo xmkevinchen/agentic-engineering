@@ -69,7 +69,7 @@ export function assembleMembers(releaseRoot, { policySourceDir }) {
 
   // runtime/validators-v1.mjs — the pinned Ajv standalone build, plus the fixture
   // import trace. No schema is compiled at runtime.
-  const standalone = readFileSync(join(FIXTURES, 'validator', 'release-manifest-v1.validator.mjs'), 'utf8');
+  const standalone = readFileSync(join(HERE, 'release-manifest-v1.validator.mjs'), 'utf8');
   const validatorModule = [
     "import { appendFileSync } from 'node:fs';",
     "if (process.env.AE_FIXTURE_IMPORT_LOG) appendFileSync(process.env.AE_FIXTURE_IMPORT_LOG, 'import:validators-v1\\n');",
@@ -148,7 +148,7 @@ export function buildRelease({
     inlineModuleSource(readFileSync(join(HERE, 'canonical-json.mjs'), 'utf8'), 'canonical-json.mjs'),
   ].join('\n');
   const validatorSource = inlineModuleSource(
-    readFileSync(join(FIXTURES, 'validator', 'release-manifest-v1.validator.mjs'), 'utf8'),
+    readFileSync(join(HERE, 'release-manifest-v1.validator.mjs'), 'utf8'),
     'release-manifest-v1.validator.mjs',
   );
 

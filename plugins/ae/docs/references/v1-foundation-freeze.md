@@ -39,9 +39,16 @@ plugins/ae/tests/foundation/
 ├── build/                build-only Node toolchain + fixture generators
 └── bin/                  deterministic verifiers
 
+The generated standalone validator is build output, but it lives in `lib/`, not
+with the corpus: the release provider validates manifests with it, and the tree
+slated for promotion into `plugins/ae/runtime/` cannot import a module out of
+`tests/fixtures/`. The schema it compiles stays with the corpus. This is asserted
+— `bin/verify-semantic-blind.mjs` refuses any mechanism module that reaches
+outside `lib/`.
+
 plugins/ae/tests/fixtures/v1-foundation/
 ├── canonical-bytes/      inputs, hand-authored expected bytes, cases.json
-├── validator/            schema, generated standalone validator, pin, cases
+├── validator/            schema, toolchain pin, manifest cases
 ├── tree-snapshot/        frozen entry projections per profile
 ├── policy-bundle/        three plugin policy trees
 └── (release-bootstrap and semantic-blind are built into temp dirs at run time)
@@ -85,6 +92,13 @@ to claim it enumerated a directory it never read. Every producer therefore hands
 out deeply frozen values (`lib/freeze.mjs`; the bridge carries its own copy, since
 a manifest member cannot import `lib/`), and the corpus asserts deep freezing
 directly as well as attempting in-place mutation of each field that matters.
+
+"Deep" has to include functions. Both helpers keyed on `typeof value ===
+'object'`, so a function-valued property — a tree-snapshot profile's `include`
+predicate — was walked straight past: never frozen, and reported as deeply frozen
+anyway. A function's `prototype` is deliberately still not walked, since freezing
+a constructor's prototype changes how its instances behave and that is not this
+helper's business.
 
 ### Two things this does *not* establish
 
@@ -455,10 +469,22 @@ Two things make that claim true rather than merely stated:
   pointing outside the project passes every lexical test and still lands the bytes
   elsewhere. Both `plugin_source` and `project_ref` are refused if they are
   absolute, contain `..`, contain a `.` or empty component, escape their root, or
-  traverse a symlink at *any* existing component. Every destination is validated
-  before any byte is written, so a rejected bundle cannot leave a half-materialized
-  policy set behind. Codes: `ref_escapes_project_root`, `ref_non_canonical`,
-  `ref_symlink_component`, `plugin_source_escapes_plugin_root`.
+  traverse a symlink at *any* existing component. Codes:
+  `ref_escapes_project_root`, `ref_non_canonical`, `ref_symlink_component`,
+  `plugin_source_escapes_plugin_root`.
+- **What is already on disk is preflighted too.** Planned uniqueness and path
+  safety say nothing about a destination that already holds different bytes, and
+  that case used to be discovered only when its own turn came round in the write
+  loop — by which point earlier targets had been created and fsynced, leaving the
+  set half materialized under a rejected bundle. Every planned destination is now
+  classified before the first write. `classifyDestination` is exported because
+  through the public path every call is a preflight, so its rejecting branches
+  would otherwise be reachable only by losing a race.
+
+Only with that last rule does "a rejected bundle cannot leave a half-materialized
+policy set behind" hold. The corpus asserts it on the arrangement that actually
+tests it — the conflict on the *second* planned target, not the first, since a
+bundle that fails on entry one has no earlier write to leave behind.
 
 `fsync` is called on the file and its parent directory. **Crash and power-loss
 durability is not claimed** and remains P0.7/P0.8.
@@ -488,6 +514,24 @@ reads *that root's* manifest to get its digest, while the bootstrap result
 recomputes every member's raw digest. So a bootstrap result cannot be earned for a
 tampered release, and a caller who controls the host record can choose among
 installed releases but cannot describe one that is not there.
+
+**Both bootstrap paths apply one rule.** The launcher cannot import what it
+verifies, so it embeds its own copy of the closed validator — which means the rule
+exists twice, and the two copies diverged. `verifyBootstrap` checked digests and
+cross-binding but never ran closed validation, resolved refs for safety or
+uniqueness, or required the singleton roles. It therefore branded releases the
+launcher refuses — an unknown-field manifest, a `self_digest`, duplicate refs, a
+symlinked ref, a `.` alias, an empty component, a case alias — and each branded
+value sealed as the verified current release. `lib/` is the tree slated for
+promotion into the runtime, so the weaker of the two definitions was the one that
+would have shipped. The provider now applies the same closed rules, minus the
+launcher's comparison against its own embedded digest — that one is the launcher's
+alone, because only the launcher was built for one specific manifest.
+
+Divergence is what the corpus watches, not any single case: every launcher
+rejection fixture puts the same tree through the provider and requires it to
+refuse too. Codes may legitimately differ between the two paths; branding a tree
+the launcher rejects may not.
 
 Executable negatives: a plain attestation, a plain bootstrap result, both plain
 and fully self-consistent, a shallow copy of either genuine value, two genuine
@@ -618,9 +662,24 @@ promises to support. The floor section is scored from its own observed results
 rather than from the table, so the one section whose job is detecting deletion is
 not the one section whose deletion is invisible, asserted by
 `bin/verify-all.mjs` and by the individual verifiers. The floor counts its own
-section too, so deleting it fails as well. Shrinking coverage is now a visible edit
-to a fixture rather than a silent consequence of editing a test — verified by
-re-running the three deletions that used to pass.
+section too, so deleting it fails as well.
+
+A count on its own does not carry that weight. Two things were missing:
+
+- **Padding.** The harness pushed every result onto a plain array, so repeating
+  one no-op `checks.ok` satisfied any section floor and the total — the harness
+  header promised each check has a stable ID and nothing enforced it. Duplicate
+  IDs are now recorded as failures, so a padded section cannot be green.
+- **Netting.** Deleting one floor assertion and adding another nets to zero
+  against a count. `expected_floor_check_ids` pins which floor assertions must
+  have run, so removing any single one names itself in the failure.
+
+**Honest boundary.** The inventory comparison is the last thing the suite runs and
+nothing observes *its* absence. Deleting the outermost check is always invisible
+to the thing being deleted; what this buys is that everything inside it is
+covered. Shrinking coverage below that point is a visible edit to a fixture rather
+than a silent consequence of editing a test — verified by re-running the
+deletions, and the padding, that used to pass.
 
 ### Masked pairs, found mechanically
 
@@ -711,6 +770,33 @@ throughout this package (algorithm identity, policy epochs, snapshot digests), a
 there the serializer is the only thing between a float and a silently wrong
 digest. Seventeen direct cases now cover that path, nested inside arrays and
 objects to prove the whole value is walked.
+
+One reason the harness gap above went unseen: `bin/harness.mjs` carried a literal
+NUL inside a regex character class, so Git classified it as binary and rendered
+every diff of it as `Bin`. The file that decides what a check *is* was the one
+file no diff could show. The class is now written with source-level escapes,
+which is the same regex and a reviewable file.
+
+A sixth kind showed up while closing the provider/launcher divergence, and it is
+the one worth naming: **a guard can be alive and still untested, because an
+earlier rule reaches the same verdict first.** Asserting only that the provider
+refuses what the launcher refuses proved agreement without proving *which* rule
+produced it, so the launcher-is-member, member-length and role-cardinality rules
+could each be deleted with the suite green — the tampered fixtures carried a bad
+digest too, and that fired either way. Two things fix it. Cases that should refuse
+for one specific reason pin the code, not just the refusal. Cases that cannot be
+isolated that way get a fixture built so nothing else *can* fire: the launcher
+listed as a member with its true digest and length, a declared length wrong while
+the digest still matches. Role cardinality needed its own case because the schema
+enumerates roles without saying how many of each a release may carry.
+
+The same lens deleted rather than bound three guards. The provider's ref-escape
+check could not fire, because containment already follows from canonicality; its
+duplicate-ref-string check could not, because two spellings of one ref and one
+spelling twice both resolve to a single inode; and the destination classifier's
+symlink branch could not, because the ref walk inspects every component,
+final one included, before the target list exists. A guard that cannot fire is not
+defense in depth — it reads as coverage while testing nothing.
 
 Not every guard is independently mutable, and the corpus says so rather than
 padding the count: the attestation objects are flat, so shallow and deep freezing

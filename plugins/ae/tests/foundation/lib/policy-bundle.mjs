@@ -161,6 +161,32 @@ export function verifyBundleSources(pluginRoot) {
 // Materialization
 // ---------------------------------------------------------------------------
 
+// What a planned destination already holds. Exported so the rule can be exercised
+// directly: through the public path every call is a preflight, so its rejecting
+// branches would otherwise only be reachable by losing a race.
+//
+// Returns 'absent' or 'identical'; anything else is a typed rejection.
+export function classifyDestination(abs, bytes, ref = abs) {
+  let stat;
+  try {
+    stat = lstatSync(abs);
+  } catch {
+    return 'absent';
+  }
+  // A symlinked destination never reaches here: `resolveProjectRef` walks every
+  // component of the ref, final one included, while the target list is built.
+  if (!stat.isFile()) {
+    fail('integrity_error', `${ref} exists and is not a regular file`, { project_ref: ref });
+  }
+  const existing = readFileSync(abs);
+  if (!existing.equals(bytes)) {
+    fail('integrity_error',
+      `project policy ${ref} already exists with different bytes; an upgrade requires a new versioned path`,
+      { ref, existing_digest: digestBytes(existing), incoming_digest: digestBytes(bytes) });
+  }
+  return 'identical';
+}
+
 // Byte-for-byte, no-clobber. Same path with the same bytes is idempotent; same
 // path with different bytes is an integrity error and never a silent upgrade.
 // An upgrade ships new content at a new versioned path.
@@ -196,6 +222,14 @@ export function materializePolicies({ pluginRoot, projectRoot }) {
     plannedAbs.set(key, ref);
   }
 
+  // Planned uniqueness is not enough. A destination that already holds different
+  // bytes is equally fatal, and it used to be discovered only when its own turn
+  // came round in the write loop below — by which point earlier targets had been
+  // created and fsynced. The set was half materialized and the bundle rejected.
+  for (const { ref, bytes, abs } of targets) {
+    classifyDestination(abs, bytes, ref);
+  }
+
   const written = [];
   const unchanged = [];
   for (const { ref, bytes, abs } of targets) {
@@ -211,13 +245,12 @@ export function materializePolicies({ pluginRoot, projectRoot }) {
       written.push(ref);
       continue;
     }
-    if (result.existing.equals(bytes)) {
-      unchanged.push(ref);
-      continue;
-    }
-    fail('integrity_error',
-      `project policy ${ref} already exists with different bytes; an upgrade requires a new versioned path`,
-      { ref, existing_digest: digestBytes(result.existing), incoming_digest: digestBytes(bytes) });
+    // The destination existed. Preflight already classified every target, so
+    // reaching here with different bytes means they changed underneath us —
+    // re-asking the same question rather than restating the rule, so there is
+    // exactly one place that decides what an existing destination means.
+    classifyDestination(abs, bytes, ref);
+    unchanged.push(ref);
   }
   return {
     written,

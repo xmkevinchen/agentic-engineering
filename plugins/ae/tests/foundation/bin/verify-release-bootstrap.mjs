@@ -92,7 +92,15 @@ function writeHostRecord(work, name, { activeRoot }) {
 
 // A rejection case: build a release (optionally transformed), optionally break it
 // on disk, run the launcher, and require the exact code with an empty trace.
-function expectRejection(checks, id, { work, build, breakIt, expectedCode, expectTrace = [] }) {
+//
+// The same tree is then put through the in-process provider. The two paths are
+// separate implementations of one rule — the launcher cannot import what it
+// verifies, so it embeds its own copy — and they diverged once already: the
+// provider branded an unknown-field manifest the launcher refused, and the
+// branded value sealed as the verified current release. Codes may legitimately
+// differ between the two; branding a tree the launcher rejects may not.
+function expectRejection(checks, id,
+  { work, build, breakIt, expectedCode, expectTrace = [], providerCode = null }) {
   const releaseRoot = join(work, `release-${id}`);
   let built;
   try {
@@ -107,6 +115,24 @@ function expectRejection(checks, id, { work, build, breakIt, expectedCode, expec
   checks.equal(`${id}/exit-nonzero`, result.status !== 0, true);
   checks.equal(`${id}/code`, result.parsed?.error, expectedCode);
   checks.equal(`${id}/trace`, result.trace.join(','), expectTrace.join(','));
+
+  let providerRefused;
+  let observedProviderCode = null;
+  try {
+    verifyBootstrap({ releaseRoot });
+    providerRefused = false;
+  } catch (error) {
+    providerRefused = true;
+    observedProviderCode = error.code ?? null;
+  }
+  checks.ok(`${id}/provider-agrees`, providerRefused,
+    'the launcher rejected this release and the in-process provider branded it');
+  // Agreement alone does not say which rule fired, so a rule that is masked by a
+  // later one can be deleted while the suite stays green. Where the provider
+  // should refuse for one specific reason, that reason is pinned.
+  if (providerCode) {
+    checks.equal(`${id}/provider-code`, observedProviderCode, providerCode);
+  }
 }
 
 export async function run() {
@@ -206,6 +232,7 @@ export async function run() {
     // release — the launcher embeds the digest of the bad manifest, so the
     // rejection cannot be explained away as a digest mismatch.
     expectRejection(checks, 'self-digest', {
+      providerCode: 'manifest_has_self_digest',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -216,6 +243,7 @@ export async function run() {
     });
 
     expectRejection(checks, 'unknown-field', {
+      providerCode: 'schema_invalid',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -246,6 +274,7 @@ export async function run() {
     // `plugin_ref` pattern refuses it first. Both layers are asserted — the
     // end-to-end code here, and the launcher's own guard directly below.
     expectRejection(checks, 'ref-absolute', {
+      providerCode: 'schema_invalid',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -301,6 +330,7 @@ export async function run() {
       'member_ref_escapes_root');
 
     expectRejection(checks, 'ref-dotdot', {
+      providerCode: 'member_ref_non_canonical',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -314,6 +344,7 @@ export async function run() {
     });
 
     expectRejection(checks, 'ref-duplicate', {
+      providerCode: 'member_ref_duplicate',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -324,6 +355,7 @@ export async function run() {
     });
 
     expectRejection(checks, 'ref-symlink', {
+      providerCode: 'member_ref_symlink',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -355,6 +387,70 @@ export async function run() {
       }),
       expectedCode: 'launcher_is_member',
     });
+
+    // ---- provider-side rules with nothing else able to fire ---------------
+    //
+    // The agreement check above proves the provider refuses what the launcher
+    // refuses, but not *why*: a fixture that also carries a bad digest is
+    // refused either way, so an individual rule can be deleted while the
+    // agreement still holds. These cases leave exactly one rule able to fire.
+    const providerOnly = (id, transform) => {
+      const releaseRoot = join(work, `provider-${id}`);
+      buildRelease({ releaseRoot, policySourceDir: POLICY_SOURCE, transformManifest: transform });
+      return releaseRoot;
+    };
+    const fileDigest = (abs) => `sha256:${createHash('sha256').update(readFileSync(abs)).digest('hex')}`;
+
+    // The launcher listed as a member, with its true digest and length, so the
+    // member-integrity checks pass and only `launcher_is_member` is left.
+    const launcherMemberRoot = join(work, 'provider-launcher-as-member');
+    {
+      const staged = buildRelease({
+        releaseRoot: `${launcherMemberRoot}-stage`, policySourceDir: POLICY_SOURCE,
+      });
+      const launcherBytes = readFileSync(staged.launcherPath);
+      buildRelease({
+        releaseRoot: launcherMemberRoot,
+        policySourceDir: POLICY_SOURCE,
+        transformManifest: (m) => ({
+          ...m,
+          members: [...m.members, {
+            role: 'schema',
+            ref: 'runtime/ae-gate.mjs',
+            raw_digest: `sha256:${createHash('sha256').update(launcherBytes).digest('hex')}`,
+            length: launcherBytes.length,
+          }],
+        }),
+      });
+    }
+    checks.rejects('provider/launcher-as-member-with-valid-digest',
+      () => verifyBootstrap({ releaseRoot: launcherMemberRoot }), 'launcher_is_member');
+
+    // Declared length wrong while the digest still matches the real bytes, so
+    // only the length rule can fire.
+    const lengthRoot = providerOnly('length', (m) => ({
+      ...m,
+      members: m.members.map((x, i) => (i === 0 ? { ...x, length: x.length + 1 } : x)),
+    }));
+    checks.rejects('provider/member-length-mismatch',
+      () => verifyBootstrap({ releaseRoot: lengthRoot }), 'member_length_mismatch');
+
+    // Role cardinality is not in the schema — it enumerates roles but says
+    // nothing about how many of each a release may carry.
+    const twoCoresRoot = providerOnly('two-cores', (m) => ({
+      ...m,
+      members: m.members.map((x) => (x.role === 'standalone_validator'
+        ? { ...x, role: 'runtime_core' } : x)),
+    }));
+    checks.rejects('provider/duplicate-singleton-role',
+      () => verifyBootstrap({ releaseRoot: twoCoresRoot }), 'schema_invalid');
+
+    const noCoreRoot = providerOnly('no-core', (m) => ({
+      ...m,
+      members: m.members.map((x) => (x.role === 'runtime_core' ? { ...x, role: 'schema' } : x)),
+    }));
+    checks.rejects('provider/missing-singleton-role',
+      () => verifyBootstrap({ releaseRoot: noCoreRoot }), 'schema_invalid');
 
     // ---- direct core invocation ------------------------------------------
     const coreRun = launch(join(rootA, 'runtime', 'ae-gate-core.mjs'), { work, hostRecord: hostA });
@@ -415,6 +511,7 @@ export async function run() {
     // A `.` component makes one file addressable under two ref strings, which
     // string-level duplicate detection cannot see.
     expectRejection(checks, 'ref-dot-alias', {
+      providerCode: 'member_ref_non_canonical',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -430,6 +527,7 @@ export async function run() {
       expectedCode: 'member_ref_non_canonical',
     });
     expectRejection(checks, 'ref-empty-component', {
+      providerCode: 'schema_invalid',
       work,
       build: (releaseRoot) => buildRelease({
         releaseRoot,
@@ -461,6 +559,7 @@ export async function run() {
       checks.skip('ref-case-alias', 'filesystem is case-sensitive; alias cannot be constructed here');
     } else {
       expectRejection(checks, 'ref-case-alias', {
+      providerCode: 'member_ref_duplicate',
         work,
         build: (releaseRoot) => buildRelease({
           releaseRoot,
