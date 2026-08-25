@@ -6,7 +6,7 @@
 >
 > **AE 1.0 baseline:** **RELEASE-BLOCKER:** bind the exact accepted release digest
 >
-> **External research snapshot:** 2026-08-23
+> **External research snapshot:** 2026-08-24
 
 Nothing in this document is an AE 1.0 requirement, release gate, waiver, or
 product promise. A direction enters a product version only through a separate
@@ -151,6 +151,63 @@ The dependency schedule is deliberately not a serial rewrite:
    R+06 state, and provider qualification in parallel; then
 3. converge first on a read-only slice, next on candidate writer/judge, and only
    then on integrator, applied-tree re-proof, and lifecycle Finalizer.
+
+### 3.2 Native teams first; cross-family bridge only for the remaining gap
+
+The desired controller shape is already available for a same-family Claude
+Code deployment: Agent Teams supplies one lead, independent teammate Sessions,
+a shared task list, and direct teammate messaging; cross-session messaging also
+lets independently launched Claude Sessions discover and wake one another.
+Codex likewise supplies separate subagent threads with configurable model,
+effort, and role instructions under one controller thread. These host features
+solve session topology and context isolation. They do **not** define AE's
+Contract, Evidence, Gate, amendment, human approval, or completion semantics.
+
+Therefore the default Claude-Code-only AE architecture is:
+
+```text
+AE governance and artifact handoffs
+        +
+Claude Code native Agent Teams / cross-session facilities
+```
+
+AE must make the semantic handoff explicit on top of that host runtime: the
+controller binds the accepted Contract and role envelope; a worker returns
+base-bound product and raw Evidence; a fresh reviewer returns an independently
+admissible result; remediation creates a new bounded attempt; and only the AE
+Gate plus required human authority permits completion. Host messages and task
+status remain coordination facts.
+
+The unresolved product gap is narrower: **cross-family native-session
+coordination**. A native Codex Session and a native Claude Code Session do not
+currently join one symmetric host team in which either runtime can be the
+controller while both retain their own frontend, skills, hooks, permissions,
+and lifecycle. A bridge such as the `agents-peer` spike may address that gap,
+but it is a Coordination Plane adapter, not a new AE runtime or truth plane.
+
+| Component | Owns | Must not own |
+| --- | --- | --- |
+| Native Agent Team/subagents | same-host spawn, context isolation, host messaging and task UX | AE proof meaning or durable completion |
+| `agents-peer`-class bridge | native cross-family pairing, identity, addressing, delivery, wake/lifecycle limits | Plan/Work/Review semantics, Evidence admission, Gate, signing |
+| AE | Contract/Strategy separation, role and artifact handoff, canonical Evidence, Gate and Finalizer | private host scheduling or transport state |
+| Loom or another controller | topology selection, routing, retries, operator projection | a second Contract/Ledger/Gate or host-specific meaning of pass |
+
+This narrows the buy-versus-build rule:
+
+1. use qualified native team facilities when every required seat is available
+   in one host family;
+2. introduce a cross-family bridge only when Contract/risk requires a seat that
+   the native team cannot supply;
+3. keep same-family bridge modes only as conformance/failure-isolation arms,
+   not as justification to duplicate host facilities; and
+4. treat Pi and DeepSeek Harness as comparison or future adapter experiments,
+   not v1+ dependencies, until an operator trial demonstrates value and a
+   separate Contract admits one.
+
+The first `agents-peer` experiment remains useful, but its success criterion is
+now explicitly limited: prove the missing native Codex/Claude bridge and its
+honest lifecycle boundary. It must not grow into a generic task system before
+that live cross-family run is evidenced.
 
 ## 4. Foundation candidates
 
