@@ -94,14 +94,40 @@ function describe(buf) {
     : JSON.stringify(text);
 }
 
-export function report(sections, { verbose = false } = {}) {
+// A check cannot observe its own deletion, so something outside the sections has
+// to hold the inventory. That is here.
+//
+// `expectedSections` names the sections that must reach this report: a section
+// that is never handed over contributes no results and no failures, which is
+// indistinguishable from a section with nothing to say — the coverage floor's own
+// failures could be omitted entirely and the run still exited zero.
+//
+// `requiredIds` names checks that must appear within a section. The floor's own
+// assertions are the ones that need it: they are what makes shrinking coverage
+// visible, so their disappearance cannot be the thing nobody looks at.
+//
+// `write` is injectable so the inventory rules can be exercised without their
+// output landing in the suite's.
+export function report(sections, {
+  verbose = false, expectedSections = [], requiredIds = {}, write = (t) => process.stdout.write(t),
+} = {}) {
+  const present = new Set(sections.map((s) => s.section));
   const all = sections.flatMap((s) => s.results);
+  for (const name of expectedSections.filter((n) => !present.has(n))) {
+    all.push({ id: `report/section-missing/${name}`, ok: false, detail: 'section never reached the report' });
+  }
+  for (const [section, ids] of Object.entries(requiredIds)) {
+    const seen = new Set(sections.filter((s) => s.section === section).flatMap((s) => s.results.map((r) => r.id)));
+    for (const id of ids.filter((i) => !seen.has(i))) {
+      all.push({ id: `report/check-missing/${id}`, ok: false, detail: 'required check did not run' });
+    }
+  }
   const failures = all.filter((r) => !r.ok);
   const skipped = all.filter((r) => r.skipped);
   for (const result of all) {
     if (verbose || !result.ok || result.skipped) {
       const label = result.skipped ? 'SKIP' : (result.ok ? 'ok  ' : 'FAIL');
-      process.stdout.write(`${label} ${result.id}${result.detail ? ` — ${result.detail}` : ''}\n`);
+      write(`${label} ${result.id}${result.detail ? ` — ${result.detail}` : ''}\n`);
     }
   }
   const bySection = new Map();
@@ -115,10 +141,10 @@ export function report(sections, { verbose = false } = {}) {
   }
   for (const [section, counts] of bySection) {
     const skipNote = counts.skip ? `, ${counts.skip} skipped` : '';
-    process.stdout.write(`[${section}] ${counts.pass} passed, ${counts.fail} failed${skipNote}\n`);
+    write(`[${section}] ${counts.pass} passed, ${counts.fail} failed${skipNote}\n`);
   }
   const ran = all.length - skipped.length;
   const skipNote = skipped.length ? ` (${skipped.length} skipped)` : '';
-  process.stdout.write(`[total] ${ran - failures.length}/${ran} checks passed${skipNote}\n`);
+  write(`[total] ${ran - failures.length}/${ran} checks passed${skipNote}\n`);
   return failures.length;
 }

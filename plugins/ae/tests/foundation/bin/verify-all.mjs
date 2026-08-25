@@ -90,21 +90,33 @@ floorChecks.ok('section/coverage-floor',
   ownChecks >= FLOOR.min_checks_per_section['coverage-floor'],
   `${ownChecks} floor checks ran, floor is ${FLOOR.min_checks_per_section['coverage-floor']}`);
 
-// A count is not an inventory. Counting alone, deleting one floor check and adding
-// an unrelated one nets to zero, and the harness only guarantees the IDs are
-// unique — not that they are the intended ones. The expected set is checked in, so
-// removing any single floor assertion names itself in the failure.
-//
-// Honest boundary: this comparison is the last thing that runs, and nothing
-// observes ITS absence. Deleting the outermost check is always invisible to the
-// thing being deleted; what this buys is that everything inside it is covered.
-const expectedFloorIds = [...FLOOR.expected_floor_check_ids].sort();
-const observedFloorIds = floorChecks.results.map((r) => r.id).sort();
-floorChecks.ok('floor-inventory',
-  expectedFloorIds.length === observedFloorIds.length
-    && expectedFloorIds.every((id, i) => id === observedFloorIds[i]),
-  `expected ${expectedFloorIds.join(',')}; observed ${observedFloorIds.join(',')}`);
+// A count is not an inventory: deleting one floor check and adding an unrelated
+// one nets to zero, and the harness guarantees only that IDs are unique, not that
+// they are the intended ones. The expected set is checked in and enforced by
+// `report`, not from inside this section — a check cannot observe its own
+// deletion, so the observer has to sit outside the thing it observes.
 
 sections.push(floorChecks);
 
-process.exit(report(sections, { verbose: process.argv.includes('--verbose') }) === 0 ? 0 : 1);
+// The inventory rules are themselves guards, so they are exercised rather than
+// trusted: a section withheld and a required check withheld must both be scored
+// as failures. The sink is swallowed so the probe's output stays out of the run's.
+const swallow = () => {};
+const probeSection = new Checks('probe-report');
+probeSection.ok('present', true);
+floorChecks.ok('report-scores-a-withheld-section',
+  report([], { expectedSections: ['probe-report'], write: swallow }) === 1,
+  'report accepted a suite with an expected section missing');
+floorChecks.ok('report-scores-a-withheld-check',
+  report([probeSection], {
+    expectedSections: ['probe-report'],
+    requiredIds: { 'probe-report': ['probe-report/present', 'probe-report/absent'] },
+    write: swallow,
+  }) === 1,
+  'report accepted a section with a required check missing');
+
+process.exit(report(sections, {
+  verbose: process.argv.includes('--verbose'),
+  expectedSections: FLOOR.expected_sections,
+  requiredIds: { 'coverage-floor': FLOOR.expected_floor_check_ids },
+}) === 0 ? 0 : 1);

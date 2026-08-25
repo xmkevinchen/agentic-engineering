@@ -15,7 +15,9 @@
 // carry an immutable passed result bound to OS/filesystem/mount selectors, and
 // earning that is P0.8. Nothing in this package may read it as qualified.
 
-import { closeSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, writeSync } from 'node:fs';
+import {
+  closeSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync,
+} from 'node:fs';
 import { dirname } from 'node:path';
 
 export const FIXTURE_PROVIDER = Object.freeze({
@@ -78,9 +80,16 @@ export function atomicFileNoReplace({ path, bytes, mode = 0o644, write = writeSy
       written += n;
     }
     fsyncSync(fd);
-  } finally {
+  } catch (error) {
+    // O_CREAT|O_EXCL created the destination before any byte was written, so a
+    // failed write leaves an empty or truncated file at a path that is supposed
+    // to hold exact bytes. Remove it. This is not transactional and does not
+    // survive a crash — it removes the file this call created, nothing more.
     closeSync(fd);
+    try { unlinkSync(path); } catch { /* the caller's error is the one that matters */ }
+    throw error;
   }
+  closeSync(fd);
   // The parent directory entry has to reach disk too, or the file can survive as
   // an unreferenced inode. Durability across a real crash is not claimed — that
   // is P0.7/P0.8.

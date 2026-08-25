@@ -17,7 +17,7 @@ import { observeActiveRoot, verifyBootstrap } from '../lib/active-release-provid
 import { buildRelease } from '../lib/release-build.mjs';
 import { canonicalize, canonicalDigest, digestBytes } from '../lib/canonical-json.mjs';
 import {
-  bundleProjectRef, candidateEpochStatus, materializePolicies, policyEpoch,
+  bundleProjectRef, candidateEpochStatus, classifyDestination, materializePolicies, policyEpoch,
   replayFromLocalSnapshots, resolveInside, selectActivationBaseBundle, verifyBundleSources,
 } from '../lib/policy-bundle.mjs';
 import { NoReplaceError, atomicFileNoReplace } from '../lib/fs-noreplace.mjs';
@@ -146,6 +146,28 @@ export function run() {
     checks.ok('materialize/symlink-rejection-created-nothing',
       !existsSync(join(symlinkProject, '.ae/policies/fresh-v1.json')),
       'a bundle rejected for a symlinked destination created its earlier target first');
+
+    // `classifyDestination` is exported, so its rejections are a public surface
+    // and each one is typed on its own terms. A direct caller has no component
+    // walk in front of it, which is exactly why the branches are asserted here
+    // rather than assumed unreachable.
+    const classifyDir = join(work, 'classify');
+    mkdirSync(join(classifyDir, 'a-directory'), { recursive: true });
+    symlinkSync(join(work, 'nowhere'), join(classifyDir, 'a-symlink'));
+    writeFileSync(join(classifyDir, 'a-file'), 'same');
+    checks.rejects('classify/symlink-is-typed-as-a-symlink',
+      () => classifyDestination(join(classifyDir, 'a-symlink'), Buffer.from('same')),
+      'ref_symlink_component');
+    checks.rejects('classify/directory-is-not-a-regular-file',
+      () => classifyDestination(join(classifyDir, 'a-directory'), Buffer.from('same')),
+      'integrity_error');
+    checks.rejects('classify/existing-different-bytes',
+      () => classifyDestination(join(classifyDir, 'a-file'), Buffer.from('other')),
+      'integrity_error');
+    checks.equal('classify/absent-destination',
+      classifyDestination(join(classifyDir, 'nothing-here'), Buffer.from('x')), 'absent');
+    checks.equal('classify/identical-destination',
+      classifyDestination(join(classifyDir, 'a-file'), Buffer.from('same')), 'identical');
 
     // ---- bundle source integrity -----------------------------------------
     const tampered = join(work, 'plugin-tampered');
@@ -418,6 +440,13 @@ export function run() {
       stalledCode = error instanceof NoReplaceError ? error.code : error.name;
     }
     checks.equal('noreplace/stalled-write-fails', stalledCode, 'short_write');
+    // O_CREAT|O_EXCL makes the destination before any byte is written, so failing
+    // the write without removing it leaves an empty file where exact bytes are
+    // supposed to be — and a retry would then read it as an integrity conflict
+    // against content that was never written.
+    checks.ok('noreplace/stalled-write-leaves-no-file',
+      !existsSync(join(writeProbe, 'stalled.json')),
+      'a failed write left its partially created destination behind');
 
     // ---- base bundle selection for a NEW candidate ------------------------
     //

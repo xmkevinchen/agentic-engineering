@@ -481,10 +481,21 @@ Two things make that claim true rather than merely stated:
   through the public path every call is a preflight, so its rejecting branches
   would otherwise be reachable only by losing a race.
 
-Only with that last rule does "a rejected bundle cannot leave a half-materialized
-policy set behind" hold. The corpus asserts it on the arrangement that actually
-tests it — the conflict on the *second* planned target, not the first, since a
-bundle that fails on entry one has no earlier write to leave behind.
+Only with that last rule does a bundle rejected **for a reason preflight can see**
+leave nothing behind. The corpus asserts it on the arrangement that actually tests
+it — the conflict on the *second* planned target, not the first, since a bundle
+that fails on entry one has no earlier write to leave behind.
+
+**That is the whole of the claim.** Materialization is not transactional. Preflight
+answers what every destination already holds; it cannot predict a write that fails
+at the syscall. When one does, earlier targets are already created and fsynced and
+nothing rolls them back. What *is* handled is narrower and worth stating exactly:
+`O_CREAT|O_EXCL` makes the destination before any byte reaches it, so a failed
+write would otherwise leave an empty or truncated file at a path that is supposed
+to hold exact bytes — and a later retry would read that as an integrity conflict
+against content that was never written. The file this call created is removed on
+failure. That is not a rollback and it does not survive a crash; real durability
+is P0.7/P0.8.
 
 `fsync` is called on the file and its parent directory. **Crash and power-loss
 durability is not claimed** and remains P0.7/P0.8.
@@ -672,14 +683,31 @@ A count on its own does not carry that weight. Two things were missing:
   IDs are now recorded as failures, so a padded section cannot be green.
 - **Netting.** Deleting one floor assertion and adding another nets to zero
   against a count. `expected_floor_check_ids` pins which floor assertions must
-  have run, so removing any single one names itself in the failure.
+  have run, so removing any single one names itself in the failure. It is
+  enforced from `report`, not from inside the floor section: a check cannot
+  observe its own deletion, so the observer has to sit outside the thing it
+  observes.
 
-**Honest boundary.** The inventory comparison is the last thing the suite runs and
-nothing observes *its* absence. Deleting the outermost check is always invisible
-to the thing being deleted; what this buys is that everything inside it is
-covered. Shrinking coverage below that point is a visible edit to a fixture rather
-than a silent consequence of editing a test — verified by re-running the
-deletions, and the padding, that used to pass.
+- **Omission.** Neither of those helps if the floor section never reaches the
+  report. A section that is not handed over contributes no results and no
+  failures, which is indistinguishable from a section with nothing to say: with
+  the hand-over removed, a deliberately failing floor check left the run green and
+  exiting zero. `report` now takes the expected section inventory and records a
+  failure for any section that did not arrive.
+
+Both inventories live in `report`, and both are exercised rather than trusted: a
+withheld section and a withheld required check must each be scored as a failure,
+asserted with the output sink swallowed so the probe stays out of the run's own
+report.
+
+**Honest boundary.** Something still runs last, and that is `report` itself. What
+the arrangement buys is that the last thing is now *one* place, reading its
+expectations from a fixture rather than from a list beside it — so dropping a
+section from the suite and dropping it from the expectation are two edits in two
+files, one of which is a golden fixture. Everything inside that boundary is
+covered: shrinking coverage is a visible edit rather than a silent consequence of
+editing a test, verified by re-running the deletions, the padding, and the
+omission that used to pass.
 
 ### Masked pairs, found mechanically
 

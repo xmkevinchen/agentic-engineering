@@ -173,8 +173,16 @@ export function classifyDestination(abs, bytes, ref = abs) {
   } catch {
     return 'absent';
   }
-  // A symlinked destination never reaches here: `resolveProjectRef` walks every
-  // component of the ref, final one included, while the target list is built.
+  // Through `materializePolicies` this cannot fire — `resolveProjectRef` walks
+  // every component of the ref, final one included, while the target list is
+  // built. It is kept and typed because this function is exported: a direct
+  // caller has no such walk in front of it, and answering "what does this
+  // destination already hold" with a generic integrity error would be wrong.
+  if (stat.isSymbolicLink()) {
+    fail('ref_symlink_component',
+      `${ref} exists as a symlink; policy snapshots are never written through links`,
+      { project_ref: ref });
+  }
   if (!stat.isFile()) {
     fail('integrity_error', `${ref} exists and is not a regular file`, { project_ref: ref });
   }
