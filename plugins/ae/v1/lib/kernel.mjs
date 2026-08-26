@@ -15,13 +15,11 @@
 
 import { execFileSync } from 'node:child_process';
 import {
-  appendFileSync, existsSync, openSync, closeSync, realpathSync, unlinkSync,
+  appendFileSync, existsSync, openSync, closeSync, readFileSync, realpathSync, unlinkSync,
 } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
-import { encodeNdjson, parseNdjson } from './canonical-json.mjs';
+import { basename, dirname, join, resolve } from 'node:path';
+import { encodeNdjson, parseNdjson, parseStrict, digestBytes } from './canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { KINDS } from './ledger.mjs';
 import { reduceAll, STATUS } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
@@ -30,7 +28,6 @@ import { dispatchRecord, requestedFamily } from './family.mjs';
 import { assertInsideLocation, assertNoSymlinkComponents } from './write-path.mjs';
 import { atomicFileNoReplace } from './fs-noreplace.mjs';
 import { checkVerifiableSources, formationProblems } from './formation.mjs';
-import { parseStrict, digestBytes } from './canonical-json.mjs';
 import { validate } from './schema.mjs';
 import {
   ACCEPTANCE, ASSIGNMENT, CONTRACT, EVIDENCE_PACKAGE, checkContractRelations,
@@ -180,17 +177,27 @@ class Ledger {
     // Validated with the position it will occupy if nothing else appends first.
     // The stored line carries no `seq`: it would be a second source for a fact the
     // line's position already states, and the two could disagree.
+    // `at` is when the record landed, observed here rather than supplied — the
+    // same surface that observes a command's exit status. It is stored, because
+    // unlike a position it cannot be derived from the file.
+    //
+    // Cost was measured by subtracting positions, which is an odometer that
+    // advances whenever anything moves: unrecorded drafting weighed nothing and
+    // ten unrelated records weighed ten, enough to reverse a retreat decision.
+    // Nothing the Gate reads consults this; it is a fact about the world, for the
+    // one question that asks about the world.
+    const stamped = { ...record, at: Date.now() };
     const seq = this.seq;
-    const problems = validate(schema, { ...record, seq });
+    const problems = validate(schema, { ...stamped, seq });
     if (problems.length > 0) {
       fail('format_open', `record does not match its closed shape: ${record.kind}`, { problems });
     }
     // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
     // canonical spelling and `parseNdjson` will refuse anything else later.
-    appendFileSync(this.path, encodeNdjson([record]));
+    appendFileSync(this.path, encodeNdjson([stamped]));
     // Nobody else can have appended: the lock is held. The position read before
     // the write is the position the record has.
-    return { ...record, seq };
+    return { ...stamped, seq };
   }
 
   // Replay is a check, not a re-enactment: the same records must reconstruct the
@@ -303,6 +310,7 @@ class Ledger {
       evidence_package: 'packages',
       artifact_recorded: 'artifacts',
       gate_result: 'gateResults',
+      gate_completed: 'gateResults',
       command_result: 'commandResults',
       capability_unavailable: 'unavailable',
       dispatch_attempt: 'dispatches',
@@ -1154,7 +1162,8 @@ export class Kernel {
       'attempt', (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
     );
     const [verdict] = only(
-      'Gate verdict', (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
+      'completed Gate evaluation',
+      (r) => r.kind === 'gate_completed' && r.lineage === lineage && r.run === run,
     );
 
     // One set of facts per run, refused here and at every reader. Two sets meant
@@ -1167,7 +1176,13 @@ export class Kernel {
     if (existing.length > 0) {
       fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
     }
-    if (!(approval.seq > formationFrom.seq) || !(verdict.seq > attempt.seq)) {
+    // Elapsed time between the boundaries, observed when each record landed.
+    //
+    // Subtracting positions measured protocol traffic: unrecorded drafting
+    // weighed nothing, and ten unrelated records weighed ten — enough to reverse
+    // a retreat decision without anything about the run having changed. Two
+    // durations are quantities of the same kind whatever else the log is doing.
+    if (!(approval.at >= formationFrom.at) || !(verdict.seq > attempt.seq)) {
       fail('cost_incomparable', 'a boundary does not enclose an interval', { lineage, run });
     }
 
@@ -1175,8 +1190,8 @@ export class Kernel {
       lineage, run,
       formation_from: formationFrom.seq, formation_to: approval.seq,
       change_from: attempt.seq, change_to: verdict.seq,
-      formation_elapsed: approval.seq - formationFrom.seq,
-      change_elapsed: verdict.seq - attempt.seq,
+      formation_elapsed: approval.at - formationFrom.at,
+      change_elapsed: verdict.at - attempt.at,
       trace_outcome: traceOutcome,
       went_wrong: wentWrong,
     };
@@ -1380,6 +1395,12 @@ export class Kernel {
         ...(v.selected ? { selected: v.selected } : {}),
       });
     }
+    // The reduction is over. One event for the operation, because the per-
+    // obligation verdicts are its components and no component marks its end.
+    this.#ledger.append({
+      kind: 'gate_completed', lineage, run, contract_revision: bound,
+      obligations: contract.obligations,
+    });
     return result;
   }
 
@@ -1617,5 +1638,3 @@ export class Kernel {
   }
 
 }
-
-export { STATUS };

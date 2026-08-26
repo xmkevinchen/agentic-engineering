@@ -206,6 +206,33 @@ export function familyTests() {
     eq('under the revision that asked for it', out.approvedRevision, 'r2');
   });
 
+  group('AC-7 · two dispatches for one obligation resolve to neither', () => {
+    // The same rule as the evidence resolvers: a name answering to two records
+    // answers to neither. Nothing exercised it for dispatches, so removing that
+    // refusal left the suite green.
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1d-')), 'log.ndjson'), {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const c = asObject(contractDoc(cross));
+    k.openFormation({ lineage: 'L', actor: OWNER });
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+      actor: OWNER, rendered: RENDERED(c.bytes),
+    });
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
+    });
+    const at = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
+    k.recordUnavailable({ lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt });
+    refuses('two dispatches under one attempt and obligation', 'binding_unresolved',
+      () => k.status({ lineage: 'L', run: 'run1' }));
+  });
+
   group('AC-7 · the choice answers the event the Gate reduced', () => {
     // An inadmissible unavailable record on the first attempt, an admissible one
     // on a retry. Taking the first record in the run meant the decision answered

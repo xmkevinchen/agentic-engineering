@@ -188,6 +188,21 @@ plant kernel.mjs "      const found = records.filter((r) => r.kind === kind && r
   "      const found = records.filter((r) => r.kind === kind && r[field] === value).slice(0, 1);"
 probe RED "two records under one name"; revert kernel.mjs
 
+# Round 16's findings: cost is time, and an operation has its own event.
+plant kernel.mjs "      formation_elapsed: approval.at - formationFrom.at," \
+  "      formation_elapsed: approval.seq - formationFrom.seq,"
+probe RED "cost measured in log traffic"; revert kernel.mjs
+
+plant kernel.mjs "      (r) => r.kind === 'gate_completed' && r.lineage === lineage && r.run === run," \
+  "      (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,"
+probe RED "the interval ends at a component"; revert kernel.mjs
+
+plant kernel.mjs "        if (found.length > 1) {
+          fail('binding_unresolved', 'two dispatches answer to one attempt and obligation', {" \
+  "        if (false) {
+          fail('binding_unresolved', 'x', {"
+probe RED "two dispatches under one name"; revert kernel.mjs
+
 # Round 15's findings: exact event identity, and one of a thing per run.
 plant kernel.mjs "      ? this.records()[entry[1].selected]" \
   "      ? this.records().find((r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run)"
@@ -196,7 +211,7 @@ probe RED "a choice answering a lookalike event"; revert kernel.mjs
 plant kernel.mjs "    if (existing.length > 0) {" "    if (false) {"
 probe RED "a run records its facts twice"; revert kernel.mjs
 
-plant kernel.mjs "    if (!(approval.seq > formationFrom.seq) || !(verdict.seq > attempt.seq)) {" \
+plant kernel.mjs "    if (!(approval.at >= formationFrom.at) || !(verdict.seq > attempt.seq)) {" \
   "    if (false) {"
 probe RED "an interval that runs backwards"; revert kernel.mjs
 
@@ -284,11 +299,6 @@ probe RED "a sign-off before the Gate reported"; revert kernel.mjs
 
 plant kernel.mjs "    if (issued.length > 1) {" "    if (false) {"
 probe RED "a run with two Assignments proceeds"; revert kernel.mjs
-
-# Not planted: the write's re-reduction. `verdictsNow` is exercised directly, but
-# its call site inside `complete` only matters when another process advances the
-# log between the reduction and the write, and there is no seam to schedule
-# against. A mutation that cannot turn red would say the guard is covered.
 
 # AC-13: a log that replays into a different verdict cannot account for its own
 # Acceptance. The fresh-process check is what catches this; nothing in-process can.

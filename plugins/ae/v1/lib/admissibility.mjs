@@ -161,8 +161,6 @@ export function admissibility({
     // A recorded set that omits an input the observation used is not a smaller
     // true statement; it is a false one, because staleness is then computed over
     // the wrong set.
-    // An absent `inputs_used` is not "used nothing" — it is a runner that did not
-    // report, and assuming completeness from silence is the vacuity this refuses.
     if (!Array.isArray(result.inputs_used)) return 'material_input_incomplete';
     // Against the Contract's list, not against the producer's. Comparing the
     // package with the runner's record compared two statements by the same party:

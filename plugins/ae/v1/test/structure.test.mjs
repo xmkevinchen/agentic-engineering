@@ -64,8 +64,15 @@ export function structureTests() {
     // Gate, no sign-off and no record.
     const kernel = files.find((f) => f.name === 'kernel.mjs').text;
     ok('the completion write is private', /#commitCompletion\(/.test(kernel));
-    const exported = [...kernel.matchAll(/^export (?:function|class) (\w+)/gm)].map((m) => m[1]);
-    eq('the Kernel module exports only the Kernel', exported.join(','), 'Kernel');
+    // Every export, including a re-export list. The regex read declarations only,
+    // so `export { STATUS }` was invisible and the assertion was false.
+    const declared = [...kernel.matchAll(/^export (?:function|class|const) (\w+)/gm)]
+      .map((m) => m[1]);
+    const listed = [...kernel.matchAll(/^export \{([^}]*)\};/gm)]
+      .flatMap((m) => m[1].split(',').map((n) => n.trim().split(/\s+as\s+/).pop()))
+      .filter(Boolean);
+    eq('the Kernel module exports only the Kernel',
+      [...declared, ...listed].join(','), 'Kernel');
   });
 
   group('AC-5 · no in-process marker stands in for external origin', () => {

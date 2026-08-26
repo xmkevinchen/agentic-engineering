@@ -8,6 +8,9 @@
 const id = { type: 'string', minLength: 1 };
 const text = { type: 'string', minLength: 1 };
 const seq = { type: 'integer', minimum: 0 };
+// When the record landed, observed by the writer. Every kind carries it, so the
+// requirement is stated once here and added to each shape below.
+const at = { type: 'integer', minimum: 0 };
 const digest = { type: 'digest' };
 
 const identity = {
@@ -42,7 +45,7 @@ const bytes = { type: 'string', minLength: 1 };
 const attempt = { type: 'integer', minimum: 0 };
 
 const approvalBase = {
-  lineage: id, revision: id, identity, bytes, decision: count, seq,
+  lineage: id, revision: id, identity, bytes, decision: count, seq, at,
   kind: { type: 'string', minLength: 1 },
 };
 
@@ -51,12 +54,12 @@ export const RECORDS = Object.freeze({
   // closed schema that refuses empty values cannot express "absent" as a value.
   contract_approved_genesis: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'revision', 'identity', 'bytes', 'decision', 'seq'],
+    required: ['kind', 'lineage', 'revision', 'identity', 'bytes', 'decision', 'seq', 'at'],
     properties: { ...approvalBase },
   },
   contract_approved_revision: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'revision', 'identity', 'bytes', 'predecessor', 'decision', 'seq'],
+    required: ['kind', 'lineage', 'revision', 'identity', 'bytes', 'predecessor', 'decision', 'seq', 'at'],
     properties: { ...approvalBase, predecessor: digest },
   },
   // The Assignment's own bytes, not a copy of its fields. Restating boundary and
@@ -64,26 +67,26 @@ export const RECORDS = Object.freeze({
   // identity of its own — which AC-3 requires of all four.
   assignment_issued: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'id', 'contract_revision', 'actor', 'bytes', 'identity', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'run', 'id', 'contract_revision', 'actor', 'bytes', 'identity', 'origin', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, run: id, id, contract_revision: id, actor: id,
       bytes, identity,
-      origin: { type: 'const', value: 'host' }, seq,
+      origin: { type: 'const', value: 'host' }, seq, at,
     },
   },
   attempt_opened: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'assignment', 'producer', 'obligations', 'seq'],
+    required: ['kind', 'lineage', 'run', 'assignment', 'producer', 'obligations', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, run: id, assignment: id, producer: id,
-      obligations: { type: 'array', minItems: 1, items: id }, seq,
+      obligations: { type: 'array', minItems: 1, items: id }, seq, at,
     },
   },
   command_result: {
     type: 'object', additional: false,
     required: [
       'kind', 'id', 'lineage', 'run', 'attempt', 'command', 'artifact',
-      'exit', 'raw', 'inputs_used', 'origin', 'seq',
+      'exit', 'raw', 'inputs_used', 'origin', 'seq', 'at',
     ],
     properties: {
       kind: text, id, lineage: id, run: id, attempt, command: text,
@@ -102,19 +105,19 @@ export const RECORDS = Object.freeze({
       // exercised, and admissibility refuses both for different reasons.
       subjects: count,
       inputs_used: { type: 'array', minItems: 0, items: id },
-      origin: { type: 'const', value: 'harness' }, seq,
+      origin: { type: 'const', value: 'harness' }, seq, at,
     },
   },
   observation: {
     type: 'object', additional: false,
     required: [
       'kind', 'lineage', 'run', 'obligation', 'observation', 'attempt', 'contract_revision',
-      'assignment', 'producer', 'artifact', 'package', 'command_result', 'seq',
+      'assignment', 'producer', 'artifact', 'package', 'command_result', 'seq', 'at',
     ],
     properties: {
       kind: text, lineage: id, run: id, obligation: id, observation: text, attempt,
       contract_revision: id, assignment: id, producer: id, artifact: id,
-      package: id, command_result: id, seq,
+      package: id, command_result: id, seq, at,
       // No `satisfied`. An observation points at the evidence; it does not say
       // what the evidence means. `additional: false` makes carrying one a
       // validation failure rather than a persuasive extra field.
@@ -126,7 +129,7 @@ export const RECORDS = Object.freeze({
   // permitted.
   gate_result: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'contract_revision', 'obligation', 'status', 'seq'],
+    required: ['kind', 'lineage', 'run', 'contract_revision', 'obligation', 'status', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, run: id, contract_revision: id, obligation: id,
       status: {
@@ -138,7 +141,20 @@ export const RECORDS = Object.freeze({
       // Where the record this verdict rests on is, so a consumer can name that
       // event rather than search for one like it.
       selected: { type: 'integer', minimum: 0 },
-      seq,
+      seq, at,
+    },
+  },
+  // One reduction finished. The Gate writes a verdict per obligation, so no single
+  // one of those marks the end of an evaluation — taking the first excluded every
+  // later obligation's verdict from the interval, and taking the last moved with
+  // every repetition. An operation needs its own event.
+  gate_completed: {
+    type: 'object', additional: false,
+    required: ['kind', 'lineage', 'run', 'contract_revision', 'obligations', 'seq', 'at'],
+    properties: {
+      kind: text, lineage: id, run: id, contract_revision: id,
+      obligations: { type: 'array', minItems: 1, items: id },
+      seq, at,
     },
   },
   // The package is a record, not an object a caller hands the Gate. An earlier
@@ -147,8 +163,8 @@ export const RECORDS = Object.freeze({
   // the same reason the Assignment's do.
   evidence_package: {
     type: 'object', additional: false,
-    required: ['kind', 'id', 'lineage', 'run', 'bytes', 'identity', 'seq'],
-    properties: { kind: text, id, lineage: id, run: id, bytes, identity, seq },
+    required: ['kind', 'id', 'lineage', 'run', 'bytes', 'identity', 'seq', 'at'],
+    properties: { kind: text, id, lineage: id, run: id, bytes, identity, seq, at },
   },
   // What a material input's identity is *now*. Staleness compares this against
   // what the package recorded, and "now" is a fact about the world that the
@@ -159,42 +175,42 @@ export const RECORDS = Object.freeze({
   // "gone" as a value.
   input_observed: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'id', 'path', 'identity', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'id', 'path', 'identity', 'origin', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, id, path: text, identity: digest,
-      origin: { type: 'const', value: 'harness' }, seq,
+      origin: { type: 'const', value: 'harness' }, seq, at,
     },
   },
   input_gone: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'id', 'path', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'id', 'path', 'origin', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, id, path: text,
-      origin: { type: 'const', value: 'harness' }, seq,
+      origin: { type: 'const', value: 'harness' }, seq, at,
     },
   },
   artifact_recorded: {
     type: 'object', additional: false,
-    required: ['kind', 'id', 'lineage', 'run', 'artifact_kind', 'path', 'identity', 'origin', 'seq'],
+    required: ['kind', 'id', 'lineage', 'run', 'artifact_kind', 'path', 'identity', 'origin', 'seq', 'at'],
     properties: {
       kind: text, id, lineage: id, run: id, path: text,
       artifact_kind: { type: 'enum', values: ['commit', 'diff', 'file'] },
       identity: digest,
-      origin: { type: 'const', value: 'harness' }, seq,
+      origin: { type: 'const', value: 'harness' }, seq, at,
     },
   },
   capability_unavailable: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'obligation', 'attempt', 'requested', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'run', 'obligation', 'attempt', 'requested', 'origin', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, run: id, obligation: id, attempt,
       requested: { type: 'array', minItems: 1, items: id },
-      origin: { type: 'const', value: 'harness' }, seq,
+      origin: { type: 'const', value: 'harness' }, seq, at,
     },
   },
   dispatch_attempt: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'attempt', 'obligation', 'requested', 'seq'],
+    required: ['kind', 'lineage', 'run', 'attempt', 'obligation', 'requested', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, run: id, attempt, obligation: id,
       requested: { type: 'array', minItems: 1, items: id },
@@ -202,7 +218,7 @@ export const RECORDS = Object.freeze({
       // check is that nothing claims an answer nobody gave.
       substituted_family: id,
       answered_family: id,
-      seq,
+      seq, at,
     },
   },
   // One shape per operation, not one shape with every operation's fields optional.
@@ -211,16 +227,16 @@ export const RECORDS = Object.freeze({
   // AC-12 means by a format being open.
   human_decision_activation: {
     type: 'object', additional: false,
-    required: ['kind', 'operation', 'actor', 'lineage', 'revision', 'view', 'origin', 'seq'],
+    required: ['kind', 'operation', 'actor', 'lineage', 'revision', 'view', 'origin', 'seq', 'at'],
     properties: {
       kind: text, operation: { type: 'const', value: 'activation' },
       actor: id, lineage: id, revision: id, view,
-      origin: { type: 'const', value: 'host' }, seq,
+      origin: { type: 'const', value: 'host' }, seq, at,
     },
   },
   human_decision_choice: {
     type: 'object', additional: false,
-    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'choice', 'origin', 'seq'],
+    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'choice', 'origin', 'seq', 'at'],
     properties: {
       kind: text,
       operation: {
@@ -231,7 +247,7 @@ export const RECORDS = Object.freeze({
       },
       actor: id, lineage: id, run: id,
       choice: { type: 'enum', values: ['issue'] },
-      origin: { type: 'const', value: 'host' }, seq,
+      origin: { type: 'const', value: 'host' }, seq, at,
     },
   },
   // AC-9's judgements, each naming the run facts it answers. They shared the
@@ -239,14 +255,14 @@ export const RECORDS = Object.freeze({
   // so a `yes` could not be tied to the arithmetic it agreed with.
   human_decision_judgement: {
     type: 'object', additional: false,
-    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'answers', 'choice', 'origin', 'seq'],
+    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'answers', 'choice', 'origin', 'seq', 'at'],
     properties: {
       kind: text,
       operation: { type: 'enum', values: ['retreat_decision', 'worth_decision'] },
       actor: id, lineage: id, run: id,
       answers: { type: 'integer', minimum: 0 },
       choice: { type: 'enum', values: ['yes', 'no'] },
-      origin: { type: 'const', value: 'host' }, seq,
+      origin: { type: 'const', value: 'host' }, seq, at,
     },
   },
   // Its own kind, carrying the run and the record it answers. It was a
@@ -257,7 +273,7 @@ export const RECORDS = Object.freeze({
     type: 'object', additional: false,
     required: [
       'kind', 'operation', 'actor', 'lineage', 'run', 'obligation',
-      'answers', 'choice', 'origin', 'seq',
+      'answers', 'choice', 'origin', 'seq', 'at',
     ],
     properties: {
       kind: text,
@@ -265,22 +281,22 @@ export const RECORDS = Object.freeze({
       actor: id, lineage: id, run: id, obligation: id,
       answers: { type: 'integer', minimum: 0 },
       choice: { type: 'enum', values: ['wait', 'stop', 'amend'] },
-      origin: { type: 'const', value: 'host' }, seq,
+      origin: { type: 'const', value: 'host' }, seq, at,
     },
   },
   human_signoff: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'contract_revision', 'deliverable', 'actor', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'run', 'contract_revision', 'deliverable', 'actor', 'origin', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, run: id, contract_revision: id, deliverable: digest,
       actor: id, origin: { type: 'const', value: 'host' },
-      accepted_review: digest, seq,
+      accepted_review: digest, seq, at,
     },
   },
   completion_committed: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'identity', 'path', 'seq'],
-    properties: { kind: text, lineage: id, run: id, identity, path: text, seq },
+    required: ['kind', 'lineage', 'run', 'identity', 'path', 'seq', 'at'],
+    properties: { kind: text, lineage: id, run: id, identity, path: text, seq, at },
   },
   // Formation's first act. Nothing recorded it, so the boundary AC-9 asks
   // formation to be measured from did not exist — the earliest record of a
@@ -288,10 +304,10 @@ export const RECORDS = Object.freeze({
   // one append rather than the work of forming the Contract.
   formation_opened: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'actor', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'actor', 'origin', 'seq', 'at'],
     properties: {
       kind: text, lineage: id, actor: id,
-      origin: { type: 'const', value: 'host' }, seq,
+      origin: { type: 'const', value: 'host' }, seq, at,
     },
   },
   // AC-9's four facts. Boundaries are positions of records that exist for other
@@ -307,7 +323,7 @@ export const RECORDS = Object.freeze({
     required: [
       'kind', 'lineage', 'run', 'formation_from', 'formation_to',
       'change_from', 'change_to', 'formation_elapsed', 'change_elapsed',
-      'trace_outcome', 'went_wrong', 'seq',
+      'trace_outcome', 'went_wrong', 'seq', 'at',
     ],
     properties: {
       kind: text, lineage: id, run: id,
@@ -316,7 +332,7 @@ export const RECORDS = Object.freeze({
       formation_elapsed: count, change_elapsed: count,
       trace_outcome: { type: 'const', value: 'caught_nothing' },
       went_wrong: { type: 'string', minLength: 0 },
-      seq,
+      seq, at,
     },
   },
   run_record_caught: {
@@ -324,7 +340,7 @@ export const RECORDS = Object.freeze({
     required: [
       'kind', 'lineage', 'run', 'formation_from', 'formation_to',
       'change_from', 'change_to', 'formation_elapsed', 'change_elapsed',
-      'trace_outcome', 'discrepancy', 'disposition', 'went_wrong', 'seq',
+      'trace_outcome', 'discrepancy', 'disposition', 'went_wrong', 'seq', 'at',
     ],
     properties: {
       kind: text, lineage: id, run: id,
@@ -335,7 +351,7 @@ export const RECORDS = Object.freeze({
       discrepancy: text,
       disposition: text,
       went_wrong: { type: 'string', minLength: 0 },
-      seq,
+      seq, at,
     },
   },
 });

@@ -347,8 +347,6 @@ export function completionTests() {
     // verdict — both counts of positions in one log, so the two figures are of the
     // same kind and neither end is a number anyone picked.
     const seqOf = (kind) => k.records().find((r) => r.kind === kind).seq;
-    const gateResult = k.records().filter((r) => r.kind === 'gate_result').pop();
-
     refuses('a trace outcome nothing supports', 'trace_outcome_unsupported',
       () => k.recordRun({
         lineage: 'L', run: w.run, traceOutcome: 'caught_something', wentWrong: '',
@@ -401,9 +399,38 @@ export function completionTests() {
       facts.formation_from, seqOf('formation_opened'));
     eq('to the approval', facts.formation_to, seqOf('contract_approved_genesis'));
     eq('and the change from the attempt', facts.change_from, seqOf('attempt_opened'));
-    eq('to the Gate\'s verdict', facts.change_to, gateResult.seq);
-    eq('with the cost derived from them',
-      facts.formation_elapsed, facts.formation_to - facts.formation_from);
+    eq('to the completed Gate evaluation', facts.change_to, seqOf('gate_completed'));
+
+    // The cost is elapsed time between those records, observed when each landed.
+    // Subtracting positions measured protocol traffic: unrecorded drafting
+    // weighed nothing and unrelated records weighed one apiece, which is enough
+    // to reverse a retreat decision without the run changing at all.
+    const atOf = (kind) => k.records().find((r) => r.kind === kind).at;
+    eq('the cost is the time between them',
+      facts.formation_elapsed, atOf('contract_approved_genesis') - atOf('formation_opened'));
+    // The case that showed positions were the wrong meter: append records under
+    // an unrelated lineage between the boundaries, and the figures must not move.
+    const quiet = fresh();
+    const q = walk(quiet);
+    quiet.status({ lineage: 'L', run: q.run });
+    const clean = quiet.recordRun({
+      lineage: 'L', run: q.run, traceOutcome: 'caught_nothing', wentWrong: '',
+    });
+
+    const noisy = fresh();
+    const n = walk(noisy);
+    for (let i = 0; i < 10; i += 1) {
+      noisy.observeInput({ lineage: 'ELSEWHERE', path: INPUT });
+    }
+    noisy.status({ lineage: 'L', run: n.run });
+    const withNoise = noisy.recordRun({
+      lineage: 'L', run: n.run, traceOutcome: 'caught_nothing', wentWrong: '',
+    });
+    eq('ten unrelated records do not lengthen formation',
+      withNoise.formation_to - withNoise.formation_from > 10,
+      clean.formation_to - clean.formation_from > 10);
+    ok('because the cost is not the distance between them',
+      withNoise.formation_elapsed < 10_000 && clean.formation_elapsed < 10_000);
 
     // And the supported `caught_something` shape, which only its refusal had been
     // exercising: the record carries the discrepancy and what was done about it.

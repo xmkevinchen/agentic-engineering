@@ -37,6 +37,7 @@ export const KINDS = Object.freeze({
   evidence_package: true,
   artifact_recorded: true,
   gate_result: true,
+  gate_completed: true,
   capability_unavailable: true,
   dispatch_attempt: true,
   input_observed: true,
