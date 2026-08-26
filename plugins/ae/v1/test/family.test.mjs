@@ -4,6 +4,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { requestedFamily, dispatchRecord } from '../lib/family.mjs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { Kernel } from '../lib/kernel.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
@@ -120,8 +122,83 @@ export function familyTests() {
     k.recordUnavailable({
       lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt, requested: ['openai'],
     });
+    // And there is nothing to dispatch: a Contract that requested no family has
+    // no request to carry, and defaulting one would put a family nobody asked for
+    // into the record.
+    refuses('a dispatch under a Contract that asked for nothing', 'requested_dropped',
+      () => k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' }));
+
     eq('an unavailable arm on a solo Contract',
       k.status({ lineage: 'L', run: 'run1' }).byObligation.O.code, 'requested_from_wrong_source');
+  });
+
+  group('AC-8 · two revisions, two runs, one log, and the requests do not cross', () => {
+    // What the criterion asks to see: distinctive requests across interleaved
+    // revisions and runs, replayed. One log holds both, and each run's dispatch
+    // and unavailable record must still name the family its own revision asked
+    // for — a request read from anywhere but the Contract would show up here as
+    // the wrong family under one of them.
+    const dir = mkdtempSync(join(tmpdir(), 'v1x-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+
+    const askFor = (families, over = {}) => contractDoc({
+      independence: {
+        required: 'cross_family_required', requested_family: families,
+        assurance: 'workflow_attested',
+      },
+      ...over,
+    });
+    const first = asObject(askFor(['openai']));
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: first.bytes, identity: first.identity,
+      actor: OWNER, rendered: RENDERED(first.bytes),
+    });
+    const a1 = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a1.bytes, identity: a1.identity, actor: OWNER,
+    });
+    const at1 = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at1.attempt, obligation: 'O' });
+
+    // A second revision asking for something else, and a run under it — opened
+    // while the first run is still unfinished, so the records interleave.
+    const second = asObject(askFor(['qwen'], {
+      revision: 'r2', predecessor: first.identity.byte_sha256,
+    }));
+    k.approve({
+      lineage: 'L', revision: 'r2', bytes: second.bytes, identity: second.identity,
+      predecessor: first.identity.byte_sha256, actor: OWNER,
+      rendered: RENDERED(second.bytes),
+    });
+    const a2 = asObject(assignmentDoc({ id: 'A2', contract_revision: 'r2' }));
+    k.issueAssignment({
+      lineage: 'L', run: 'run2', bytes: a2.bytes, identity: a2.identity, actor: OWNER,
+    });
+    const at2 = k.openAttempt({
+      lineage: 'L', run: 'run2', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run2', attempt: at2.attempt, obligation: 'O' });
+
+    const dispatches = k.records().filter((r) => r.kind === 'dispatch_attempt');
+    eq('the first run asked for what its revision stated',
+      dispatches.find((d) => d.run === 'run1').requested.join(','), 'openai');
+    eq('the second for what its own stated',
+      dispatches.find((d) => d.run === 'run2').requested.join(','), 'qwen');
+
+    // Replayed in a fresh process, each run still carries its own request.
+    k.recordUnavailable({
+      lineage: 'L', run: 'run2', obligation: 'O', attempt: at2.attempt, requested: ['qwen'],
+    });
+    k.status({ lineage: 'L', run: 'run2' });
+    const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const out = JSON.parse(execFileSync(
+      process.execPath, [here, logPath, 'L', 'run2'], { encoding: 'utf8' },
+    ));
+    eq('and replay reads the second run\'s request', (out.requested || []).join(','), 'qwen');
+    eq('under the revision that asked for it', out.approvedRevision, 'r2');
   });
 
   group('AC-7 · the choice is recorded, and only after the fact', () => {
