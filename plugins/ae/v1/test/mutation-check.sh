@@ -207,6 +207,9 @@ probe RED "a Contract naming another revision"; revert kernel.mjs
 plant codes.mjs "  (c) => !BY_CONSTRUCTION[c] && !RESERVED[c]," "  () => true,"
 probe RED "a code nothing can raise, raisable"; revert codes.mjs
 
+plant kernel.mjs "    if (opened && !opened.obligations.includes(obligation)) {" "    if (false) {"
+probe RED "a surface writing out of scope"; revert kernel.mjs
+
 # Round 19's finding: authority a child record narrowed, regained downstream.
 plant admissibility.mjs "  if (!(attempt.obligations || []).includes(record.obligation)) {" \
   "  if (false) {"

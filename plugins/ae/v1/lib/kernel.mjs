@@ -1025,6 +1025,20 @@ export class Kernel {
         producer, obligation,
       });
     }
+    // And what this attempt opened for. Checking only the Assignment was half the
+    // authority: the attempt's narrowing says what this execution is for, and a
+    // surface that re-checks the broader grant hands back what the narrower one
+    // removed. The Gate refuses such a record too — it decides what counts as
+    // evidence — but a surface should not write what it knows is out of scope.
+    const opened = this.records().find(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run
+        && r.seq === attempt,
+    );
+    if (opened && !opened.obligations.includes(obligation)) {
+      fail('authority_not_granted', 'this attempt did not open for that obligation', {
+        producer, obligation,
+      });
+    }
     // No outcome parameter. What the run produced is in the runner's record; the
     // observation says which obligation it answers and which evidence it points
     // at, and stops there.

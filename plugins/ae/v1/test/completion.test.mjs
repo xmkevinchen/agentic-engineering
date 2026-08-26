@@ -619,18 +619,15 @@ export function completionTests() {
       lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
     });
     k.observeInput({ lineage: 'L', path: INPUT });
-    // The submission is recorded — the Gate decides what counts as evidence, and
-    // "this record does not count" is a verdict rather than a refusal to write.
-    k.submitObservation({
-      lineage: 'L', run: w.run, obligation: 'O2', observation: COMMAND,
-      attempt: w.attempt.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
-      commandResult: 'cr2', submitter: 'P',
-    });
+    refuses('a submission outside what the attempt opened for', 'authority_not_granted',
+      () => k.submitObservation({
+        lineage: 'L', run: w.run, obligation: 'O2', observation: COMMAND,
+        attempt: w.attempt.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
+        commandResult: 'cr2', submitter: 'P',
+      }));
     const status = k.status({ lineage: 'L', run: w.run }).byObligation;
-    eq('the obligation the attempt did not open for is invalid',
-      status.O2.status, 'invalid');
-    eq('for want of authority', status.O2.code, 'authority_not_granted');
-    eq('while the one it did open for passes', status.O.status, 'passed');
+    eq('so it stays pending', status.O2.status, 'pending');
+    eq('while the one the attempt opened for passes', status.O.status, 'passed');
     refuses('and completion does not land', 'not_all_passed',
       () => k.complete({ lineage: 'L', run: w.run, actor: OWNER }));
   });
