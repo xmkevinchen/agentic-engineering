@@ -517,7 +517,7 @@ export class Kernel {
   // The latest observation wins. `null` means the Harness looked and it was gone,
   // which is different from never having looked — a never-observed input has no
   // record at all, and the resolver says so by returning `undefined`.
-  inputsNowFor(lineage) {
+  #inputsNowFor(lineage) {
     const records = this.records().filter(
       (r) => (r.kind === 'input_observed' || r.kind === 'input_gone') && r.lineage === lineage,
     );
@@ -975,7 +975,7 @@ export class Kernel {
   // null, and `admit` already refuses a result with no subjects. A second layer no
   // planted defect can turn red is a claim of protection nothing holds to account,
   // so it states the property once, where it is reachable.
-  outcomeReader({ lineage, run }) {
+  #outcomeReader({ lineage, run }) {
     const index = this.index({ lineage, run });
     return (record) => {
       const result = index.commandResult(record.command_result);
@@ -1046,7 +1046,7 @@ export class Kernel {
     }
     const records = this.records();
     const index = this.index({ lineage, run });
-    const inputsNow = this.inputsNowFor(lineage);
+    const inputsNow = this.#inputsNowFor(lineage);
     const current = approved.revision;
     const admit = admissibility({
       contract, assignment, approvals: this.approvals(), index, inputsNow, run,
@@ -1055,7 +1055,7 @@ export class Kernel {
       records, lineage, run, obligations: contract.obligations, currentRevision: current,
       admit,
       inputsChanged: inputsChangedAgainst(index, inputsNow),
-      outcomeOf: this.outcomeReader({ lineage, run }),
+      outcomeOf: this.#outcomeReader({ lineage, run }),
     });
 
     return result;

@@ -26,12 +26,18 @@ restore_all() {
   done
   PLANTED=""
 }
-trap 'restore_all' EXIT INT TERM PIPE
+cleanup() { restore_all; rm -rf "$RUNDIR"; }
+trap 'cleanup' EXIT INT TERM PIPE
 
-# Backups are named flatly. A path like `../schema/records.mjs` used to become
-# `$TMPDIR/../schema/records.mjs.mut.bak`, which is a backup written outside the
-# temporary directory — in one run, into the repository itself.
-bak() { echo "${TMPDIR:-/tmp}/$(echo "$1" | tr '/.' '__').mut.bak"; }
+# Backups live in a directory this run creates, and nothing else can write to.
+#
+# They used to be named after the file in a shared temporary directory, so a
+# backup left behind by an earlier run was still there for a later one to restore
+# from — and it did: a run reverted a source file to a copy predating edits made
+# between the two runs, silently discarding them. A backup that outlives its run
+# is a way to lose work, not a safety net.
+RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/ae-mutation.XXXXXX")
+bak() { echo "$RUNDIR/$(echo "$1" | tr '/.' '__').mut.bak"; }
 
 plant() { # file, from, to
   cp "$V1/lib/$1" "$(bak "$1")"
@@ -44,7 +50,11 @@ assert a in s, f"pattern not found: {a[:50]}"
 io.open(p,'w',encoding='utf-8').write(s.replace(a,b,1))
 PY
 }
-revert() { cp "$(bak "$1")" "$V1/lib/$1"; PLANTED=""; }
+revert() {
+  [ -f "$(bak "$1")" ] || { echo "no backup for $1 from this run — refusing to revert"; exit 1; }
+  cp "$(bak "$1")" "$V1/lib/$1"
+  PLANTED=""
+}
 
 echo "baseline                                $(run)"
 
