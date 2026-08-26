@@ -15,7 +15,8 @@
 
 import { execFileSync } from 'node:child_process';
 import {
-  appendFileSync, existsSync, openSync, closeSync, readFileSync, realpathSync, unlinkSync,
+  appendFileSync, existsSync, openSync, closeSync, lstatSync, readFileSync, readlinkSync,
+  realpathSync, unlinkSync,
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { encodeNdjson, parseNdjson, parseStrict, digestBytes } from './canonical-json.mjs';
@@ -69,14 +70,22 @@ class Ledger {
     // it — took different locks and both believed they held the log. One opener
     // then received another's position, which is the execution-merging defect the
     // lock exists to close.
-    // The file itself when it exists, so a link whose *final* component is the
-    // log resolves too. Resolving only the directory left `alias.ndjson` and
-    // `log.ndjson` taking different locks while naming one file.
-    try {
-      this.path = realpathSync(path);
-    } catch {
-      this.path = join(realpathSync(dirname(path)), basename(path));
+    // The file itself, following a final-component link even when its target does
+    // not exist yet. `realpathSync` throws on a dangling link, and falling back to
+    // the alias name meant two Kernels opened before the first append took
+    // different locks and then, once the file appeared, named one file between
+    // them. A link is resolved by reading it, not by the target being there.
+    let target = path;
+    for (let hops = 0; hops < 32; hops += 1) {
+      let stat;
+      try { stat = lstatSync(target); } catch { break; }
+      if (!stat.isSymbolicLink()) break;
+      const link = readlinkSync(target);
+      target = link.startsWith('/') ? link : join(dirname(target), link);
     }
+    // The final directory resolved too: a link's target is written as it was
+    // given, so following one can land back on an unresolved path.
+    this.path = join(realpathSync(dirname(target)), basename(target));
   }
 
   // Appends are serialized by an exclusive-create lock, so a writer knows exactly
@@ -1152,9 +1161,17 @@ export class Kernel {
     // Each end is the *first* record of its kind, so repeating an operation
     // cannot move it. Taking the last let a second `status()` call extend the
     // change interval without anything about the run having changed.
-    const [formationFrom] = only(
+    const opened = only(
       'record of formation opening', (r) => r.kind === 'formation_opened' && r.lineage === lineage,
     );
+    // Uniqueness decided here, as it is for an Assignment: `openFormation` checks
+    // and then appends, which is two operations, and eight writers all saw none.
+    if (opened.length > 1) {
+      fail('run_facts_incomplete', 'formation opens once for a lineage', {
+        lineage, count: opened.length,
+      });
+    }
+    const [formationFrom] = opened;
     const bound = this.contractForRun(lineage, run);
     if (!bound) {
       fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
@@ -1168,9 +1185,18 @@ export class Kernel {
     const [attempt] = only(
       'attempt', (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
     );
+    // The evaluation that closed the change: the first one after the last attempt
+    // was opened. Taking the first in the run ended the interval before a retry
+    // had even begun, so the cost excluded the work the retry did — and taking the
+    // last moved the endpoint every time anyone asked the Gate again.
+    const attempts = all.filter(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    const lastAttempt = attempts[attempts.length - 1];
     const [verdict] = only(
-      'completed Gate evaluation',
-      (r) => r.kind === 'gate_completed' && r.lineage === lineage && r.run === run,
+      'completed Gate evaluation of the latest attempt',
+      (r) => r.kind === 'gate_completed' && r.lineage === lineage && r.run === run
+        && r.seq > lastAttempt.seq,
     );
 
     // One set of facts per run, refused here and at every reader. Two sets meant
@@ -1201,9 +1227,8 @@ export class Kernel {
     if (!(approval.seq > formationFrom.seq)) {
       fail('cost_incomparable', 'formation does not enclose an interval', { lineage, run });
     }
-    if (!(verdict.seq > attempt.seq)) {
-      fail('cost_incomparable', 'the change does not enclose an interval', { lineage, run });
-    }
+    // No order check for the change: the evaluation is selected as one that
+    // follows the last attempt, so the ordering is how it was found.
     if (!(approval.at >= formationFrom.at)) {
       fail('cost_incomparable', 'formation ran backwards on the clock', { lineage, run });
     }

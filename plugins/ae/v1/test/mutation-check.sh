@@ -204,13 +204,29 @@ probe RED "a Contract naming another lineage"; revert kernel.mjs
 plant kernel.mjs "    if (contract.revision !== revision) {" "    if (false) {"
 probe RED "a Contract naming another revision"; revert kernel.mjs
 
+# Round 18's findings: facts sampled before the event that makes them final.
+plant kernel.mjs "        && r.seq > lastAttempt.seq," ""
+probe RED "the change ends before a retry"; revert kernel.mjs
+
+plant kernel.mjs "    if (opened.length > 1) {" "    if (false) {"
+probe RED "a lineage with two formations"; revert kernel.mjs
+
+plant kernel.mjs "      if (!stat.isSymbolicLink()) break;" "      break;"
+probe RED "a dangling link keeps its own name"; revert kernel.mjs
+
+plant admissibility.mjs "    const recorded = new Set((pkg.material_inputs || []).map((i) => i.path));" \
+  "    const recorded = new Set(stated);"
+probe RED "a package that names no input at all"; revert admissibility.mjs
+
 # Round 16's findings: cost is time, and an operation has its own event.
 plant kernel.mjs "      formation_elapsed: approval.at - formationFrom.at," \
   "      formation_elapsed: approval.seq - formationFrom.seq,"
 probe RED "cost measured in log traffic"; revert kernel.mjs
 
-plant kernel.mjs "      (r) => r.kind === 'gate_completed' && r.lineage === lineage && r.run === run," \
-  "      (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,"
+plant kernel.mjs "      (r) => r.kind === 'gate_completed' && r.lineage === lineage && r.run === run
+        && r.seq > lastAttempt.seq," \
+  "      (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run
+        && r.seq > lastAttempt.seq,"
 probe RED "the interval ends at a component"; revert kernel.mjs
 
 plant kernel.mjs "        if (found.length > 1) {
@@ -231,9 +247,6 @@ probe RED "a run records its facts twice"; revert kernel.mjs
 # red on whichever half a test reached and covered the other by appearance.
 plant kernel.mjs "    if (!(approval.seq > formationFrom.seq)) {" "    if (false) {"
 probe RED "formation enclosing nothing"; revert kernel.mjs
-
-plant kernel.mjs "    if (!(verdict.seq > attempt.seq)) {" "    if (false) {"
-probe RED "a change enclosing nothing"; revert kernel.mjs
 
 plant kernel.mjs "    if (!(approval.at >= formationFrom.at)) {" "    if (false) {"
 probe RED "formation running backwards on the clock"; revert kernel.mjs
@@ -297,7 +310,8 @@ plant kernel.mjs "    if (contract.final_signer !== this.#owner) {" "    if (fal
 probe RED "a Contract nominates its own signer"; revert kernel.mjs
 
 # Round 8's findings.
-plant kernel.mjs "      this.path = realpathSync(path);" "      this.path = path;"
+plant kernel.mjs "    this.path = join(realpathSync(dirname(target)), basename(target));" \
+  "    this.path = target;"
 probe RED "an aliased log takes its own lock"; revert kernel.mjs
 
 plant admissibility.mjs "      if (!(now.seq > pkg.seq)) return 'material_input_incomplete';" ""

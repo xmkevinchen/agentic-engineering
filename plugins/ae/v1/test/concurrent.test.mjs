@@ -113,6 +113,48 @@ export function concurrentTests() {
     eq('every open produced a record', opened.length, results.length);
   });
 
+  group('AC-13 · a link to a log that does not exist yet still names it', () => {
+    // Both Kernels are built before anything is written, so the link dangles.
+    // Resolution gave up on a dangling link and kept the alias name, so the two
+    // took different locks — and once the file appeared they were writing to one
+    // file while each believed it held the log alone.
+    const dir = mkdtempSync(join(tmpdir(), 'v1dangle-'));
+    const logPath = join(dir, 'log.ndjson');
+    const alias = join(dir, 'alias.ndjson');
+    symlinkSync(logPath, alias);
+    const direct = new Kernel(logPath, {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const linked = new Kernel(alias, {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    eq('both name the same file before either writes', linked.logPath, direct.logPath);
+  });
+
+  group('AC-9 · formation opens once, however many writers try', () => {
+    // The check and the append are separate operations, so several writers all saw
+    // none and all appended. Uniqueness is decided where it is read: a lineage
+    // that ended up with two openings has no formation to measure from.
+    const { dir, logPath, k } = prepared();
+    race(dir, logPath, 'formation');
+    const opened = k.records().filter((r) => r.kind === 'formation_opened');
+    ok('at least one landed', opened.length >= 1);
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
+    });
+    k.openAttempt({ lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P' });
+    k.status({ lineage: 'L', run: 'run1' });
+    let outcome;
+    try {
+      k.recordRun({ lineage: 'L', run: 'run1', traceOutcome: 'caught_nothing', wentWrong: '' });
+      outcome = 'measured';
+    } catch (e) { outcome = e.code; }
+    ok('either one opening, or nothing to measure from — never a quiet choice',
+      (opened.length === 1 && outcome === 'measured')
+        || (opened.length > 1 && outcome === 'run_facts_incomplete'));
+  });
+
   group('AC-3 · a forked approval history has no current revision', () => {
     // Each writer's own check passed: the genesis really was the prior approval
     // it saw. What they produced together is a fan, and counting genesis records

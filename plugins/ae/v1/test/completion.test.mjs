@@ -377,12 +377,32 @@ export function completionTests() {
         lineage: 'L', run: l.run, traceOutcome: 'caught_nothing', wentWrong: '',
       }));
 
+    // A retry after the Gate has already reported. The endpoint was the first
+    // evaluation in the run, so the interval ended before the retry began and the
+    // cost excluded everything it did.
+    const retried = fresh();
+    const rr = walk(retried);
+    retried.status({ lineage: 'L', run: rr.run });
+    const firstEval = retried.records().find((r) => r.kind === 'gate_completed');
+    const again = retried.openAttempt({
+      lineage: 'L', run: rr.run, producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    retried.status({ lineage: 'L', run: rr.run });
+    const retryFacts = retried.recordRun({
+      lineage: 'L', run: rr.run, traceOutcome: 'caught_nothing', wentWrong: '',
+    });
+    ok('the interval does not end at the first evaluation',
+      retryFacts.change_to !== firstEval.seq);
+    ok('it ends after the retry was opened', retryFacts.change_to > again.seq);
+
     // Two records that landed in the same millisecond, in the wrong order. The
     // clock comparison passes — the duration is zero, not negative — so this is
     // what the order comparison is for, and the two are not the same check.
+    // Only formation: the change's evaluation is selected as one that *follows*
+    // the last attempt, so their order is how it was found rather than something
+    // to check afterwards.
     for (const [what, first, second] of [
       ['formation', 'formation_opened', 'contract_approved_genesis'],
-      ['the change', 'attempt_opened', 'gate_completed'],
     ]) {
       const dir = mkdtempSync(join(tmpdir(), 'tie-'));
       const logPath = join(dir, 'log.ndjson');
@@ -410,17 +430,20 @@ export function completionTests() {
     // clock comparisons exist for — and the only way to reach it is a log whose
     // timestamps say so.
     for (const [what, kind] of [
-      ['formation', 'contract_approved_genesis'],
-      ['the change', 'gate_completed'],
+      ['formation', 'formation_opened'],
+      ['the change', 'attempt_opened'],
     ]) {
       const dir = mkdtempSync(join(tmpdir(), 'clock-'));
       const logPath = join(dir, 'log.ndjson');
       const src = fresh();
       const r = walk(src);
       src.status({ lineage: 'L', run: r.run });
+      // The *earlier* endpoint pushed forward, so the interval runs backwards
+      // while the records stay in order — which is the case a clock rollback
+      // produces and the only one these two comparisons exist for.
       writeFileSync(logPath, src.records()
         .map(({ seq, ...record }) => JSON.stringify(
-          record.kind === kind ? { ...record, at: 0 } : record,
+          record.kind === kind ? { ...record, at: 9_999_999_999_999 } : record,
         )).join('\n') + '\n');
       const rolled = new Kernel(logPath, {
         sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
@@ -443,11 +466,12 @@ export function completionTests() {
         lineage: 'L', run: m.run, traceOutcome: 'caught_nothing', wentWrong: '',
       }));
 
-    // And a verdict that predates the attempt encloses nothing: the Gate can be
-    // asked before an attempt is opened, and the change is measured between them.
+    // A Gate evaluation that predates the attempt is not the one that closed the
+    // change — the endpoint is chosen as an evaluation *after* the last attempt,
+    // so an earlier one is not a backwards interval, it is not the endpoint.
     const early = fresh();
     const e = walk(early, { reduceBeforeAttempt: true });
-    refuses('a change interval that runs backwards', 'cost_incomparable',
+    refuses('only an evaluation from before the attempt', 'run_facts_incomplete',
       () => early.recordRun({
         lineage: 'L', run: e.run, traceOutcome: 'caught_nothing', wentWrong: '',
       }));

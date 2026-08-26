@@ -100,7 +100,7 @@ export function packageDoc(over = {}) {
     artifact: 'art1',
     command_result: 'cr1',
     changed_paths: ['docs/v1/a.md'],
-    material_inputs: [{ id: INPUT, path: INPUT, identity: sha('in1') }],
+    material_inputs: [{ path: INPUT, identity: sha('in1') }],
     deviations: [],
     known_risks: [],
     ...over,
@@ -191,9 +191,7 @@ export function walk(k, over = {}) {
 
   const pkg = asObject(packageDoc({
     attempt: attempt.attempt,
-    material_inputs: [{
-      id: INPUT, path: INPUT, identity: digestBytes(readFileSync(inputPath)),
-    }],
+    material_inputs: [{ path: INPUT, identity: digestBytes(readFileSync(inputPath)) }],
     ...pkgOver,
   }));
   k.recordPackage({

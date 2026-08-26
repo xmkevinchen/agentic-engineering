@@ -178,12 +178,12 @@ export function admissibility({
     // copy; what is worth checking is that the package — which the producer wrote
     // — records every input the Contract states.
     const stated = entry.material_inputs || [];
-    const recorded = new Set((pkg.material_inputs || []).map((i) => i.id));
+    const recorded = new Set((pkg.material_inputs || []).map((i) => i.path));
     for (const used of stated) {
       if (!recorded.has(used)) return 'material_input_incomplete';
     }
     for (const input of pkg.material_inputs || []) {
-      const now = inputsNow(input.id);
+      const now = inputsNow(input.path);
       // Never observed is not "unchanged". An input the Harness has not looked at
       // cannot be shown to be current, and assuming it is would be the vacuity
       // this section refuses.
@@ -237,10 +237,9 @@ export function inputsChangedAgainst(index, inputsNow) {
     const pkg = index.package(record.package);
     if (!pkg) return false;
     for (const input of pkg.material_inputs || []) {
-      const now = inputsNow(input.id);
+      const now = inputsNow(input.path);
       if (now === undefined) return false;
       if (now === null) return true;
-      if (now.path !== input.path) return true;
       if (now.identity !== input.identity) return true;
     }
     return false;

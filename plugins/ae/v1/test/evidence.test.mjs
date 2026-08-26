@@ -27,7 +27,7 @@ const pkg = {
   id: 'pkg1', contract_revision: 'r1', assignment: 'A1', attempt: 1, producer: 'P',
   command_result: 'cr1', artifact: 'art1',
   changed_paths: ['docs/v1/a.md'],
-  material_inputs: [{ id: 'in1', path: 'in1', identity: 'sha256:aa' }],
+  material_inputs: [{ path: 'in1', identity: 'sha256:aa' }],
 };
 const result = {
   origin: 'harness', seq: 9, subjects: 69, inputs_used: ['in1'],

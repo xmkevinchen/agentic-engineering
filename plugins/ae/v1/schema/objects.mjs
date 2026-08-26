@@ -29,10 +29,15 @@ const identity = {
 // chose, and the latest observation for that label won whatever it had read: the
 // packaged input could change while a decoy under the same id was observed
 // unchanged, and the run stayed `passed`.
+// A material input is the file the Contract names. It carried an `id` and a
+// `path` as separate fields, which could disagree: a package could name the
+// Contract's input as its id while pointing at a decoy, and the mismatch
+// surfaced as `stale` — "it has since changed" — rather than as a package that
+// never represented the named input at all.
 const materialInput = {
   type: 'object', additional: false,
-  required: ['id', 'path', 'identity'],
-  properties: { id, path: text, identity: digest },
+  required: ['path', 'identity'],
+  properties: { path: text, identity: digest },
 };
 
 export const CONTRACT = {

@@ -25,6 +25,8 @@ try {
     k.issueAssignment({
       lineage: 'L', run: 'run1', bytes, identity: identify(bytes), actor: 'Human Owner',
     });
+  } else if (what === 'formation') {
+    k.openFormation({ lineage: 'L', actor: 'Human Owner' });
   } else if (what === 'revision') {
     // Every writer names the genesis as its predecessor. Each one's own check
     // passes — the genesis really is the prior approval it saw — and the result

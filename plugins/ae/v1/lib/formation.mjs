@@ -12,7 +12,6 @@
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { fail } from './codes.mjs';
 
 export function fileDigest(path) {
   return `sha256:${createHash('sha256').update(readFileSync(path)).digest('hex')}`;
