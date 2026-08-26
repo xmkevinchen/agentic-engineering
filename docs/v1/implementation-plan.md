@@ -34,7 +34,7 @@ the slice was the wrong idea, stated before it is built.
 | **V0** | Consolidation and product boundary | This document set; no production behavior change |
 | **V1** | Minimal Kernel + solo workflow | One real feature accepted end to end by one implementer |
 | **V2** | Claude Code Agent Teams workflow | One real feature through Lead → Implementer → QA → Reviewer → Fixer |
-| **V3** | Cross-family seat (**release prerequisite**) | One Contract-declared high-risk review run through agent-proxy |
+| **V3** | Cross-family seat (**release prerequisite**) | The human-signed release-qualification Contract reviewed through agent-proxy |
 | **V4** | Knowledge Feedback | Real suggestions produced from V1–V3 records |
 | **V5** | Earned hardening | Only fixes for failures that actually occurred |
 
@@ -214,18 +214,21 @@ Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
   same-family reviewer;
 - the same `Review` shape as a same-family seat.
 
-**Exit:** AE's own **release-qualification Contract** — declaring
-`cross_family_required` over real AE-on-AE work, not a synthetic fixture — runs
+**Exit:** the **release-qualification Contract** — declaring
+`cross_family_required` over real AE-on-AE work, commissioned and signed by a
+human release owner, not declared by AE and not a synthetic fixture — runs
 through the bridge with a provider that actually answers, and is accepted
-([`acceptance.md` X1 and X2b](acceptance.md#5-cross-family-criteria)). The
-release cannot wait for a user to declare cross-family, so AE declares it. V1 already
+([`acceptance.md` §5](acceptance.md#5-cross-family-criteria)). The release cannot
+wait for a user to declare cross-family, so the release owner declares it, and
+the Contract records why that work earns source independence rather than citing
+the release's need for it. V1 already
 proved the unavailable branch, so V3 does not re-demonstrate it; what V3 must
 additionally show is that adding a real provider introduced no second workflow
 and no second Gate (X4).
 
 **V3 is a release prerequisite** — reversed on 2026-08-25. It was scoped as
 optional on the assumption that a release could decline to ship the successful
-path and evidence it unreachable. Six formulations of that exemption failed, each
+path and evidence it unreachable. Four formulations of that exemption failed, each
 naming a condition that changes without a release; the manifest closes file
 membership, not reachability, and `plugin.json` already registers three MCP
 servers. AE ships a live cross-family capability, so AE must prove it does not
@@ -321,9 +324,10 @@ V0 ──▶ V1 ──▶ V2 ──▶ V3   ── all three are release prerequ
 - V1 depends on V0 only for scope confirmation, not for new mechanisms.
 - V2 depends on V1's Contract, Assignment, Evidence, and Gate being real.
 - V3 depends on V2's `Review` object; it adds a seat, not a workflow.
-- V4 depends on having real records from V1, V2 **and** V3 — all three are
-  release prerequisites, so all three will have run more than once by the time
-  V4 has anything worth learning from.
+- V4 depends on having real records from V1, V2 **and** V3. Release requires V1
+  to have run repeatedly and V2 and V3 to have succeeded once each; whether that
+  is enough history to learn anything is V4's own retreat condition, not an
+  assumption made here.
 - V5 depends on an observed failure. It has no schedule.
 
 ## 5. What this plan refuses to do

@@ -26,7 +26,7 @@ AE v1 is releasable when all six hold:
 | 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
 **V4 and V5 are not release prerequisites. V3 is** — reversed on 2026-08-25 after
-six failed attempts to write an exemption for it.
+four failed attempts to write an exemption for it.
 
 The exemption was supposed to say when the successful cross-family path is
 unreachable and therefore need not be proven. Every formulation named a condition
@@ -122,13 +122,36 @@ All five must run before release.
 
 **Who declares it.** A user may never write `cross_family_required` into a
 Contract of their own, and that stays their choice — so the obligation cannot
-rest on one appearing. AE supplies its own: a **release-qualification Contract**,
-declaring `cross_family_required`, over real AE-on-AE work. It is an ordinary
-Contract that goes through the ordinary flow and produces an ordinary
-Acceptance; what makes it a qualification Contract is only that the release
-requires one to exist. A synthetic fixture would not do — every slice must run
-on real repository work, and a path proven only against a mock is a path proven
-against a mock.
+rest on one appearing. The release therefore requires one to exist: a
+**release-qualification Contract** declaring `cross_family_required`, over real
+AE-on-AE work.
+
+It is an ordinary `Contract` producing an ordinary `Acceptance` — not a seventh
+durable object. "Release-qualification" is the release policy's description of
+it, nothing more. And **AE does not declare it.** A human release owner
+commissions or approves the work, approves the `cross_family_required` risk
+requirement, is the Contract's declared final signer, and gives the Acceptance
+sign-off. AE proposing its own material boundary and approving it is precisely
+what [`design.md` §7.2](design.md#72-the-rules) forbids; a Contract that
+self-authorized would be invalid under AE's own formation model.
+
+Two things it must not become:
+
+- **A mock.** Every slice runs on real repository work. A path proven only
+  against a test double is a path proven against a test double.
+- **Ceremony.** Real work is not enough on its own — an arbitrary genuine task
+  could be pushed through a cross-family seat purely to exercise the path, which
+  is [CF-09](design.md#71-the-failures-formation-exists-to-prevent) wearing a
+  release badge. The Contract must record why *that* work earns source
+  independence. Reviewing the V3 bridge and its identity correlation is the
+  natural candidate: the artifact under review is the machinery that decides
+  what another model's answer may be claimed to be, so having a different family
+  review it is warranted on the work's own merits, not on the release's need.
+
+**These are distinct Contracts and distinct runs.** The unavailable arm (X2a,
+X3) is V1's non-terminating test-corpus Contract, which produces no Acceptance
+by construction. The qualification Contract (X1, X2b) is V3's, and it
+terminates. Nothing requires them to be the same Contract, and they cannot be.
 
 | # | Criterion | Owner |
 |---|---|---|
