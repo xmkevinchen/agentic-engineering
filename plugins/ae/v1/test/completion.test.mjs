@@ -100,7 +100,7 @@ export function completionTests() {
     // the second run has an Assignment and an attempt, and nothing submitted.
     const a2 = asObject(assignmentDoc({ id: 'A2' }));
     k.issueAssignment({
-      lineage: 'L', run: 'run2', bytes: a2.bytes, identity: a2.identity, actor: 'Owner',
+      lineage: 'L', run: 'run2', bytes: a2.bytes, identity: a2.identity, actor: 'Human Owner',
     });
     k.openAttempt({ lineage: 'L', run: 'run2', producer: 'P', obligations: ['O'], submitter: 'P' });
     eq('the second run is pending, not passed',
@@ -128,14 +128,14 @@ export function completionTests() {
     const c = asObject(contractDoc());
     k1.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-      actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
     });
     const a = asObject(assignmentDoc());
     k1.issueAssignment({
-      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Owner',
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
     });
     k2.issueAssignment({
-      lineage: 'L', run: 'run2', bytes: a.bytes, identity: a.identity, actor: 'Owner',
+      lineage: 'L', run: 'run2', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
     });
     const at1 = k1.openAttempt({
       lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
@@ -250,7 +250,7 @@ export function completionTests() {
       const c = asObject(contractDoc(over));
       return k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
       });
     };
     refuses('a statement citing nothing', 'statement_uncited',

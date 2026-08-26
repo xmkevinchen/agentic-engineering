@@ -20,12 +20,12 @@ function approved(k, over = {}) {
   const contract = asObject(contractDoc(over));
   k.approve({
     lineage: 'L', revision: 'r1', bytes: contract.bytes, identity: contract.identity,
-    actor: 'Owner', rendered: RENDERED(contract.bytes), render: RENDERED,
+    actor: 'Human Owner', rendered: RENDERED(contract.bytes), render: RENDERED,
   });
   return contract;
 }
 
-const issue = (k, over = {}, actor = 'Owner') => {
+const issue = (k, over = {}, actor = 'Human Owner') => {
   const a = asObject(assignmentDoc(over));
   return k.issueAssignment({
     lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor,

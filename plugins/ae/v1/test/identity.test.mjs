@@ -42,7 +42,7 @@ export function identityTests() {
       const c = asObject(contractDoc(over));
       return k.approve({
         lineage: over.lineage || 'L', revision: over.revision || 'r1',
-        bytes: c.bytes, identity: c.identity, actor: 'Owner',
+        bytes: c.bytes, identity: c.identity, actor: 'Human Owner',
         rendered: RENDERED(c.bytes), render: RENDERED, ...extra,
       });
     };

@@ -51,12 +51,12 @@ export function recordTests() {
       const c = asObject(contractDoc({ lineage: '../../escaped' }));
       escaping.approve({
         lineage: '../../escaped', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
       });
       const a2 = asObject(assignmentDoc({ lineage: '../../escaped' }));
       escaping.issueAssignment({
         lineage: '../../escaped', run: 'run1', bytes: a2.bytes, identity: a2.identity,
-        actor: 'Owner',
+        actor: 'Human Owner',
       });
       escaping.completionPathFor({ lineage: '../../escaped', run: 'run1' });
     });
@@ -228,7 +228,7 @@ export function recordTests() {
     // host origin cannot be appended with anything else there.
     refuses('a decision claiming a different origin', 'format_open',
       () => ledger.append({
-        kind: 'human_decision_choice', operation: 'signoff', actor: 'H', lineage: 'L', choice: 'sign',
+        kind: 'human_decision_choice', operation: 'signoff', actor: 'Human Owner', lineage: 'L', choice: 'sign',
         origin: 'model',
       }));
 

@@ -22,7 +22,7 @@ const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'k-')), 'log.ndjs
 const doc = asObject(contractDoc());
 const approve = (k, over = {}) => k.approve({
   lineage: 'L', revision: 'r1', bytes: doc.bytes, identity: doc.identity,
-  actor: 'H', rendered: RENDERED(doc.bytes), render: RENDERED, ...over,
+  actor: 'Human Owner', rendered: RENDERED(doc.bytes), render: RENDERED, ...over,
 });
 
 export function kernelTests() {
@@ -31,13 +31,13 @@ export function kernelTests() {
     // The bypass: an object with `origin: 'host'` written by whoever holds it.
     refuses('supplying an origin', 'human_input_self_supplied',
       () => k.collectHumanInput({
-        operation: 'signoff', actor: 'H', lineage: 'L', choice: 'sign', origin: 'host',
+        operation: 'signoff', actor: 'Human Owner', lineage: 'L', choice: 'sign', origin: 'host',
       }));
 
     // The Kernel stamps it. There is no exported function that does, so holding
     // a host-origin record means having gone through here.
     const rec = k.collectHumanInput({
-      operation: 'signoff', actor: 'H', lineage: 'L', choice: 'sign',
+      operation: 'signoff', actor: 'Human Owner', lineage: 'L', choice: 'sign',
     });
     eq('the Kernel stamps the origin', rec.origin, 'host');
 
@@ -46,7 +46,7 @@ export function kernelTests() {
     // there is no longer a way to attempt the append — the Kernel's ledger is
     // private, so every record goes through the operation that guards it.
     const problems = validate(RECORDS.human_decision_choice, {
-      kind: 'human_decision_choice', operation: 'signoff', actor: 'H', lineage: 'L',
+      kind: 'human_decision_choice', operation: 'signoff', actor: 'Human Owner', lineage: 'L',
       choice: 'sign', origin: 'model', seq: 0,
     });
     ok('a decision claiming another origin is not a valid record', problems.length > 0);
@@ -58,12 +58,12 @@ export function kernelTests() {
     // none — combinations no consumer can use.
     ok('an activation without its revision and view is refused',
       validate(RECORDS.human_decision_activation, {
-        kind: 'human_decision_activation', operation: 'activation', actor: 'H',
+        kind: 'human_decision_activation', operation: 'activation', actor: 'Human Owner',
         lineage: 'L', origin: 'host', seq: 0,
       }).length > 0);
     ok('a choice decision without a choice is refused',
       validate(RECORDS.human_decision_choice, {
-        kind: 'human_decision_choice', operation: 'unavailable_decision', actor: 'H',
+        kind: 'human_decision_choice', operation: 'unavailable_decision', actor: 'Human Owner',
         lineage: 'L', origin: 'host', seq: 0,
       }).length > 0);
   });
@@ -78,9 +78,18 @@ export function kernelTests() {
     const other = asObject(contractDoc({ lineage: 'OTHER', revision: 't1' }));
     k.approve({
       lineage: 'OTHER', revision: 't1', bytes: other.bytes, identity: other.identity,
-      actor: 'H', rendered: RENDERED(other.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(other.bytes), render: RENDERED,
     });
     eq('the first lineage is unchanged', k.currentRevision('L'), 'r1');
+  });
+
+  group('AC-5 · the Contract names who may activate it', () => {
+    // AC-5's table puts activation, sign-off and the unavailable decision in one
+    // row: the Human Owner, and no model. `actor` was whatever the caller wrote,
+    // so a Contract could be activated by someone it does not name.
+    const k = fresh();
+    refuses('someone the Contract does not name', 'authority_not_granted',
+      () => approve(k, { actor: 'P' }));
   });
 
   group('AC-3 · approval judges the bytes it is given', () => {
@@ -105,7 +114,7 @@ export function kernelTests() {
     approve(k);
     const a = asObject(assignmentDoc());
     k.issueAssignment({
-      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'H',
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
     });
     const at = k.openAttempt({
       lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
@@ -131,7 +140,7 @@ export function kernelTests() {
     approve(k);
     const a = asObject(assignmentDoc());
     k.issueAssignment({
-      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'H',
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
     });
     const { byObligation } = k.status({ lineage: 'L', run: 'run1' });
     eq('the approved obligation is judged', Object.keys(byObligation).join(','), 'O');

@@ -127,6 +127,19 @@ printf "an Acceptance carrying an extra field   %s\n" "$(run)"; revert kernel.mj
 plant kernel.mjs "    if (actor !== contract.final_signer) {" "    if (false) {"
 printf "anyone signs the completion off         %s\n" "$(run)"; revert kernel.mjs
 
+plant kernel.mjs "      fail('authority_not_granted', \"only the Contract's final signer approves it\", {" \
+  "      if (false) fail('authority_not_granted', \"x\", {"
+printf "anyone activates the Contract           %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    if (actor !== approved.contract.final_signer) {" "    if (false) {"
+printf "anyone decides on the unavailable arm   %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
+      origin: HARNESS," \
+  "      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
+      origin: 'submission',"
+printf "the artifact recorded by a submission   %s\n" "$(run)"; revert kernel.mjs
+
 plant kernel.mjs "      const recorded = this.records().find(" \
   "      const recorded = true || this.records().find("
 printf "a review nobody recorded is carried     %s\n" "$(run)"; revert kernel.mjs

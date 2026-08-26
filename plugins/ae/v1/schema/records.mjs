@@ -158,11 +158,12 @@ export const RECORDS = Object.freeze({
   },
   artifact_recorded: {
     type: 'object', additional: false,
-    required: ['kind', 'id', 'lineage', 'run', 'artifact_kind', 'identity', 'seq'],
+    required: ['kind', 'id', 'lineage', 'run', 'artifact_kind', 'identity', 'origin', 'seq'],
     properties: {
       kind: text, id, lineage: id, run: id,
       artifact_kind: { type: 'enum', values: ['commit', 'diff', 'file'] },
-      identity: digest, seq,
+      identity: digest,
+      origin: { type: 'const', value: 'harness' }, seq,
     },
   },
   capability_unavailable: {

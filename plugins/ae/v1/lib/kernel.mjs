@@ -193,9 +193,13 @@ export class Kernel {
     };
   }
 
+  // On the Harness surface, like the command result. It was the only evidential
+  // record with no origin at all, which left the party being judged writing what
+  // it had produced — and the Acceptance names that identity as the deliverable.
   recordArtifact({ id, lineage, run, artifactKind, identity }) {
     return this.#ledger.append({
       kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
+      origin: HARNESS,
     });
   }
 
@@ -289,6 +293,16 @@ export class Kernel {
       renders_sha256: identity.byte_sha256,
       rendering_sha256: digestBytes(Buffer.from(rendered, 'utf8')),
     };
+
+    // AC-5's table puts activation, sign-off and the unavailable decision in one
+    // row: the Human Owner, and no model. The Contract names who that is, so
+    // approval is the first place it can be checked — and a Contract approved by
+    // someone it does not name is approved by nobody in particular.
+    if (actor !== contract.final_signer) {
+      fail('authority_not_granted', "only the Contract's final signer approves it", {
+        actor, final_signer: contract.final_signer,
+      });
+    }
 
     const decision = this.collectHumanInput({
       operation: 'activation', actor, lineage, revision, view,
@@ -785,6 +799,15 @@ export class Kernel {
   // never arrives: completion stops at `not_all_passed` first, which left the
   // ordering check sitting in a branch nothing could reach.
   decideUnavailable({ lineage, run, actor, choice }) {
+    const approved = this.contractFor(lineage);
+    if (approved === null) {
+      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+    }
+    if (actor !== approved.contract.final_signer) {
+      fail('authority_not_granted', "only the Contract's final signer decides on an unavailable capability", {
+        actor, final_signer: approved.contract.final_signer,
+      });
+    }
     if (!['wait', 'stop', 'amend'].includes(choice)) {
       fail('human_input_absent', 'the decision must be wait, stop, or amend', { choice });
     }

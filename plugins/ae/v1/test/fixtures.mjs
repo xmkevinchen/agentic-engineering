@@ -114,7 +114,7 @@ for (const [name, schema, value] of [
 // about the route parties actually take.
 export function walk(k, over = {}) {
   const {
-    lineage = 'L', run = 'run1', actor = 'Owner', producer = 'P',
+    lineage = 'L', run = 'run1', actor = 'Human Owner', producer = 'P',
     contract: contractOver = {}, assignment: assignmentOver = {},
     package: pkgOver = {}, exit = 0, subjects = 69, inputNow,
     obligations = ['O'],
