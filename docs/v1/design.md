@@ -433,10 +433,16 @@ authoritative source of that identity; final signer; **formation provenance**
 the one shared formation basis, canonicalized with the Contract and covered by
 the same digest, so approving a Contract approves the trace that produced it.
 
-The `Assignment` carries the Contract's identity, never a second copy of the
-requested family. An Assignment asserting a family that disagrees with its
-Contract is `invalid`, not a conflict to resolve: two sources for one fact is
-how the fact gets quietly changed.
+The `Assignment` carries the Contract's identity and **has no family field at
+all**. Under the closed-schema rule, an Assignment carrying one is `invalid`
+whether it agrees with its Contract or not — agreement today is a second source
+tomorrow, and two sources for one fact is how the fact gets quietly changed.
+
+Formation provenance is a **trace, not an authority**. It records what was asked
+for and why; it does not supply the requested identity to dispatch or
+adjudication. A provenance entry contradicting the Contract's own field is a
+formation defect (CF-02) and makes the Contract `invalid` — it never becomes a
+competing source.
 
 **`Assignment`** — task ID; owner role/session; dependencies; allowed change
 boundary; the exact Contract identity it serves.

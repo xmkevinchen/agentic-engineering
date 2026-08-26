@@ -134,12 +134,18 @@ human intent
   [X2a, X3, X4](acceptance.md#5-cross-family-criteria). X2a is bounded at **AE's
   own records**, not at the provider: the `requested` identity the Contract
   states — the sole authoritative source ([`design.md` §9](design.md#9-minimal-durable-objects))
-  — retained byte-identical in the dispatch-attempt and unavailable records,
-  bound to the same Contract revision and run, with `observed` and `effective`
-  absent. The test uses a **distinctive sentinel** request and reads the durable
-  records back on replay, so a default substitution, a dropped field, or a
-  cross-run misbinding is visible rather than indistinguishable from a correct
-  pass. An unavailable run may stop before the backend handoff, so it cannot show
+  — appearing in the dispatch-attempt and unavailable records with an identical
+  canonical-JSON encoding (equivalently, an identical canonical digest), bound to
+  the same Contract revision and run, with `observed` and `effective` absent.
+  Canonical equality, not raw lexical bytes: the records are parsed and
+  re-encoded, so lexical form is not stable and comparing it would be testing the
+  serializer instead of the claim. The corpus uses **distinctive sentinels across at least two interleaved
+  Contract revisions and runs**, replays the durable records, and asserts
+  `observed`/`effective` are *absent* rather than `null` or empty. One sentinel
+  in one run would catch a dropped field and a recorded default, but not
+  cross-run contamination, and not a dispatch that read the family from the
+  Assignment or from configuration instead of the Contract. A conflicting-source
+  negative fixture covers the last of those. An unavailable run may stop before the backend handoff, so it cannot show
   what a provider received — that is exact input handoff, and V3 owns it along
   with the correlation half (X2b).
 - **Knowledge isolation tests.** The `.ae/graph` corpus already exists, so V1
@@ -222,12 +228,14 @@ requires it to have actually run ([`acceptance.md` §1](acceptance.md#1-release-
 X2b** — a real provider answering, and the correlation that only then becomes
 exercisable — and that is the part a release may ship without.
 
-Shipping without it means the V3 integration code is **not published** — the only
-unreachability v1 can evidence. A provider that merely happens to be unavailable
-does not make X1/X2b N/A, and neither does a disabled selector: AE's selector is
-editable project configuration, and the immutable release capability manifest
-that would make that branch sound is deferred to V5. If the V3 code ships, X1 and
-X2b must run.
+Shipping without it means the release's dispatch graph has **no edge to a backend
+that answers**, evidenced by enumerating the release manifest's closed member set
+and activation entry points — not by observing any provider's state, and not by
+omitting something labelled V3. `agent-proxy` is already on the mainline, so its
+presence in the repository proves nothing either way; what counts is whether a
+released dispatch path reaches it. Wire that edge and X1/X2b must run. See
+[`acceptance.md` §5](acceptance.md#5-cross-family-criteria) for the rejected
+alternatives and why.
 
 A provider being silently swapped for a same-family reviewer blocks the release,
 and always did.

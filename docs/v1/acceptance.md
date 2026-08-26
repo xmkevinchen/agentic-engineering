@@ -102,7 +102,7 @@ cross-family invocation.
 | # | Criterion | Required for release | Owner |
 |---|---|---|---|
 | X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | **Optional** — this is the successful path | V3 |
-| X2a | The `requested` identity **the Contract states** is retained byte-identical in AE's own dispatch-attempt and unavailable records, bound to the same Contract revision and run, while `observed` and `effective` remain **absent**. A request field is never reported as an effective-family claim. | **Yes** | V1 |
+| X2a | The `requested` identity **the Contract states** appears in AE's dispatch-attempt and unavailable records with an identical **canonical-JSON encoding** (equivalently, an identical canonical digest), bound to the same Contract revision and run, while `observed` and `effective` are **absent — not `null`, not empty**. A request field is never reported as an effective-family claim. | **Yes** | V1 |
 | X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | **Optional**, with X1 | V3 |
 | X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | **Yes** — this is release criterion 5's negative arm | V1 |
 | X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | **Yes** | V1 |
@@ -123,24 +123,37 @@ provider received — that is *exact input handoff*, and V3 owns it. What V1 can
 and must show is that AE preserved the request it was given and claimed nothing
 about an observation it never made.
 
-**X2b may be N/A only when the V3 integration code is not published in the
-release.** That is the only form of unreachability v1 can evidence. Two weaker
-forms were considered and rejected:
+**X2b may be N/A only when the release's dispatch graph contains no edge that
+can deliver a cross-family request to a backend that answers.** The evidence is
+an enumeration of the release manifest's closed member set and its activation
+entry points — the same shape of argument as the foundation corpus's
+semantic-blindness scan, which enumerates modules from disk rather than trusting
+a hand-kept list. It is not an observation of any provider's state.
 
-- *Every configured provider reports `unavailable`.* Credentials, quotas and
-  networks recover, and the path is then live in a release that never proved it.
-  A temporary observation is not a structural fact — the exact substitution this
-  document exists to refuse.
-- *A release-bound selector disables it.* AE's selector today is editable project
-  configuration, so a user flips it and the unproved path is live. Making that
-  branch sound would need an immutable release capability manifest, treating any
-  activation as a separately qualified release — and that machinery is
-  [deferred to V5](mechanism-disposition.md#3-defer). A v1 criterion may not rest
-  on a deferred mechanism.
+The distinction that matters: **`agent-proxy` existing in the repository is not
+that edge.** The bridge is already on the mainline and v1 does not rebuild it
+([`design.md` §5](design.md#5-agent-proxy)). What would make the path reachable
+is a released dispatch path that reaches it. V1 needs Contracts to be able to
+declare `cross_family_required` at all — X3 depends on that — so the honest
+position is a clean fork:
 
-So: if the V3 code ships, X1 and X2b must run, whatever the provider happens to
-be doing at release time. As with any AE N/A, the unreachability itself needs
-evidence; an unevidenced blank is not an N/A.
+- V1's dispatch reaches only a result that cannot answer, and the member/entry-
+  point enumeration shows there is no edge to a live backend → X2b is an
+  evidenced N/A; or
+- the release wires that edge → X1 and X2b **must run**, whatever any provider
+  happens to be doing at release time.
+
+Three weaker forms were considered and rejected, and are recorded so they do not
+grow back:
+
+| Rejected as N/A evidence | Why |
+|---|---|
+| Every configured provider reports `unavailable` | Credentials, quotas and networks recover; the path is then live in a release that never proved it. A temporary observation is not a structural fact — the exact substitution this document exists to refuse. |
+| A release-bound selector disables it | AE's selector is editable project configuration; a user flips it and the unproved path is live. Making it sound needs an immutable release capability manifest treating each activation as a separately qualified release — [deferred to V5](mechanism-disposition.md#3-defer). A v1 criterion may not rest on a deferred mechanism. |
+| "The V3 integration code is not published" | Undefined boundary. The bridge it would integrate is already published, so omitting something labelled V3 proves nothing about whether generic dispatch can still reach a live backend. |
+
+As with any AE N/A, the unreachability itself needs evidence; an unevidenced
+blank is not an N/A.
 
 ## 6. Knowledge non-authority criteria
 

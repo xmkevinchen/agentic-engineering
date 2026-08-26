@@ -590,7 +590,7 @@ read-only port does not automatically authorize writer support.
 ### R+32 — Claude Code Dynamic Workflows bridge
 
 - **State:** `hypothesis`
-- **v1 boundary:** unreachable by the v1 selector.
+- **v1 boundary:** v1 implements no path to them.
 - **Opportunity:** Dynamic Workflows provide script-driven subagent fan-out and
   same-session pause/resume. Current official documentation also states that
   spawned agents run in `acceptEdits`, file edits are auto-approved, ordinary
