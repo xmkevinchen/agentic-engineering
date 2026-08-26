@@ -452,6 +452,21 @@ export function completionTests() {
       () => w.k.signOff({ lineage: 'L', run: w.run, actor: 'P' }));
   });
 
+  group('AC-2 · two records under one name resolve to neither', () => {
+    // The evidence references ids a producer chooses, and the resolver returned
+    // the first match — so recording a second result under an id already used
+    // silently decided which one the evidence pointed at. Ambiguity is refused,
+    // not resolved by order.
+    const k = fresh();
+    const w = walk(k);
+    k.runObservation({
+      id: 'cr1', lineage: 'L', run: w.run, attempt: w.attempt.attempt,
+      obligation: 'O', artifact: 'art1',
+    });
+    refuses('a second result under the same name', 'binding_unresolved',
+      () => k.status({ lineage: 'L', run: w.run }));
+  });
+
   group('AC-2 · a decoy cannot stand in for the input', () => {
     // A material input is identified by the path the Contract states, so there is
     // no label for a producer to reuse. `observeInput` took an id and a path, and

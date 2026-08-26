@@ -184,6 +184,10 @@ plant family.mjs "  const requested = requestedFamily(contract);" \
   "  const requested = requestedFamily(contract) || ['openai'];"
 probe RED "a dispatch defaults its request"; revert family.mjs
 
+plant kernel.mjs "      const found = records.filter((r) => r.kind === kind && r[field] === value);" \
+  "      const found = records.filter((r) => r.kind === kind && r[field] === value).slice(0, 1);"
+probe RED "two records under one name"; revert kernel.mjs
+
 # Round 15's findings: exact event identity, and one of a thing per run.
 plant kernel.mjs "      ? this.records()[entry[1].selected]" \
   "      ? this.records().find((r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run)"

@@ -1201,9 +1201,21 @@ export class Kernel {
   // check asked whether it belonged to this execution.
   index({ lineage, run }) {
     const records = this.records().filter((r) => r.lineage === lineage && r.run === run);
-    const findBy = (kind, field) => (value) => records.find(
-      (r) => r.kind === kind && r[field] === value,
-    ) || null;
+    // Ambiguity is refused, not resolved by order. These match on ids a producer
+    // chooses, and `find` returned the first — so recording a second result under
+    // an id already used silently decided which one the evidence pointed at.
+    // Uniqueness is decided here for the same reason it is for an Assignment:
+    // checking before the append is two operations, and only the reader sees what
+    // they left.
+    const findBy = (kind, field) => (value) => {
+      const found = records.filter((r) => r.kind === kind && r[field] === value);
+      if (found.length > 1) {
+        fail('binding_unresolved', `two ${kind} records answer to one name`, {
+          lineage, run, [field]: value,
+        });
+      }
+      return found[0] || null;
+    };
     const packageRecord = findBy('evidence_package', 'id');
     return {
       commandResult: findBy('command_result', 'id'),
@@ -1211,10 +1223,18 @@ export class Kernel {
       artifact: findBy('artifact_recorded', 'id'),
       // Parsed through `verify`, so a consumer cannot reach a package whose byte
       // identity does not check out.
-      dispatch: (attempt, obligation) => records.find(
-        (r) => r.kind === 'dispatch_attempt' && r.attempt === attempt
-          && r.obligation === obligation,
-      ) || null,
+      dispatch: (attempt, obligation) => {
+        const found = records.filter(
+          (r) => r.kind === 'dispatch_attempt' && r.attempt === attempt
+            && r.obligation === obligation,
+        );
+        if (found.length > 1) {
+          fail('binding_unresolved', 'two dispatches answer to one attempt and obligation', {
+            lineage, run, attempt, obligation,
+          });
+        }
+        return found[0] || null;
+      },
       package: (id) => {
         const rec = packageRecord(id);
         if (!rec) return null;
