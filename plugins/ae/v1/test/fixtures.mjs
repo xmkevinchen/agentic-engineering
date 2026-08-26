@@ -24,13 +24,19 @@ export const COMMAND = 'sh plugins/ae/scripts/ae-run-tests.sh';
 // the behaviour under test rather than an inconvenience to work around.
 export const SOURCE_ROOT = mkdtempSync(join(tmpdir(), 'v1src-'));
 mkdirSync(join(SOURCE_ROOT, 'docs', 'v1'), { recursive: true });
-writeFileSync(join(SOURCE_ROOT, 'docs', 'v1', 'design.md'), '# design\n');
-const DESIGN = fileDigest(join(SOURCE_ROOT, 'docs', 'v1', 'design.md'));
+writeFileSync(join(SOURCE_ROOT, 'docs', 'v1', 'design.md'),
+  '# design\n\nEvidence is externally produced.\n');
+export const DESIGN_SHA = fileDigest(join(SOURCE_ROOT, 'docs', 'v1', 'design.md'));
 
 // Cited sources. The Contract's statements cite these ids, and approval checks
 // that they do.
 const provenance = {
-  verifiable: [{ id: 'D-01', source: 'docs/v1/design.md', sha256: DESIGN }],
+  verifiable: [{
+    id: 'D-01',
+    source: 'docs/v1/design.md',
+    sha256: DESIGN_SHA,
+    quote: 'Evidence is externally produced.',
+  }],
   transcribed: [
     { id: 'D-02', statement: 'evidence is externally produced', disposition: 'carried' },
     { id: 'D-03', statement: 'releases are qualified', disposition: 'deferred to V2' },
@@ -123,7 +129,7 @@ export function walk(k, over = {}) {
   const contract = asObject(contractDoc(contractOver));
   k.approve({
     lineage, revision: 'r1', bytes: contract.bytes, identity: contract.identity,
-    actor, rendered: RENDERED(contract.bytes), render: RENDERED,
+    actor, rendered: RENDERED(contract.bytes),
   });
 
   const assignment = asObject(assignmentDoc(assignmentOver));
@@ -133,12 +139,12 @@ export function walk(k, over = {}) {
 
   const attempt = k.openAttempt({ lineage, run, producer, obligations, submitter: producer });
 
-  k.recordCommandResult({
-    id: 'cr1', lineage, run, attempt: attempt.attempt, command: COMMAND,
-    exit, raw: 'GREEN', subjects, inputsUsed: ['in1'],
-  });
   k.recordArtifact({
     id: 'art1', lineage, run, artifactKind: 'commit', identity: sha('artifact'),
+  });
+  k.recordCommandResult({
+    id: 'cr1', lineage, run, attempt: attempt.attempt, command: COMMAND,
+    artifact: 'art1', exit, raw: 'GREEN', subjects, inputsUsed: ['in1'],
   });
 
   const pkg = asObject(packageDoc({ attempt: attempt.attempt, ...pkgOver }));

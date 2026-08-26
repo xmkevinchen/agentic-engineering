@@ -1,4 +1,7 @@
-// AC-11's staging property, checked against the write path's own source.
+// Properties read off the source, where reading the program is the only way to
+// check them.
+//
+// AC-11's staging property: the write path performs no move, link or copy.
 //
 // Separate from the write path on purpose: an audit is not a writer, and the
 // enumeration of what writes completion has to stay short enough to read.
@@ -23,6 +26,23 @@ export function auditWritePath({ readFileSync, dir, files = ['kernel.mjs', 'writ
     for (const call of STAGING_CALLS) {
       if (new RegExp(`\\b${call}\\s*\\(`).test(text)) found.push({ file: name, call });
     }
+  }
+  return found;
+}
+
+// AC-5 — no public operation takes an origin.
+//
+// `origin` is stamped by the Kernel and by nothing else. That used to be backed
+// by a guard inside the stamper, which became unreachable once the stamper went
+// private: every call site is internal and none passes one. What is left to check
+// is the surface itself, and the surface is a fact about the source.
+export function auditOriginSurface({ readFileSync, dir, file = 'kernel.mjs' }) {
+  const text = readFileSync(`${dir}/${file}`, 'utf8');
+  const found = [];
+  // Public methods only: a name that does not begin with `#`, at class-member
+  // indentation, whose destructured parameters name `origin`.
+  for (const m of text.matchAll(/^ {2}([A-Za-z][\w]*)\(\{([^}]*)\}/gm)) {
+    if (/\borigin\b/.test(m[2])) found.push(m[1]);
   }
   return found;
 }

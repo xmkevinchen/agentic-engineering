@@ -25,7 +25,7 @@ const pkg = {
 };
 const result = {
   origin: 'harness', seq: 9, subjects: 69, inputs_used: ['in1'],
-  attempt: 'at1', command: 'sh plugins/ae/scripts/ae-run-tests.sh',
+  attempt: 'at1', artifact: 'art1', command: 'sh plugins/ae/scripts/ae-run-tests.sh',
 };
 const attempt = { attempt: 'at1', assignment: 'A1', producer: 'P' };
 
@@ -106,6 +106,11 @@ export function evidenceTests() {
     const foreignResult = build({ resultOver: { attempt: 'OTHER' } });
     eq('a command result from another attempt',
       foreignResult.admit(foreignResult.record), 'binding_cross_execution');
+    // The decisive one: a real green run, paired with an artifact it never
+    // touched. Everything resolved, and that artifact became the deliverable.
+    const untested = build({ resultOver: { artifact: 'art2' } });
+    eq('a command result for another artifact',
+      untested.admit(untested.record), 'binding_cross_execution');
     // A submission naming another run while pointing at this run's attempt.
     // Nothing stops a party writing that: `submitObservation` takes the attempt
     // as an argument and does not require it to belong to the run. Selection

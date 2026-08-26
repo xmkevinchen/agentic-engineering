@@ -37,13 +37,13 @@ export function identityTests() {
   // `checkApproval`, which the tests called and the approval path did not — so
   // every case passed and none of it was reached.
   group('AC-3 · lineage relations', () => {
-    const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1i-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+    const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1i-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
     const approve = (k, over, extra = {}) => {
       const c = asObject(contractDoc(over));
       return k.approve({
         lineage: over.lineage || 'L', revision: over.revision || 'r1',
         bytes: c.bytes, identity: c.identity, actor: 'Human Owner',
-        rendered: RENDERED(c.bytes), render: RENDERED, ...extra,
+        rendered: RENDERED(c.bytes), ...extra,
       });
     };
 

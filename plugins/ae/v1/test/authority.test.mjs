@@ -14,13 +14,13 @@ import { Kernel } from '../lib/kernel.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha, SOURCE_ROOT } from './fixtures.mjs';
 
-const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1a-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1a-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
 
 function approved(k, over = {}) {
   const contract = asObject(contractDoc(over));
   k.approve({
     lineage: 'L', revision: 'r1', bytes: contract.bytes, identity: contract.identity,
-    actor: 'Human Owner', rendered: RENDERED(contract.bytes), render: RENDERED,
+    actor: 'Human Owner', rendered: RENDERED(contract.bytes),
   });
   return contract;
 }
@@ -36,8 +36,13 @@ export function authorityTests() {
   group('AC-5 · the Assignment is issued from outside', () => {
     const k = fresh();
     approved(k);
+    // AC-5: issuing an Assignment at all is the Human Owner's. Any actor but the
+    // beneficiary used to be accepted, so a second producer could hand the first
+    // its authority.
+    refuses('someone the Contract does not name', 'authority_not_granted',
+      () => issue(k, {}, 'Mallory'));
     refuses('the party it grants may not issue it', 'assignment_self_issued',
-      () => issue(k, {}, 'P'));
+      () => issue(k, { grants: { attempt_producer: 'Human Owner', mutation_producer: 'Human Owner', obligations: ['O'] } }));
     refuses('it must bind the current approved revision', 'assignment_not_issued',
       () => issue(k, { contract_revision: 'r9' }));
     refuses('it may not grant an obligation the Contract does not state', 'authority_not_granted',

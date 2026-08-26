@@ -16,7 +16,7 @@ import { checkCitations, statementsFrom } from '../lib/formation.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { validate } from '../lib/schema.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, SOURCE_ROOT } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, SOURCE_ROOT, DESIGN_SHA } from './fixtures.mjs';
 
 const CONTRACT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -28,7 +28,7 @@ const CONTRACT = join(
 // calls the write.
 function fresh() {
   const dir = mkdtempSync(join(tmpdir(), 'ac1-'));
-  return new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT });
+  return new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
 }
 
 const run = (over = {}) => walk(fresh(), over);
@@ -122,13 +122,13 @@ export function completionTests() {
     // sequence number, with Assignment ids unique only within a run.
     const dir = mkdtempSync(join(tmpdir(), 'two-'));
     const logPath = join(dir, 'log.ndjson');
-    const k1 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT });
-    const k2 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT });
+    const k1 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const k2 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
 
     const c = asObject(contractDoc());
     k1.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-      actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(c.bytes),
     });
     const a = asObject(assignmentDoc());
     k1.issueAssignment({
@@ -148,6 +148,31 @@ export function completionTests() {
     // And even if they were not, the run comparison separates the submissions.
     const seqs = k1.records().map((r) => r.seq);
     eq('no sequence number is handed out twice', new Set(seqs).size, seqs.length);
+  });
+
+  group('AC-4 · the latest attempt decides at the moment the bytes land', () => {
+    // Several Kernels may share a log, so between a reduction and the write that
+    // rests on it another can open a newer attempt and reduce again. The write
+    // re-derives rather than carrying the earlier answer; this exercises the
+    // reader both use, on a log two Kernels advanced.
+    const dir = mkdtempSync(join(tmpdir(), 'race-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k1 = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED,
+    });
+    const w = walk(k1);
+    eq('the run passes', k1.status({ lineage: 'L', run: w.run }).byObligation.O.status, 'passed');
+
+    const k2 = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED,
+    });
+    k2.openAttempt({ lineage: 'L', run: w.run, producer: 'P', obligations: ['O'], submitter: 'P' });
+    k2.status({ lineage: 'L', run: w.run });
+
+    eq('and stops passing once a newer attempt is opened',
+      k1.verdictsRecorded({ lineage: 'L', run: w.run }).get('O'), 'pending');
+    refuses('so completion does not land', 'not_all_passed',
+      () => k1.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
   });
 
   group('AC-1 · the deliverable is the artifact the evidence exercised', () => {
@@ -170,12 +195,12 @@ export function completionTests() {
     });
     // `walk` answered both obligations against `art1`. Replace the second with a
     // complete, admissible chain of its own naming a different artifact.
-    k.recordCommandResult({
-      id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt, command: COMMAND,
-      exit: 0, raw: 'GREEN', subjects: 12, inputsUsed: ['in1'],
-    });
     k.recordArtifact({
       id: 'art2', lineage: 'L', run: w.run, artifactKind: 'commit', identity: sha('other'),
+    });
+    k.recordCommandResult({
+      id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt, command: COMMAND,
+      artifact: 'art2', exit: 0, raw: 'GREEN', subjects: 12, inputsUsed: ['in1'],
     });
     const pkg2 = asObject({
       ...w.pkg.value, id: 'pkg2', artifact: 'art2', command_result: 'cr2',
@@ -236,7 +261,7 @@ export function completionTests() {
     // the Kernel. A Kernel with no completion root cannot complete at all, which
     // is the honest answer to "where would it write".
     const dir = mkdtempSync(join(tmpdir(), 'ac11-'));
-    const k = new Kernel(join(dir, 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+    const k = new Kernel(join(dir, 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
     const w = walk(k);
     refuses('no root, no completion', 'writer_not_sole',
       () => k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' }));
@@ -250,7 +275,7 @@ export function completionTests() {
       const c = asObject(contractDoc(over));
       return k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes),
       });
     };
     refuses('a statement citing nothing', 'statement_uncited',
@@ -274,7 +299,10 @@ export function completionTests() {
     const k = fresh();
     const c = asObject(contractDoc({
       provenance: {
-        verifiable: [{ id: 'D-01', source: 'docs/v1/design.md', sha256: sha('something else') }],
+        verifiable: [{
+          id: 'D-01', source: 'docs/v1/design.md', sha256: sha('something else'),
+          quote: 'Evidence is externally produced.',
+        }],
         transcribed: [
           { id: 'D-02', statement: 'evidence is externally produced', disposition: 'carried' },
         ],
@@ -285,7 +313,30 @@ export function completionTests() {
     refuses('a cited file that is not what was cited', 'citation_unknown',
       () => k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes),
+      }));
+
+    // And the passage, not only the file. A matching digest says the source has
+    // not changed since it was cited; it says nothing about whether the source
+    // contains what the citing statement rests on — AC-6's falsifier names that
+    // case, and nothing checked it.
+    const misquoted = asObject(contractDoc({
+      provenance: {
+        verifiable: [{
+          id: 'D-01', source: 'docs/v1/design.md', sha256: DESIGN_SHA,
+          quote: 'a sentence that is not in the file',
+        }],
+        transcribed: [
+          { id: 'D-02', statement: 'evidence is externally produced', disposition: 'carried' },
+        ],
+        proposals: [],
+        unknowns: [],
+      },
+    }));
+    refuses('a passage the cited source does not contain', 'citation_unknown',
+      () => k.approve({
+        lineage: 'L', revision: 'r1', bytes: misquoted.bytes, identity: misquoted.identity,
+        actor: 'Human Owner', rendered: RENDERED(misquoted.bytes),
       }));
 
     // And a Kernel that cannot resolve them cannot approve at all, rather than
@@ -295,7 +346,7 @@ export function completionTests() {
     refuses('a Kernel with nowhere to resolve them', 'citation_unknown',
       () => blind.approve({
         lineage: 'L', revision: 'r1', bytes: good.bytes, identity: good.identity,
-        actor: 'Human Owner', rendered: RENDERED(good.bytes), render: RENDERED,
+        actor: 'Human Owner', rendered: RENDERED(good.bytes),
       }));
   });
 
@@ -316,23 +367,28 @@ export function completionTests() {
     refuses('a rendering of something else', 'identity_mismatch',
       () => k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Human Owner', rendered: 'VIEW OF SOMETHING ELSE', render: RENDERED,
+        actor: 'Human Owner', rendered: 'VIEW OF SOMETHING ELSE',
       }));
     refuses('nothing shown at all', 'human_input_absent',
       () => k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Human Owner', render: RENDERED,
+        actor: 'Human Owner',
       }));
-    // The derivation must be checkable, so the renderer is required. When it ran
-    // only if a caller passed one, omitting it accepted any non-empty string.
-    refuses('no way to re-derive what was shown', 'human_input_absent',
-      () => k.approve({
+    // The renderer belongs to the Kernel. A caller that supplies both the
+    // rendering and the function judging it approves anything at all —
+    // `render: () => rendered` was enough — so there is no longer a parameter
+    // for it, and a Kernel without one cannot approve.
+    const noRenderer = new Kernel(join(mkdtempSync(join(tmpdir(), 'nr-')), 'log.ndjson'), {
+      sourceRoot: SOURCE_ROOT,
+    });
+    refuses('a Kernel with no renderer', 'human_input_absent',
+      () => noRenderer.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
         actor: 'Human Owner', rendered: 'ANYTHING AT ALL',
       }));
     const approved = k.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-      actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(c.bytes),
     });
     eq('a derived view is recorded', approved.identity.byte_sha256, c.identity.byte_sha256);
   });

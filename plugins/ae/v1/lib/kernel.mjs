@@ -66,10 +66,17 @@ export class Kernel {
   // something that has since changed is a citation to something else.
   #sourceRoot;
 
-  constructor(logPath, { completionRoot, sourceRoot } = {}) {
+  // How the Contract is rendered for a human to read. Configured here, not passed
+  // to `approve`: a renderer supplied by the party presenting the view is that
+  // party judging its own presentation, and `render: () => rendered` approved
+  // anything at all.
+  #render;
+
+  constructor(logPath, { completionRoot, sourceRoot, render } = {}) {
     this.#ledger = new Ledger(logPath);
     this.#completionRoot = completionRoot || null;
     this.#sourceRoot = sourceRoot || null;
+    this.#render = typeof render === 'function' ? render : null;
   }
 
   // --- reads -------------------------------------------------------------
@@ -89,20 +96,21 @@ export class Kernel {
     return deriveCurrent(this.approvals(), lineage);
   }
 
-  find(kind, id) {
-    return this.records().find((r) => r.kind === kind && r.id === id) || null;
-  }
-
   // --- host-collected inputs ---------------------------------------------
   //
   // The trust root, as a write path. `collectHumanInput` is the only producer of
   // a record with `origin: host`, and it is a method rather than a free function
   // so that holding one requires having gone through the Kernel.
 
-  collectHumanInput({ operation, actor, lineage, ...payload }) {
-    if (Object.prototype.hasOwnProperty.call(payload, 'origin')) {
-      fail('human_input_self_supplied', 'a caller may not supply an origin', { operation });
-    }
+  // Private. It was public, so `decideUnavailable`'s ordering check could be
+  // walked around entirely: calling this with `operation: 'unavailable_decision'`
+  // appended a valid choice before anything had been found unavailable. Being
+  // the only stamper is not a property if the stamper is reachable directly.
+  #collectHumanInput({ operation, actor, lineage, ...payload }) {
+    // No guard against a caller-supplied origin here. Every call site is inside
+    // this class and none passes one; the property that matters is that no public
+    // method takes an origin at all, which `auditOriginSurface` reads off the
+    // source. A guard nothing can trip is a claim with nothing behind it.
     // One kind per operation shape. The single `human_decision` shape carried
     // every operation's fields as optional, so it admitted an activation with a
     // choice and an unavailable decision with none. Two branches rather than a
@@ -117,7 +125,9 @@ export class Kernel {
     });
   }
 
-  recordCommandResult({ id, lineage, run, attempt, command, exit, raw, subjects, inputsUsed }) {
+  recordCommandResult({
+    id, lineage, run, attempt, command, artifact, exit, raw, subjects, inputsUsed,
+  }) {
     // `inputsUsed` is not defaulted. An omitted argument became `[]`, which reads
     // as "used nothing" and made the later completeness check unreachable — the
     // vacuity the check exists to refuse, introduced by the channel that was
@@ -126,7 +136,7 @@ export class Kernel {
       fail('material_input_incomplete', 'the runner must report which inputs it used', { id });
     }
     return this.#ledger.append({
-      kind: 'command_result', id, lineage, run, attempt, command, exit,
+      kind: 'command_result', id, lineage, run, attempt, command, artifact, exit,
       raw, subjects, inputs_used: inputsUsed, origin: HARNESS,
     });
   }
@@ -213,7 +223,7 @@ export class Kernel {
   // `rendered` is the bytes the host displayed, not a digest of them. A digest a
   // caller computes is a claim about a rendering nobody else saw; the bytes can
   // be re-rendered and compared.
-  approve({ lineage, revision, bytes, identity, predecessor, actor, rendered, render }) {
+  approve({ lineage, revision, bytes, identity, predecessor, actor, rendered }) {
     const contract = openObject(bytes, identity, CONTRACT, 'Contract');
     if (contract.lineage !== lineage || contract.revision !== revision) {
       fail('identity_mismatch', 'the Contract names another lineage or revision', {
@@ -277,13 +287,13 @@ export class Kernel {
     if (typeof rendered !== 'string' || rendered.length === 0) {
       fail('human_input_absent', 'approval must record what was shown', { lineage });
     }
-    // Required. When this ran only if a caller passed a renderer, omitting one
-    // accepted any non-empty string as the view — and AC-6 asks for a derivation
-    // that is checkable, which an unchecked one is not.
-    if (typeof render !== 'function') {
-      fail('human_input_absent', 'approval must be able to re-derive what was shown', { lineage });
+    // The Kernel's renderer, not one the approval supplied. AC-6 asks for a
+    // derivation that is checkable; a caller passing both the rendering and the
+    // function that judges it makes the check answer to itself.
+    if (!this.#render) {
+      fail('human_input_absent', 'this Kernel has no renderer, so it cannot approve', { lineage });
     }
-    const expected = render(bytes);
+    const expected = this.#render(bytes);
     if (digestBytes(Buffer.from(expected, 'utf8')) !== digestBytes(Buffer.from(rendered, 'utf8'))) {
       fail('identity_mismatch', 'the recorded rendering is not what those bytes render to', {
         lineage,
@@ -304,7 +314,7 @@ export class Kernel {
       });
     }
 
-    const decision = this.collectHumanInput({
+    const decision = this.#collectHumanInput({
       operation: 'activation', actor, lineage, revision, view,
     });
     // Genesis and revision are separate shapes, so the key is absent rather than
@@ -351,13 +361,25 @@ export class Kernel {
         id: assignment.id,
       });
     }
+    // AC-5: issuing an Assignment at all is the Human Owner's, bound to an
+    // approved revision. Any actor but the beneficiary was accepted, so a second
+    // producer could hand the first its authority.
+    const approvedContract = this.contractFor(lineage);
+    if (approvedContract === null) {
+      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+    }
+    if (actor !== approvedContract.contract.final_signer) {
+      fail('authority_not_granted', "only the Contract's final signer issues an Assignment", {
+        actor, final_signer: approvedContract.contract.final_signer,
+      });
+    }
     const current = this.currentRevision(lineage);
     if (current !== assignment.contract_revision) {
       fail('assignment_not_issued', 'an Assignment must bind the current approved revision', {
         id: assignment.id, contractRevision: assignment.contract_revision, current,
       });
     }
-    const { contract } = this.contractFor(lineage);
+    const { contract } = approvedContract;
     for (const obligation of assignment.grants.obligations) {
       if (!contract.obligations.includes(obligation)) {
         fail('authority_not_granted', 'an Assignment may not grant an obligation the Contract does not state', {
@@ -373,7 +395,7 @@ export class Kernel {
     if (existing.length > 0) {
       fail('assignment_not_unique', 'a run holds exactly one Assignment', { id: assignment.id });
     }
-    this.collectHumanInput({
+    this.#collectHumanInput({
       operation: 'assignment_issuance', actor, lineage, choice: 'issue',
     });
     return this.#ledger.append({
@@ -452,12 +474,6 @@ export class Kernel {
   recordReview({ lineage, run, identity, family }) {
     return this.#ledger.append({
       kind: 'review_recorded', lineage, run, identity, family, origin: HARNESS,
-    });
-  }
-
-  recordDelivery({ lineage, to, carried, provenance }) {
-    return this.#ledger.append({
-      kind: 'delivery', lineage, to, carried, provenance, origin: HARNESS,
     });
   }
 
@@ -580,16 +596,6 @@ export class Kernel {
     };
   }
 
-  // Deliveries are what makes "the contributor consumed the shared basis"
-  // observable rather than self-reported: a contribution is admissible only
-  // against one. Consumption itself is not observable, and the Contract claims
-  // only delivery — this is the reader that makes the claim mean something.
-  deliveriesTo(actor, lineage) {
-    return this.records().filter(
-      (r) => r.kind === 'delivery' && r.to === actor && r.lineage === lineage,
-    );
-  }
-
   // AC-9's arithmetic reads this. The retreat condition fires when formation
   // elapsed exceeds change elapsed and the trace caught nothing; recording the
   // facts without anything reading them would be a kind with no consumer.
@@ -605,14 +611,6 @@ export class Kernel {
       change: record.change_elapsed,
       trace: record.trace_outcome,
     };
-  }
-
-  // Observations reach the Gate through `status`, which reads them by kind. This
-  // names that reader explicitly so the audit can see it.
-  observationsFor(lineage, obligation) {
-    return this.records().filter(
-      (r) => r.kind === 'observation' && r.lineage === lineage && r.obligation === obligation,
-    );
   }
 
   // --- the reduction ------------------------------------------------------
@@ -758,7 +756,9 @@ export class Kernel {
         run,
       });
     }
-    const written = this.#commitCompletion({ acceptance, run, revision: current });
+    const written = this.#commitCompletion({
+      acceptance, obligations: contract.obligations, run, revision: current,
+    });
     // Two identities, like the other three durable objects. It used to record one
     // digest, which cannot tell a lexical mutation of the written file from the
     // same content spelled differently — the exact thing AC-3 keeps a pair for.
@@ -821,7 +821,7 @@ export class Kernel {
         lineage, run,
       });
     }
-    return this.collectHumanInput({
+    return this.#collectHumanInput({
       operation: 'unavailable_decision', actor, lineage, choice,
     });
   }
@@ -834,8 +834,45 @@ export class Kernel {
   // array, which made it a second completion entry point however carefully the
   // Kernel called it: importing the module was enough to write an Acceptance with
   // no Gate, no sign-off and no record.
-  #commitCompletion({ acceptance, run, revision }) {
+  // The latest recorded verdict per obligation, as the log stands now. Both
+  // `complete` and the write read this: the first to decide, the second to check
+  // that the decision still holds when the bytes land.
+  verdictsRecorded({ lineage, run }) {
+    const latest = new Map();
+    for (const r of this.records()) {
+      if (r.kind !== 'gate_result' || r.lineage !== lineage || r.run !== run) continue;
+      latest.set(r.obligation, r.status);
+    }
+    return latest;
+  }
+
+  #commitCompletion({ acceptance, obligations, run, revision }) {
     const path = this.completionPathFor({ lineage: acceptance.lineage, run });
+
+    // Re-derived here, not carried from the reduction above.
+    //
+    // This was deleted once as a duplicate of `complete`'s own check, and that
+    // was wrong: several Kernels may share a log, and between the reduction and
+    // this write another can open a newer attempt and reduce again, leaving the
+    // run `pending` while an Acceptance says `accepted`. "The latest attempt
+    // decides" is decided at the moment the bytes land.
+    //
+    // The suite cannot produce that interleave in one process — there is no seam
+    // inside `complete` to schedule against, and adding one for a test would be
+    // test-only machinery. `verdictsRecorded` is exercised directly instead, on a
+    // log two Kernels advanced. Said plainly rather than left to look covered.
+    const latest = this.verdictsRecorded({ lineage: acceptance.lineage, run });
+    for (const obligation of obligations) {
+      const status = latest.get(obligation);
+      if (status === undefined) {
+        fail('record_not_appended', 'no recorded verdict for an obligation', { obligation, run });
+      }
+      if (status !== 'passed') {
+        fail('not_all_passed', 'the run stopped passing before the Acceptance landed', {
+          obligation, status,
+        });
+      }
+    }
 
     // The shape, checked against the schema rather than against truthiness — an
     // earlier version tested `if (!acceptance)` and wrote `{}`. This is the one
@@ -846,12 +883,6 @@ export class Kernel {
     if (problems.length > 0) {
       fail('format_open', 'the Acceptance does not match its closed shape', { problems });
     }
-    if (acceptance.decision.run !== run || acceptance.contract_revision !== revision) {
-      fail('signoff_wrong_run', 'the Acceptance belongs to another run or revision', {
-        run, revision, acceptance: acceptance.decision.run,
-      });
-    }
-
     const bytes = Buffer.from(JSON.stringify(acceptance), 'utf8');
 
     // The destination was checked when it was derived; this is where it lands.

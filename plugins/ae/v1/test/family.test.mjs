@@ -56,11 +56,11 @@ export function familyTests() {
 
   group('AC-7 · the unavailable arm reaches its status through the same reduction', () => {
     const build = (dispatchOver = {}, unavailableOver = {}) => {
-      const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+      const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
       const c = asObject(contractDoc(cross));
       k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes),
       });
       const a = asObject(assignmentDoc());
       k.issueAssignment({
@@ -97,11 +97,11 @@ export function familyTests() {
 
     // And a solo Contract cannot have an unavailable arm at all: nothing was
     // requested, so nothing can have been missing.
-    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
     const c = asObject(contractDoc());
     k.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-      actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(c.bytes),
     });
     const a = asObject(assignmentDoc());
     k.issueAssignment({
@@ -122,11 +122,11 @@ export function familyTests() {
     // there is a record the decision must follow. It used to be checked at
     // completion, which an unavailable run never reaches — completion stops at
     // `not_all_passed` first — so the ordering check sat in an unreachable branch.
-    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1u-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1u-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
     const c = asObject(contractDoc(cross));
     k.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-      actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(c.bytes),
     });
     const a = asObject(assignmentDoc());
     k.issueAssignment({

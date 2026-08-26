@@ -11,34 +11,44 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Kernel } from '../lib/kernel.mjs';
+import { auditOriginSurface } from '../lib/source-audit.mjs';
+
+const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 import { validate } from '../lib/schema.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { asObject, assignmentDoc, contractDoc, RENDERED, COMMAND, SOURCE_ROOT } from './fixtures.mjs';
 
-const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'k-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'k-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
 
 const doc = asObject(contractDoc());
 const approve = (k, over = {}) => k.approve({
   lineage: 'L', revision: 'r1', bytes: doc.bytes, identity: doc.identity,
-  actor: 'Human Owner', rendered: RENDERED(doc.bytes), render: RENDERED, ...over,
+  actor: 'Human Owner', rendered: RENDERED(doc.bytes), ...over,
 });
 
 export function kernelTests() {
   group('AC-5 · a caller cannot manufacture a host-collected input', () => {
     const k = fresh();
-    // The bypass: an object with `origin: 'host'` written by whoever holds it.
-    refuses('supplying an origin', 'human_input_self_supplied',
-      () => k.collectHumanInput({
-        operation: 'signoff', actor: 'Human Owner', lineage: 'L', choice: 'sign', origin: 'host',
-      }));
+    // There is no way to reach the stamper. It was a public method, so the
+    // guarded operations could be walked around entirely: calling it with
+    // `operation: 'unavailable_decision'` appended a valid choice before anything
+    // had been found unavailable. Being the only stamper is not a property if the
+    // stamper is reachable directly.
+    ok('the stamper is not reachable', k.collectHumanInput === undefined);
+    // And no public operation takes an origin, so there is no parameter through
+    // which one could be supplied. Read off the source, because "there is no such
+    // parameter" is a fact about the program rather than about a value.
+    eq('no public method takes an origin',
+      auditOriginSurface({ readFileSync, dir: libDir }).join(','), '');
 
-    // The Kernel stamps it. There is no exported function that does, so holding
-    // a host-origin record means having gone through here.
-    const rec = k.collectHumanInput({
-      operation: 'signoff', actor: 'Human Owner', lineage: 'L', choice: 'sign',
-    });
+    // Approval goes through it, and what lands is host-origin.
+    approve(k);
+    const rec = k.records().find((r) => r.kind === 'human_decision_activation');
     eq('the Kernel stamps the origin', rec.origin, 'host');
 
     // And the record shape pins it: a record claiming host origin cannot exist
@@ -78,7 +88,7 @@ export function kernelTests() {
     const other = asObject(contractDoc({ lineage: 'OTHER', revision: 't1' }));
     k.approve({
       lineage: 'OTHER', revision: 't1', bytes: other.bytes, identity: other.identity,
-      actor: 'Human Owner', rendered: RENDERED(other.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(other.bytes),
     });
     eq('the first lineage is unchanged', k.currentRevision('L'), 'r1');
   });

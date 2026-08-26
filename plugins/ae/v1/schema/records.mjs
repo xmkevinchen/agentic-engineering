@@ -75,11 +75,16 @@ export const RECORDS = Object.freeze({
   command_result: {
     type: 'object', additional: false,
     required: [
-      'kind', 'id', 'lineage', 'run', 'attempt', 'command',
+      'kind', 'id', 'lineage', 'run', 'attempt', 'command', 'artifact',
       'exit', 'raw', 'subjects', 'inputs_used', 'origin', 'seq',
     ],
     properties: {
       kind: text, id, lineage: id, run: id, attempt: id, command: text,
+      // What the command ran against. Without it the result says a command
+      // exited zero and nothing about which artifact it exercised — so a
+      // producer could pair a real green run with any artifact it liked, and
+      // that artifact became the deliverable.
+      artifact: id,
       // The outcome the runner observed. The Gate computes `passed` from this
       // and the subject count; nothing a submission says about the result is
       // consulted, because that would be its self-report.
@@ -196,14 +201,6 @@ export const RECORDS = Object.freeze({
     required: ['kind', 'lineage', 'run', 'identity', 'family', 'origin', 'seq'],
     properties: {
       kind: text, lineage: id, run: id, identity: digest, family: id,
-      origin: { type: 'const', value: 'harness' }, seq,
-    },
-  },
-  delivery: {
-    type: 'object', additional: false,
-    required: ['kind', 'lineage', 'to', 'carried', 'provenance', 'origin', 'seq'],
-    properties: {
-      kind: text, lineage: id, to: id, carried: text, provenance: digest,
       origin: { type: 'const', value: 'harness' }, seq,
     },
   },

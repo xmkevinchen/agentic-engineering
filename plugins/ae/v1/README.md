@@ -19,7 +19,7 @@ lib/family.mjs         the requested identity, and the unavailable arm
 lib/formation.mjs      the provenance trace, including the landing check
 lib/ledger.mjs         append-only record, closed at the append boundary
 lib/write-path.mjs     where a completion write may land
-lib/write-audit.mjs    AC-11's no-staging property, read off the write path
+lib/source-audit.mjs   properties only the source can answer: staging, origin
 lib/schema.mjs         closed-format validation, and validation of the schemas
 schema/objects.mjs     the four durable objects
 schema/records.mjs     the closed shape of every record kind
@@ -84,14 +84,21 @@ thing: **a submission cannot author its own provenance.** The observation is a
 separate append from the runner's record, the Assignment from the attempt that
 uses it, the approval from the evidence judged under it.
 
-What it does not buy, said plainly because reviewers keep finding it and are
-right to: a single caller holding the whole machinery can drive every surface. It
-can approve as the Contract's signer, issue an Assignment to a producer it also
-plays, and record a command result that never ran. §4 concedes exactly this — a
-process running as the same OS user can edit the repository, the records and the
-machinery together — and adding an in-process marker to resist it is the thing §4
-names and refuses. Closing it needs a Harness-controlled mutation path, which is
-N7 and not V1.
+What it does not buy, said plainly because a reviewer kept finding it and was
+right to: **a caller that drives every surface in turn is not stopped, and §4 does
+not concede that.** §4 concedes editing the repository, the records and the
+machinery directly. Calling `recordCommandResult` for a command that never ran
+uses the supported API and needs no such edit, and §4's positive claim — that raw
+content is externally produced — is weaker here than it reads.
+
+What V1 does instead is separate the surfaces **by record**: the raw result, the
+artifact, the approval, the Assignment and the observation are five appends with
+three different origins, and no one of them can be inferred from another. A
+submission still cannot author its own provenance — the observation carries no
+result and no origin — but nothing prevents the same process from making all five
+appends. Separating them by *process* needs a Harness that owns the mutation path,
+which is N7 and not this slice. Until then the honest reading of `workflow_attested`
+is: the records are separable and auditable, not independently sourced.
 
 ## What is not built yet
 

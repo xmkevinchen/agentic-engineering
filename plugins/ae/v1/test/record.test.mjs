@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
-import { auditWritePath } from '../lib/write-audit.mjs';
+import { auditWritePath } from '../lib/source-audit.mjs';
 import { Ledger, KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
@@ -25,7 +25,7 @@ export function recordTests() {
     // importing the module wrote an Acceptance with no Gate and no sign-off.
     const completed = () => {
       const dir = tmp('v1w-');
-      const k = new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT });
+      const k = new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
       const w = walk(k);
       return { dir, k, w };
     };
@@ -46,12 +46,12 @@ export function recordTests() {
     // The destination is built from the lineage and the run, so those are the two
     // ways a caller could aim it somewhere else.
     const esc = completed();
-    const escaping = new Kernel(join(esc.dir, 'log.ndjson'), { completionRoot: esc.dir, sourceRoot: SOURCE_ROOT });
+    const escaping = new Kernel(join(esc.dir, 'log.ndjson'), { completionRoot: esc.dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
     refuses('a lineage that climbs out of the root', 'write_escapes_location', () => {
       const c = asObject(contractDoc({ lineage: '../../escaped' }));
       escaping.approve({
         lineage: '../../escaped', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes),
       });
       const a2 = asObject(assignmentDoc({ lineage: '../../escaped' }));
       escaping.issueAssignment({
@@ -72,7 +72,7 @@ export function recordTests() {
       ['a parent symlink pointing outside', join(linked, 'outlink')],
       ['a parent symlink pointing inside', join(linked, 'inlink')],
     ]) {
-      const k2 = new Kernel(join(linked, `${name.length}.ndjson`), { completionRoot: root, sourceRoot: SOURCE_ROOT });
+      const k2 = new Kernel(join(linked, `${name.length}.ndjson`), { completionRoot: root, sourceRoot: SOURCE_ROOT, render: RENDERED });
       const w2 = walk(k2);
       refuses(name, 'write_through_symlink',
         () => k2.complete({ lineage: w2.lineage, run: w2.run, actor: 'Human Owner' }));
@@ -159,7 +159,7 @@ export function recordTests() {
   group('AC-13 · a fresh process rebuilds what the run reached', () => {
     const dir = mkdtempSync(join(tmpdir(), 'v1r-'));
     const logPath = join(dir, 'log.ndjson');
-    const k = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT });
+    const k = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
     const w = walk(k);
     const { acceptance } = k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' });
 

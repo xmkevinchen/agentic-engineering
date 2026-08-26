@@ -23,15 +23,22 @@ export function fileDigest(path) {
 export function checkVerifiableSources(provenance, resolve) {
   const problems = [];
   for (const entry of provenance.verifiable) {
-    let actual;
+    let text;
     try {
-      actual = fileDigest(resolve(entry.source));
+      text = readFileSync(resolve(entry.source), 'utf8');
     } catch {
       problems.push({ id: entry.id, why: 'cited source does not resolve' });
       continue;
     }
-    if (actual !== entry.sha256) {
+    if (fileDigest(resolve(entry.source)) !== entry.sha256) {
       problems.push({ id: entry.id, why: 'cited digest does not match the file' });
+      continue;
+    }
+    // The content, not only the file. A matching digest says the source has not
+    // changed since it was cited; it says nothing about whether the source
+    // contains what the citation rests on.
+    if (!text.includes(entry.quote)) {
+      problems.push({ id: entry.id, why: 'the cited source does not contain the quoted passage' });
     }
   }
   return problems;

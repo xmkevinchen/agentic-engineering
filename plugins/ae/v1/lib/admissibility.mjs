@@ -117,6 +117,11 @@ export function admissibility({
     }
     if (pkg.command_result !== record.command_result) return 'binding_cross_execution';
     if (result.attempt !== record.attempt) return 'binding_cross_execution';
+    // The command must have run against the artifact the observation names.
+    // Without this the result established that *a* command exited zero, and the
+    // producer chose which artifact that vouched for — including one nothing had
+    // been run against, which then became the deliverable.
+    if (result.artifact !== record.artifact) return 'binding_cross_execution';
 
     // --- captured after activation ----------------------------------------
     // Ordered by the record, not by a time the submission supplied. Results

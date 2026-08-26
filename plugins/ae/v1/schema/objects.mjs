@@ -84,8 +84,13 @@ export const CONTRACT = {
           type: 'array', minItems: 1,
           items: {
             type: 'object', additional: false,
-            required: ['id', 'source', 'sha256'],
-            properties: { id, source: text, sha256: digest },
+            // `quote` is the passage the citation rests on, and approval checks
+            // the source contains it. A digest establishes that a file has not
+            // changed, not that it says what the citing statement claims — which
+            // is AC-6's falsifier "citing a source that does not contain the
+            // cited content", and nothing checked it.
+            required: ['id', 'source', 'sha256', 'quote'],
+            properties: { id, source: text, sha256: digest, quote: text },
           },
         },
         transcribed: {

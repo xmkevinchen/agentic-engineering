@@ -56,8 +56,9 @@ printf "superseded revision not stale          %s\n" "$(run)"; revert gate.mjs
 plant identity.mjs "if (actual.byte_sha256 !== recorded.byte_sha256) {" "if (false) {"
 printf "lexical mutation undetected            %s\n" "$(run)"; revert identity.mjs
 
-plant kernel.mjs "if (Object.prototype.hasOwnProperty.call(payload, 'origin')) {" "if (false) {"
-printf "caller-written origin accepted          %s\n" "$(run)"; revert kernel.mjs
+plant kernel.mjs "  recordUnavailable({ lineage, run, obligation, attempt, requested }) {" \
+  "  recordUnavailable({ lineage, run, obligation, attempt, requested, origin }) {"
+printf "a public operation takes an origin      %s\n" "$(run)"; revert kernel.mjs
 
 plant kernel.mjs "    assertNoSymlinkComponents(resolve(this.#completionRoot), resolve(path));" ""
 printf "symlink parent unchecked               %s\n" "$(run)"; revert kernel.mjs
@@ -148,22 +149,28 @@ plant kernel.mjs "    const stale = checkVerifiableSources(" \
   "    const stale = []; const unusedStale = checkVerifiableSources("
 printf "a citation to changed content accepted  %s\n" "$(run)"; revert kernel.mjs
 
-plant kernel.mjs "    if (typeof render !== 'function') {" "    if (false) {"
-printf "an underivable view approved            %s\n" "$(run)"; revert kernel.mjs
-
 plant kernel.mjs "    if (pkg.lineage !== lineage) {" "    if (false) {"
 printf "a package from another lineage filed    %s\n" "$(run)"; revert kernel.mjs
 
+# Round 5's findings.
+plant admissibility.mjs "    if (result.artifact !== record.artifact) return 'binding_cross_execution';" ""
+printf "a green run vouches for any artifact    %s\n" "$(run)"; revert admissibility.mjs
+
+plant kernel.mjs "    if (actor !== approvedContract.contract.final_signer) {" "    if (false) {"
+printf "anyone issues an Assignment             %s\n" "$(run)"; revert kernel.mjs
+
+plant formation.mjs "    if (!text.includes(entry.quote)) {" "    if (false) {"
+printf "a citation to a passage nobody wrote    %s\n" "$(run)"; revert formation.mjs
+
+plant kernel.mjs "    if (!this.#render) {" "    if (false) { this.__r = 1;"
+printf "an unrenderable Contract approved       %s\n" "$(run)"; revert kernel.mjs
+
+plant ledger.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));" \
+  "    return parseNdjson(bytes).map((r) => ({ ...r, seq: 0 }));"
+printf "every record claims the same position   %s\n" "$(run)"; revert ledger.mjs
+
 # AC-13: a log that replays into a different verdict cannot account for its own
 # Acceptance. The fresh-process check is what catches this; nothing in-process can.
-plant ledger.mjs "  get seq() {
-    return this.read().length;
-  }" "  get seq() {
-    if (this._cached === undefined) this._cached = this.read().length;
-    return this._cached++;
-  }"
-printf "two Kernels share a sequence number     %s\n" "$(run)"; revert ledger.mjs
-
 plant admissibility.mjs "    if (record.run !== run) return 'binding_cross_execution';" ""
 printf "a submission from another run admitted  %s\n" "$(run)"; revert admissibility.mjs
 

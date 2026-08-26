@@ -30,7 +30,6 @@ export const KINDS = Object.freeze({
   capability_unavailable: { producer: 'harness', consumer: ['gate'] },
   dispatch_attempt: { producer: 'harness', consumer: ['family', 'gate'] },
   review_recorded: { producer: 'harness', consumer: ['completion'] },
-  delivery: { producer: 'harness', consumer: ['formation'] },
   input_observed: { producer: 'harness', consumer: ['gate'] },
   input_gone: { producer: 'harness', consumer: ['gate'] },
   human_decision_activation: { producer: 'human', consumer: ['identity', 'replay'] },
@@ -53,11 +52,18 @@ export class Ledger {
     return this.read().length;
   }
 
+  // A record's sequence number is its position in the log, assigned on the way
+  // out rather than stored on the way in.
+  //
+  // Allocating it at append time — even reading the length immediately before
+  // writing — is two operations, and two processes can read the same length and
+  // both write it. Position cannot collide: `appendFileSync` opens with `O_APPEND`,
+  // so each line lands whole and in some order, and that order is the numbering.
   read() {
     if (!existsSync(this.path)) return [];
     const bytes = readFileSync(this.path);
     if (bytes.length === 0) return [];
-    return parseNdjson(bytes);
+    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));
   }
 
   // Rejection happens here, at the append boundary. A record outside the closed
@@ -77,6 +83,9 @@ export class Ledger {
     if (!schema) {
       fail('kind_without_consumer', `no record schema for ${record.kind}`, { kind: record.kind });
     }
+    // Validated with the position it will occupy if nothing else appends first.
+    // The stored line carries no `seq`: it would be a second source for a fact the
+    // line's position already states, and the two could disagree.
     const seq = this.seq;
     const problems = validate(schema, { ...record, seq });
     if (problems.length > 0) {
@@ -84,9 +93,11 @@ export class Ledger {
     }
     // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
     // canonical spelling and `parseNdjson` will refuse anything else later.
-    const stamped = { ...record, seq };
-    appendFileSync(this.path, encodeNdjson([stamped]));
-    return stamped;
+    appendFileSync(this.path, encodeNdjson([record]));
+    // Re-read, because between the length above and this append another process
+    // may have written. The returned record carries the position it actually got.
+    const all = this.read();
+    return all[all.length - 1];
   }
 
   // Replay is a check, not a re-enactment: the same records must reconstruct the
@@ -170,7 +181,6 @@ export class Ledger {
       unavailable: [],
       dispatches: [],
       reviews: [],
-      deliveries: [],
       decisions: [],
       signoffs: [],
       completions: [],
@@ -189,7 +199,6 @@ export class Ledger {
       capability_unavailable: 'unavailable',
       dispatch_attempt: 'dispatches',
       review_recorded: 'reviews',
-      delivery: 'deliveries',
       input_observed: 'inputObservations',
       input_gone: 'inputObservations',
       human_decision_activation: 'decisions',
@@ -245,13 +254,19 @@ export function auditKinds({ readdirSync, readFileSync, dir }) {
     const produced = sources.some(({ name, text }) => name !== 'ledger.mjs'
       && new RegExp(`kind:\\s*'${kind}'`).test(text));
     // Consumed: something reads it back — by a direct kind comparison, through a
-    // named reader helper that takes the kind as an argument, or through a
-    // reconstruction branch in the ledger itself. The helper form is spelled out
-    // rather than matched loosely: `findBy('x', …)` is a real read of `x`, while
-    // any mention of the string is not.
+    // named reader helper that takes the kind as an argument, through membership
+    // of a set the reduction selects on, or through a reconstruction branch in
+    // the ledger itself. Each form is spelled out rather than matched loosely: a
+    // mention of the string is not a read of the kind.
+    //
+    // Three readers used to exist only so this audit would find a comparison —
+    // `find`, `deliveriesTo`, `observationsFor`, none of them on any path. An
+    // audit that can be satisfied by writing a function nobody calls measures the
+    // spelling and not the program, so the forms below name real reading shapes
+    // and the unused readers are gone.
     const consumed = sources.some(({ name, text }) => (
       name !== 'ledger.mjs' && new RegExp(
-        `===\\s*'${kind}'|'${kind}'\\s*===|findBy\\('${kind}'`,
+        `===\\s*'${kind}'|'${kind}'\\s*===|findBy\\('${kind}'|SUBMITTED_KINDS = new Set\\(\\[[^\\]]*'${kind}'`,
       ).test(text)
     )) || new RegExp(`case '${kind}':`).test(
       sources.find((f) => f.name === 'ledger.mjs')?.text || '',
