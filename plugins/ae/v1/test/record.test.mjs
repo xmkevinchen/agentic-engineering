@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
-import { auditWritePath, auditReductionPurity } from '../lib/source-audit.mjs';
+import { auditWritePath } from '../lib/source-audit.mjs';
 import { KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
@@ -14,7 +14,9 @@ import { RECORDS } from '../schema/records.mjs';
 import { fail, ALL_KERNEL_CODES } from '../lib/codes.mjs';
 import { execFileSync } from 'node:child_process';
 import { Kernel } from '../lib/kernel.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, RENDERED, SOURCE_ROOT, OWNER } from './fixtures.mjs';
+import {
+  asObject, assignmentDoc, contractDoc, walk, RENDERED, SOURCE_ROOT, OWNER, FAILING,
+} from './fixtures.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 
 const tmp = (p) => mkdtempSync(join(tmpdir(), p));
@@ -201,15 +203,57 @@ export function recordTests() {
     eq('and recomputing agrees', out.recomputed.O, 'passed');
   });
 
-  group('AC-13 · the reduction reads records and nothing else', () => {
-    // The completeness half — "did we write what we relied on" — stated as a
-    // property of the program. If the Gate can only see what was written down,
-    // then whatever it relied on was written down, and replay from the log alone
-    // reaches the same verdict. Enumerating record kinds instead would be
-    // satisfied by whatever anyone happened to list.
-    const ambient = auditReductionPurity({ readFileSync, dir: libDir });
-    eq('the reduction touches nothing ambient',
-      ambient.map((a) => `${a.file}:${a.source}`).join(','), '');
+  group('AC-13 · the verdict depends on the log and nothing else', () => {
+    // The completeness half — "did we write what we relied on" — asked as
+    // noninterference: hold the log fixed, vary everything around it, and the
+    // verdict must not move. If it cannot move, then nothing outside the log
+    // reached it, and whatever the Gate relied on was written down.
+    //
+    // A source-level blacklist was the first attempt and reached too little: it
+    // covered the reduction's two modules while the readers it uses are assembled
+    // in `kernel.mjs`, which legitimately touches the filesystem. Teaching one of
+    // those readers to consult an environment variable left the suite green.
+    const dir = tmp('v1n-');
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const w = walk(k);
+    const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const verdict = (env) => JSON.parse(execFileSync(
+      process.execPath, [here, logPath, w.lineage, w.run],
+      { encoding: 'utf8', env: { ...process.env, ...env }, cwd: env.CWD || process.cwd() },
+    )).recomputed.O;
+
+    const plain = verdict({});
+    eq('a second process agrees', verdict({}), plain);
+    eq('a different timezone and locale agree',
+      verdict({ TZ: 'Asia/Tokyo', LANG: 'ja_JP.UTF-8' }), plain);
+    eq('a different working directory agrees', verdict({ CWD: dir }), plain);
+    eq('an environment full of noise agrees',
+      verdict({ AE_ANYTHING: 'x', AE_PASS: 'yes', AE_FAIL: 'yes', HOME: dir }), plain);
+
+    // A run the environment could plausibly be asked to rescue: it failed, and
+    // the noise includes exactly the sort of flag a shortcut would read. The
+    // comparisons above cannot catch that on a passing run — a defect that turns
+    // things green changes nothing that was already green.
+    const other = tmp('v1n2-');
+    const otherLog = join(other, 'log.ndjson');
+    const k2 = new Kernel(otherLog, {
+      completionRoot: other, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const failing = walk(k2, { command: FAILING });
+    const failedVerdict = (env) => JSON.parse(execFileSync(
+      process.execPath, [here, otherLog, failing.lineage, failing.run],
+      { encoding: 'utf8', env: { ...process.env, ...env } },
+    )).recomputed.O;
+    eq('a failing run fails', failedVerdict({}), 'failed');
+    eq('and nothing in the environment rescues it',
+      failedVerdict({ AE_PASS: 'yes', AE_FORCE: '1', CI: 'true' }), 'failed');
+
+    // And not vacuous: different facts must reach a different verdict, or the
+    // comparisons would pass on a function that ignores its input.
+    ok('different facts reach a different verdict', failedVerdict({}) !== plain);
   });
 
   group('AC-13 · the unavailable arm replays too', () => {

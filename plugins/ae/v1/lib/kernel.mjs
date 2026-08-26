@@ -240,6 +240,9 @@ class Ledger {
         case 'human_decision_choice':
           state.humanDecisions[r.operation] = r.choice;
           break;
+        case 'human_decision_judgement':
+          state.humanDecisions[r.operation] = { choice: r.choice, answers: r.answers };
+          break;
         case 'human_decision_unavailable':
           // The choice and what it answers. Keeping only the choice lost the
           // relation: replay could say the Human Owner chose `stop` and not which
@@ -306,6 +309,7 @@ class Ledger {
       human_decision_activation: 'decisions',
       human_decision_choice: 'decisions',
       human_decision_unavailable: 'decisions',
+      human_decision_judgement: 'decisions',
       human_signoff: 'signoffs',
       completion_committed: 'completions',
       run_record: 'runRecords',
@@ -453,6 +457,11 @@ export class Kernel {
         kind: 'human_decision_activation', operation, actor, lineage, origin: HOST, ...payload,
       });
     }
+    if (operation === 'retreat_decision' || operation === 'worth_decision') {
+      return this.#ledger.append({
+        kind: 'human_decision_judgement', operation, actor, lineage, origin: HOST, ...payload,
+      });
+    }
     if (operation === 'unavailable_decision') {
       return this.#ledger.append({
         kind: 'human_decision_unavailable', operation, actor, lineage, origin: HOST, ...payload,
@@ -481,12 +490,13 @@ export class Kernel {
   // it to B, run against B, and the Acceptance carried A's digest. Digesting
   // after the command binds the identity to the execution that produced it.
   runObservation({ id, lineage, run, attempt, obligation, artifact }) {
-    // What is run, and what it reads, both come from the Contract. `command` and
-    // `inputsUsed` were arguments: a producer could declare it had read nothing,
-    // and then nothing could ever be stale.
-    const { contract } = this.contractFor(lineage) || {};
+    // What is run, what it runs against, and what it reads all come from the run's
+    // Contract — the revision its Assignment named. `command` and `inputsUsed`
+    // were arguments: a producer could declare it had read nothing, and then
+    // nothing could ever be stale.
+    const { contract } = this.contractForRun(lineage, run) || {};
     if (!contract) {
-      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
     }
     const entry = contract.observations.find((o) => o.obligation === obligation);
     if (!entry) {
@@ -515,7 +525,7 @@ export class Kernel {
       raw = `${error.stdout || ''}${error.stderr || ''}`;
     }
     // After the command, not before.
-    this.#recordArtifact({ id: artifact, lineage, run, obligation, artifactKind: 'file' });
+    this.#recordArtifact({ id: artifact, lineage, run, entry, artifactKind: 'file' });
     const marker = /^AE-SUBJECTS:\s*(\d+)\s*$/m.exec(raw);
     return this.#ledger.append({
       kind: 'command_result', id, lineage, run, attempt, command, artifact, exit,
@@ -609,20 +619,9 @@ export class Kernel {
   // Digested here, not declared. The identity recorded is the deliverable the
   // Acceptance names, so accepting one as an argument let the producer name what
   // its own evidence would be taken to have exercised.
-  #recordArtifact({ id, lineage, run, obligation, artifactKind }) {
-    // The path comes from the Contract's entry for this obligation, not from the
-    // caller. It was an argument, so the producer chose which file its passing
-    // command would be taken to have exercised.
-    const { contract } = this.contractFor(lineage) || {};
-    if (!contract) {
-      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
-    }
-    const entry = contract.observations.find((o) => o.obligation === obligation);
-    if (!entry) {
-      fail('observation_not_named', 'the Contract names no observation for this obligation', {
-        obligation,
-      });
-    }
+  // The path comes from the run's Contract, not from the caller. Its existence
+  // checks live at the one call site, immediately above.
+  #recordArtifact({ id, lineage, run, entry, artifactKind }) {
     const path = `${this.#sourceRoot}/${entry.artifact}`;
     let identity;
     try {
@@ -769,6 +768,35 @@ export class Kernel {
   // The approved Contract, from the approved bytes. The Gate took this as an
   // argument, so the party being judged chose the obligations it would be judged
   // against — fewer of them, or `independence.required: none`.
+  // The Contract a *run* is bound to: the revision its Assignment named, not
+  // whichever is newest.
+  //
+  // Everything used `contractFor(lineage)`, so approving a successor mid-run
+  // changed what an unfinished run was judged against — its dispatch recorded the
+  // new revision's requested family, and evidence bound to the old one reported
+  // `unavailable` where it should have been `stale`. Currentness decides
+  // staleness; it does not decide what the run was asked to do.
+  contractForRun(lineage, run) {
+    // Through `assignmentFor`, which is where a run's Assignment is resolved and
+    // where uniqueness is decided. Re-deriving both here was a second copy of the
+    // rule, and a planted defect could not tell the copies apart.
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) return null;
+    const bound = this.approvalsFor(lineage).find(
+      (a) => a.revision === assignment.contract_revision,
+    );
+    if (!bound) {
+      fail('binding_unresolved', 'the run names a revision this lineage never approved', {
+        lineage, run, revision: assignment.contract_revision,
+      });
+    }
+    return {
+      contract: openObject(bound.bytes, bound.identity, CONTRACT, 'Contract'),
+      identity: bound.identity,
+      revision: bound.revision,
+    };
+  }
+
   contractFor(lineage) {
     const prior = this.approvalsFor(lineage);
     if (prior.length === 0) return null;
@@ -911,7 +939,10 @@ export class Kernel {
   // seat did in fact answer. They are not defaults — omitted, the keys are absent,
   // and their absence is what AC-8 checks.
   recordDispatch({ lineage, run, attempt, obligation, substitutedFamily, answeredFamily }) {
-    const { contract } = this.contractFor(lineage);
+    const { contract } = this.contractForRun(lineage, run) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
     const built = dispatchRecord({ contract, lineage, run, attempt, obligation });
     return this.#ledger.append({
       ...built,
@@ -975,9 +1006,9 @@ export class Kernel {
   // that did not exist. What it signs for is resolved; only *whether* to sign is
   // the caller's.
   signOff({ lineage, run, actor, acceptedReview }) {
-    const approved = this.contractFor(lineage);
+    const approved = this.contractForRun(lineage, run);
     if (!approved) {
-      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
     }
     if (actor !== this.#owner) {
       fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
@@ -993,7 +1024,17 @@ export class Kernel {
     if (!reported) {
       fail('signoff_before_gate', 'the sign-off predates the Gate result', { lineage, run });
     }
-    const verdicts = this.verdictsNow({ lineage, run });
+    // The recorded verdicts, and they must say `passed` — not "the Gate reported
+    // something, and recomputing now says passed". A run could report `pending`,
+    // receive its evidence afterwards, and be signed for while the only verdict
+    // in the log still said `pending`.
+    const latest = new Map();
+    for (const r of this.records()) {
+      if (r.kind !== 'gate_result' || r.lineage !== lineage || r.run !== run) continue;
+      if (r.contract_revision !== approved.revision) continue;
+      latest.set(r.obligation, r);
+    }
+    const verdicts = new Map([...latest].map(([o, r]) => [o, r.status]));
     // And it signs for a run that passed. It checked only that the Gate had
     // reported *something*, so a failing run produced a host sign-off record.
     for (const obligation of approved.contract.obligations) {
@@ -1098,6 +1139,56 @@ export class Kernel {
   // AC-9's arithmetic reads this. The retreat condition fires when formation
   // elapsed exceeds change elapsed and the trace caught nothing; recording the
   // facts without anything reading them would be a kind with no consumer.
+  // AC-9's two judgements, as operations that can record them.
+  //
+  // The record kinds existed and nothing produced them: the criterion reserves
+  // the *judgement* for the Human Owner, and reserving a judgement is not the
+  // same as having nowhere to put it. Each names the run facts it answers, so a
+  // decision cannot float free of the arithmetic it was made against.
+  decideWorth({ lineage, run, actor, choice }) {
+    return this.#humanJudgement({
+      lineage, run, actor, choice, operation: 'worth_decision',
+    });
+  }
+
+  decideRetreat({ lineage, run, actor, choice }) {
+    const arithmetic = this.retreatCondition(lineage, run);
+    const decision = this.#humanJudgement({
+      lineage, run, actor, choice, operation: 'retreat_decision',
+    });
+    // The decision has to agree with the facts. A `no` where the condition fired,
+    // or a `yes` where it did not, is a decision about a different run.
+    if (arithmetic.fired !== (choice === 'yes')) {
+      fail('retreat_contradicts_facts', 'the decision disagrees with the recorded facts', {
+        fired: arithmetic.fired, choice,
+      });
+    }
+    return decision;
+  }
+
+  #humanJudgement({ lineage, run, actor, choice, operation }) {
+    if (!['yes', 'no'].includes(choice)) {
+      fail('human_input_absent', 'the judgement is yes or no', { choice, operation });
+    }
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
+      });
+    }
+    // Against recorded facts, so the judgement answers something. AC-9's two
+    // questions are asked *of* a run's arithmetic, and one asked of nothing is
+    // not the judgement the criterion reserves.
+    const facts = this.records().find(
+      (r) => r.kind === 'run_record' && r.lineage === lineage && r.run === run,
+    );
+    if (!facts) {
+      fail('run_facts_incomplete', 'there are no run facts to judge', { lineage, run });
+    }
+    return this.#collectHumanInput({
+      operation, actor, lineage, run, choice, answers: facts.seq,
+    });
+  }
+
   retreatCondition(lineage, run) {
     const record = this.records().find(
       (r) => r.kind === 'run_record' && r.lineage === lineage && r.run === run,
@@ -1132,7 +1223,7 @@ export class Kernel {
   #statusLocked({ lineage, run }) {
     const result = this.#reduce({ lineage, run });
     const current = this.currentRevision(lineage);
-    const { contract } = this.contractFor(lineage);
+    const { contract } = this.contractForRun(lineage, run);
 
     // The verdict is recorded, because completion relies on it and AC-13 says
     // everything either the Gate or the Human Owner relies on is recorded when it
@@ -1153,9 +1244,11 @@ export class Kernel {
   }
 
   #reduce({ lineage, run }) {
-    const approved = this.contractFor(lineage);
+    // The run's Contract decides what is being judged; the lineage's current
+    // revision decides only whether the evidence is stale.
+    const approved = this.contractForRun(lineage, run);
     if (approved === null) {
-      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
     }
     const { contract } = approved;
     const assignment = this.assignmentFor(lineage, run);
@@ -1165,7 +1258,7 @@ export class Kernel {
     const records = this.records();
     const index = this.index({ lineage, run });
     const inputsNow = this.#inputsNowFor(lineage);
-    const current = approved.revision;
+    const current = this.currentRevision(lineage);
     const admit = admissibility({
       contract, assignment, approvals: this.approvals(), index, inputsNow, run,
     });
@@ -1195,7 +1288,11 @@ export class Kernel {
   }
 
   #completeLocked({ lineage, run, actor, acceptedReview }) {
-    const { contract, identity: contractIdentity, revision: current } = this.contractFor(lineage);
+    const bound = this.contractForRun(lineage, run);
+    if (!bound) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    const { contract, identity: contractIdentity, revision: current } = bound;
     const { byObligation, allPassed } = this.status({ lineage, run });
     if (!allPassed) {
       const first = contract.obligations.find((o) => byObligation[o].status !== 'passed');
@@ -1248,9 +1345,7 @@ export class Kernel {
     // The write is the last step of this method, not a function a caller invokes
     // afterwards with whatever it likes. Its destination belongs to the Kernel,
     // and the verdicts it reads are the ones just recorded.
-    const written = this.#commitCompletion({
-      acceptance, obligations: contract.obligations, run,
-    });
+    const written = this.#commitCompletion({ acceptance, run });
     // Two identities, like the other three durable objects. It used to record one
     // digest, which cannot tell a lexical mutation of the written file from the
     // same content spelled differently — the exact thing AC-3 keeps a pair for.
@@ -1355,7 +1450,7 @@ export class Kernel {
     return new Map(Object.entries(byObligation).map(([o, v]) => [o, v.status]));
   }
 
-  #commitCompletion({ acceptance, obligations, run }) {
+  #commitCompletion({ acceptance, run }) {
     const path = this.completionPathFor({ lineage: acceptance.lineage, run });
 
     // Re-derived here, not carried from the reduction above.

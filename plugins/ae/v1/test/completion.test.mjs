@@ -331,6 +331,36 @@ export function completionTests() {
       () => k.signOff({ lineage: 'L', run: w.run, actor: OWNER }));
   });
 
+  group('AC-9 · the two judgements have somewhere to be recorded', () => {
+    // The record kinds existed and nothing produced them. Reserving a judgement
+    // for the Human Owner is not the same as having nowhere to put it: without
+    // these, the run AC-9 asks for could not record its own answers.
+    const k = fresh();
+    const w = walk(k);
+    refuses('a judgement about a run with no facts', 'run_facts_incomplete',
+      () => k.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' }));
+
+    const facts = k.recordRun({
+      lineage: 'L', run: w.run, formationElapsed: 90, changeElapsed: 30,
+      traceOutcome: 'caught_nothing', wentWrong: '',
+    });
+    refuses('by someone the Kernel does not serve', 'authority_not_granted',
+      () => k.decideWorth({ lineage: 'L', run: w.run, actor: 'P', choice: 'yes' }));
+    const worth = k.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' });
+    eq('the judgement is recorded', worth.choice, 'yes');
+    eq('bound to the facts it answers', worth.answers, facts.seq);
+    eq('externally produced', worth.origin, 'host');
+
+    // The retreat condition is arithmetic, and the decision has to agree with it:
+    // formation cost 90 against change cost 30, and the trace caught nothing, so
+    // it fired.
+    ok('the condition fired', k.retreatCondition('L', w.run).fired);
+    refuses('a decision that disagrees with the facts', 'retreat_contradicts_facts',
+      () => k.decideRetreat({ lineage: 'L', run: w.run, actor: OWNER, choice: 'no' }));
+    eq('and one that agrees is recorded',
+      k.decideRetreat({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' }).choice, 'yes');
+  });
+
   group('AC-5 · every authority operation answers to the same owner', () => {
     // Downstream operations compare the actor with the owner alone. Restating the
     // Contract's field at each one was a second copy of a fact approval settles,

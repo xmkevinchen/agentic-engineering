@@ -143,6 +143,16 @@ export function authorityTests() {
     const at = k.openAttempt({
       lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
     });
+    // The producer grant, separately from the obligation grant. Deleting the
+    // producer check left the suite green: the obligation check happened to fire
+    // for the case being tested, and admissibility invalidated the record later —
+    // but the authority operation itself had been accepted.
+    refuses('evidence from an ungranted producer', 'authority_not_granted',
+      () => k.submitObservation({
+        lineage: 'L', run: 'run1', obligation: 'O', observation: COMMAND,
+        attempt: at.attempt, producer: 'Q', artifact: 'art1', pkg: 'pkg1',
+        commandResult: 'cr1', submitter: 'Q',
+      }));
     refuses('evidence for an ungranted obligation', 'authority_not_granted',
       () => k.submitObservation({
         lineage: 'L', run: 'run1', obligation: 'O2', observation: 'sh other.sh',

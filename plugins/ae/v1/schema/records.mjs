@@ -225,10 +225,25 @@ export const RECORDS = Object.freeze({
         type: 'enum',
         // No `signoff`: signing off is its own kind, `human_signoff`, and an
         // operation two shapes could carry is a fact with two spellings.
-        values: ['assignment_issuance', 'retreat_decision', 'worth_decision'],
+        values: ['assignment_issuance'],
       },
       actor: id, lineage: id, run: id,
-      choice: { type: 'enum', values: ['issue', 'yes', 'no'] },
+      choice: { type: 'enum', values: ['issue'] },
+      origin: { type: 'const', value: 'host' }, seq,
+    },
+  },
+  // AC-9's judgements, each naming the run facts it answers. They shared the
+  // generic choice shape, which carried no reference to what was being judged —
+  // so a `yes` could not be tied to the arithmetic it agreed with.
+  human_decision_judgement: {
+    type: 'object', additional: false,
+    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'answers', 'choice', 'origin', 'seq'],
+    properties: {
+      kind: text,
+      operation: { type: 'enum', values: ['retreat_decision', 'worth_decision'] },
+      actor: id, lineage: id, run: id,
+      answers: { type: 'integer', minimum: 0 },
+      choice: { type: 'enum', values: ['yes', 'no'] },
       origin: { type: 'const', value: 'host' }, seq,
     },
   },

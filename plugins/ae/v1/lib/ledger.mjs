@@ -39,6 +39,7 @@ export const KINDS = Object.freeze({
   human_decision_activation: { producer: 'human', consumer: ['identity', 'replay'] },
   human_decision_choice: { producer: 'human', consumer: ['run', 'replay'] },
   human_decision_unavailable: { producer: 'human', consumer: ['run', 'gate'] },
+  human_decision_judgement: { producer: 'human', consumer: ['run', 'replay'] },
   human_signoff: { producer: 'human', consumer: ['completion'] },
   completion_committed: { producer: 'writer', consumer: ['replay', 'run'] },
   run_record: { producer: 'run', consumer: ['run', 'replay'] },

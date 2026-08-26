@@ -34,9 +34,14 @@ function groupsNamed() {
   return named;
 }
 
-// Criteria that cannot be exercised without a human decision, and why. Listed
-// rather than silently absent: an uncovered criterion should say whether it is
-// waiting on a person or on the implementer.
+// Criteria whose *substance* cannot be exercised without a human decision, and
+// why. Listed rather than silently absent: an uncovered criterion should say
+// whether it is waiting on a person or on the implementer.
+//
+// Being human-gated does not mean nothing about it can be tested. The judgement
+// is the Human Owner's; the operations that record it are the implementer's, and
+// leaving those untested because the judgement is reserved is how a criterion
+// ends up with the machinery to receive an answer missing entirely.
 const HUMAN_GATED = {
   'AC-9': 'the real dogfood run — the Human Owner chooses the change and judges its worth (Q-02)',
 };
@@ -52,7 +57,6 @@ export function coverageTests() {
 
     for (const [criterion, why] of Object.entries(HUMAN_GATED)) {
       ok(`${criterion} is declared human-gated: ${why}`, criteria.includes(criterion));
-      ok(`${criterion} is not also claimed as covered`, !covered.has(criterion));
     }
   });
 

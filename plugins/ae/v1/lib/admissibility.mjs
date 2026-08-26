@@ -30,6 +30,16 @@ function admitUnavailable(record, { contract, assignment, index }) {
   const attempt = index.attempt(record.attempt);
   if (!attempt) return 'binding_unresolved';
   if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
+  // The same authority the ordinary arm answers to. Only the Assignment id was
+  // compared, so an attempt granted one obligation could carry an unavailable
+  // record for another and the Gate reported `unavailable` for something nobody
+  // had been granted.
+  if (!(assignment.grants.obligations || []).includes(record.obligation)) {
+    return 'authority_not_granted';
+  }
+  if (!(attempt.obligations || []).includes(record.obligation)) {
+    return 'authority_not_granted';
+  }
 
   const dispatch = index.dispatch(record.attempt, record.obligation);
   if (!dispatch) return 'binding_unresolved';
