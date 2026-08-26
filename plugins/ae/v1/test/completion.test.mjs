@@ -19,6 +19,8 @@ import {
   checkDispositions, checkCitations, checkPresentedView, statementsFrom,
 } from '../lib/formation.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
+import { validate } from '../lib/schema.mjs';
+import { RECORDS } from '../schema/records.mjs';
 
 const sha = (s) => `sha256:${createHash('sha256').update(s).digest('hex')}`;
 const CONTRACT = join(
@@ -114,15 +116,16 @@ export function completionTests() {
     const vacuous = walk({ subjects: 0 });
     refuses('zero subjects does not complete', 'not_all_passed', () => complete(vacuous));
 
-    // And there is no field to claim otherwise: the observation schema refuses one.
-    const w = walk();
-    refuses('an observation carrying an outcome', 'format_open',
-      () => w.k.ledger.append({
-        kind: 'observation', lineage: 'L', run: w.run, obligation: 'O',
-        observation: 'sh run-tests.sh', attempt: w.attempt.attempt, contract_revision: 'r1',
-        assignment: 'A1', producer: 'P', artifact: 'art1', package: 'pkg1',
-        command_result: 'cr1', satisfied: true,
-      }));
+    // And there is no field to claim otherwise: the observation schema refuses
+    // one, so no path — Kernel or tampered log — can put an outcome in a
+    // submission and have it read as a record.
+    const problems = validate(RECORDS.observation, {
+      kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O',
+      observation: 'sh run-tests.sh', attempt: 'a1', contract_revision: 'r1',
+      assignment: 'A1', producer: 'P', artifact: 'art1', package: 'pkg1',
+      command_result: 'cr1', satisfied: true, seq: 0,
+    });
+    ok('an observation carrying an outcome is not a valid record', problems.length > 0);
   });
 
   group('AC-2 · a changed material input goes stale', () => {

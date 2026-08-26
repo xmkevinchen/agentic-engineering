@@ -27,13 +27,19 @@ const HOST = 'host';
 const HARNESS = 'harness';
 
 export class Kernel {
+  // Private. A public `ledger` let anything holding a Kernel append a record
+  // without passing the operation that guards it — `gate_result: passed` and
+  // `human_signoff` included. Being the only writer is not a property if the
+  // writer is reachable around the front door.
+  #ledger;
+
   constructor(logPath) {
-    this.ledger = new Ledger(logPath);
+    this.#ledger = new Ledger(logPath);
   }
 
   // --- reads -------------------------------------------------------------
 
-  records() { return this.ledger.read(); }
+  records() { return this.#ledger.read(); }
 
   approvals() {
     return this.records().filter(
@@ -62,7 +68,7 @@ export class Kernel {
     if (Object.prototype.hasOwnProperty.call(payload, 'origin')) {
       fail('human_input_self_supplied', 'a caller may not supply an origin', { operation });
     }
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'human_decision', operation, actor, lineage, origin: HOST, ...payload,
     });
   }
@@ -75,18 +81,18 @@ export class Kernel {
     if (!Array.isArray(inputsUsed)) {
       fail('material_input_incomplete', 'the runner must report which inputs it used', { id });
     }
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'command_result', id, lineage, run, attempt, command, exit,
       raw, subjects, inputs_used: inputsUsed, origin: HARNESS,
     });
   }
 
   recordPackage(pkg) {
-    return this.ledger.append({ kind: 'evidence_package', ...pkg });
+    return this.#ledger.append({ kind: 'evidence_package', ...pkg });
   }
 
   recordArtifact({ id, lineage, run, artifactKind, identity }) {
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
     });
   }
@@ -119,7 +125,7 @@ export class Kernel {
     // schema counts it as one — which is the honest behaviour: "absent" cannot be
     // spelled as a value.
     const base = { lineage, revision, identity, decision: decision.seq };
-    return this.ledger.append(
+    return this.#ledger.append(
       prior.length === 0
         ? { kind: 'contract_approved_genesis', ...base }
         : { kind: 'contract_approved_revision', ...base, predecessor },
@@ -146,9 +152,9 @@ export class Kernel {
       fail('attempt_not_granted', 'only the granted producer may open an attempt', { producer });
     }
     const assignment = issued;
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'attempt_opened', lineage, run, assignment: assignment.id,
-      attempt: `${assignment.id}#${this.ledger.seq}`, producer, obligations,
+      attempt: `${assignment.id}#${this.#ledger.seq}`, producer, obligations,
     });
   }
 
@@ -173,21 +179,21 @@ export class Kernel {
     // The grants and the boundary are part of the issuance, not something the
     // holder supplies later. An earlier version recorded who issued it and let
     // the Assignment object carry self-selected grants.
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'assignment_issued', lineage, run, id, contract_revision: contractRevision,
       actor, beneficiary, boundary, grants, origin: HOST,
     });
   }
 
   recordUnavailable({ lineage, run, obligation, attempt, requested }) {
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'capability_unavailable', lineage, run, obligation, attempt,
       requested, origin: HARNESS,
     });
   }
 
   recordDelivery({ lineage, to, carried, provenance }) {
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'delivery', lineage, to, carried, provenance, origin: HARNESS,
     });
   }
@@ -204,7 +210,7 @@ export class Kernel {
     // No outcome parameter. What the run produced is in the runner's record; the
     // observation says which obligation it answers and which evidence it points
     // at, and stops there.
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'observation', lineage, run, obligation, observation, attempt,
       contract_revision: contractRevision, assignment, producer, artifact,
       package: pkg, command_result: commandResult,
@@ -212,7 +218,7 @@ export class Kernel {
   }
 
   signOff({ lineage, run, contractRevision, deliverable, actor, acceptedReview }) {
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'human_signoff', lineage, run, contract_revision: contractRevision,
       deliverable, actor, origin: HOST,
       ...(acceptedReview ? { accepted_review: acceptedReview } : {}),
@@ -220,13 +226,13 @@ export class Kernel {
   }
 
   recordCompletion({ lineage, run, acceptance, path }) {
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'completion_committed', lineage, run, acceptance, path,
     });
   }
 
   recordRun({ lineage, run, formationElapsed, changeElapsed, traceOutcome, wentWrong }) {
-    return this.ledger.append({
+    return this.#ledger.append({
       kind: 'run_record', lineage, run,
       formation_elapsed: formationElapsed, change_elapsed: changeElapsed,
       trace_outcome: traceOutcome, went_wrong: wentWrong,
@@ -332,7 +338,7 @@ export class Kernel {
     if (run) {
       for (const obligation of contract.obligations) {
         const v = result.byObligation[obligation];
-        this.ledger.append({
+        this.#ledger.append({
           kind: 'gate_result', lineage, run, contract_revision: current, obligation,
           status: v.status,
           ...(v.code ? { code: v.code } : {}),

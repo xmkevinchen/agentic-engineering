@@ -12,6 +12,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Kernel } from '../lib/kernel.mjs';
+import { validate } from '../lib/schema.mjs';
+import { RECORDS } from '../schema/records.mjs';
 import { identify } from '../lib/identity.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 
@@ -33,12 +35,15 @@ export function kernelTests() {
     const rec = k.collectHumanInput({ operation: 'signoff', actor: 'H', lineage: 'L' });
     eq('the Kernel stamps the origin', rec.origin, 'host');
 
-    // And the record shape pins it: a record claiming host origin cannot be
-    // appended with anything else in that position.
-    refuses('appending a decision with another origin', 'format_open',
-      () => k.ledger.append({
-        kind: 'human_decision', operation: 'signoff', actor: 'H', lineage: 'L', origin: 'model',
-      }));
+    // And the record shape pins it: a record claiming host origin cannot exist
+    // with anything else in that position. Asserted against the schema, because
+    // there is no longer a way to attempt the append — the Kernel's ledger is
+    // private, so every record goes through the operation that guards it.
+    const problems = validate(RECORDS.human_decision, {
+      kind: 'human_decision', operation: 'signoff', actor: 'H', lineage: 'L',
+      origin: 'model', seq: 0,
+    });
+    ok('a decision claiming another origin is not a valid record', problems.length > 0);
   });
 
   group('AC-3 · the current revision is derived, never nominated', () => {
@@ -129,18 +134,25 @@ export function kernelTests() {
     };
     const assignment = { id: 'A1', contract_revision: 'r1', boundary: ['docs'] };
 
-    k.ledger.append({
-      kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1', attempt: 'a1',
-      producer: 'P', obligations: ['O'],
+    // Through the real operations, not planted: this is a path a producer can
+    // actually take. It opens a granted attempt and submits an observation whose
+    // evidence references name nothing in the log.
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', id: 'A1', contractRevision: 'r1',
+      actor: 'H', beneficiary: 'P', boundary: ['docs'],
+      grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O'] },
+    });
+    const at = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
     });
     // A bare observation — the shape the old positive test used — reaches the
-    // reduction and is refused there rather than passing. Its references name
-    // nothing in the log, which is the point: they resolve through the Kernel's
-    // own index, and an index built from the log cannot be talked out of it.
-    k.ledger.append({
-      kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O', observation: 'sh run.sh',
-      attempt: 'a1', contract_revision: 'r1', assignment: 'A1', producer: 'P',
-      artifact: 'art1', package: 'pkg1', command_result: 'cr1',
+    // reduction and is refused there rather than passing. The references resolve
+    // through the Kernel's own index, and an index built from the log cannot be
+    // talked out of it.
+    k.submitObservation({
+      lineage: 'L', run: 'run1', obligation: 'O', observation: 'sh run.sh',
+      attempt: at.attempt, contractRevision: 'r1', assignment: 'A1', producer: 'P',
+      artifact: 'art1', pkg: 'pkg1', commandResult: 'cr1', submitter: 'P',
     });
     const { byObligation, allPassed } = k.status({
       contract, lineage: 'L', assignment, inputsNow: () => null,
