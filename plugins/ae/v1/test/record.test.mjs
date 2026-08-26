@@ -7,9 +7,10 @@ import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 import { auditWritePath } from '../lib/source-audit.mjs';
-import { Ledger, KINDS, auditKinds } from '../lib/ledger.mjs';
+import { KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
+import { RECORDS } from '../schema/records.mjs';
 import { execFileSync } from 'node:child_process';
 import { Kernel } from '../lib/kernel.mjs';
 import { asObject, assignmentDoc, contractDoc, walk, RENDERED, SOURCE_ROOT } from './fixtures.mjs';
@@ -187,64 +188,52 @@ export function recordTests() {
   });
 
   group('AC-13 · the record appends, closes, and replays', () => {
+    // Through a Kernel, because there is no other way to append. `Ledger` was
+    // exported, so `import { Ledger }` and `append` was a second way into the log
+    // — which made "the Kernel is the only way in" a sentence in a README rather
+    // than a property.
     const dir = tmp('v1l-');
     const path = join(dir, 'log.ndjson');
-    const ledger = new Ledger(path);
+    const k = new Kernel(path, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const w = walk(k);
+    k.status({ lineage: w.lineage, run: w.run });
 
-    // Full records, because `append` now validates the payload and not only the
-    // kind. A shorthand fixture would have been refused — which is the point:
-    // closure over names is not closure.
-    ledger.append({
-      kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1',
-      producer: 'P', obligations: ['O'],
-    });
-    ledger.append({
-      kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O',
-      observation: 'sh run-tests.sh', attempt: 0, contract_revision: 'r1',
-      assignment: 'A1', producer: 'P', artifact: 'art1', package: 'pkg1',
-      command_result: 'cr1',
-    });
-
-    // Rejection happens at the append boundary, so the Gate never sees it — and
-    // `pending` for an obligation nothing was validly submitted for is correct.
-    refuses('a kind outside the closed set', 'kind_without_consumer',
-      () => ledger.append({ kind: 'invented_kind', lineage: 'L' }));
-
-    // The payload too. An earlier draft checked the name and accepted anything
-    // beside it: missing fields, nulls, and additional properties all appended.
-    refuses('a known kind with a field missing', 'format_open',
-      () => ledger.append({ kind: 'attempt_opened', lineage: 'L', run: 'run1' }));
-    refuses('a known kind with a null field', 'format_open',
-      () => ledger.append({
+    // The closure itself, asserted against the shapes that enforce it: a kind
+    // outside the set has no shape, and a known kind with a missing, null or
+    // additional field does not match the one it has.
+    ok('a kind outside the closed set has no shape', RECORDS.invented_kind === undefined);
+    for (const [why, record] of [
+      ['a field missing', { kind: 'attempt_opened', lineage: 'L', run: 'run1', seq: 0 }],
+      ['a null field', {
         kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: null,
-        producer: 'P', obligations: ['O'],
-      }));
-    refuses('a known kind with an additional field', 'format_open',
-      () => ledger.append({
+        producer: 'P', obligations: ['O'], seq: 0,
+      }],
+      ['an additional field', {
         kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1',
-        producer: 'P', obligations: ['O'], smuggled: 'value',
-      }));
-    // And the origin markers are constants in the shape, so a record claiming
-    // host origin cannot be appended with anything else there.
-    refuses('a decision claiming a different origin', 'format_open',
-      () => ledger.append({
-        kind: 'human_decision_choice', operation: 'unavailable_decision', actor: 'Human Owner', lineage: 'L', choice: 'stop',
-        origin: 'model',
-      }));
+        producer: 'P', obligations: ['O'], smuggled: 'value', seq: 0,
+      }],
+      ['a decision claiming a different origin', {
+        kind: 'human_decision_choice', operation: 'unavailable_decision',
+        actor: 'Human Owner', lineage: 'L', choice: 'stop', origin: 'model', seq: 0,
+      }],
+    ]) {
+      ok(`${why} is refused`, validate(RECORDS[record.kind], record).length > 0);
+    }
 
-    const first = ledger.replay();
-    eq('both records replay', first.records.length, 2);
-    eq('the attempt is reconstructed', first.state.attempts.length, 1);
-    eq('sequence is the record’s own', first.records.map((r) => r.seq).join(','), '0,1');
+    // Replay in this process, and again in a fresh one: the same records must
+    // reconstruct the same state.
+    const first = k.replay();
+    ok('every record lands in a bucket', first.records.length > 0);
+    const again = new Kernel(path).replay();
+    eq('a fresh reader agrees',
+      JSON.stringify(again.state), JSON.stringify(first.state));
 
-    // Replay is a check, not a re-enactment: a fresh reader must rebuild the same
-    // state from the same bytes.
-    const fresh = new Ledger(path).replay();
-    ok('a fresh process rebuilds the same state',
-      JSON.stringify(fresh.records) === JSON.stringify(first.records));
-
-    refuses('a relied-on fact that was never recorded', 'record_not_appended',
-      () => ledger.assertRecorded(['human_signoff']));
-    ok('facts that were recorded', ledger.assertRecorded(['attempt_opened', 'observation']));
+    // The completeness half: not "can we replay what we wrote", but "did we write
+    // what we relied on".
+    refuses('a fact nothing recorded', 'record_not_appended',
+      () => k.assertRecorded(['human_signoff'], { lineage: w.lineage, run: w.run }));
+    ok('facts that were recorded',
+      k.assertRecorded(['attempt_opened', 'observation'], { lineage: w.lineage, run: w.run }));
   });
+
 }

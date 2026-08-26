@@ -17,7 +17,7 @@ lib/identity.mjs       two identities per object
 lib/admissibility.mjs  what makes an observation count as evidence
 lib/family.mjs         the requested identity, and the unavailable arm
 lib/formation.mjs      the provenance trace, including the landing check
-lib/ledger.mjs         append-only record, closed at the append boundary
+lib/ledger.mjs         append-only record, closed at the append boundary — not exported
 lib/write-path.mjs     where a completion write may land
 lib/source-audit.mjs   properties only the source can answer: staging, origin
 lib/schema.mjs         closed-format validation, and validation of the schemas

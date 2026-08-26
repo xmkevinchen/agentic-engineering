@@ -14,7 +14,7 @@
 // access §4 already concedes and does not pretend to resist.
 
 import { resolve } from 'node:path';
-import { Ledger } from './ledger.mjs';
+import { InternalLedger as Ledger } from './ledger.mjs';
 import { reduceAll, STATUS } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
 import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
@@ -82,6 +82,14 @@ export class Kernel {
   // --- reads -------------------------------------------------------------
 
   records() { return this.#ledger.read(); }
+
+  // The log's own readers. They live here because the Ledger is not reachable
+  // from outside — a caller that could construct one could also append to it.
+  replay() { return this.#ledger.replay(); }
+
+  reconstruct(scope) { return this.#ledger.reconstruct(scope); }
+
+  assertRecorded(reliedOn, scope = {}) { return this.#ledger.assertRecorded(reliedOn, scope); }
 
   approvals() {
     return this.records().filter(
@@ -753,6 +761,15 @@ export class Kernel {
       if (!recorded) {
         fail('review_required_absent', 'the review the Acceptance carries was never recorded', {
           acceptedReview,
+        });
+      }
+      // And it must come from a family the Contract asked for. Only the digest
+      // was checked, so a review recorded as the implementer's own family
+      // satisfied a cross-family requirement — which is the substitution AC-7
+      // refuses, arriving through the review rather than through the dispatch.
+      if (!contract.independence.requested_family.includes(recorded.family)) {
+        fail('same_family_substituted', 'the review is not from a family the Contract requested', {
+          recorded: recorded.family, requested: contract.independence.requested_family,
         });
       }
     } else if (acceptedReview) {

@@ -188,6 +188,10 @@ printf "a run with two Assignments proceeds     %s\n" "$(run)"; revert kernel.mj
 # log between the reduction and the write, and there is no seam to schedule
 # against. A mutation that cannot turn red would say the guard is covered.
 
+plant kernel.mjs "      if (!contract.independence.requested_family.includes(recorded.family)) {" \
+  "      if (false) {"
+printf "a same-family review satisfies the ask  %s\n" "$(run)"; revert kernel.mjs
+
 # AC-13: a log that replays into a different verdict cannot account for its own
 # Acceptance. The fresh-process check is what catches this; nothing in-process can.
 plant admissibility.mjs "    if (record.run !== run) return 'binding_cross_execution';" ""

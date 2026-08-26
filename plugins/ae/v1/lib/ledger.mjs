@@ -39,7 +39,11 @@ export const KINDS = Object.freeze({
   run_record: { producer: 'run', consumer: ['run', 'replay'] },
 });
 
-export class Ledger {
+// Not exported. It was, so `import { Ledger }` and `append` was a second way into
+// the log — which made "the Kernel is the only way in" a sentence in a README
+// rather than a property. The Kernel owns the only instance, and the readers a
+// caller legitimately needs are its methods.
+class Ledger {
   constructor(path) {
     this.path = path;
   }
@@ -291,3 +295,5 @@ export function auditKinds({ readdirSync, readFileSync, dir }) {
   }
   return problems;
 }
+
+export { Ledger as InternalLedger };

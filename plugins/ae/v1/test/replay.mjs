@@ -6,14 +6,12 @@
 // it finds; the caller compares that with what the original run reached.
 
 import { copyFileSync } from 'node:fs';
-import { Ledger } from '../lib/ledger.mjs';
 import { Kernel } from '../lib/kernel.mjs';
 import { SOURCE_ROOT, RENDERED } from './fixtures.mjs';
 
 const [, , path, lineage, run] = process.argv;
 
-const ledger = new Ledger(path);
-const state = ledger.reconstruct({ lineage, run });
+const state = new Kernel(path).reconstruct({ lineage, run });
 
 // And the verdicts, recomputed rather than read back. `status` records what it
 // decides, so the reduction runs against a copy: replaying must not write into

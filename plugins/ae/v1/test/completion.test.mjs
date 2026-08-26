@@ -266,6 +266,17 @@ export function completionTests() {
     refuses('a review nobody recorded', 'review_required_absent',
       () => complete(run(cross), { acceptedReview: sha('imagined') }));
 
+    // And it must come from a family the Contract asked for. Only the digest was
+    // checked, so a review recorded as the implementer's own family satisfied a
+    // cross-family requirement.
+    const wrongFamily = run(cross);
+    wrongFamily.k.recordReview({
+      lineage: wrongFamily.lineage, run: wrongFamily.run,
+      identity: sha('the review'), family: 'anthropic',
+    });
+    refuses('a review from the implementer\'s own family', 'same_family_substituted',
+      () => complete(wrongFamily, { acceptedReview: sha('the review') }));
+
     const w = run(cross);
     w.k.recordReview({
       lineage: w.lineage, run: w.run, identity: sha('the review'), family: 'openai',
