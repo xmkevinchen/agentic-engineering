@@ -160,9 +160,10 @@ Owner's call.
 
 | | |
 |---|---|
-| **AC-9** — the real dogfood run | Needs the Human Owner to choose the change and judge its independent worth. Q-02. |
+| **AC-9** — the real dogfood run | Needs the Human Owner to choose the change and judge it. The machinery to record both judgements exists (`decideWorth`, `decideRetreat`); the judgements do not. Q-02. |
 | **AC-1 end to end** | The pieces exist and are tested; the run that exercises them together is AC-9's. |
 | **AC-12's freeze** | Deliberate. Formats freeze *after* the real run exercises them, with the identity of what enforces them pinned. Freezing now would repeat the mistake the plan exists to avoid. |
+| **AC-2 and AC-5** | Not met in full, and not waivable here — see above. Extending the slice or amending the criteria is the Human Owner's call. |
 
 The suite covers every criterion that can be exercised without a human decision.
 The ones that cannot are the ones the Contract reserves for the Human Owner, and
