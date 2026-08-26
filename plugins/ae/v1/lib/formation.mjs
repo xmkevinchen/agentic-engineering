@@ -112,6 +112,64 @@ export function checkCitations(statements, provenance) {
   return problems;
 }
 
+// AC-6 over the approved bytes, as one call, so approval can make it compulsory.
+//
+// Everything is derived from the Contract itself. The two halves used to take
+// oracles — a statement list, and a `carriedBy` function that answered whether a
+// criterion carried an obligation — so a caller could describe a document that
+// satisfied every rule and never mention the one that did not.
+//
+// A material statement is one the Contract makes in prose: its scope, its
+// non-goals, and the evidence it requires. Obligations are identifiers and carry
+// no claim of their own; the observation named for each is where the claim is.
+export function formationProblems(contract) {
+  const { provenance } = contract;
+  const known = new Set([
+    ...provenance.verifiable.map((v) => v.id),
+    ...provenance.transcribed.map((t) => t.id),
+    ...provenance.proposals.map((p) => p.id),
+  ]);
+  const broad = new Set(provenance.transcribed.filter((t) => t.broad === true).map((t) => t.id));
+
+  const statements = [
+    ...contract.scope.map((text, i) => ({ id: `scope[${i}]`, cites: citesIn(text) })),
+    ...contract.non_goals.map((text, i) => ({ id: `non_goals[${i}]`, cites: citesIn(text) })),
+    ...contract.required_evidence.map((text, i) => ({
+      id: `required_evidence[${i}]`, cites: citesIn(text),
+    })),
+  ];
+
+  const problems = [];
+  const cited = new Set();
+  for (const s of statements) {
+    if (s.cites.length === 0) {
+      problems.push({ code: 'statement_uncited', statement: s.id });
+      continue;
+    }
+    for (const id of s.cites) {
+      cited.add(id);
+      if (!known.has(id)) problems.push({ code: 'citation_unknown', statement: s.id, source: id });
+    }
+    if (s.cites.every((id) => broad.has(id))) {
+      problems.push({ code: 'citation_broad_only', statement: s.id });
+    }
+  }
+
+  // Inbound coverage, and the landing. A transcribed entry says what became of an
+  // obligation a source placed on this work; `carried` means the Contract took it
+  // on, and the Contract taking it on is visible as some statement citing it.
+  for (const t of provenance.transcribed) {
+    if (!t.disposition) {
+      problems.push({ code: 'obligation_undisposed', source: t.id });
+      continue;
+    }
+    if (t.disposition === 'carried' && !cited.has(t.id)) {
+      problems.push({ code: 'disposition_lands_nowhere', source: t.id });
+    }
+  }
+  return problems;
+}
+
 // Inbound, with the landing check. `carriedBy` answers whether a criterion
 // actually contains an obligation — supplied by the caller, because only the
 // caller knows what its criteria say.
@@ -138,27 +196,4 @@ export function checkDispositions(dispositions, carriedBy) {
     }
   }
   return problems;
-}
-
-// The view presented for approval must be derived from the approved bytes, and
-// the derivation must be checkable — not two digests recorded side by side, which
-// a stale view of one candidate plus the correct digest of another would satisfy.
-export function checkPresentedView({ approvedBytes, view, render }) {
-  if (!view || !view.rendering_sha256 || !view.renders_sha256) {
-    fail('human_input_absent', 'approval must record what was shown and what it renders', {});
-  }
-  const approved = `sha256:${createHash('sha256').update(approvedBytes).digest('hex')}`;
-  if (view.renders_sha256 !== approved) {
-    fail('identity_mismatch', 'the view does not claim to render the approved bytes', {
-      claimed: view.renders_sha256, approved,
-    });
-  }
-  const rerendered = render(approvedBytes);
-  const actual = `sha256:${createHash('sha256').update(rerendered).digest('hex')}`;
-  if (actual !== view.rendering_sha256) {
-    fail('identity_mismatch', 'the recorded rendering is not what those bytes render to', {
-      recorded: view.rendering_sha256, actual,
-    });
-  }
-  return true;
 }

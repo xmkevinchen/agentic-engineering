@@ -9,14 +9,54 @@
 // rather than throwing, because the Gate turns it into a status and a thrown
 // error would bypass the reduction that must produce it.
 
+// The unavailable arm's own admissibility. AC-4 says both arms reach a status
+// through the same reduction; that is only true if the unavailable record is
+// checked like any other submission. An earlier version mapped every
+// `capability_unavailable` straight to `unavailable`, and the dispatch checks sat
+// in a function `complete` called after it had already established everything
+// passed — unreachable for exactly the runs that had an unavailable result.
+function admitUnavailable(record, { contract, assignment, index }) {
+  const stated = contract.independence.required === 'cross_family_required'
+    ? contract.independence.requested_family
+    : null;
+  if (stated === null) {
+    // Nothing was requested, so nothing can have been unavailable.
+    return 'requested_from_wrong_source';
+  }
+  if (!Array.isArray(record.requested)) return 'requested_dropped';
+  if (JSON.stringify(record.requested) !== JSON.stringify(stated)) {
+    return 'requested_substituted';
+  }
+  const attempt = index.attempt(record.attempt);
+  if (!attempt) return 'binding_unresolved';
+  if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
+
+  const dispatch = index.dispatch(record.attempt, record.obligation);
+  if (!dispatch) return 'binding_unresolved';
+  if (JSON.stringify(dispatch.requested) !== JSON.stringify(stated)) {
+    return 'requested_substituted';
+  }
+  for (const field of ['observed', 'effective']) {
+    if (Object.prototype.hasOwnProperty.call(dispatch, field)) return 'observed_without_answer';
+  }
+  if (dispatch.substituted_family || dispatch.answered_family) {
+    return 'same_family_substituted';
+  }
+  return null;
+}
+
 export function admissibility({
   contract,        // the active revision: names an observation per obligation
   assignment,      // grants: producer, boundary, obligations
   approvals,       // approval history, for activation ordering
   index,           // resolvers: package(id), attempt(id), artifact(id), commandResult(id)
-  inputsNow,       // current identity of a material input, or null if gone
+  inputsNow,       // the Harness's latest observation of a material input
 }) {
   return function admit(record) {
+    if (record.kind === 'capability_unavailable') {
+      return admitUnavailable(record, { contract, assignment, index });
+    }
+
     // --- the observation the Contract named -------------------------------
     // A list, matching the schema. An earlier draft read this as an
     // obligation-keyed object while the schema required a list, so a
@@ -106,7 +146,12 @@ export function admissibility({
       if (!recorded.has(used)) return 'material_input_incomplete';
     }
     for (const input of pkg.material_inputs || []) {
-      if (inputsNow(input.id) === null) return 'binding_unresolved';
+      const now = inputsNow(input.id);
+      // Never observed is not "unchanged". An input the Harness has not looked at
+      // cannot be shown to be current, and assuming it is would be the vacuity
+      // this section refuses.
+      if (now === undefined) return 'material_input_incomplete';
+      if (now === null) return 'binding_unresolved';
     }
 
     return null;
@@ -119,10 +164,19 @@ export function withinBoundary(path, boundary) {
   // Normalise first. Comparing raw segments accepted `docs/v1/../../src/secret.js`
   // against boundary `docs/v1`, because the first two segments matched and nobody
   // asked where the rest went.
+  // An absolute path is outside any repository-relative boundary by construction,
+  // and `..` at the root escapes rather than cancelling. Both used to normalise
+  // into something the boundary accepted: `/docs/v1/a` and `../../docs/v1/a` both
+  // became `docs/v1/a`.
+  if (path.startsWith('/')) return false;
   const parts = [];
   for (const seg of path.split('/')) {
     if (seg === '' || seg === '.') continue;
-    if (seg === '..') { parts.pop(); continue; }
+    if (seg === '..') {
+      if (parts.length === 0) return false;
+      parts.pop();
+      continue;
+    }
     parts.push(seg);
   }
   return (boundary || []).some((allowed) => {
@@ -140,6 +194,7 @@ export function inputsChangedAgainst(index, inputsNow) {
     if (!pkg) return false;
     for (const input of pkg.material_inputs || []) {
       const now = inputsNow(input.id);
+      if (now === undefined) return false;
       if (now === null) return true;
       if (now !== input.identity) return true;
     }

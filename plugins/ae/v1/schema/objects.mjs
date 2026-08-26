@@ -18,7 +18,7 @@ const identity = {
   properties: {
     byte_sha256: digest,
     canonical_sha256: digest,
-    length: { type: 'integer' },
+    length: { type: 'integer', minimum: 0 },
   },
 };
 
@@ -160,18 +160,14 @@ export const EVIDENCE_PACKAGE = {
     assignment: id,
     attempt: id,
     producer: id,
-    artifact: {
-      type: 'object', additional: false,
-      required: ['kind', 'identity'],
-      properties: {
-        kind: { type: 'enum', values: ['commit', 'diff', 'file'] },
-        identity: digest,
-      },
-    },
-    // The raw result is referenced, never restated: the package names the record
-    // the Harness wrote. That is how a package can carry the field D-01 §9
-    // requires without its author being able to write what it says.
-    command_result: digest,
+    // Both are references to records, never restatements of them. The package
+    // names the artifact the Harness recorded and the result the Harness wrote;
+    // it carries neither's content, which is how it can carry the fields D-01 §9
+    // requires without its author being able to write what they say. Restating
+    // the artifact's identity here made the package a second source for it, and
+    // the two were never compared.
+    artifact: id,
+    command_result: id,
     changed_paths: { type: 'array', minItems: 0, items: text },
     material_inputs: { type: 'array', minItems: 0, items: materialInput },
     deviations: { type: 'array', minItems: 0, items: text },
@@ -201,7 +197,7 @@ export const ACCEPTANCE = {
         outcome: { type: 'enum', values: ['accepted'] },
         origin: { type: 'enum', values: ['host'] },
         run: id,
-        seq: { type: 'integer' },
+        seq: { type: 'integer', minimum: 0 },
       },
     },
     // Where no independence was required this states that, and the Gate checks

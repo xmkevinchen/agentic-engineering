@@ -27,15 +27,15 @@ const sources = () => readdirSync(libDir)
   .filter((f) => f.endsWith('.mjs'))
   .map((f) => ({ name: f, text: readFileSync(join(libDir, f), 'utf8') }));
 
-const A1 = { kind: 'attempt_opened', lineage: 'L', attempt: 'a1' };
+const A1 = { kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a1' };
 // The observation names its evidence; the outcome comes from the runner's record
 // through `outcomeOf`, never from the submission.
 const obs = (green, extra = {}) => ({
-  kind: 'observation', lineage: 'L', obligation: 'O', attempt: 'a1',
+  kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O', attempt: 'a1',
   contract_revision: 'r1', command_result: green ? 'green' : 'red', ...extra,
 });
 const gate = (records) => reduce({
-  records, lineage: 'L', obligation: 'O', currentRevision: 'r1',
+  records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1',
   admit: () => null,
   inputsChanged: () => false,
   outcomeOf: (r) => r.command_result === 'green',

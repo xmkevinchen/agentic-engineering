@@ -5,18 +5,20 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { group, ok, eq } from './harness.mjs';
 
-const A1 = { kind: 'attempt_opened', lineage: 'L', attempt: 'a1' };
-const A2 = { kind: 'attempt_opened', lineage: 'L', attempt: 'a2' };
+// Every record carries the run it belongs to. Selection is scoped by it, because
+// a lineage outlives its executions and evidence from one used to decide another.
+const A1 = { kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a1' };
+const A2 = { kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a2' };
 // The observation names its evidence and claims no outcome — the schema has no
 // field for one. `outcome` here is what the *runner's* record would say, threaded
 // through `outcomeOf` below, so these cases exercise the reduction rather than a
 // submission's opinion of itself.
 const obs = (attempt, outcome, rev = 'r1') => ({
-  kind: 'observation', lineage: 'L', obligation: 'O', attempt,
+  kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O', attempt,
   contract_revision: rev, command_result: outcome ? 'green' : 'red',
 });
 const unavailable = (attempt) => ({
-  kind: 'capability_unavailable', lineage: 'L', obligation: 'O', attempt,
+  kind: 'capability_unavailable', lineage: 'L', run: 'run1', obligation: 'O', attempt,
 });
 
 // The three readers the reduction requires. None has a permissive default: an
@@ -28,7 +30,8 @@ const DEFAULTS = {
   outcomeOf: (r) => r.command_result === 'green',
 };
 const run = (records, opts = {}) => reduce({
-  records, lineage: 'L', obligation: 'O', currentRevision: 'r1', ...DEFAULTS, ...opts,
+  records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1',
+  ...DEFAULTS, ...opts,
 }).status;
 
 export function gateTests() {
@@ -88,7 +91,7 @@ export function gateTests() {
 
   group('AC-4 · the reduction refuses to run without its readers', () => {
     const records = [A1, obs('a1', true)];
-    const base = { records, lineage: 'L', obligation: 'O', currentRevision: 'r1' };
+    const base = { records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1' };
     for (const missing of ['admit', 'inputsChanged', 'outcomeOf']) {
       const opts = { ...DEFAULTS };
       delete opts[missing];
@@ -147,20 +150,22 @@ export function gateTests() {
 
   group('AC-1 · completion needs every obligation passed', () => {
     const recs = [
-      { kind: 'attempt_opened', lineage: 'L', attempt: 'a1' },
+      { kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a1' },
       { ...obs('a1', true), obligation: 'O1' },
       { ...obs('a1', true), obligation: 'O2' },
     ];
     ok('all passed', reduceAll({
-      records: recs, lineage: 'L', obligations: ['O1', 'O2'], currentRevision: 'r1', ...DEFAULTS,
+      records: recs, lineage: 'L', run: 'run1', obligations: ['O1', 'O2'],
+      currentRevision: 'r1', ...DEFAULTS,
     }).allPassed);
     ok('one pending blocks', reduceAll({
-      records: recs, lineage: 'L', obligations: ['O1', 'O2', 'O3'], currentRevision: 'r1', ...DEFAULTS,
+      records: recs, lineage: 'L', run: 'run1', obligations: ['O1', 'O2', 'O3'],
+      currentRevision: 'r1', ...DEFAULTS,
     }).allPassed === false);
     // An empty obligation list is not "everything passed" — it is a Contract that
     // promised nothing, and vacuous completion is the failure AE exists to catch.
     ok('no obligations is not completion', reduceAll({
-      records: recs, lineage: 'L', obligations: [], currentRevision: 'r1', ...DEFAULTS,
+      records: recs, lineage: 'L', run: 'run1', obligations: [], currentRevision: 'r1', ...DEFAULTS,
     }).allPassed === false);
   });
 }

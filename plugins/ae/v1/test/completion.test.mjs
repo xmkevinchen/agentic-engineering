@@ -1,127 +1,81 @@
 // AC-1, AC-6 — completion through the channel, and the formation trace.
 //
 // Every case here walks the whole path: approve, issue, open, run, record,
-// submit, reduce, complete. That is deliberate. The previous version of this file
+// submit, reduce, complete. That is deliberate. An earlier version of this file
 // called a standalone `emitAcceptance` with a bare observation and asserted
 // `accepted`, which is exactly the bypass the review found — a positive test that
 // codified the defect. There is no standalone entry point any more, so a test
 // cannot take one by accident.
 
-import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Kernel } from '../lib/kernel.mjs';
-import { identify } from '../lib/identity.mjs';
-import { commitCompletion } from '../lib/writer.mjs';
-import {
-  checkDispositions, checkCitations, checkPresentedView, statementsFrom,
-} from '../lib/formation.mjs';
+import { checkCitations, statementsFrom } from '../lib/formation.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { validate } from '../lib/schema.mjs';
 import { RECORDS } from '../schema/records.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND } from './fixtures.mjs';
 
-const sha = (s) => `sha256:${createHash('sha256').update(s).digest('hex')}`;
 const CONTRACT = join(
   dirname(fileURLToPath(import.meta.url)),
   '..', '..', '..', '..', '.ae', 'features', 'active',
   'F-086-v1-minimal-kernel', 'contract.md',
 );
 
-const contractDoc = {
-  lineage: 'L',
-  obligations: ['O'],
-  observations: [{ obligation: 'O', observation: 'sh run-tests.sh' }],
-  independence: { required: 'none', assurance: 'workflow_attested' },
-};
-const bytes = JSON.stringify(contractDoc);
-const identity = identify(bytes);
-const contract = { ...contractDoc, identity };
-const view = { renders_sha256: identity.byte_sha256, rendering_sha256: sha('rendered') };
-const deliverable = { kind: 'commit', identity: sha('deliverable') };
-
-// The whole path, once. Each case below perturbs one step of it, so a failure
-// says which step was load-bearing rather than that something threw.
-function walk(over = {}) {
-  const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'ac1-')), 'log.ndjson'));
-  const run = 'run1';
-
-  k.approve({ lineage: 'L', revision: 'r1', bytes, identity, view, actor: 'Owner' });
-  k.issueAssignment({
-    lineage: 'L', run, id: 'A1', contractRevision: 'r1',
-    actor: 'Owner', beneficiary: 'P',
-    boundary: ['docs/v1'],
-    grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O'] },
-  });
-  const assignment = {
-    id: 'A1', lineage: 'L', contract_revision: 'r1', boundary: ['docs/v1'],
-    grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O'] },
-  };
-  // The Assignment is resolved from the log inside `openAttempt`; passing one in
-  // is no longer possible, which is what stops a caller choosing its own grants.
-  const attempt = k.openAttempt({
-    lineage: 'L', run, producer: 'P', obligations: ['O'], submitter: 'P',
-  });
-
-  k.recordCommandResult({
-    id: 'cr1', lineage: 'L', run, attempt: attempt.attempt,
-    command: 'sh run-tests.sh',
-    exit: over.exit ?? 0,
-    raw: 'ALL GREEN',
-    subjects: over.subjects ?? 69,
-    inputsUsed: ['in1'],
-  });
-  k.recordArtifact({
-    id: 'art1', lineage: 'L', run, artifactKind: 'commit', identity: sha('artifact'),
-  });
-  k.recordPackage({
-    id: 'pkg1', lineage: 'L', run, contract_revision: 'r1', assignment: 'A1',
-    attempt: attempt.attempt, producer: 'P', artifact: 'art1', command_result: 'cr1',
-    changed_paths: ['docs/v1/a.md'],
-    material_inputs: [{ id: 'in1', identity: sha('in1') }],
-    deviations: [], known_risks: [],
-  });
-  k.submitObservation({
-    lineage: 'L', run, obligation: 'O', observation: 'sh run-tests.sh',
-    attempt: attempt.attempt, contractRevision: 'r1', assignment: 'A1',
-    producer: 'P', artifact: 'art1', pkg: 'pkg1', commandResult: 'cr1', submitter: 'P',
-  });
-
-  const inputsNow = over.inputsNow || (() => sha('in1'));
-  return { k, run, assignment, inputsNow, attempt };
+// A Kernel that can complete: the destination belongs to it, not to whoever
+// calls the write.
+function fresh() {
+  const dir = mkdtempSync(join(tmpdir(), 'ac1-'));
+  return new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir });
 }
 
+const run = (over = {}) => walk(fresh(), over);
 const complete = (w, over = {}) => w.k.complete({
-  contract, lineage: 'L', run: w.run, assignment: w.assignment,
-  deliverable, actor: 'Owner', inputsNow: w.inputsNow, ...over,
+  lineage: w.lineage, run: w.run, actor: 'Owner', ...over,
 });
 
 export function completionTests() {
   group('AC-1 · the whole path completes', () => {
-    const w = walk();
-    const { acceptance, verdicts } = complete(w);
+    const w = run();
+    const { acceptance, written } = complete(w);
     eq('accepted', acceptance.decision.outcome, 'accepted');
+    ok('and a stated absence of review', acceptance.review.required === false);
+    eq('the file was created', written.outcome, 'created');
+    const onDisk = JSON.parse(readFileSync(written.path, 'utf8'));
+    eq('what was written is the Acceptance', onDisk.decision.run, w.run);
+
+    // The deliverable is the artifact the evidence exercised, resolved from the
+    // record. It used to be an argument, so an Acceptance could name one thing
+    // while the evidence had exercised another.
+    eq('the deliverable is the recorded artifact', acceptance.deliverable.identity, sha('artifact'));
+
+    const verdicts = w.k.records().filter((r) => r.kind === 'gate_result');
     eq('with a recorded verdict beside it',
       verdicts.find((v) => v.obligation === 'O').status, 'passed');
-    ok('and a stated absence of review', acceptance.review.required === false);
+  });
+
+  group('AC-1 · completion is written once', () => {
+    const w = run();
+    complete(w);
+    refuses('a second completion does not overwrite', 'write_would_clobber', () => complete(w));
   });
 
   group('AC-2 · the verdict comes from the runner, not the submission', () => {
     // The defect this closes: `satisfied` used to be a field the submitter wrote
     // and the Gate copied, which left "done" asserted rather than computed.
-    const failing = walk({ exit: 1 });
-    refuses('a non-zero exit does not complete', 'not_all_passed', () => complete(failing));
-
-    const vacuous = walk({ subjects: 0 });
-    refuses('zero subjects does not complete', 'not_all_passed', () => complete(vacuous));
+    refuses('a non-zero exit does not complete', 'not_all_passed',
+      () => complete(run({ exit: 1 })));
+    refuses('zero subjects does not complete', 'not_all_passed',
+      () => complete(run({ subjects: 0 })));
 
     // And there is no field to claim otherwise: the observation schema refuses
     // one, so no path — Kernel or tampered log — can put an outcome in a
     // submission and have it read as a record.
     const problems = validate(RECORDS.observation, {
       kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O',
-      observation: 'sh run-tests.sh', attempt: 'a1', contract_revision: 'r1',
+      observation: COMMAND, attempt: 'a1', contract_revision: 'r1',
       assignment: 'A1', producer: 'P', artifact: 'art1', package: 'pkg1',
       command_result: 'cr1', satisfied: true, seq: 0,
     });
@@ -129,63 +83,146 @@ export function completionTests() {
   });
 
   group('AC-2 · a changed material input goes stale', () => {
-    const w = walk({ inputsNow: () => sha('moved') });
-    refuses('completion stops', 'not_all_passed', () => complete(w));
+    refuses('completion stops', 'not_all_passed',
+      () => complete(run({ inputNow: sha('moved') })));
+  });
+
+  group('AC-2 · evidence from one run does not complete another', () => {
+    // Everything below is real evidence, recorded by the granted producer, for
+    // `run1`. Selection and every resolver used to span the lineage, so it
+    // decided `run2` as well.
+    const k = fresh();
+    walk(k);
+    refuses('a second run has no Assignment of its own', 'assignment_not_issued',
+      () => k.complete({ lineage: 'L', run: 'run2', actor: 'Owner' }));
+
+    // And issuing one for `run2` does not let `run1`'s evidence answer for it:
+    // the second run has an Assignment and an attempt, and nothing submitted.
+    const a2 = asObject(assignmentDoc({ id: 'A2' }));
+    k.issueAssignment({
+      lineage: 'L', run: 'run2', bytes: a2.bytes, identity: a2.identity, actor: 'Owner',
+    });
+    k.openAttempt({ lineage: 'L', run: 'run2', producer: 'P', obligations: ['O'], submitter: 'P' });
+    eq('the second run is pending, not passed',
+      k.status({ lineage: 'L', run: 'run2' }).byObligation.O.status, 'pending');
+    // And the first run is not disturbed by the second's existence. Selection
+    // took the latest attempt in the lineage, so opening `run2` turned `run1`
+    // from passed into pending — a completed run undone by an unrelated retry.
+    eq('and the first run still passes',
+      k.status({ lineage: 'L', run: 'run1' }).byObligation.O.status, 'passed');
+    refuses('and cannot complete', 'not_all_passed',
+      () => k.complete({ lineage: 'L', run: 'run2', actor: 'Owner' }));
+  });
+
+  group('AC-1 · the deliverable is the artifact the evidence exercised', () => {
+    // Two obligations, each fully evidenced against its own artifact. Both pass,
+    // so the run reaches the point where the Acceptance must name a deliverable —
+    // and there is no single thing to name. Picking one is not resolving.
+    const k = fresh();
+    const w = walk(k, {
+      obligations: ['O', 'O2'],
+      contract: {
+        obligations: ['O', 'O2'],
+        observations: [
+          { obligation: 'O', observation: COMMAND },
+          { obligation: 'O2', observation: COMMAND },
+        ],
+      },
+      assignment: {
+        grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O', 'O2'] },
+      },
+    });
+    // `walk` answered both obligations against `art1`. Replace the second with a
+    // complete, admissible chain of its own naming a different artifact.
+    k.recordCommandResult({
+      id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt, command: COMMAND,
+      exit: 0, raw: 'GREEN', subjects: 12, inputsUsed: ['in1'],
+    });
+    k.recordArtifact({
+      id: 'art2', lineage: 'L', run: w.run, artifactKind: 'commit', identity: sha('other'),
+    });
+    const pkg2 = asObject({
+      ...w.pkg.value, id: 'pkg2', artifact: 'art2', command_result: 'cr2',
+    });
+    k.recordPackage({
+      lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
+    });
+    k.submitObservation({
+      lineage: 'L', run: w.run, obligation: 'O2', observation: COMMAND,
+      attempt: w.attempt.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
+      commandResult: 'cr2', submitter: 'P',
+    });
+    eq('both obligations pass', k.status({ lineage: 'L', run: w.run }).allPassed, true);
+    refuses('but the run names two artifacts', 'binding_cross_execution',
+      () => k.complete({ lineage: 'L', run: w.run, actor: 'Owner' }));
   });
 
   group('AC-1 · review is stated, never left empty', () => {
-    const crossFamily = {
-      ...contract,
-      independence: {
-        required: 'cross_family_required', requested_family: ['openai'],
-        assurance: 'workflow_attested',
+    const w = run({
+      contract: {
+        independence: {
+          required: 'cross_family_required', requested_family: ['openai'],
+          assurance: 'workflow_attested',
+        },
       },
+    });
+    refuses('a required review that is absent', 'review_required_absent', () => complete(w));
+  });
+
+  group('AC-11 · completion has no second entry point', () => {
+    // The write is the last step of `complete`, and its destination belongs to
+    // the Kernel. A Kernel with no completion root cannot complete at all, which
+    // is the honest answer to "where would it write".
+    const dir = mkdtempSync(join(tmpdir(), 'ac11-'));
+    const k = new Kernel(join(dir, 'log.ndjson'));
+    const w = walk(k);
+    refuses('no root, no completion', 'writer_not_sole',
+      () => k.complete({ lineage: w.lineage, run: w.run, actor: 'Owner' }));
+  });
+
+  group('AC-6 · the Contract must trace to its sources', () => {
+    // On the approval path, not beside it. These checks existed and nothing
+    // called them, so a Contract whose statements cited nothing was approved.
+    const k = fresh();
+    const approve = (over) => {
+      const c = asObject(contractDoc(over));
+      return k.approve({
+        lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+        actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      });
     };
-    const w = walk();
-    refuses('a required review that is absent', 'review_required_absent',
-      () => complete(w, { contract: crossFamily }));
+    refuses('a statement citing nothing', 'statement_uncited',
+      () => approve({ scope: ['S1 the completion path'] }));
+    refuses('a statement citing an unknown source', 'citation_unknown',
+      () => approve({ scope: ['S1 the completion path (D-99)'] }));
+    // D-02 is transcribed as `carried`, and nothing in this Contract cites it —
+    // so the Contract claims to have taken on an obligation that landed nowhere.
+    refuses('a carried obligation nothing cites', 'disposition_lands_nowhere',
+      () => approve({
+        scope: ['S1 the completion path (D-01)'],
+        non_goals: ['N1 no release concept (D-01)'],
+        required_evidence: ['E1 a command result (D-01)'],
+      }));
   });
 
-  group('AC-11 · the write resolves its verdicts from the record', () => {
-    const w = walk();
-    const { acceptance, verdicts } = complete(w);
-    const root = mkdtempSync(join(tmpdir(), 'w-'));
-
-    // A caller map used to be enough, so `{invented: 'passed'}` reached the write.
-    refuses('an obligation with no recorded verdict', 'record_not_appended',
-      () => commitCompletion({
-        root, path: join(root, 'a.json'), acceptance,
-        recordedVerdicts: verdicts, obligations: ['O', 'NEVER-RUN'],
-        run: w.run, revision: 'r1',
+  group('AC-6 · the presented view is derived from the approved bytes', () => {
+    const k = fresh();
+    const c = asObject(contractDoc());
+    refuses('a rendering of something else', 'identity_mismatch',
+      () => k.approve({
+        lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+        actor: 'Owner', rendered: 'VIEW OF SOMETHING ELSE', render: RENDERED,
       }));
-    refuses('an Acceptance that is not the shape', 'format_open',
-      () => commitCompletion({
-        root, path: join(root, 'b.json'), acceptance: { not: 'an acceptance' },
-        recordedVerdicts: verdicts, obligations: ['O'], run: w.run, revision: 'r1',
+    refuses('nothing shown at all', 'human_input_absent',
+      () => k.approve({
+        lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+        actor: 'Owner', render: RENDERED,
       }));
-    refuses('a Contract that promised nothing', 'not_all_passed',
-      () => commitCompletion({
-        root, path: join(root, 'c.json'), acceptance,
-        recordedVerdicts: verdicts, obligations: [], run: w.run, revision: 'r1',
-      }));
-    eq('a real one writes',
-      commitCompletion({
-        root, path: join(root, 'd.json'), acceptance,
-        recordedVerdicts: verdicts, obligations: ['O'], run: w.run, revision: 'r1',
-      }).outcome, 'created');
-  });
-
-  group('AC-6 · the disposition table checks itself', () => {
-    const carriedBy = (criterion, obligation) => criterion === 'AC-4' && obligation === 'determinism';
-    eq('a true landing', checkDispositions(
-      [{ obligation: 'determinism', disposition: 'carried', lands_in: ['AC-4'] }], carriedBy,
-    ).length, 0);
-    eq('a false landing is caught', checkDispositions(
-      [{ obligation: 'determinism', disposition: 'carried', lands_in: ['AC-9'] }], carriedBy,
-    )[0].why, 'AC-9 does not contain this obligation');
-    ok('carried but naming no landing', checkDispositions(
-      [{ obligation: 'determinism', disposition: 'carried' }], carriedBy,
-    ).length > 0);
+    const approved = k.approve({
+      lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+      actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+    });
+    eq('a derived view is recorded', approved.identity.byte_sha256, c.identity.byte_sha256);
   });
 
   group('AC-6 · citations must be specific', () => {
@@ -205,19 +242,5 @@ export function completionTests() {
     ok('the activated Contract yields statements', statements.length > 10);
     const uncited = statements.filter((s) => s.cites.length === 0);
     eq('none is uncited', uncited.map((s) => s.id).join(','), '');
-  });
-
-  group('AC-6 · the presented view is derived from the approved bytes', () => {
-    const b = Buffer.from('{"a":1}');
-    const render = (x) => Buffer.from(`VIEW:${x.toString()}`);
-    const good = {
-      renders_sha256: sha(b.toString()),
-      rendering_sha256: sha(render(b).toString()),
-    };
-    ok('a derived view', checkPresentedView({ approvedBytes: b, view: good, render }));
-    refuses('a view of different bytes', 'identity_mismatch',
-      () => checkPresentedView({
-        approvedBytes: b, view: { ...good, rendering_sha256: sha('VIEW:{"a":2}') }, render,
-      }));
   });
 }

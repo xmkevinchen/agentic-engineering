@@ -194,7 +194,7 @@ export function recordTests() {
     // host origin cannot be appended with anything else there.
     refuses('a decision claiming a different origin', 'format_open',
       () => ledger.append({
-        kind: 'human_decision', operation: 'signoff', actor: 'H', lineage: 'L',
+        kind: 'human_decision_choice', operation: 'signoff', actor: 'H', lineage: 'L', choice: 'sign',
         origin: 'model',
       }));
 

@@ -10,7 +10,7 @@ const records = JSON.parse(process.argv[2]);
 // reduction. They are stated here rather than defaulted in `reduce`, because a
 // default would be the optional check the review found.
 const out = reduce({
-  records, lineage: 'L', obligation: 'O', currentRevision: 'r1',
+  records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1',
   admit: () => null,
   inputsChanged: () => false,
   outcomeOf: (r) => r.command_result === 'green',

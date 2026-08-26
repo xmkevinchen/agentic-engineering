@@ -16,9 +16,28 @@
 import { Ledger } from './ledger.mjs';
 import { reduceAll, STATUS } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
-import { currentRevision as deriveCurrent, verify } from './identity.mjs';
-import { checkRequestedSurvives, checkUnanswered, requestedFamily } from './family.mjs';
+import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
+import { checkRequestedSurvives, checkUnanswered, dispatchRecord, requestedFamily } from './family.mjs';
+import { commitCompletion } from './writer.mjs';
+import { formationProblems } from './formation.mjs';
+import { parseStrict, digestBytes } from './canonical-json.mjs';
+import { validate } from './schema.mjs';
+import { ASSIGNMENT, CONTRACT, EVIDENCE_PACKAGE, checkContractRelations } from '../schema/objects.mjs';
 import { fail } from './codes.mjs';
+
+// A durable object goes in as bytes and comes out only through here. `verify`
+// first, then the schema, then the value: a consumer that acts on an object whose
+// byte identity does not verify is AC-3's falsifier, and the way to make that
+// impossible is to have no other way to obtain the object.
+function openObject(bytes, identity, schema, what) {
+  verify(bytes, identity);
+  const value = parseStrict(Buffer.from(bytes, 'utf8'));
+  const problems = validate(schema, value);
+  if (problems.length > 0) {
+    fail('format_open', `the ${what} does not match its closed shape`, { problems });
+  }
+  return value;
+}
 
 // Origin is stamped here and nowhere else. It is not a brand — a brand travels
 // with a value a caller already holds. This is a property the caller never gets
@@ -33,8 +52,14 @@ export class Kernel {
   // writer is reachable around the front door.
   #ledger;
 
-  constructor(logPath) {
+  // Where completion is written. Held by the Kernel rather than passed to the
+  // write, because a caller that chooses the destination chooses what "the
+  // completion" is.
+  #completionRoot;
+
+  constructor(logPath, { completionRoot } = {}) {
     this.#ledger = new Ledger(logPath);
+    this.#completionRoot = completionRoot || null;
   }
 
   // --- reads -------------------------------------------------------------
@@ -68,8 +93,17 @@ export class Kernel {
     if (Object.prototype.hasOwnProperty.call(payload, 'origin')) {
       fail('human_input_self_supplied', 'a caller may not supply an origin', { operation });
     }
+    // One kind per operation shape. The single `human_decision` shape carried
+    // every operation's fields as optional, so it admitted an activation with a
+    // choice and an unavailable decision with none. Two branches rather than a
+    // computed kind, so each is a real call site the kind audit can see.
+    if (operation === 'activation') {
+      return this.#ledger.append({
+        kind: 'human_decision_activation', operation, actor, lineage, origin: HOST, ...payload,
+      });
+    }
     return this.#ledger.append({
-      kind: 'human_decision', operation, actor, lineage, origin: HOST, ...payload,
+      kind: 'human_decision_choice', operation, actor, lineage, origin: HOST, ...payload,
     });
   }
 
@@ -87,8 +121,58 @@ export class Kernel {
     });
   }
 
-  recordPackage(pkg) {
-    return this.#ledger.append({ kind: 'evidence_package', ...pkg });
+  // The package is the producer's account of what it produced, so its author is
+  // checked against the mutation grant. It arrives as bytes and carries its own
+  // identity, like the other three durable objects.
+  recordPackage({ lineage, run, bytes, identity, submitter }) {
+    const pkg = openObject(bytes, identity, EVIDENCE_PACKAGE, 'Evidence Package');
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (submitter !== pkg.producer) {
+      fail('identity_self_asserted', 'the submitter is not the producer it names', {
+        submitter, producer: pkg.producer,
+      });
+    }
+    if (assignment.grants.mutation_producer !== pkg.producer) {
+      fail('mutation_producer_ungranted', 'changes submitted under an ungranted producer', {
+        producer: pkg.producer,
+      });
+    }
+    return this.#ledger.append({
+      kind: 'evidence_package', id: pkg.id, lineage, run, bytes, identity,
+    });
+  }
+
+  // A material input's identity as the Harness finds it now. Staleness compares
+  // this against what the package recorded. It used to be a callback the caller
+  // passed to the Gate, so the party being judged decided whether its own
+  // evidence was still current.
+  observeInput({ lineage, id, identity }) {
+    return this.#ledger.append({
+      kind: 'input_observed', lineage, id, identity, origin: HARNESS,
+    });
+  }
+
+  inputGone({ lineage, id }) {
+    return this.#ledger.append({ kind: 'input_gone', lineage, id, origin: HARNESS });
+  }
+
+  // The latest observation wins. `null` means the Harness looked and it was gone,
+  // which is different from never having looked — a never-observed input has no
+  // record at all, and the resolver says so by returning `undefined`.
+  inputsNowFor(lineage) {
+    const records = this.records().filter(
+      (r) => (r.kind === 'input_observed' || r.kind === 'input_gone') && r.lineage === lineage,
+    );
+    return (id) => {
+      for (let i = records.length - 1; i >= 0; i -= 1) {
+        if (records[i].id !== id) continue;
+        return records[i].kind === 'input_gone' ? null : records[i].identity;
+      }
+      return undefined;
+    };
   }
 
   recordArtifact({ id, lineage, run, artifactKind, identity }) {
@@ -99,8 +183,35 @@ export class Kernel {
 
   // --- the guarded operations --------------------------------------------
 
-  approve({ lineage, revision, bytes, identity, predecessor, view, actor }) {
-    verify(bytes, identity);
+  // Approval fixes which bytes are judged, so it is where the Contract is
+  // actually checked. An earlier version compared one digest and appended: a
+  // schema-invalid Contract, or one whose obligations named no observation, was
+  // approved and only failed later, somewhere else, as something else.
+  //
+  // `rendered` is the bytes the host displayed, not a digest of them. A digest a
+  // caller computes is a claim about a rendering nobody else saw; the bytes can
+  // be re-rendered and compared.
+  approve({ lineage, revision, bytes, identity, predecessor, actor, rendered, render }) {
+    const contract = openObject(bytes, identity, CONTRACT, 'Contract');
+    if (contract.lineage !== lineage || contract.revision !== revision) {
+      fail('identity_mismatch', 'the Contract names another lineage or revision', {
+        lineage, revision, named: { lineage: contract.lineage, revision: contract.revision },
+      });
+    }
+    const relations = checkContractRelations(contract);
+    if (relations.length > 0) {
+      fail('format_open', 'the Contract is schema-valid but incoherent', { problems: relations });
+    }
+    // AC-6, on the path rather than beside it. These checks existed and nothing
+    // called them, so a Contract whose statements cited nothing was approved and
+    // the citation check was something a test ran on a fixture.
+    const formation = formationProblems(contract);
+    if (formation.length > 0) {
+      fail(formation[0].code, 'the Contract does not trace to its sources', {
+        problems: formation,
+      });
+    }
+
     const prior = this.approvals().filter((a) => a.lineage === lineage);
     if (prior.length === 0 && predecessor != null) {
       fail('lineage_predecessor_wrong', 'a lineage genesis has no predecessor', { lineage });
@@ -113,10 +224,29 @@ export class Kernel {
       if (predecessor !== last.identity.byte_sha256) {
         fail('lineage_predecessor_wrong', 'predecessor is not the prior revision', { lineage });
       }
+      if (contract.predecessor !== last.identity.byte_sha256) {
+        fail('lineage_predecessor_wrong', 'the Contract names another predecessor', { lineage });
+      }
     }
-    if (!view || !view.renders_sha256 || view.renders_sha256 !== identity.byte_sha256) {
-      fail('human_input_absent', 'approval must record the view of these exact bytes', { lineage });
+
+    // What was shown must be what these bytes render to. Both halves are computed
+    // here; neither is accepted.
+    if (typeof rendered !== 'string' || rendered.length === 0) {
+      fail('human_input_absent', 'approval must record what was shown', { lineage });
     }
+    if (typeof render === 'function') {
+      const expected = render(bytes);
+      if (digestBytes(Buffer.from(expected, 'utf8')) !== digestBytes(Buffer.from(rendered, 'utf8'))) {
+        fail('identity_mismatch', 'the recorded rendering is not what those bytes render to', {
+          lineage,
+        });
+      }
+    }
+    const view = {
+      renders_sha256: identity.byte_sha256,
+      rendering_sha256: digestBytes(Buffer.from(rendered, 'utf8')),
+    };
+
     const decision = this.collectHumanInput({
       operation: 'activation', actor, lineage, revision, view,
     });
@@ -124,7 +254,7 @@ export class Kernel {
     // present-and-undefined. `undefined` is still an own property, and a closed
     // schema counts it as one — which is the honest behaviour: "absent" cannot be
     // spelled as a value.
-    const base = { lineage, revision, identity, decision: decision.seq };
+    const base = { lineage, revision, identity, bytes, decision: decision.seq };
     return this.#ledger.append(
       prior.length === 0
         ? { kind: 'contract_approved_genesis', ...base }
@@ -132,56 +262,126 @@ export class Kernel {
     );
   }
 
-  // An attempt may be opened only by the producer the Assignment names, and the
-  // record of who opened it is written here rather than claimed by the opener.
+  // The approved Contract, from the approved bytes. The Gate took this as an
+  // argument, so the party being judged chose the obligations it would be judged
+  // against — fewer of them, or `independence.required: none`.
+  contractFor(lineage) {
+    const prior = this.approvals().filter((a) => a.lineage === lineage);
+    if (prior.length === 0) return null;
+    const latest = prior[prior.length - 1];
+    return {
+      contract: openObject(latest.bytes, latest.identity, CONTRACT, 'Contract'),
+      identity: latest.identity,
+      revision: latest.revision,
+    };
+  }
+
+  // The Assignment is issued by the Human Owner, bound to an approved revision,
+  // and the party it grants may not issue it. A producer minting one that grants
+  // itself what it wants is the regress this ends.
+  //
+  // It arrives as bytes. Its boundary and its grants live in those bytes and
+  // nowhere else, so there is no second place for them to differ, and it has an
+  // identity of its own as AC-3 requires of all four objects.
+  issueAssignment({ lineage, run, bytes, identity, actor }) {
+    const assignment = openObject(bytes, identity, ASSIGNMENT, 'Assignment');
+    if (assignment.lineage !== lineage) {
+      fail('identity_mismatch', 'the Assignment names another lineage', { lineage });
+    }
+    const granted = [assignment.grants.attempt_producer, assignment.grants.mutation_producer];
+    if (granted.includes(actor)) {
+      fail('assignment_self_issued', 'the party an Assignment grants may not issue it', {
+        id: assignment.id,
+      });
+    }
+    const current = this.currentRevision(lineage);
+    if (current !== assignment.contract_revision) {
+      fail('assignment_not_issued', 'an Assignment must bind the current approved revision', {
+        id: assignment.id, contractRevision: assignment.contract_revision, current,
+      });
+    }
+    const { contract } = this.contractFor(lineage);
+    for (const obligation of assignment.grants.obligations) {
+      if (!contract.obligations.includes(obligation)) {
+        fail('authority_not_granted', 'an Assignment may not grant an obligation the Contract does not state', {
+          obligation,
+        });
+      }
+    }
+    // One per run, not one per lineage. A lineage outlives its runs, and refusing
+    // a second run's Assignment made retry impossible.
+    const existing = this.records().filter(
+      (r) => r.kind === 'assignment_issued' && r.lineage === lineage && r.run === run,
+    );
+    if (existing.length > 0) {
+      fail('assignment_not_unique', 'a run holds exactly one Assignment', { id: assignment.id });
+    }
+    this.collectHumanInput({
+      operation: 'assignment_issuance', actor, lineage, choice: 'issue',
+    });
+    return this.#ledger.append({
+      kind: 'assignment_issued', lineage, run, id: assignment.id,
+      contract_revision: assignment.contract_revision, actor, bytes, identity, origin: HOST,
+    });
+  }
+
+  // The run's Assignment, from the issued bytes. Taking it as an argument let a
+  // caller keep the issued id and widen the boundary.
+  assignmentFor(lineage, run) {
+    const issued = this.records().find(
+      (r) => r.kind === 'assignment_issued' && r.lineage === lineage && r.run === run,
+    );
+    if (!issued) return null;
+    return openObject(issued.bytes, issued.identity, ASSIGNMENT, 'Assignment');
+  }
+
+  // An attempt may be opened only by the producer the Assignment names, for the
+  // obligations it grants, and the record of who opened it is written here rather
+  // than claimed by the opener.
   openAttempt({ lineage, run, producer, obligations, submitter }) {
     if (submitter !== producer) {
       fail('identity_self_asserted', 'the submitter is not the producer it names', {
         submitter, producer,
       });
     }
-    // Resolved from the log, not accepted as an argument. A caller previously
-    // passed an Assignment object with grants it had chosen itself.
-    const issued = this.records().find(
-      (r) => r.kind === 'assignment_issued' && r.lineage === lineage && r.run === run,
-    );
-    if (!issued) {
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
       fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
     }
-    if (issued.grants.attempt_producer !== producer) {
+    if (assignment.grants.attempt_producer !== producer) {
       fail('attempt_not_granted', 'only the granted producer may open an attempt', { producer });
     }
-    const assignment = issued;
+    // The grant names which obligations. Without this a producer granted one
+    // obligation opened an attempt against another and the Gate never noticed,
+    // because the check lived in a helper nothing called.
+    for (const obligation of obligations) {
+      if (!assignment.grants.obligations.includes(obligation)) {
+        fail('authority_not_granted', 'the Assignment does not grant this obligation', {
+          producer, obligation,
+        });
+      }
+    }
     return this.#ledger.append({
       kind: 'attempt_opened', lineage, run, assignment: assignment.id,
       attempt: `${assignment.id}#${this.#ledger.seq}`, producer, obligations,
     });
   }
 
-  // The Assignment is issued by the Human Owner, bound to an approved revision,
-  // and the beneficiary may not be the actor. A producer minting one that grants
-  // itself what it wants is the regress this ends.
-  issueAssignment({ lineage, run, id, contractRevision, actor, beneficiary, boundary, grants }) {
-    if (actor === beneficiary) {
-      fail('assignment_self_issued', 'the party an Assignment grants may not issue it', { id });
-    }
-    if (this.currentRevision(lineage) !== contractRevision) {
-      fail('assignment_not_issued', 'an Assignment must bind the current approved revision', {
-        id, contractRevision,
-      });
-    }
-    const existing = this.records().filter(
-      (r) => r.kind === 'assignment_issued' && r.lineage === lineage,
-    );
-    if (existing.length > 0) {
-      fail('assignment_not_unique', 'a run holds exactly one Assignment', { id });
-    }
-    // The grants and the boundary are part of the issuance, not something the
-    // holder supplies later. An earlier version recorded who issued it and let
-    // the Assignment object carry self-selected grants.
+  // The dispatch carries what the Contract states, resolved here. `dispatchRecord`
+  // builds it from the Contract and nothing else, which is AC-8's point: there is
+  // no parameter through which an Assignment or a configuration could supply it.
+  //
+  // `substitutedFamily` and `answeredFamily` exist so a Harness can record that a
+  // seat did in fact answer. They are not defaults — omitted, the keys are absent,
+  // and their absence is what AC-8 checks.
+  recordDispatch({ lineage, run, attempt, obligation, substitutedFamily, answeredFamily }) {
+    const { contract } = this.contractFor(lineage);
+    const built = dispatchRecord({ contract, lineage, run, attempt, obligation });
     return this.#ledger.append({
-      kind: 'assignment_issued', lineage, run, id, contract_revision: contractRevision,
-      actor, beneficiary, boundary, grants, origin: HOST,
+      ...built,
+      requested: [...built.requested],
+      ...(substitutedFamily ? { substituted_family: substitutedFamily } : {}),
+      ...(answeredFamily ? { answered_family: answeredFamily } : {}),
     });
   }
 
@@ -200,11 +400,26 @@ export class Kernel {
 
   // An observation names the runner's record; it does not carry one. The
   // separation is what stops a submission authoring its own raw result.
-  submitObservation({ lineage, run, obligation, observation, attempt, contractRevision,
-    assignment, producer, artifact, pkg, commandResult, submitter }) {
+  //
+  // Which Assignment and which revision it is bound to are resolved, not taken:
+  // a submission that names them names the two things it is being judged against.
+  submitObservation({ lineage, run, obligation, observation, attempt,
+    producer, artifact, pkg, commandResult, submitter }) {
     if (submitter !== producer) {
       fail('identity_self_asserted', 'the submitter is not the producer it names', {
         submitter, producer,
+      });
+    }
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (assignment.grants.attempt_producer !== producer) {
+      fail('authority_not_granted', 'only the granted producer may submit evidence', { producer });
+    }
+    if (!assignment.grants.obligations.includes(obligation)) {
+      fail('authority_not_granted', 'the Assignment does not grant this obligation', {
+        producer, obligation,
       });
     }
     // No outcome parameter. What the run produced is in the runner's record; the
@@ -212,8 +427,8 @@ export class Kernel {
     // at, and stops there.
     return this.#ledger.append({
       kind: 'observation', lineage, run, obligation, observation, attempt,
-      contract_revision: contractRevision, assignment, producer, artifact,
-      package: pkg, command_result: commandResult,
+      contract_revision: assignment.contract_revision, assignment: assignment.id,
+      producer, artifact, package: pkg, command_result: commandResult,
     });
   }
 
@@ -225,7 +440,9 @@ export class Kernel {
     });
   }
 
-  recordCompletion({ lineage, run, acceptance, path }) {
+  // Private. A public one appended `completion_committed` without the write ever
+  // happening, which is a record of a completion that does not exist.
+  #recordCompletion({ lineage, run, acceptance, path }) {
     return this.#ledger.append({
       kind: 'completion_committed', lineage, run, acceptance, path,
     });
@@ -243,16 +460,30 @@ export class Kernel {
   // version accepted `index` and `inputsNow` as parameters, which let the party
   // being judged supply the evidence universe — packages and command results that
   // had never been recorded resolved fine and produced `passed`.
-  index() {
-    const records = this.records();
+  // Scoped to one run. Unscoped, evidence recorded for `run1` resolved while
+  // completing `run2`: every reference still pointed at a real record, and no
+  // check asked whether it belonged to this execution.
+  index({ lineage, run }) {
+    const records = this.records().filter((r) => r.lineage === lineage && r.run === run);
     const findBy = (kind, field) => (value) => records.find(
       (r) => r.kind === kind && r[field] === value,
     ) || null;
+    const packageRecord = findBy('evidence_package', 'id');
     return {
       commandResult: findBy('command_result', 'id'),
       attempt: findBy('attempt_opened', 'attempt'),
-      package: findBy('evidence_package', 'id'),
       artifact: findBy('artifact_recorded', 'id'),
+      // Parsed through `verify`, so a consumer cannot reach a package whose byte
+      // identity does not check out.
+      dispatch: (attempt, obligation) => records.find(
+        (r) => r.kind === 'dispatch_attempt' && r.attempt === attempt
+          && r.obligation === obligation,
+      ) || null,
+      package: (id) => {
+        const rec = packageRecord(id);
+        if (!rec) return null;
+        return openObject(rec.bytes, rec.identity, EVIDENCE_PACKAGE, 'Evidence Package');
+      },
     };
   }
 
@@ -264,8 +495,8 @@ export class Kernel {
   // null, and `admit` already refuses a result with no subjects. A second layer no
   // planted defect can turn red is a claim of protection nothing holds to account,
   // so it states the property once, where it is reachable.
-  outcomeReader() {
-    const index = this.index();
+  outcomeReader({ lineage, run }) {
+    const index = this.index({ lineage, run });
     return (record) => {
       const result = index.commandResult(record.command_result);
       if (!result) return null;
@@ -313,21 +544,33 @@ export class Kernel {
   // No optional admissibility. The Gate always runs the full check, because a
   // check a caller may omit is a check that does not exist.
 
-  status({ contract, lineage, assignment, inputsNow, run }) {
-    const records = this.records();
-    const index = this.index();
-    const current = this.currentRevision(lineage);
-    if (current === null) {
+  // Two arguments, both names of things already recorded. The Contract, the
+  // Assignment and the current identity of every material input used to come in
+  // as parameters, so the party being judged supplied the standard, the authority
+  // and the notion of "current" — three different ways to pass without changing
+  // anything true.
+  status({ lineage, run }) {
+    const approved = this.contractFor(lineage);
+    if (approved === null) {
       fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
     }
+    const { contract } = approved;
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    const records = this.records();
+    const index = this.index({ lineage, run });
+    const inputsNow = this.inputsNowFor(lineage);
+    const current = approved.revision;
     const admit = admissibility({
       contract, assignment, approvals: this.approvals(), index, inputsNow,
     });
     const result = reduceAll({
-      records, lineage, obligations: contract.obligations, currentRevision: current,
+      records, lineage, run, obligations: contract.obligations, currentRevision: current,
       admit,
       inputsChanged: inputsChangedAgainst(index, inputsNow),
-      outcomeOf: this.outcomeReader(),
+      outcomeOf: this.outcomeReader({ lineage, run }),
     });
 
     // The verdict is recorded, because completion relies on it and AC-13 says
@@ -335,7 +578,7 @@ export class Kernel {
     // happens. Without this, replay could reconstruct the inputs but not the
     // decision they produced — and "the Gate said passed" would be a claim with
     // nothing behind it.
-    if (run) {
+    {
       for (const obligation of contract.obligations) {
         const v = result.byObligation[obligation];
         this.#ledger.append({
@@ -354,10 +597,9 @@ export class Kernel {
   // its own module, call the reducer itself, and forward admissibility as an
   // optional argument — so the channel could be walked around by importing the
   // other thing. It is deleted rather than deprecated.
-  complete({ contract, lineage, run, assignment, deliverable, actor, inputsNow, acceptedReview }) {
-    const { byObligation, allPassed } = this.status({
-      contract, lineage, assignment, inputsNow, run,
-    });
+  complete({ lineage, run, actor, acceptedReview }) {
+    const { contract, identity: contractIdentity, revision: current } = this.contractFor(lineage);
+    const { byObligation, allPassed } = this.status({ lineage, run });
     if (!allPassed) {
       const first = contract.obligations.find((o) => byObligation[o].status !== 'passed');
       fail('not_all_passed', 'completion requires every obligation to be passed', {
@@ -369,11 +611,15 @@ export class Kernel {
     // cross-family cannot complete while its dispatch guarantees are unmet.
     this.checkUnavailableArm({ contract, lineage });
 
-    const current = this.currentRevision(lineage);
     const required = contract.independence.required === 'cross_family_required';
     if (required && !acceptedReview) {
       fail('review_required_absent', 'the Contract required a review and none is carried', {});
     }
+
+    // The deliverable is the artifact the evidence attests to, resolved from the
+    // record. Taking it as an argument let an Acceptance name one thing while the
+    // evidence had exercised another.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
 
     const signoff = this.signOff({
       lineage, run, contractRevision: current,
@@ -401,18 +647,61 @@ export class Kernel {
     const acceptance = {
       lineage,
       contract_revision: current,
-      contract_identity: contract.identity,
+      contract_identity: contractIdentity,
       deliverable,
       decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq },
       review: required
         ? { required: true, accepted_review: acceptedReview }
         : { required: false, statement: 'no independent review required by this Contract' },
     };
-    return {
+
+    // The write is the last step of this method, not a function a caller invokes
+    // afterwards with whatever it likes. Its destination belongs to the Kernel,
+    // and the verdicts it reads are the ones just recorded.
+    if (!this.#completionRoot) {
+      fail('writer_not_sole', 'this Kernel has no completion root, so it cannot complete', {
+        run,
+      });
+    }
+    const written = commitCompletion({
+      root: this.#completionRoot,
+      path: `${this.#completionRoot}/${lineage}.${run}.acceptance.json`,
       acceptance,
-      verdicts: this.records().filter((r) => r.kind === 'gate_result' && r.run === run),
+      recordedVerdicts: this.records().filter((r) => r.kind === 'gate_result'),
       obligations: contract.obligations,
-    };
+      run,
+      revision: current,
+    });
+    this.#recordCompletion({
+      lineage, run, acceptance: digestBytes(Buffer.from(JSON.stringify(acceptance), 'utf8')),
+      path: written.path,
+    });
+    return { acceptance, written };
+  }
+
+  // The artifact this run's evidence actually exercised. Every admissible
+  // observation names one; they must agree, because two artifacts in one run
+  // means the Acceptance would have to pick, and picking is not resolving.
+  deliverableFor({ lineage, run, contract }) {
+    const index = this.index({ lineage, run });
+    const named = new Set();
+    for (const obligation of contract.obligations) {
+      for (const r of this.records()) {
+        if (r.kind !== 'observation') continue;
+        if (r.lineage !== lineage || r.run !== run || r.obligation !== obligation) continue;
+        named.add(r.artifact);
+      }
+    }
+    if (named.size !== 1) {
+      fail('binding_cross_execution', 'the run does not name exactly one artifact', {
+        run, artifacts: [...named],
+      });
+    }
+    const record = index.artifact([...named][0]);
+    if (!record) {
+      fail('binding_unresolved', 'the artifact the evidence names is not recorded', { run });
+    }
+    return { kind: record.artifact_kind, identity: record.identity };
   }
 
   // The unavailable arm is on the path, not beside it. An earlier draft had a

@@ -53,9 +53,15 @@ function rank(status) {
 // reduction are not inputs to the next one.
 const SUBMITTED_KINDS = new Set(['observation', 'capability_unavailable']);
 
-export function select({ records, lineage, obligation }) {
+// `run` is required, not optional. Selecting across a lineage let evidence
+// recorded for one run decide another run's status — every reference resolved,
+// and nothing asked whether it belonged to this execution.
+export function select({ records, lineage, run, obligation }) {
+  if (run == null) {
+    throw new TypeError('select requires a run — a lineage outlives its executions');
+  }
   const attempts = records.filter(
-    (r) => r.kind === 'attempt_opened' && r.lineage === lineage,
+    (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
   );
   if (attempts.length === 0) return { attempt: null, records: [] };
 
@@ -70,6 +76,10 @@ export function select({ records, lineage, obligation }) {
     // next pass and, finding a kind it could not read, turned a `passed` into an
     // `invalid` — the reduction poisoning itself with its own output.
     records: records.filter(
+      // No second run filter here. An attempt belongs to exactly one run, and the
+      // attempts above are already scoped to this one, so `r.attempt === latest`
+      // is what confines the selection — a copy of the run comparison beside it
+      // was a layer no planted defect could turn red.
       (r) => SUBMITTED_KINDS.has(r.kind)
         && r.lineage === lineage
         && r.obligation === obligation
@@ -82,19 +92,23 @@ export function select({ records, lineage, obligation }) {
 // Stage 2 — reduction, within the selected candidate only.
 
 function verdictOf(record, ctx) {
-  // An unavailable record is a verdict in itself: the capability could not be
-  // used, which is neither a failure of the work nor an absence of evidence.
-  if (record.kind === 'capability_unavailable') {
-    return { status: STATUS.UNAVAILABLE, code: null, record };
-  }
-
-  if (record.kind !== 'observation') {
+  if (record.kind !== 'observation' && record.kind !== 'capability_unavailable') {
     return { status: STATUS.INVALID, code: 'kind_without_consumer', record };
   }
 
-  // Admissibility first, so nothing inadmissible is read for content.
+  // Admissibility first, and for both arms. An unavailable record used to short
+  // out to `unavailable` before any check ran, so an unrequested family, a
+  // substituted request or a seat that had in fact answered all reported the same
+  // clean "the capability was missing".
   const refusal = ctx.admit(record, ctx);
   if (refusal) return { status: STATUS.INVALID, code: refusal, record };
+
+  // An admissible unavailable record is a verdict in itself: the capability could
+  // not be used, which is neither a failure of the work nor an absence of
+  // evidence.
+  if (record.kind === 'capability_unavailable') {
+    return { status: STATUS.UNAVAILABLE, code: null, record };
+  }
 
   // Two kinds of staleness, and both are stale: bound to a superseded revision,
   // or the material inputs it recorded have since changed.
@@ -120,6 +134,7 @@ function verdictOf(record, ctx) {
 export function reduce({
   records,
   lineage,
+  run,
   obligation,
   currentRevision,
   admit,
@@ -139,7 +154,7 @@ export function reduce({
     throw new TypeError('reduce requires an outcome reader — the verdict is computed, not supplied');
   }
   const ctx = { currentRevision, admit, inputsChanged, outcomeOf };
-  const { attempt, records: selected } = select({ records, lineage, obligation });
+  const { attempt, records: selected } = select({ records, lineage, run, obligation });
 
   // The attempt opened and submitted nothing for this obligation. An older
   // attempt's pass is not retained: a retry that produced nothing is an absence,
@@ -187,12 +202,12 @@ export function reduce({
 // Not a seventh status — AC-1's precondition, computed from the same reduction
 // rather than beside it.
 export function reduceAll({
-  records, lineage, obligations, currentRevision, admit, inputsChanged, outcomeOf,
+  records, lineage, run, obligations, currentRevision, admit, inputsChanged, outcomeOf,
 }) {
   const byObligation = {};
   for (const obligation of obligations) {
     byObligation[obligation] = reduce({
-      records, lineage, obligation, currentRevision, admit, inputsChanged, outcomeOf,
+      records, lineage, run, obligation, currentRevision, admit, inputsChanged, outcomeOf,
     });
   }
   const allPassed = obligations.length > 0

@@ -6,22 +6,23 @@ The minimal Kernel and solo workflow, built against the Contract activated on
 ## What this is
 
 The part of AE that decides whether finished work is admissible. It is small on
-purpose: a reduction, an identity check, an admissibility check, an authority
-check, a record, and one writer.
+purpose: a reduction, an identity check, an admissibility check, a record, and
+one writer — reached through one object.
 
 ```text
-lib/codes.mjs          56 typed refusals — every Contract falsifier has a name
+lib/kernel.mjs         the channel: every operation, and the only way to any of them
+lib/codes.mjs          typed refusals — every Contract falsifier has a name
 lib/gate.mjs           the reduction: select, then reduce, by a stated table
-lib/identity.mjs       two identities per object; lineage relations
+lib/identity.mjs       two identities per object
 lib/admissibility.mjs  what makes an observation count as evidence
-lib/authority.mjs      grants, and the trust root that ends the regress
 lib/family.mjs         the requested identity, and the unavailable arm
-lib/acceptance.mjs     completion: every obligation passed, and a bound sign-off
 lib/formation.mjs      the provenance trace, including the landing check
 lib/ledger.mjs         append-only record, closed at the append boundary
 lib/writer.mjs         the sole completion write
+lib/write-audit.mjs    AC-11's no-staging property, read off the write path
 lib/schema.mjs         closed-format validation, and validation of the schemas
 schema/objects.mjs     the four durable objects
+schema/records.mjs     the closed shape of every record kind
 ```
 
 Run: `sh plugins/ae/tests/scripts/test-v1-kernel.sh`
@@ -43,7 +44,19 @@ Four modules are **copied** from `tests/foundation/lib/`, not moved:
 copies and keeps passing. Consolidating now would be the upfront horizontal build
 the plan forbids; a later slice may do it once both have real consumers.
 
-## Three things worth knowing before reading the code
+## Four things worth knowing before reading the code
+
+**Nothing that decides an outcome comes from a caller.** The Contract, the
+Assignment, the Evidence Package and the current identity of every material input
+are read out of the log, not passed in. Each durable object enters as its own
+bytes with its own identity, and the only way to obtain the object is through a
+resolver that verifies that identity first — so acting on an object whose bytes do
+not check out is not something a consumer can do by forgetting to check.
+
+Three rounds of review found the same defect in three different places: a
+parameter through which the party being judged supplied the standard it would be
+judged against. There is no longer such a parameter, and that is the property to
+check first when reading `lib/kernel.mjs`.
 
 **The reduction judges; selection does not.** Stage 1 reads the routing envelope —
 lineage, obligation, attempt — and stops. Whether a record is valid, current, or
@@ -56,6 +69,12 @@ evidence.
 reordered members, changed whitespace, a respelled escape all canonicalize to the
 same bytes on purpose. A byte digest cannot compare two encodings of the same
 content. Keeping one loses the other.
+
+**A check that a caller may skip is not a check.** Every property lives on the
+one path a party can take. Standalone helpers — `checkAssignment`, `checkGrant`,
+`requireHumanInput`, `unavailableArm`, `checkPresentedView` — were deleted rather
+than kept beside it: each was correct, tested, and called by nothing, which made
+the suite green about functions instead of about the program.
 
 **The trust root is named once.** Three criteria each pushed authorization up a
 level — the runner would vouch for the result, the Assignment for the runner's

@@ -30,7 +30,10 @@ export const KINDS = Object.freeze({
   capability_unavailable: { producer: 'harness', consumer: ['gate'] },
   dispatch_attempt: { producer: 'harness', consumer: ['family', 'gate'] },
   delivery: { producer: 'harness', consumer: ['formation'] },
-  human_decision: { producer: 'human', consumer: ['run', 'gate'] },
+  input_observed: { producer: 'harness', consumer: ['gate'] },
+  input_gone: { producer: 'harness', consumer: ['gate'] },
+  human_decision_activation: { producer: 'human', consumer: ['identity', 'replay'] },
+  human_decision_choice: { producer: 'human', consumer: ['run', 'gate'] },
   human_signoff: { producer: 'human', consumer: ['completion'] },
   completion_committed: { producer: 'writer', consumer: ['replay', 'run'] },
   run_record: { producer: 'run', consumer: ['run', 'replay'] },
@@ -109,8 +112,11 @@ export class Ledger {
         case 'gate_result':
           state.gateVerdicts[r.obligation] = r.status;
           break;
-        case 'human_decision':
-          state.humanDecisions[r.operation] = r.choice || r.revision || true;
+        case 'human_decision_activation':
+          state.humanDecisions[r.operation] = r.revision;
+          break;
+        case 'human_decision_choice':
+          state.humanDecisions[r.operation] = r.choice;
           break;
         case 'human_signoff':
           state.signoff = r.seq;
@@ -139,6 +145,7 @@ export class Ledger {
       artifacts: [],
       gateResults: [],
       commandResults: [],
+      inputObservations: [],
       unavailable: [],
       dispatches: [],
       deliveries: [],
@@ -160,7 +167,10 @@ export class Ledger {
       capability_unavailable: 'unavailable',
       dispatch_attempt: 'dispatches',
       delivery: 'deliveries',
-      human_decision: 'decisions',
+      input_observed: 'inputObservations',
+      input_gone: 'inputObservations',
+      human_decision_activation: 'decisions',
+      human_decision_choice: 'decisions',
       human_signoff: 'signoffs',
       completion_committed: 'completions',
       run_record: 'runRecords',

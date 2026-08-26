@@ -78,6 +78,16 @@ export function lintSchema(schema, path = '$') {
       }
       break;
     }
+    case 'integer': {
+      // Same rule one type over. Counts, lengths, sequence numbers and elapsed
+      // durations all admitted negatives, which are not smaller values but
+      // unusable ones. A position where any integer is genuinely meaningful says
+      // so by stating a negative minimum.
+      if (schema.minimum === undefined) {
+        problems.push({ path, code: 'format_open', why: 'integer without a minimum' });
+      }
+      break;
+    }
     case 'enum': {
       if (!Array.isArray(schema.values) || schema.values.length === 0) {
         problems.push({ path, code: 'format_open', why: 'enum without values' });
@@ -146,8 +156,13 @@ export function validate(schema, value, path = '$') {
         return [{ path, code: 'format_open', why: 'shorter than the minimum' }];
       }
       return [];
-    case 'integer':
-      return Number.isInteger(value) ? [] : [{ path, code: 'format_open', why: 'expected integer' }];
+    case 'integer': {
+      if (!Number.isInteger(value)) return [{ path, code: 'format_open', why: 'expected integer' }];
+      if (schema.minimum !== undefined && value < schema.minimum) {
+        return [{ path, code: 'format_open', why: `below the minimum ${schema.minimum}` }];
+      }
+      return [];
+    }
     case 'boolean':
       return typeof value === 'boolean' ? [] : [{ path, code: 'format_open', why: 'expected boolean' }];
     case 'digest':

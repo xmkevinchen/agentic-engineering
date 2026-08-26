@@ -89,6 +89,15 @@ export const KERNEL_CODES = deepFreeze({
     'retreat_not_acted_on',       // the condition fired and nothing was cut
   ],
 
+  // AC-6 — formation
+  formation: [
+    'statement_uncited',          // a material statement cites no source
+    'citation_unknown',           // cites an id the provenance does not list
+    'citation_broad_only',        // cites only an entry broad enough to support anything
+    'obligation_undisposed',      // a transcribed obligation neither carried nor disposed
+    'disposition_lands_nowhere',  // carried, but nothing in the Contract cites it
+  ],
+
   // AC-8 — requested identity
   family: [
     'requested_substituted',      // a default replaced the stated identity

@@ -148,5 +148,7 @@ export function commitCompletion({
   if (result.outcome === 'exists') {
     fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });
   }
-  return result;
+  // The resolved target, so what gets recorded is where the bytes actually went
+  // rather than the path someone asked for.
+  return { ...result, path: target };
 }

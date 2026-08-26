@@ -55,8 +55,8 @@ printf "superseded revision not stale          %s\n" "$(run)"; revert gate.mjs
 plant identity.mjs "if (actual.byte_sha256 !== recorded.byte_sha256) {" "if (false) {"
 printf "lexical mutation undetected            %s\n" "$(run)"; revert identity.mjs
 
-plant authority.mjs "if (!input || input.origin !== 'host') {" "if (false) {"
-printf "model output accepted as human input   %s\n" "$(run)"; revert authority.mjs
+plant kernel.mjs "if (Object.prototype.hasOwnProperty.call(payload, 'origin')) {" "if (false) {"
+printf "caller-written origin accepted          %s\n" "$(run)"; revert kernel.mjs
 
 plant writer.mjs "assertNoSymlinkComponents(resolve(root), target);" ""
 printf "symlink parent unchecked               %s\n" "$(run)"; revert writer.mjs
@@ -91,6 +91,31 @@ printf "completion over invented verdicts       %s\n" "$(run)"; revert writer.mj
 
 plant admissibility.mjs "if (!(result.subjects > 0)) return 'vacuous_observation';" ""
 printf "a run that exercised nothing passes     %s\n" "$(run)"; revert admissibility.mjs
+
+# The round-3 findings: state the party being judged used to supply.
+plant gate.mjs "(r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run," \
+  "(r) => r.kind === 'attempt_opened' && r.lineage === lineage,"
+printf "another run's attempt decides this one  %s\n" "$(run)"; revert gate.mjs
+
+plant gate.mjs "  if (record.kind === 'capability_unavailable') {
+    return { status: STATUS.UNAVAILABLE, code: null, record };
+  }" "  if (record.kind === 'capability_unavailable') {
+    return { status: STATUS.UNAVAILABLE, code: null, record };
+  }
+  return { status: STATUS.UNAVAILABLE, code: null, record };"
+printf "unavailable arm skips admissibility     %s\n" "$(run)"; revert gate.mjs
+
+plant admissibility.mjs "  if (path.startsWith('/')) return false;" ""
+printf "an absolute path is inside the boundary %s\n" "$(run)"; revert admissibility.mjs
+
+plant admissibility.mjs "      if (parts.length === 0) return false;" ""
+printf "traversal above the root cancels out    %s\n" "$(run)"; revert admissibility.mjs
+
+plant kernel.mjs "    const formation = formationProblems(contract);" "    const formation = [];"
+printf "a Contract tracing to nothing approved  %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    if (named.size !== 1) {" "if (false) { named.add('art1');"
+printf "a deliverable nothing evidenced         %s\n" "$(run)"; revert kernel.mjs
 
 # Not a defect in a branch — a staging call introduced onto the write path, which
 # is what AC-11's no-staging property is actually about.

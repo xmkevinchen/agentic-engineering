@@ -121,6 +121,17 @@ export function evidenceTests() {
     const outside = build({ pkgOver: { changed_paths: ['docs/v1/a.md', 'src/x.js'] } });
     eq('a change outside it', outside.admit(outside.record), 'change_out_of_boundary');
     ok('a prefix is not containment', withinBoundary('docs/v1x/a.md', ['docs/v1']) === false);
+    // Both of these used to normalise into something the boundary accepted. An
+    // absolute path is outside any repository-relative boundary by construction,
+    // and `..` at the root escapes rather than cancelling.
+    ok('an absolute path is outside', withinBoundary('/docs/v1/a.md', ['docs/v1']) === false);
+    ok('traversal above the root escapes',
+      withinBoundary('../../docs/v1/a.md', ['docs/v1']) === false);
+    ok('traversal inside it still resolves',
+      withinBoundary('docs/v1/sub/../a.md', ['docs/v1']) === true);
+    const outsideAbsolute = build({ pkgOver: { changed_paths: ['/etc/passwd'] } });
+    eq('and the package carrying one is refused',
+      outsideAbsolute.admit(outsideAbsolute.record), 'change_out_of_boundary');
   });
 
   group('AC-2 · non-vacuity', () => {
