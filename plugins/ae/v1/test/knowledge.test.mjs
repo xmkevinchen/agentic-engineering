@@ -36,7 +36,8 @@ const obs = (green, extra = {}) => ({
   contract_revision: 'r1', command_result: green ? 'green' : 'red', ...extra,
 });
 const gate = (records) => reduce({
-  records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1',
+  records, lineage: 'L', run: 'run1', obligation: 'O',
+  currentRevision: 'r1', boundRevision: 'r1',
   admit: () => null,
   inputsChanged: () => false,
   outcomeOf: (r) => r.command_result === 'green',
@@ -82,9 +83,17 @@ export function knowledgeTests() {
     // A summary is a claim about a run, and the reduction reads the run's facts.
     eq('an agent summary does not decide',
       gate([A1, obs(false, { summary: 'I verified this thoroughly' })]), STATUS.FAILED);
-    // Nor does a corpus-preferred revision become the current one.
+    // Nor does a corpus-preferred revision become the current one. Currency is
+    // the run's bound revision against the lineage's latest, and a field on a
+    // submission naming a preference is not either of them.
+    const preferring = (records) => reduce({
+      records, lineage: 'L', run: 'run1', obligation: 'O',
+      currentRevision: 'r1', boundRevision: 'r0',
+      admit: () => null, inputsChanged: () => false,
+      outcomeOf: (r) => r.command_result === 'green',
+    }).status;
     eq('a corpus preference does not set currency',
-      gate([A1, obs(true, { contract_revision: 'r0', corpus_prefers: 'r0' })]), STATUS.STALE);
+      preferring([A1, obs(true, { corpus_prefers: 'r0' })]), STATUS.STALE);
   });
 
   group('AC-10 · N5 — no suggestion-to-policy path exists in V1', () => {

@@ -66,14 +66,11 @@ probe RED "contradiction no longer fails closed"; revert gate.mjs
 plant gate.mjs "const latest = attempts[attempts.length - 1];" "const latest = attempts[0];"
 probe RED "earliest attempt decides instead"; revert gate.mjs
 
-plant gate.mjs "if (record.contract_revision !== ctx.currentRevision) {" "if (false) {"
-probe RED "superseded revision not stale"; revert gate.mjs
-
 plant identity.mjs "if (actual.byte_sha256 !== recorded.byte_sha256) {" "if (false) {"
 probe RED "lexical mutation undetected"; revert identity.mjs
 
-plant kernel.mjs "  recordUnavailable({ lineage, run, obligation, attempt, requested }) {" \
-  "  recordUnavailable({ lineage, run, obligation, attempt, requested, origin }) {"
+plant kernel.mjs "  recordUnavailable({ lineage, run, obligation, attempt }) {" \
+  "  recordUnavailable({ lineage, run, obligation, attempt, origin }) {"
 probe RED "a public operation takes an origin"; revert kernel.mjs
 
 plant kernel.mjs "    assertNoSymlinkComponents(resolve(this.#completionRoot), resolve(path));" ""
@@ -186,6 +183,23 @@ probe RED "the verdict consults the environment"; revert kernel.mjs
 plant family.mjs "  const requested = requestedFamily(contract);" \
   "  const requested = requestedFamily(contract) || ['openai'];"
 probe RED "a dispatch defaults its request"; revert family.mjs
+
+# Round 13's findings.
+plant gate.mjs "  if (boundRevision !== currentRevision) {" "  if (false) {"
+probe RED "a superseded run is not stale"; revert gate.mjs
+
+plant kernel.mjs "    if (arithmetic && arithmetic.fired !== (choice === 'yes')) {" "    if (false) {"
+probe RED "a decision against the arithmetic"; revert kernel.mjs
+
+plant kernel.mjs "      if (!(to > from)) {" "      if (false) {"
+probe RED "a boundary enclosing nothing"; revert kernel.mjs
+
+plant kernel.mjs "      if (!discrepancy || !disposition) {" "      if (false) {"
+probe RED "caught_something supported by nothing"; revert kernel.mjs
+
+plant kernel.mjs "    const requested = requestedFamily(bound.contract);" \
+  "    const requested = ['anthropic'];"
+probe RED "an unavailability nobody asked about"; revert kernel.mjs
 
 # Round 11's findings.
 plant kernel.mjs "    const labels = new Set();" "    const labels = new Set(); if (true) return prior;"

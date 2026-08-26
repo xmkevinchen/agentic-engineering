@@ -277,14 +277,46 @@ export const RECORDS = Object.freeze({
     required: ['kind', 'lineage', 'run', 'identity', 'path', 'seq'],
     properties: { kind: text, lineage: id, run: id, identity, path: text, seq },
   },
-  run_record: {
+  // AC-9's four facts. Boundaries are positions of records that exist for other
+  // reasons, so the two cost figures are quantities of the same kind by
+  // construction — and derived rather than supplied, which is what stops
+  // "formation cost more than the change" being an opinion wearing a number.
+  //
+  // Two shapes, because `caught_something` means something only when the record
+  // holds the discrepancy and what was done about it. One shape with optional
+  // fields admitted a trace outcome nothing supports.
+  run_record_clean: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'formation_elapsed', 'change_elapsed', 'trace_outcome', 'went_wrong', 'seq'],
+    required: [
+      'kind', 'lineage', 'run', 'formation_from', 'formation_to',
+      'change_from', 'change_to', 'formation_elapsed', 'change_elapsed',
+      'trace_outcome', 'went_wrong', 'seq',
+    ],
     properties: {
       kind: text, lineage: id, run: id,
-      formation_elapsed: count,
-      change_elapsed: count,
-      trace_outcome: { type: 'enum', values: ['caught_something', 'caught_nothing'] },
+      formation_from: count, formation_to: count,
+      change_from: count, change_to: count,
+      formation_elapsed: count, change_elapsed: count,
+      trace_outcome: { type: 'const', value: 'caught_nothing' },
+      went_wrong: { type: 'string', minLength: 0 },
+      seq,
+    },
+  },
+  run_record_caught: {
+    type: 'object', additional: false,
+    required: [
+      'kind', 'lineage', 'run', 'formation_from', 'formation_to',
+      'change_from', 'change_to', 'formation_elapsed', 'change_elapsed',
+      'trace_outcome', 'discrepancy', 'disposition', 'went_wrong', 'seq',
+    ],
+    properties: {
+      kind: text, lineage: id, run: id,
+      formation_from: count, formation_to: count,
+      change_from: count, change_to: count,
+      formation_elapsed: count, change_elapsed: count,
+      trace_outcome: { type: 'const', value: 'caught_something' },
+      discrepancy: text,
+      disposition: text,
       went_wrong: { type: 'string', minLength: 0 },
       seq,
     },

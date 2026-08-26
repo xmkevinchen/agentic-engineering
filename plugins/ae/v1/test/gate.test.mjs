@@ -32,8 +32,11 @@ const DEFAULTS = {
   inputsChanged: () => false,
   outcomeOf: (r) => r.command_result === 'green',
 };
+// `boundRevision` is the revision the run was assigned under; `currentRevision`
+// is the lineage's latest. Equal here unless a case is about staleness.
 const run = (records, opts = {}) => reduce({
-  records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1',
+  records, lineage: 'L', run: 'run1', obligation: 'O',
+  currentRevision: 'r1', boundRevision: 'r1',
   ...DEFAULTS, ...opts,
 }).status;
 
@@ -43,7 +46,8 @@ export function gateTests() {
     eq('failed', run([A1, obs(1, false)]), STATUS.FAILED);
     eq('pending — attempt opened, nothing submitted', run([A1]), STATUS.PENDING);
     eq('unavailable', run([A1, unavailable(1)]), STATUS.UNAVAILABLE);
-    eq('stale — superseded revision', run([A1, obs(1, true, 'r0')]), STATUS.STALE);
+    eq('stale — superseded revision',
+      run([A1, obs(1, true)], { boundRevision: 'r0' }), STATUS.STALE);
     eq('stale — material input changed',
       run([A1, obs(1, true)], { inputsChanged: () => true }), STATUS.STALE);
     eq('invalid — inadmissible',
@@ -75,7 +79,7 @@ export function gateTests() {
     // The record a status exists to report must survive selection. Two earlier
     // drafts filtered here and each time the status became `pending`.
     eq('superseded evidence is stale, not pending',
-      run([A1, obs(1, true, 'r0')]), STATUS.STALE);
+      run([A1, obs(1, true)], { boundRevision: 'r0' }), STATUS.STALE);
     eq('inadmissible evidence is invalid, not pending',
       run([A1, obs(1, true)], { admit: () => 'binding_unresolved' }), STATUS.INVALID);
     eq('unavailable is unavailable, not pending',
@@ -94,7 +98,10 @@ export function gateTests() {
 
   group('AC-4 · the reduction refuses to run without its readers', () => {
     const records = [A1, obs(1, true)];
-    const base = { records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1' };
+    const base = {
+      records, lineage: 'L', run: 'run1', obligation: 'O',
+      currentRevision: 'r1', boundRevision: 'r1',
+    };
     for (const missing of ['admit', 'inputsChanged', 'outcomeOf']) {
       const opts = { ...DEFAULTS };
       delete opts[missing];
@@ -119,8 +126,12 @@ export function gateTests() {
     eq('order is invalid > stale > unavailable > failed > passed',
       PRECEDENCE.join('>'), 'invalid>stale>unavailable>failed>passed');
     // invalid outranks stale: uninterpretable evidence is not interpreted further.
+    // A superseded run is stale before anything is selected, so the pairing that
+    // remains meaningful is `invalid` against a stale *input*.
     eq('invalid over stale',
-      run([A1, obs(1, true, 'r0')], { admit: () => 'binding_missing' }), STATUS.INVALID);
+      run([A1, obs(1, true)], {
+        admit: () => 'binding_missing', inputsChanged: () => true,
+      }), STATUS.INVALID);
     // stale outranks unavailable, and both outrank a plain failure.
     eq('unavailable over failed',
       run([A1, obs(1, false), unavailable(1)]), STATUS.UNAVAILABLE);
@@ -159,16 +170,17 @@ export function gateTests() {
     ];
     ok('all passed', reduceAll({
       records: recs, lineage: 'L', run: 'run1', obligations: ['O1', 'O2'],
-      currentRevision: 'r1', ...DEFAULTS,
+      currentRevision: 'r1', boundRevision: 'r1', ...DEFAULTS,
     }).allPassed);
     ok('one pending blocks', reduceAll({
       records: recs, lineage: 'L', run: 'run1', obligations: ['O1', 'O2', 'O3'],
-      currentRevision: 'r1', ...DEFAULTS,
+      currentRevision: 'r1', boundRevision: 'r1', ...DEFAULTS,
     }).allPassed === false);
     // An empty obligation list is not "everything passed" — it is a Contract that
     // promised nothing, and vacuous completion is the failure AE exists to catch.
     ok('no obligations is not completion', reduceAll({
-      records: recs, lineage: 'L', run: 'run1', obligations: [], currentRevision: 'r1', ...DEFAULTS,
+      records: recs, lineage: 'L', run: 'run1', obligations: [],
+      currentRevision: 'r1', boundRevision: 'r1', ...DEFAULTS,
     }).allPassed === false);
   });
 }

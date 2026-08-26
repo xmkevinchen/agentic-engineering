@@ -103,20 +103,20 @@ function verdictOf(record, ctx) {
   const refusal = ctx.admit(record, ctx);
   if (refusal) return { status: STATUS.INVALID, code: refusal, record };
 
-  // An admissible unavailable record is a verdict in itself: the capability could
-  // not be used, which is neither a failure of the work nor an absence of
-  // evidence.
-  if (record.kind === 'capability_unavailable') {
-    return { status: STATUS.UNAVAILABLE, code: null, record };
-  }
-
-  // Two kinds of staleness, and both are stale: bound to a superseded revision,
-  // or the material inputs it recorded have since changed.
-  if (record.contract_revision !== ctx.currentRevision) {
-    return { status: STATUS.STALE, code: null, record };
-  }
+  // Staleness of the second kind: the material inputs the evidence recorded have
+  // since changed, so it no longer describes what it observed. The first kind —
+  // bound to a superseded revision — is a property of the run rather than of each
+  // record, and is decided before any of this; see `reduce`.
   if (ctx.inputsChanged(record, ctx)) {
     return { status: STATUS.STALE, code: null, record };
+  }
+
+  // An admissible, current unavailable record is a verdict in itself: the
+  // capability could not be used, which is neither a failure of the work nor an
+  // absence of evidence. It used to be decided before staleness, so a run bound
+  // to a superseded revision still reported a clean `unavailable`.
+  if (record.kind === 'capability_unavailable') {
+    return { status: STATUS.UNAVAILABLE, code: null, record };
   }
 
   // The verdict is computed from the external record, never copied from the
@@ -137,6 +137,7 @@ export function reduce({
   run,
   obligation,
   currentRevision,
+  boundRevision,
   admit,
   inputsChanged,
   outcomeOf,
@@ -154,6 +155,13 @@ export function reduce({
     throw new TypeError('reduce requires an outcome reader — the verdict is computed, not supplied');
   }
   const ctx = { currentRevision, admit, inputsChanged, outcomeOf };
+  // A run bound to a superseded revision is stale, whatever it submitted and
+  // whichever arm it took. Deciding this per record left the unavailable arm out,
+  // because an unavailable record names no revision of its own.
+  if (boundRevision !== currentRevision) {
+    return { status: STATUS.STALE, code: null, attempt: null, selected: null };
+  }
+
   const { attempt, records: selected } = select({ records, lineage, run, obligation });
 
   // The attempt opened and submitted nothing for this obligation. An older
@@ -202,12 +210,14 @@ export function reduce({
 // Not a seventh status — AC-1's precondition, computed from the same reduction
 // rather than beside it.
 export function reduceAll({
-  records, lineage, run, obligations, currentRevision, admit, inputsChanged, outcomeOf,
+  records, lineage, run, obligations, currentRevision, boundRevision,
+  admit, inputsChanged, outcomeOf,
 }) {
   const byObligation = {};
   for (const obligation of obligations) {
     byObligation[obligation] = reduce({
-      records, lineage, run, obligation, currentRevision, admit, inputsChanged, outcomeOf,
+      records, lineage, run, obligation, currentRevision, boundRevision,
+      admit, inputsChanged, outcomeOf,
     });
   }
   const allPassed = obligations.length > 0

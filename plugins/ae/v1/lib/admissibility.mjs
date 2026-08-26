@@ -24,9 +24,6 @@ function admitUnavailable(record, { contract, assignment, index }) {
     return 'requested_from_wrong_source';
   }
   if (!Array.isArray(record.requested)) return 'requested_dropped';
-  if (JSON.stringify(record.requested) !== JSON.stringify(stated)) {
-    return 'requested_substituted';
-  }
   const attempt = index.attempt(record.attempt);
   if (!attempt) return 'binding_unresolved';
   if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
@@ -41,11 +38,12 @@ function admitUnavailable(record, { contract, assignment, index }) {
     return 'authority_not_granted';
   }
 
+  // No comparison of either record's `requested` against the Contract's: both are
+  // copied from it by the Kernel, so that compared a value with itself. What a
+  // request survives is checked where it is built, and what it must not claim is
+  // in the record shape.
   const dispatch = index.dispatch(record.attempt, record.obligation);
   if (!dispatch) return 'binding_unresolved';
-  if (JSON.stringify(dispatch.requested) !== JSON.stringify(stated)) {
-    return 'requested_substituted';
-  }
   // No check for `observed` or `effective` here. The dispatch schema has no
   // position for either, so a record carrying one is not a record — and a copy of
   // the rule at this level was a layer no planted defect could turn red.
@@ -119,6 +117,9 @@ export function admissibility({
     // package explicitly bound to another execution resolved fine in an earlier
     // draft, because nothing compared the two.
     if (record.assignment !== assignment.id) return 'binding_cross_execution';
+    // The revision the record names is the one its Assignment bound. Whether that
+    // revision is still current is staleness, decided in the reduction and for
+    // the whole run.
     if (assignment.contract_revision !== record.contract_revision) return 'binding_cross_execution';
     if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
     if (attempt.producer !== record.producer) return 'binding_cross_execution';

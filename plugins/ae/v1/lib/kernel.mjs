@@ -26,7 +26,7 @@ import { KINDS } from './ledger.mjs';
 import { reduceAll, STATUS } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
 import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
-import { dispatchRecord } from './family.mjs';
+import { dispatchRecord, requestedFamily } from './family.mjs';
 import { assertInsideLocation, assertNoSymlinkComponents } from './write-path.mjs';
 import { atomicFileNoReplace } from './fs-noreplace.mjs';
 import { checkVerifiableSources, formationProblems } from './formation.mjs';
@@ -260,7 +260,8 @@ class Ledger {
           state.unavailable = r.seq;
           state.requested = r.requested;
           break;
-        case 'run_record':
+        case 'run_record_clean':
+        case 'run_record_caught':
           state.runFacts = {
             formation: r.formation_elapsed, change: r.change_elapsed,
             trace: r.trace_outcome, wentWrong: r.went_wrong,
@@ -312,7 +313,8 @@ class Ledger {
       human_decision_judgement: 'decisions',
       human_signoff: 'signoffs',
       completion_committed: 'completions',
-      run_record: 'runRecords',
+      run_record_clean: 'runRecords',
+      run_record_caught: 'runRecords',
     };
     for (const r of records) {
       const key = bucket[r.kind];
@@ -952,7 +954,19 @@ export class Kernel {
     });
   }
 
-  recordUnavailable({ lineage, run, obligation, attempt, requested }) {
+  // The request comes from the run's Contract, like the dispatch's does. It was
+  // an argument, so a caller could describe a capability nobody had asked for as
+  // missing, reduce that to `unavailable`, and open the Human Owner's decision
+  // path on it.
+  recordUnavailable({ lineage, run, obligation, attempt }) {
+    const bound = this.contractForRun(lineage, run);
+    if (!bound) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    const requested = requestedFamily(bound.contract);
+    if (requested === null) {
+      fail('requested_from_wrong_source', 'this Contract requested no family', { lineage, run });
+    }
     return this.#ledger.append({
       kind: 'capability_unavailable', lineage, run, obligation, attempt,
       requested, origin: HARNESS,
@@ -1074,12 +1088,51 @@ export class Kernel {
     });
   }
 
-  recordRun({ lineage, run, formationElapsed, changeElapsed, traceOutcome, wentWrong }) {
-    return this.#ledger.append({
-      kind: 'run_record', lineage, run,
-      formation_elapsed: formationElapsed, change_elapsed: changeElapsed,
-      trace_outcome: traceOutcome, went_wrong: wentWrong,
-    });
+  // AC-9's four facts. The two cost figures are derived from boundaries, and a
+  // boundary is the position of a record that exists for another reason — an
+  // approval, an attempt, a Gate result. Elapsed quantities used to be numbers a
+  // caller passed, which made "formation cost more than the change" an opinion
+  // wearing a number: nothing said what was measured, or that the two figures
+  // were of the same kind.
+  recordRun({
+    lineage, run, formationFrom, formationTo, changeFrom, changeTo,
+    traceOutcome, discrepancy, disposition, wentWrong,
+  }) {
+    const at = (seq, which) => {
+      const record = this.records()[seq];
+      if (!record) {
+        fail('cost_boundary_post_hoc', 'a boundary names no record', { which, seq });
+      }
+      return record;
+    };
+    for (const [which, from, to] of [
+      ['formation', formationFrom, formationTo],
+      ['change', changeFrom, changeTo],
+    ]) {
+      at(from, `${which}_from`);
+      at(to, `${which}_to`);
+      if (!(to > from)) {
+        fail('cost_incomparable', 'a boundary does not enclose an interval', { which, from, to });
+      }
+    }
+    const base = {
+      lineage, run,
+      formation_from: formationFrom, formation_to: formationTo,
+      change_from: changeFrom, change_to: changeTo,
+      formation_elapsed: formationTo - formationFrom,
+      change_elapsed: changeTo - changeFrom,
+      trace_outcome: traceOutcome,
+      went_wrong: wentWrong,
+    };
+    if (traceOutcome === 'caught_something') {
+      if (!discrepancy || !disposition) {
+        fail('trace_outcome_unsupported', 'caught_something needs the discrepancy and what was done', {
+          run,
+        });
+      }
+      return this.#ledger.append({ kind: 'run_record_caught', ...base, discrepancy, disposition });
+    }
+    return this.#ledger.append({ kind: 'run_record_clean', ...base });
   }
 
   // The index resolves from the log and takes nothing from a caller. An earlier
@@ -1152,24 +1205,23 @@ export class Kernel {
   }
 
   decideRetreat({ lineage, run, actor, choice }) {
+    // Checked before it is written. Appending and then refusing left a durable
+    // host record of a decision the Kernel had rejected — a log that says the
+    // Human Owner decided something they were not permitted to.
     const arithmetic = this.retreatCondition(lineage, run);
-    const decision = this.#humanJudgement({
-      lineage, run, actor, choice, operation: 'retreat_decision',
-    });
-    // The decision has to agree with the facts. A `no` where the condition fired,
-    // or a `yes` where it did not, is a decision about a different run.
-    if (arithmetic.fired !== (choice === 'yes')) {
+    if (arithmetic && arithmetic.fired !== (choice === 'yes')) {
       fail('retreat_contradicts_facts', 'the decision disagrees with the recorded facts', {
         fired: arithmetic.fired, choice,
       });
     }
-    return decision;
+    return this.#humanJudgement({
+      lineage, run, actor, choice, operation: 'retreat_decision',
+    });
   }
 
+  // No `yes`/`no` check here: the record shape states it, and a copy beside it is
+  // a claim no planted defect can turn red.
   #humanJudgement({ lineage, run, actor, choice, operation }) {
-    if (!['yes', 'no'].includes(choice)) {
-      fail('human_input_absent', 'the judgement is yes or no', { choice, operation });
-    }
     if (actor !== this.#owner) {
       fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
         actor,
@@ -1179,7 +1231,8 @@ export class Kernel {
     // questions are asked *of* a run's arithmetic, and one asked of nothing is
     // not the judgement the criterion reserves.
     const facts = this.records().find(
-      (r) => r.kind === 'run_record' && r.lineage === lineage && r.run === run,
+      (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
+        && r.lineage === lineage && r.run === run,
     );
     if (!facts) {
       fail('run_facts_incomplete', 'there are no run facts to judge', { lineage, run });
@@ -1191,7 +1244,8 @@ export class Kernel {
 
   retreatCondition(lineage, run) {
     const record = this.records().find(
-      (r) => r.kind === 'run_record' && r.lineage === lineage && r.run === run,
+      (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
+        && r.lineage === lineage && r.run === run,
     );
     if (!record) return null;
     return {
@@ -1222,8 +1276,7 @@ export class Kernel {
 
   #statusLocked({ lineage, run }) {
     const result = this.#reduce({ lineage, run });
-    const current = this.currentRevision(lineage);
-    const { contract } = this.contractForRun(lineage, run);
+    const { contract, revision: bound } = this.contractForRun(lineage, run);
 
     // The verdict is recorded, because completion relies on it and AC-13 says
     // everything either the Gate or the Human Owner relies on is recorded when it
@@ -1233,7 +1286,11 @@ export class Kernel {
     for (const obligation of contract.obligations) {
       const v = result.byObligation[obligation];
       this.#ledger.append({
-        kind: 'gate_result', lineage, run, contract_revision: current, obligation,
+        // The revision judged, which is the one the run was assigned under.
+        // Recording the lineage's current revision instead named something the
+        // reduction had not looked at, and the sign-off — which filters by the
+        // bound revision — then found no verdicts at all.
+        kind: 'gate_result', lineage, run, contract_revision: bound, obligation,
         status: v.status,
         ...(v.code ? { code: v.code } : {}),
         ...(v.attempt != null ? { attempt: v.attempt } : {}),
@@ -1263,7 +1320,8 @@ export class Kernel {
       contract, assignment, approvals: this.approvals(), index, inputsNow, run,
     });
     const result = reduceAll({
-      records, lineage, run, obligations: contract.obligations, currentRevision: current,
+      records, lineage, run, obligations: contract.obligations,
+      currentRevision: current, boundRevision: approved.revision,
       admit,
       inputsChanged: inputsChangedAgainst(index, inputsNow),
       outcomeOf: this.#outcomeReader({ lineage, run }),
@@ -1453,24 +1511,13 @@ export class Kernel {
   #commitCompletion({ acceptance, run }) {
     const path = this.completionPathFor({ lineage: acceptance.lineage, run });
 
-    // Re-derived here, not carried from the reduction above.
-    //
-    // This was deleted once as a duplicate of `complete`'s own check, and that
-    // was wrong: several Kernels may share a log, and between the reduction and
-    // this write another can open a newer attempt and reduce again, leaving the
-    // run `pending` while an Acceptance says `accepted`. "The latest attempt
-    // decides" is decided at the moment the bytes land.
-    //
-    // The suite cannot produce that interleave in one process — there is no seam
-    // inside `complete` to schedule against, and adding one for a test would be
-    // test-only machinery. `verdictsRecorded` is exercised directly instead, on a
-    // log two Kernels advanced. Said plainly rather than left to look covered.
-
     // The shape, checked against the schema rather than against truthiness — an
-    // earlier version tested `if (!acceptance)` and wrote `{}`. This is the one
-    // check left here: the verdict re-derivation that used to sit beside it read
-    // the same records `complete` had just reduced, and no planted defect could
-    // turn the copy red now that nothing else can call this.
+    // earlier version tested `if (!acceptance)` and wrote `{}`.
+    //
+    // This is the only check left here. A verdict re-derivation used to sit
+    // beside it, for the case where a second Kernel advanced the log between the
+    // reduction and the write — but the whole of completion holds one lock now,
+    // so re-reading under it reaches the same answer by construction.
     const problems = validate(ACCEPTANCE, acceptance);
     if (problems.length > 0) {
       fail('format_open', 'the Acceptance does not match its closed shape', { problems });

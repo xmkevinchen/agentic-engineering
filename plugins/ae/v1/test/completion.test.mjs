@@ -337,13 +337,38 @@ export function completionTests() {
     // these, the run AC-9 asks for could not record its own answers.
     const k = fresh();
     const w = walk(k);
+    k.status({ lineage: 'L', run: w.run });
     refuses('a judgement about a run with no facts', 'run_facts_incomplete',
       () => k.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' }));
 
+    // Boundaries are positions of records that already exist. Formation runs from
+    // the log's first record to the approval; the change from the attempt to the
+    // Gate's verdict — so both figures are counts of the same thing, and neither
+    // is a number anyone typed.
+    const seqOf = (kind) => k.records().find((r) => r.kind === kind).seq;
+    const gateResult = k.records().filter((r) => r.kind === 'gate_result').pop();
+    refuses('a boundary that encloses nothing', 'cost_incomparable',
+      () => k.recordRun({
+        lineage: 'L', run: w.run,
+        formationFrom: 0, formationTo: 0,
+        changeFrom: seqOf('attempt_opened'), changeTo: gateResult.seq,
+        traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
+    refuses('a trace outcome nothing supports', 'trace_outcome_unsupported',
+      () => k.recordRun({
+        lineage: 'L', run: w.run,
+        formationFrom: 0, formationTo: seqOf('contract_approved_genesis'),
+        changeFrom: seqOf('attempt_opened'), changeTo: gateResult.seq,
+        traceOutcome: 'caught_something', wentWrong: '',
+      }));
     const facts = k.recordRun({
-      lineage: 'L', run: w.run, formationElapsed: 90, changeElapsed: 30,
+      lineage: 'L', run: w.run,
+      formationFrom: 0, formationTo: seqOf('contract_approved_genesis'),
+      changeFrom: seqOf('attempt_opened'), changeTo: gateResult.seq,
       traceOutcome: 'caught_nothing', wentWrong: '',
     });
+    eq('formation cost is derived from its boundaries',
+      facts.formation_elapsed, seqOf('contract_approved_genesis') - 0);
     refuses('by someone the Kernel does not serve', 'authority_not_granted',
       () => k.decideWorth({ lineage: 'L', run: w.run, actor: 'P', choice: 'yes' }));
     const worth = k.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' });
@@ -351,14 +376,20 @@ export function completionTests() {
     eq('bound to the facts it answers', worth.answers, facts.seq);
     eq('externally produced', worth.origin, 'host');
 
-    // The retreat condition is arithmetic, and the decision has to agree with it:
-    // formation cost 90 against change cost 30, and the trace caught nothing, so
-    // it fired.
-    ok('the condition fired', k.retreatCondition('L', w.run).fired);
+    // The retreat condition is arithmetic over those two figures and the trace
+    // outcome. Whichever way it comes out, a decision disagreeing with it is
+    // refused — and refused *before* anything is written, since appending first
+    // left a durable record of a decision the Kernel had rejected.
+    const fired = k.retreatCondition('L', w.run).fired;
+    const disagrees = fired ? 'no' : 'yes';
     refuses('a decision that disagrees with the facts', 'retreat_contradicts_facts',
-      () => k.decideRetreat({ lineage: 'L', run: w.run, actor: OWNER, choice: 'no' }));
-    eq('and one that agrees is recorded',
-      k.decideRetreat({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' }).choice, 'yes');
+      () => k.decideRetreat({ lineage: 'L', run: w.run, actor: OWNER, choice: disagrees }));
+    ok('and nothing was written',
+      !k.records().some((r) => r.operation === 'retreat_decision'));
+    eq('one that agrees is recorded',
+      k.decideRetreat({
+        lineage: 'L', run: w.run, actor: OWNER, choice: fired ? 'yes' : 'no',
+      }).choice, fired ? 'yes' : 'no');
   });
 
   group('AC-5 · every authority operation answers to the same owner', () => {

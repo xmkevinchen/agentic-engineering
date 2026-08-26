@@ -285,7 +285,6 @@ export function recordTests() {
     k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
     const missing = k.recordUnavailable({
       lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
-      requested: ['openai', 'qwen'],
     });
     k.status({ lineage: 'L', run: 'run1' });
     k.decideUnavailable({ lineage: 'L', run: 'run1', actor: OWNER, choice: 'stop' });

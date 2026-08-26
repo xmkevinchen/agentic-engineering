@@ -75,8 +75,7 @@ export function familyTests() {
         lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O', ...dispatchOver,
       });
       k.recordUnavailable({
-        lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
-        requested: ['openai', 'qwen'], ...unavailableOver,
+        lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt, ...unavailableOver,
       });
       return k;
     };
@@ -93,14 +92,17 @@ export function familyTests() {
     eq('a same-family seat standing in',
       answered.status({ lineage: 'L', run: 'run1' }).byObligation.O.code,
       'same_family_substituted');
-    const swapped = build({}, { requested: ['anthropic'] });
-    eq('a request nobody made', swapped.status({ lineage: 'L', run: 'run1' }).byObligation.O.code,
-      'requested_substituted');
-
-    // And an arm the Gate refused is not one the Human Owner may decide about:
-    // the choice answers an event, and there was no admissible event.
+    // A request nobody made is not constructible: `recordUnavailable` reads the
+    // run's Contract, so there is no argument through which one could arrive.
+    // What is constructible is an arm the Gate refuses for authority — and that
+    // is not one the Human Owner may decide about either, because the choice
+    // answers an event and there was no admissible event.
+    const refused = build({ substitutedFamily: 'anthropic' });
+    eq('a seat that answered is not a missing capability',
+      refused.status({ lineage: 'L', run: 'run1' }).byObligation.O.code,
+      'same_family_substituted');
     refuses('a choice about an arm the Gate refused', 'human_input_absent',
-      () => swapped.decideUnavailable({
+      () => refused.decideUnavailable({
         lineage: 'L', run: 'run1', actor: 'Human Owner', choice: 'stop',
       }));
 
@@ -119,17 +121,19 @@ export function familyTests() {
     const at = k.openAttempt({
       lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
     });
-    k.recordUnavailable({
-      lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt, requested: ['openai'],
-    });
-    // And there is nothing to dispatch: a Contract that requested no family has
-    // no request to carry, and defaulting one would put a family nobody asked for
-    // into the record.
+    // A solo Contract has no request, so there is nothing to dispatch and nothing
+    // that could have been missing — defaulting either would put a family nobody
+    // asked for into the record.
+    refuses('an unavailable record under a Contract that asked for nothing',
+      'requested_from_wrong_source',
+      () => k.recordUnavailable({
+        lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
+      }));
     refuses('a dispatch under a Contract that asked for nothing', 'requested_dropped',
       () => k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' }));
 
-    eq('an unavailable arm on a solo Contract',
-      k.status({ lineage: 'L', run: 'run1' }).byObligation.O.code, 'requested_from_wrong_source');
+    eq('and the obligation is simply pending',
+      k.status({ lineage: 'L', run: 'run1' }).byObligation.O.status, 'pending');
   });
 
   group('AC-8 · two revisions, two runs, one log, and the requests do not cross', () => {
@@ -189,9 +193,7 @@ export function familyTests() {
       dispatches.find((d) => d.run === 'run2').requested.join(','), 'qwen');
 
     // Replayed in a fresh process, each run still carries its own request.
-    k.recordUnavailable({
-      lineage: 'L', run: 'run2', obligation: 'O', attempt: at2.attempt, requested: ['qwen'],
-    });
+    k.recordUnavailable({ lineage: 'L', run: 'run2', obligation: 'O', attempt: at2.attempt });
     k.status({ lineage: 'L', run: 'run2' });
     const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
     const out = JSON.parse(execFileSync(
@@ -226,10 +228,7 @@ export function familyTests() {
       () => k.decideUnavailable({ lineage: 'L', run: 'run1', actor: 'Human Owner', choice: 'stop' }));
 
     k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
-    k.recordUnavailable({
-      lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
-      requested: ['openai', 'qwen'],
-    });
+    k.recordUnavailable({ lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt });
 
     refuses('a choice outside wait/stop/amend', 'human_input_absent',
       () => k.decideUnavailable({ lineage: 'L', run: 'run1', actor: 'Human Owner', choice: 'proceed' }));

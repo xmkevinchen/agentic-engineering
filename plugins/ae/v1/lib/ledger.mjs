@@ -21,28 +21,34 @@
 
 // Kinds this slice writes and reads. Each must have a real V1 producer and a real
 // V1 consumer: a kind frozen for a future slice fails AC-12 as surely as a missing
-// one. The consumer column is what makes that checkable rather than asserted.
+// one.
+//
+// The entries were `{ producer, consumer }` labels, and nothing read them — the
+// audit uses the keys and looks for real call sites, so the labels could drift to
+// anything without failing. A set of names says what the set is; the audit says
+// whether each is reached.
 export const KINDS = Object.freeze({
-  contract_approved_genesis: { producer: 'activation', consumer: ['gate', 'identity'] },
-  contract_approved_revision: { producer: 'activation', consumer: ['gate', 'identity'] },
-  assignment_issued: { producer: 'human', consumer: ['authority', 'admissibility'] },
-  attempt_opened: { producer: 'implementer', consumer: ['gate'] },
-  command_result: { producer: 'harness', consumer: ['admissibility', 'gate'] },
-  observation: { producer: 'implementer', consumer: ['gate'] },
-  evidence_package: { producer: 'implementer', consumer: ['admissibility'] },
-  artifact_recorded: { producer: 'implementer', consumer: ['admissibility'] },
-  gate_result: { producer: 'gate', consumer: ['completion', 'replay'] },
-  capability_unavailable: { producer: 'harness', consumer: ['gate'] },
-  dispatch_attempt: { producer: 'harness', consumer: ['family', 'gate'] },
-  input_observed: { producer: 'harness', consumer: ['gate'] },
-  input_gone: { producer: 'harness', consumer: ['gate'] },
-  human_decision_activation: { producer: 'human', consumer: ['identity', 'replay'] },
-  human_decision_choice: { producer: 'human', consumer: ['run', 'replay'] },
-  human_decision_unavailable: { producer: 'human', consumer: ['run', 'gate'] },
-  human_decision_judgement: { producer: 'human', consumer: ['run', 'replay'] },
-  human_signoff: { producer: 'human', consumer: ['completion'] },
-  completion_committed: { producer: 'writer', consumer: ['replay', 'run'] },
-  run_record: { producer: 'run', consumer: ['run', 'replay'] },
+  contract_approved_genesis: true,
+  contract_approved_revision: true,
+  assignment_issued: true,
+  attempt_opened: true,
+  command_result: true,
+  observation: true,
+  evidence_package: true,
+  artifact_recorded: true,
+  gate_result: true,
+  capability_unavailable: true,
+  dispatch_attempt: true,
+  input_observed: true,
+  input_gone: true,
+  human_decision_activation: true,
+  human_decision_choice: true,
+  human_decision_unavailable: true,
+  human_decision_judgement: true,
+  human_signoff: true,
+  completion_committed: true,
+  run_record_clean: true,
+  run_record_caught: true,
 });
 
 // Every declared kind must be produced and consumed by real code, not by a
