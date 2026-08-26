@@ -8,7 +8,7 @@
 // visible from a single process, which is why these spawn real ones.
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -23,10 +23,10 @@ const WRITERS = 4;
 // they collide rather than queue. Running them one at a time through
 // `execFileSync` would be four sequential writers — which is what the rest of the
 // suite already does, and which found none of these.
-function race(dir, logPath, what, env = {}) {
+function race(dir, logPath, what, env = {}, pathFor = () => logPath) {
   const startAt = Date.now() + 700;
   const started = Array.from({ length: WRITERS }, (_, i) => [
-    process.execPath, writer, logPath, SOURCE_ROOT, what, String(i), String(startAt),
+    process.execPath, writer, pathFor(i), SOURCE_ROOT, what, String(i), String(startAt),
     join(dir, `out-${i}.json`),
   ].map((a) => `'${a}'`).join(' ')).map((cmd) => `${cmd} &`).join('\n');
   execFileSync('/bin/sh', ['-c', `${started}\nwait`], {
@@ -72,6 +72,36 @@ export function concurrentTests() {
     ok('either exactly one, or a refusal — never a quiet choice',
       (issued.length === 1 && outcome === 'one')
         || (issued.length > 1 && outcome === 'assignment_not_unique'));
+  });
+
+  group('AC-13 · one log reached by two names is one log', () => {
+    // The lock is named after the log's path, so two Kernels reaching the same
+    // file through a real path and a symlink took different locks and both
+    // believed they held it. Applied to an attempt, one opener then received
+    // another's position — the execution-merging the lock exists to close.
+    const { dir, logPath, k } = prepared();
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
+    });
+    const linkDir = join(dir, 'via-link');
+    symlinkSync(dir, linkDir);
+    const viaLink = new Kernel(join(linkDir, 'log.ndjson'), {
+      sourceRoot: SOURCE_ROOT, render: RENDERED,
+    });
+    eq('both names see one log', k.records().length, viaLink.records().length);
+
+    // The lock is named after this, so the two must agree on it. Asserted
+    // directly rather than by racing through both names: whether a collision
+    // reproduces depends on the schedule, and a test that only sometimes catches
+    // the defect is one that only sometimes tests.
+    eq('and agree on which file it is', viaLink.logPath, k.logPath);
+
+    // Writers do reach it by both names at once, so the paths are real.
+    const results = race(dir, logPath, 'attempt', {},
+      (i) => (i % 2 === 0 ? logPath : join(linkDir, 'log.ndjson'))).filter((r) => r.ok);
+    const opened = k.records().filter((r) => r.kind === 'attempt_opened');
+    eq('every open produced a record', opened.length, results.length);
   });
 
   group('AC-3 · a forked approval history has no current revision', () => {

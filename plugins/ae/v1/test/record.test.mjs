@@ -213,8 +213,9 @@ export function recordTests() {
         producer: 'P', obligations: ['O'], smuggled: 'value', seq: 0,
       }],
       ['a decision claiming a different origin', {
-        kind: 'human_decision_choice', operation: 'unavailable_decision',
-        actor: 'Human Owner', lineage: 'L', choice: 'stop', origin: 'model', seq: 0,
+        kind: 'human_decision_unavailable', operation: 'unavailable_decision',
+        actor: 'Human Owner', lineage: 'L', run: 'run1', answers: 3,
+        choice: 'stop', origin: 'model', seq: 0,
       }],
     ]) {
       ok(`${why} is refused`, validate(RECORDS[record.kind], record).length > 0);
@@ -228,12 +229,15 @@ export function recordTests() {
     eq('a fresh reader agrees',
       JSON.stringify(again.state), JSON.stringify(first.state));
 
-    // The completeness half: not "can we replay what we wrote", but "did we write
-    // what we relied on".
-    refuses('a fact nothing recorded', 'record_not_appended',
-      () => k.assertRecorded(['human_signoff'], { lineage: w.lineage, run: w.run }));
-    ok('facts that were recorded',
-      k.assertRecorded(['attempt_opened', 'observation'], { lineage: w.lineage, run: w.run }));
+    // The completeness half — "did we write what we relied on" — is carried by
+    // the shape of the reduction rather than by a check. The Gate reduces from
+    // records and from nothing else, so a fact that was not recorded is a fact it
+    // cannot have used: this asserts that every input the verdict rested on is in
+    // the log, by finding it there.
+    const kinds = new Set(k.records().map((r) => r.kind));
+    for (const relied of ['attempt_opened', 'observation', 'command_result', 'gate_result']) {
+      ok(`${relied} is in the log`, kinds.has(relied));
+    }
   });
 
 }

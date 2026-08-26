@@ -164,6 +164,10 @@ export function admissibility({
       // this section refuses.
       if (now === undefined) return 'material_input_incomplete';
       if (now === null) return 'binding_unresolved';
+      // And it must have been looked at after the package was written. An
+      // observation taken before the evidence was packaged says the input was
+      // current at some earlier moment, which is not what staleness asks.
+      if (!(now.seq > pkg.seq)) return 'material_input_incomplete';
     }
 
     return null;
@@ -208,7 +212,7 @@ export function inputsChangedAgainst(index, inputsNow) {
       const now = inputsNow(input.id);
       if (now === undefined) return false;
       if (now === null) return true;
-      if (now !== input.identity) return true;
+      if (now.identity !== input.identity) return true;
     }
     return false;
   };

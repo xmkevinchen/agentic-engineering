@@ -18,6 +18,7 @@ const approvals = [{ lineage: 'L', revision: 'r1', seq: 5 }];
 // is not binding: a package explicitly bound to another execution resolved fine
 // until this was compared.
 const pkg = {
+  seq: 4,
   id: 'pkg1', contract_revision: 'r1', assignment: 'A1', attempt: 1, producer: 'P',
   command_result: 'cr1', artifact: 'art1',
   changed_paths: ['docs/v1/a.md'],
@@ -31,7 +32,8 @@ const attempt = { seq: 1, assignment: 'A1', producer: 'P' };
 
 function build(over = {}) {
   const {
-    pkgOver = {}, resultOver = {}, attemptOver = {}, inputsNow = () => 'sha256:aa', ...recOver
+    pkgOver = {}, resultOver = {}, attemptOver = {},
+    inputsNow = () => ({ identity: 'sha256:aa', seq: 9, path: 'in1' }), ...recOver
   } = over;
   const P = { ...pkg, ...pkgOver };
   const R = { ...result, ...resultOver };
@@ -175,9 +177,10 @@ export function evidenceTests() {
 
   group('AC-4 · the second staleness — a recorded input changed', () => {
     const index = { package: () => pkg };
-    const changed = inputsChangedAgainst(index, () => 'sha256:bb');
+    const at = (identity) => () => ({ identity, seq: 9, path: 'in1' });
+    const changed = inputsChangedAgainst(index, at('sha256:bb'));
     ok('a changed input is stale', changed({ package: 'pkg1' }) === true);
-    const unchanged = inputsChangedAgainst(index, () => 'sha256:aa');
+    const unchanged = inputsChangedAgainst(index, at('sha256:aa'));
     ok('an unchanged input is not', unchanged({ package: 'pkg1' }) === false);
   });
 }

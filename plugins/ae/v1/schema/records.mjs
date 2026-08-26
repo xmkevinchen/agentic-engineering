@@ -157,17 +157,17 @@ export const RECORDS = Object.freeze({
   // "gone" as a value.
   input_observed: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'id', 'identity', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'id', 'path', 'identity', 'origin', 'seq'],
     properties: {
-      kind: text, lineage: id, id, identity: digest,
+      kind: text, lineage: id, id, path: text, identity: digest,
       origin: { type: 'const', value: 'harness' }, seq,
     },
   },
   input_gone: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'id', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'id', 'path', 'origin', 'seq'],
     properties: {
-      kind: text, lineage: id, id,
+      kind: text, lineage: id, id, path: text,
       origin: { type: 'const', value: 'harness' }, seq,
     },
   },
@@ -229,18 +229,33 @@ export const RECORDS = Object.freeze({
   },
   human_decision_choice: {
     type: 'object', additional: false,
-    required: ['kind', 'operation', 'actor', 'lineage', 'choice', 'origin', 'seq'],
+    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'choice', 'origin', 'seq'],
     properties: {
       kind: text,
       operation: {
         type: 'enum',
         // No `signoff`: signing off is its own kind, `human_signoff`, and an
         // operation two shapes could carry is a fact with two spellings.
-        values: ['assignment_issuance', 'unavailable_decision',
-          'retreat_decision', 'worth_decision'],
+        values: ['assignment_issuance', 'retreat_decision', 'worth_decision'],
       },
-      actor: id, lineage: id,
-      choice: { type: 'enum', values: ['wait', 'stop', 'amend', 'issue', 'yes', 'no'] },
+      actor: id, lineage: id, run: id,
+      choice: { type: 'enum', values: ['issue', 'yes', 'no'] },
+      origin: { type: 'const', value: 'host' }, seq,
+    },
+  },
+  // Its own kind, carrying the run and the record it answers. It was a
+  // `human_decision_choice` with neither: a decision for one run was reconstructed
+  // into every run of the lineage, two unavailable runs collapsed to whichever
+  // choice landed last, and replay could not say which event was decided about.
+  human_decision_unavailable: {
+    type: 'object', additional: false,
+    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'answers', 'choice', 'origin', 'seq'],
+    properties: {
+      kind: text,
+      operation: { type: 'const', value: 'unavailable_decision' },
+      actor: id, lineage: id, run: id,
+      answers: { type: 'integer', minimum: 0 },
+      choice: { type: 'enum', values: ['wait', 'stop', 'amend'] },
       origin: { type: 'const', value: 'host' }, seq,
     },
   },

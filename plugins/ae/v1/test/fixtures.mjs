@@ -128,6 +128,7 @@ export function walk(k, over = {}) {
     lineage = 'L', run = 'run1', actor = 'Human Owner', producer = 'P',
     contract: contractOver = {}, assignment: assignmentOver = {},
     package: pkgOver = {}, command = COMMAND, inputNow,
+    observeBeforePackaging = false,
     obligations = ['O'],
   } = over;
 
@@ -169,6 +170,8 @@ export function walk(k, over = {}) {
     artifact: 'art1', inputsUsed: ['in1'],
   });
 
+  if (observeBeforePackaging) k.observeInput({ lineage, id: 'in1', path: inputPath });
+
   const pkg = asObject(packageDoc({
     attempt: attempt.attempt,
     material_inputs: [{ id: 'in1', identity: digestBytes(readFileSync(inputPath)) }],
@@ -179,7 +182,7 @@ export function walk(k, over = {}) {
   });
 
   if (inputNow) writeFileSync(inputPath, inputNow);
-  k.observeInput({ lineage, id: 'in1', path: inputPath });
+  if (!observeBeforePackaging) k.observeInput({ lineage, id: 'in1', path: inputPath });
 
   for (const obligation of obligations) {
     k.submitObservation({

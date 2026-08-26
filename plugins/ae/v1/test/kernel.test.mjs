@@ -55,8 +55,9 @@ export function kernelTests() {
     // with anything else in that position. Asserted against the schema, because
     // there is no longer a way to attempt the append — the Kernel's ledger is
     // private, so every record goes through the operation that guards it.
-    const problems = validate(RECORDS.human_decision_choice, {
-      kind: 'human_decision_choice', operation: 'unavailable_decision', actor: 'Human Owner', lineage: 'L',
+    const problems = validate(RECORDS.human_decision_unavailable, {
+      kind: 'human_decision_unavailable', operation: 'unavailable_decision',
+      actor: 'Human Owner', lineage: 'L', run: 'run1', answers: 3,
       choice: 'stop', origin: 'model', seq: 0,
     });
     ok('a decision claiming another origin is not a valid record', problems.length > 0);
@@ -72,9 +73,17 @@ export function kernelTests() {
         lineage: 'L', origin: 'host', seq: 0,
       }).length > 0);
     ok('a choice decision without a choice is refused',
-      validate(RECORDS.human_decision_choice, {
-        kind: 'human_decision_choice', operation: 'unavailable_decision', actor: 'Human Owner',
-        lineage: 'L', origin: 'host', seq: 0,
+      validate(RECORDS.human_decision_unavailable, {
+        kind: 'human_decision_unavailable', operation: 'unavailable_decision',
+        actor: 'Human Owner', lineage: 'L', run: 'run1', origin: 'host', seq: 0,
+      }).length > 0);
+    // And an unavailable decision that answers nothing in particular: it was a
+    // `human_decision_choice` carrying neither the run nor the record it
+    // answered, so a decision for one run was replayed into every run.
+    ok('an unavailable decision with no run or answer is refused',
+      validate(RECORDS.human_decision_unavailable, {
+        kind: 'human_decision_unavailable', operation: 'unavailable_decision',
+        actor: 'Human Owner', lineage: 'L', choice: 'stop', origin: 'host', seq: 0,
       }).length > 0);
   });
 

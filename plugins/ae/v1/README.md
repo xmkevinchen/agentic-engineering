@@ -105,11 +105,24 @@ The subject count comes from the command's own output, on a line it prints
 (`AE-SUBJECTS: <n>`). A command that prints none leaves the count absent, which is
 read as unestablishable rather than as zero.
 
-What remains open, said plainly because a reviewer kept finding it: the *command
-string* still comes from the Contract and the *paths* from the caller, so a caller
-that drives every surface in turn can point the Harness at whatever it likes. What
-it can no longer do is skip the running and the digesting. Closing the rest needs a
-Harness that owns the repository mutation path — N7, and not this slice.
+**One criterion is not fully met, and this is where it is said.** AC-5 asks that
+identity come "from the record of who acted, not from a field the actor wrote
+about itself". In-process there is no such record: `actor`, `producer` and
+`submitter` are strings the caller passes, and comparing two of them establishes
+nothing about who acted. Everything downstream is bound — the Contract names who
+may sign, the Assignment names who may produce, and neither can be chosen by the
+party they constrain — but the *name* at the root is still asserted.
+
+Closing it needs a principal the Kernel does not mint: a host adapter that
+authenticates the human and is the only thing that may append a host record. That
+is the same boundary N7 draws for the repository mutation path, and it is not this
+slice. Recorded here rather than argued away, because eight rounds of review kept
+arriving at it and each time the honest answer was the same one.
+
+What did close: the Harness runs the command and digests the files, so the
+outcome, the deliverable and staleness are no longer things a caller states. The
+command string comes from the Contract and the paths from the caller, so a caller
+can still point the Harness at the wrong place — but it cannot skip the looking.
 
 ## What is not built yet
 

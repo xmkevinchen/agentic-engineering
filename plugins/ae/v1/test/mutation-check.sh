@@ -172,9 +172,9 @@ printf "a citation to a passage nobody wrote    %s\n" "$(run)"; revert formation
 plant kernel.mjs "    if (!this.#render) {" "    if (false) { this.__r = 1;"
 printf "an unrenderable Contract approved       %s\n" "$(run)"; revert kernel.mjs
 
-plant ledger.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));" \
+plant kernel.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));" \
   "    return parseNdjson(bytes).map((r) => ({ ...r, seq: 0 }));"
-printf "every record claims the same position   %s\n" "$(run)"; revert ledger.mjs
+printf "every record claims the same position   %s\n" "$(run)"; revert kernel.mjs
 
 plant kernel.mjs "    if (actor !== approved.contract.final_signer) {
       fail('authority_not_granted', \"only the Contract's final signer signs\", {" \
@@ -185,6 +185,13 @@ printf "anyone signs for the run                %s\n" "$(run)"; revert kernel.mj
 plant kernel.mjs "    const deliverable = this.deliverableFor({ lineage, run, contract: approved.contract });" \
   "    const deliverable = { identity: 'sha256:' + '0'.repeat(64) };"
 printf "a sign-off names any deliverable        %s\n" "$(run)"; revert kernel.mjs
+
+# Round 8's findings.
+plant kernel.mjs "    const dir = realpathSync(dirname(path));" "    const dir = dirname(path);"
+printf "an aliased path takes its own lock      %s\n" "$(run)"; revert kernel.mjs
+
+plant admissibility.mjs "      if (!(now.seq > pkg.seq)) return 'material_input_incomplete';" ""
+printf "an input observed before the evidence   %s\n" "$(run)"; revert admissibility.mjs
 
 # Round 7's findings: facts the Harness must produce rather than accept.
 plant kernel.mjs "      exit = typeof error.status === 'number' ? error.status : 1;" "      exit = 0;"
@@ -227,8 +234,8 @@ printf "a submission from another run admitted  %s\n" "$(run)"; revert admissibi
 plant kernel.mjs "    if (!unavailable) {" "    if (false) {"
 printf "a pre-authorized choice accepted        %s\n" "$(run)"; revert kernel.mjs
 
-plant ledger.mjs "      ([k, v]) => r[k] === undefined || r[k] === v," "      ([k, v]) => r[k] === v,"
-printf "replay cannot say which Contract ran    %s\n" "$(run)"; revert ledger.mjs
+plant kernel.mjs "      ([k, v]) => r[k] === undefined || r[k] === v," "      ([k, v]) => r[k] === v,"
+printf "replay cannot say which Contract ran    %s\n" "$(run)"; revert kernel.mjs
 
 # Not a defect in a branch — a staging call introduced onto the write path, which
 # is what AC-11's no-staging property is actually about.

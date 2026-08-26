@@ -14,9 +14,15 @@
 // access §4 already concedes and does not pretend to resist.
 
 import { execFileSync } from 'node:child_process';
+import {
+  appendFileSync, existsSync, openSync, closeSync, realpathSync, unlinkSync,
+} from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { encodeNdjson, parseNdjson } from './canonical-json.mjs';
+import { RECORDS } from '../schema/records.mjs';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { InternalLedger as Ledger } from './ledger.mjs';
+import { KINDS } from './ledger.mjs';
 import { reduceAll, STATUS } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
 import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
@@ -50,6 +56,245 @@ function openObject(bytes, identity, schema, what) {
 // to set, because the only writer of these records is below.
 const HOST = 'host';
 const HARNESS = 'harness';
+
+// The log. It lives inside this module because no other module may be able to
+// name it: it was its own file exporting `InternalLedger`, and "internal" is a
+// name rather than a boundary — any code could import it and append a
+// `command_result` with `origin: harness`, which is the forgery §4 does not
+// concede. The Kernel owns the only instance, and the readers a caller
+// legitimately needs are its methods.
+class Ledger {
+  constructor(path) {
+    // Resolved, and through any symlink. The lock is named after this path, so
+    // two Kernels reaching one log by different names — a real path and a link to
+    // it — took different locks and both believed they held the log. One opener
+    // then received another's position, which is the execution-merging defect the
+    // lock exists to close.
+    const dir = realpathSync(dirname(path));
+    this.path = join(dir, basename(path));
+  }
+
+  // Appends are serialized by an exclusive-create lock, so a writer knows exactly
+  // where its record landed.
+  //
+  // Without it a writer had to *find* its own line afterwards, and two appends of
+  // byte-identical content are indistinguishable — which is how four concurrent
+  // openers all ended up holding one attempt while four had been opened. The
+  // choice is between a differentiator nobody can check and serialising the
+  // append; this serialises it.
+  //
+  // `O_EXCL` is the same primitive the completion write uses: the kernel decides,
+  // atomically, who created the file. A holder that dies leaves the lock behind,
+  // and the next writer fails with a named code rather than waiting forever or
+  // silently breaking in.
+  #withLock(fn) {
+    const lockPath = `${this.path}.lock`;
+    let fd = null;
+    const deadline = 5000;
+    const started = process.hrtime.bigint();
+    for (;;) {
+      try {
+        fd = openSync(lockPath, 'wx');
+        break;
+      } catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        if (Number(process.hrtime.bigint() - started) / 1e6 > deadline) {
+          fail('record_not_appended', 'the log is locked by another writer', { path: lockPath });
+        }
+      }
+    }
+    try {
+      return fn();
+    } finally {
+      closeSync(fd);
+      unlinkSync(lockPath);
+    }
+  }
+
+  // Read at append time, never cached. Two Ledgers on one log each held their own
+  // count, so both handed out the same sequence number — and since an attempt id
+  // is built from one, two runs could mint the same attempt and each other's
+  // evidence became selectable.
+  get seq() {
+    return this.read().length;
+  }
+
+  // A record's sequence number is its position in the log, assigned on the way
+  // out rather than stored on the way in.
+  //
+  // Allocating it at append time — even reading the length immediately before
+  // writing — is two operations, and two processes can read the same length and
+  // both write it. Position cannot collide: `appendFileSync` opens with `O_APPEND`,
+  // so each line lands whole and in some order, and that order is the numbering.
+  read() {
+    if (!existsSync(this.path)) return [];
+    const bytes = readFileSync(this.path);
+    if (bytes.length === 0) return [];
+    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));
+  }
+
+  // Rejection happens here, at the append boundary. A record outside the closed
+  // set never becomes a record, so the Gate never sees it — and the Gate reporting
+  // `pending` for an obligation nothing was validly submitted for is correct,
+  // because nothing admissible exists.
+  append(record) {
+    return this.#withLock(() => this.#appendLocked(record));
+  }
+
+  // Everything a guarded operation checks and then writes belongs inside one
+  // lock, or the check and the write are two operations again.
+  transaction(fn) {
+    return this.#withLock(fn);
+  }
+
+  #appendLocked(record) {
+    if (!Object.prototype.hasOwnProperty.call(KINDS, record.kind)) {
+      fail('kind_without_consumer', `record kind outside the closed set: ${record.kind}`, {
+        kind: record.kind, known: Object.keys(KINDS),
+      });
+    }
+    // The payload, not only the name. An earlier draft validated that `kind` was
+    // known and accepted arbitrary, missing, null and additional fields beside
+    // it — closure over names is not closure.
+    const schema = RECORDS[record.kind];
+    if (!schema) {
+      fail('kind_without_consumer', `no record schema for ${record.kind}`, { kind: record.kind });
+    }
+    // Validated with the position it will occupy if nothing else appends first.
+    // The stored line carries no `seq`: it would be a second source for a fact the
+    // line's position already states, and the two could disagree.
+    const seq = this.seq;
+    const problems = validate(schema, { ...record, seq });
+    if (problems.length > 0) {
+      fail('format_open', `record does not match its closed shape: ${record.kind}`, { problems });
+    }
+    // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
+    // canonical spelling and `parseNdjson` will refuse anything else later.
+    appendFileSync(this.path, encodeNdjson([record]));
+    // Nobody else can have appended: the lock is held. The position read before
+    // the write is the position the record has.
+    return { ...record, seq };
+  }
+
+  // Replay is a check, not a re-enactment: the same records must reconstruct the
+  // same state in a fresh process. A state reachable in the real flow that replay
+  // cannot rebuild is the defect this exists to catch.
+  // Bucketing is not reconstruction. `replay` sorts records so a caller can find
+  // them; `reconstruct` rebuilds the state a run reached, which is what AC-13
+  // actually asks for — including the Gate verdicts and the human decisions,
+  // since those are what completion relied on.
+  // `scope` names the run. Matching every key against every record dropped the
+  // approval and the unavailable decision, because those are facts about the
+  // lineage rather than about one execution — so a run-scoped reconstruction
+  // could not say which Contract it ran under.
+  reconstruct(scope) {
+    const matches = (r) => Object.entries(scope).every(
+      ([k, v]) => r[k] === undefined || r[k] === v,
+    );
+    const mine = this.read().filter(matches);
+    const state = {
+      approvedRevision: null,
+      attempts: [],
+      gateVerdicts: {},
+      humanDecisions: {},
+      signoff: null,
+      completion: null,
+      unavailable: null,
+      runFacts: null,
+    };
+    for (const r of mine) {
+      switch (r.kind) {
+        case 'contract_approved_genesis':
+        case 'contract_approved_revision':
+          state.approvedRevision = r.revision;
+          break;
+        case 'attempt_opened':
+          // Its position is its name; there is no other field to push.
+          state.attempts.push(r.seq);
+          break;
+        case 'gate_result':
+          state.gateVerdicts[r.obligation] = r.status;
+          break;
+        case 'human_decision_activation':
+          state.humanDecisions[r.operation] = r.revision;
+          break;
+        case 'human_decision_choice':
+        case 'human_decision_unavailable':
+          state.humanDecisions[r.operation] = r.choice;
+          break;
+        case 'human_signoff':
+          state.signoff = r.seq;
+          break;
+        case 'completion_committed':
+          state.completion = r.identity;
+          break;
+        case 'capability_unavailable':
+          state.unavailable = r.seq;
+          break;
+        case 'run_record':
+          state.runFacts = {
+            formation: r.formation_elapsed, change: r.change_elapsed,
+            trace: r.trace_outcome, wentWrong: r.went_wrong,
+          };
+          break;
+        default:
+          break;
+      }
+    }
+    return state;
+  }
+
+  replay() {
+    const records = this.read();
+    const state = {
+      approvals: [],
+      assignments: [],
+      attempts: [],
+      observations: [],
+      packages: [],
+      artifacts: [],
+      gateResults: [],
+      commandResults: [],
+      inputObservations: [],
+      unavailable: [],
+      dispatches: [],
+      reviews: [],
+      decisions: [],
+      signoffs: [],
+      completions: [],
+      runRecords: [],
+    };
+    const bucket = {
+      contract_approved_genesis: 'approvals',
+      contract_approved_revision: 'approvals',
+      assignment_issued: 'assignments',
+      attempt_opened: 'attempts',
+      observation: 'observations',
+      evidence_package: 'packages',
+      artifact_recorded: 'artifacts',
+      gate_result: 'gateResults',
+      command_result: 'commandResults',
+      capability_unavailable: 'unavailable',
+      dispatch_attempt: 'dispatches',
+      review_recorded: 'reviews',
+      input_observed: 'inputObservations',
+      input_gone: 'inputObservations',
+      human_decision_activation: 'decisions',
+      human_decision_choice: 'decisions',
+      human_decision_unavailable: 'decisions',
+      human_signoff: 'signoffs',
+      completion_committed: 'completions',
+      run_record: 'runRecords',
+    };
+    for (const r of records) {
+      const key = bucket[r.kind];
+      if (!key) fail('replay_incomplete', `no replay rule for kind ${r.kind}`, { kind: r.kind });
+      state[key].push(r);
+    }
+    return { records, state };
+  }
+
+}
 
 export class Kernel {
   // Private. A public `ledger` let anything holding a Kernel append a record
@@ -85,13 +330,23 @@ export class Kernel {
 
   records() { return this.#ledger.read(); }
 
+  // The log this Kernel is attached to, resolved. Two Kernels reaching one file
+  // by different names — a real path and a link to it — must agree on this, or
+  // they take different locks and both believe they hold the log.
+  get logPath() { return this.#ledger.path; }
+
   // The log's own readers. They live here because the Ledger is not reachable
   // from outside — a caller that could construct one could also append to it.
   replay() { return this.#ledger.replay(); }
 
   reconstruct(scope) { return this.#ledger.reconstruct(scope); }
 
-  assertRecorded(reliedOn, scope = {}) { return this.#ledger.assertRecorded(reliedOn, scope); }
+  // No `assertRecorded`. AC-13's completeness half — "did we write what we relied
+  // on" — is carried by the shape of the reduction rather than by a check: the
+  // Gate reduces from records and from nothing else, so a fact that was not
+  // recorded is a fact it cannot have used. Calling it on the completion path
+  // could never fail, because completion already requires each of those facts to
+  // have produced a passing verdict.
 
   approvals() {
     return this.records().filter(
@@ -155,6 +410,11 @@ export class Kernel {
         kind: 'human_decision_activation', operation, actor, lineage, origin: HOST, ...payload,
       });
     }
+    if (operation === 'unavailable_decision') {
+      return this.#ledger.append({
+        kind: 'human_decision_unavailable', operation, actor, lineage, origin: HOST, ...payload,
+      });
+    }
     return this.#ledger.append({
       kind: 'human_decision_choice', operation, actor, lineage, origin: HOST, ...payload,
     });
@@ -172,15 +432,19 @@ export class Kernel {
   // `AE-SUBJECTS: <n>`. A command that prints none leaves the count absent, which
   // admissibility reads as unestablishable — not as zero, and not as "assume it
   // exercised something".
-  runObservation({ id, lineage, run, attempt, command, artifact, inputsUsed, cwd }) {
-    if (!Array.isArray(inputsUsed)) {
-      fail('material_input_incomplete', 'the runner must be told which inputs it uses', { id });
+  runObservation({ id, lineage, run, attempt, command, artifact, inputsUsed }) {
+    // No `cwd`. It was a parameter, so a command could be run somewhere the
+    // deliverable was not: the approved command ran, exited zero, and exercised a
+    // decoy. The Harness runs where the Kernel is rooted, which is the same place
+    // cited sources resolve from.
+    if (!this.#sourceRoot) {
+      fail('binding_unresolved', 'this Kernel has no root, so it cannot run anything', { id });
     }
     let raw = '';
     let exit = 0;
     try {
       raw = execFileSync('/bin/sh', ['-c', command], {
-        encoding: 'utf8', cwd: cwd || process.cwd(), stdio: ['ignore', 'pipe', 'pipe'],
+        encoding: 'utf8', cwd: this.#sourceRoot, stdio: ['ignore', 'pipe', 'pipe'],
         maxBuffer: 64 * 1024 * 1024,
       });
     } catch (error) {
@@ -235,14 +499,18 @@ export class Kernel {
   // argument, so the party whose evidence would be judged stale decided whether
   // it was.
   observeInput({ lineage, id, path }) {
+    // The path is recorded with the identity. Without it the log said an input
+    // had a digest and not what had been looked at, so replay could not say
+    // where "now" was read from — and nothing tied two observations of the same
+    // id to the same file.
     let identity;
     try {
       identity = digestBytes(readFileSync(path));
     } catch {
-      return this.#ledger.append({ kind: 'input_gone', lineage, id, origin: HARNESS });
+      return this.#ledger.append({ kind: 'input_gone', lineage, id, path, origin: HARNESS });
     }
     return this.#ledger.append({
-      kind: 'input_observed', lineage, id, identity, origin: HARNESS,
+      kind: 'input_observed', lineage, id, path, identity, origin: HARNESS,
     });
   }
 
@@ -256,7 +524,8 @@ export class Kernel {
     return (id) => {
       for (let i = records.length - 1; i >= 0; i -= 1) {
         if (records[i].id !== id) continue;
-        return records[i].kind === 'input_gone' ? null : records[i].identity;
+        if (records[i].kind === 'input_gone') return null;
+        return { identity: records[i].identity, seq: records[i].seq, path: records[i].path };
       }
       return undefined;
     };
@@ -464,7 +733,7 @@ export class Kernel {
       fail('assignment_not_unique', 'a run holds exactly one Assignment', { id: assignment.id });
     }
     this.#collectHumanInput({
-      operation: 'assignment_issuance', actor, lineage, choice: 'issue',
+      operation: 'assignment_issuance', actor, lineage, run, choice: 'issue',
     });
     return this.#ledger.append({
       kind: 'assignment_issued', lineage, run, id: assignment.id,
@@ -687,7 +956,13 @@ export class Kernel {
       package: (id) => {
         const rec = packageRecord(id);
         if (!rec) return null;
-        return openObject(rec.bytes, rec.identity, EVIDENCE_PACKAGE, 'Evidence Package');
+        // The parsed object, plus where its record landed — staleness compares an
+        // observation's position against it, and the object's own bytes cannot
+        // carry a position they were written before.
+        return {
+          ...openObject(rec.bytes, rec.identity, EVIDENCE_PACKAGE, 'Evidence Package'),
+          seq: rec.seq,
+        };
       },
     };
   }
@@ -932,7 +1207,8 @@ export class Kernel {
       });
     }
     return this.#collectHumanInput({
-      operation: 'unavailable_decision', actor, lineage, choice,
+      operation: 'unavailable_decision', actor, lineage, run, choice,
+      answers: unavailable.seq,
     });
   }
 

@@ -98,6 +98,19 @@ export function completionTests() {
       () => complete(run({ inputNow: 'the input moved\n' })));
   });
 
+  group('AC-2 · an input observed before the evidence proves nothing', () => {
+    // Staleness asks whether the input is current now, so an observation taken
+    // before the package was written answers a different question — it says the
+    // input was current at some earlier moment, which every stale input also was.
+    const k = fresh();
+    const w = walk(k);
+    const before = fresh();
+    const b = walk(before, { observeBeforePackaging: true });
+    refuses('completion stops', 'not_all_passed',
+      () => before.complete({ lineage: b.lineage, run: b.run, actor: 'Human Owner' }));
+    ok('while observing after it does not', k.status({ lineage: 'L', run: w.run }).allPassed);
+  });
+
   group('AC-2 · evidence from one run does not complete another', () => {
     // Everything below is real evidence, recorded by the granted producer, for
     // `run1`. Selection and every resolver used to span the lineage, so it
@@ -224,6 +237,10 @@ export function completionTests() {
     k.recordPackage({
       lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
     });
+    // Observed after this package, as staleness requires: an observation taken
+    // before the evidence was packaged says the input was current at some earlier
+    // moment, which is not what is being asked.
+    k.observeInput({ lineage: 'L', id: 'in1', path: w.inputPath });
     k.submitObservation({
       lineage: 'L', run: w.run, obligation: 'O2', observation: COMMAND,
       attempt: w.attempt.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
