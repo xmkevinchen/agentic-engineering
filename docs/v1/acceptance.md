@@ -102,7 +102,7 @@ cross-family invocation.
 | # | Criterion | Required for release | Owner |
 |---|---|---|---|
 | X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | **Optional** — this is the successful path | V3 |
-| X2a | `requested` survives the run intact, and a **missing** `observed` identity is never promoted to `effective`. A request field is never reported as an effective-family claim. | **Yes** | V1 |
+| X2a | The exact request the Contract and Assignment specified is retained **unchanged in AE's own dispatch-attempt and unavailable records**, bound to the same Contract revision and run, while `observed` and `effective` remain **absent**. A request field is never reported as an effective-family claim. | **Yes** | V1 |
 | X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | **Optional**, with X1 | V3 |
 | X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | **Yes** — this is release criterion 5's negative arm | V1 |
 | X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | **Yes** | V1 |
@@ -117,11 +117,19 @@ owns it. It cannot exercise the correlation logic that runs when the archive
 actually reports what a backend did, because nothing answered. That is X2b, and
 it needs a provider that answers.
 
-**X2b is not skipped when a release ships without V3 — it is unreachable, and
-that has to be shown.** A release with no answering provider must evidence the
-unreachability (no provider configured, or every configured provider reporting
-`unavailable`), the same standard AE applies to any other N/A. An unevidenced
-blank is not an N/A.
+X2a's boundary is deliberately drawn at AE's own records, not at the provider.
+An unavailable run may stop before the backend handoff, so it cannot show what a
+provider received — that is *exact input handoff*, and V3 owns it. What V1 can
+and must show is that AE preserved the request it was given and claimed nothing
+about an observation it never made.
+
+**X2b may be N/A only when the successful path is structurally unreachable in
+the shipped release** — the V3 code is not published, or a release-bound
+selector disables it. A provider that merely *happens* to be unavailable does
+not qualify: credentials, quotas, and networks recover, and the path is then
+reachable in a release that never proved it. If V3 ships and is enabled, X1 and
+X2b must run. As with any AE N/A, the unreachability itself needs evidence; an
+unevidenced blank is not an N/A, and neither is a temporary observation.
 
 ## 6. Knowledge non-authority criteria
 

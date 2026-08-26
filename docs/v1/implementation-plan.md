@@ -131,10 +131,13 @@ human intent
   claim with nothing behind it.
 
   Owner of [`acceptance.md` criterion 5](acceptance.md#1-release-criteria) and of
-  [X2a, X3, X4](acceptance.md#5-cross-family-criteria) — the half of the identity
-  distinction an unanswered provider can prove: `requested` survives, and a
-  missing `observed` is never promoted to `effective`. The correlation half (X2b)
-  needs a backend that answers and belongs to V3.
+  [X2a, X3, X4](acceptance.md#5-cross-family-criteria). X2a is bounded at **AE's
+  own records**, not at the provider: the exact request the Contract and
+  Assignment specified is retained unchanged in the dispatch-attempt and
+  unavailable records, bound to the same Contract revision and run, with
+  `observed` and `effective` absent. An unavailable run may stop before the
+  backend handoff, so it cannot show what a provider received — that is exact
+  input handoff, and V3 owns it along with the correlation half (X2b).
 - **Knowledge isolation tests.** The `.ae/graph` corpus already exists, so V1
   proves it contributes nothing to any Gate status — including N6's differential:
   delete the corpus, and no proof result changes. Owner of
@@ -211,12 +214,18 @@ workflow and no second Gate (X4).
 **V3 is not a release prerequisite — but only the successful path is optional.**
 The negative arm is mandatory and belongs to V1, not here: release criterion 5
 requires it to have actually run ([`acceptance.md` §1](acceptance.md#1-release-criteria),
-[§5](acceptance.md#5-cross-family-criteria)). What V3 adds on top is X1 — a real
-provider answering — and that is the part a release may ship without.
+[§5](acceptance.md#5-cross-family-criteria)). What V3 adds on top is X1 **and
+X2b** — a real provider answering, and the correlation that only then becomes
+exercisable — and that is the part a release may ship without.
 
-So: a provider being unavailable at release time does not block the release,
-because V1 already proved the unavailable branch. A provider being silently
-swapped for a same-family reviewer blocks it, and always did.
+Shipping without it means the successful path is **structurally** absent: the V3
+code is unpublished, or a release-bound selector disables it. A provider that
+merely happens to be unavailable does not make X1/X2b N/A — it recovers, and the
+path is live in a release that never proved it. If V3 ships enabled, X1 and X2b
+must run.
+
+A provider being silently swapped for a same-family reviewer blocks the release,
+and always did.
 
 **Retreat:** if correlation cannot be observed well enough to distinguish a real
 cross-family invocation from a same-family fallback, report cross-family as
