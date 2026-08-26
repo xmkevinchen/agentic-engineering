@@ -154,13 +154,23 @@ export function reduce({
   if (typeof outcomeOf !== 'function') {
     throw new TypeError('reduce requires an outcome reader — the verdict is computed, not supplied');
   }
-  const ctx = { currentRevision, admit, inputsChanged, outcomeOf };
-  // A run bound to a superseded revision is stale, whatever it submitted and
+  const ctx = { admit, inputsChanged, outcomeOf };
+  // A run bound to a superseded revision is stale — whatever it submitted, and
   // whichever arm it took. Deciding this per record left the unavailable arm out,
   // because an unavailable record names no revision of its own.
-  if (boundRevision !== currentRevision) {
-    return { status: STATUS.STALE, code: null, attempt: null, selected: null };
-  }
+  //
+  // Applied after the reduction rather than before it, so precedence holds:
+  // `invalid` outranks `stale`, and returning early made a superseded run with
+  // uninterpretable evidence report the milder of the two.
+  const superseded = boundRevision !== currentRevision;
+
+  // `invalid` outranks `stale`, so supersession is applied to the verdict rather
+  // than instead of computing one.
+  const settle = (verdict) => (
+    superseded && verdict.status !== STATUS.INVALID
+      ? { ...verdict, status: STATUS.STALE, code: null }
+      : verdict
+  );
 
   const { attempt, records: selected } = select({ records, lineage, run, obligation });
 
@@ -168,12 +178,12 @@ export function reduce({
   // attempt's pass is not retained: a retry that produced nothing is an absence,
   // not a pass.
   if (selected.length === 0) {
-    return {
+    return settle({
       status: STATUS.PENDING,
       code: null,
       attempt: attempt ? attempt.seq : null,
       selected: null,
-    };
+    });
   }
 
   const verdicts = selected.map((r) => verdictOf(r, ctx));
@@ -187,23 +197,23 @@ export function reduce({
       .map((v) => v.status),
   );
   if (outcomes.size > 1) {
-    return {
+    return settle({
       status: STATUS.INVALID,
       code: 'contradictory_observations',
       attempt: attempt.seq,
       selected: null,
-    };
+    });
   }
 
   let worst = verdicts[0];
   for (const v of verdicts) if (rank(v.status) < rank(worst.status)) worst = v;
 
-  return {
+  return settle({
     status: worst.status,
     code: worst.code,
     attempt: attempt.seq,
     selected: worst.record ? canonicalDigest(worst.record) : null,
-  };
+  });
 }
 
 // A run is complete only when every obligation the Contract states is `passed`.

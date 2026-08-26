@@ -126,11 +126,16 @@ export function gateTests() {
     eq('order is invalid > stale > unavailable > failed > passed',
       PRECEDENCE.join('>'), 'invalid>stale>unavailable>failed>passed');
     // invalid outranks stale: uninterpretable evidence is not interpreted further.
-    // A superseded run is stale before anything is selected, so the pairing that
-    // remains meaningful is `invalid` against a stale *input*.
-    eq('invalid over stale',
+    // Both kinds of staleness lose to `invalid`. Supersession used to return
+    // before anything was selected, so a superseded run holding uninterpretable
+    // evidence reported the milder of the two.
+    eq('invalid over a stale input',
       run([A1, obs(1, true)], {
         admit: () => 'binding_missing', inputsChanged: () => true,
+      }), STATUS.INVALID);
+    eq('invalid over a superseded revision',
+      run([A1, obs(1, true)], {
+        admit: () => 'binding_missing', boundRevision: 'r0',
       }), STATUS.INVALID);
     // stale outranks unavailable, and both outrank a plain failure.
     eq('unavailable over failed',

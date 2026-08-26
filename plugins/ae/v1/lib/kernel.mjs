@@ -948,7 +948,6 @@ export class Kernel {
     const built = dispatchRecord({ contract, lineage, run, attempt, obligation });
     return this.#ledger.append({
       ...built,
-      requested: [...built.requested],
       ...(substitutedFamily ? { substituted_family: substitutedFamily } : {}),
       ...(answeredFamily ? { answered_family: answeredFamily } : {}),
     });
@@ -1094,33 +1093,50 @@ export class Kernel {
   // caller passed, which made "formation cost more than the change" an opinion
   // wearing a number: nothing said what was measured, or that the two figures
   // were of the same kind.
-  recordRun({
-    lineage, run, formationFrom, formationTo, changeFrom, changeTo,
-    traceOutcome, discrepancy, disposition, wentWrong,
-  }) {
-    const at = (seq, which) => {
-      const record = this.records()[seq];
-      if (!record) {
-        fail('cost_boundary_post_hoc', 'a boundary names no record', { which, seq });
-      }
-      return record;
-    };
-    for (const [which, from, to] of [
-      ['formation', formationFrom, formationTo],
-      ['change', changeFrom, changeTo],
+  recordRun({ lineage, run, traceOutcome, discrepancy, disposition, wentWrong }) {
+    // The boundaries are derived, not chosen. Formation runs from the lineage's
+    // first record to the approval that fixed the Contract; the change from the
+    // run's first attempt to the Gate's last verdict on it. Both are counts of
+    // positions in one log, so they are quantities of the same kind, and neither
+    // end is a number anyone picked.
+    //
+    // They were four caller-supplied positions. Deriving the elapsed values from
+    // them fixed the arithmetic and not the provenance: nothing checked their
+    // kind, lineage, run or role, so facts could be recorded for one run out of
+    // another's boundaries. AC-9 asks for boundaries fixed before the run, and
+    // the only version of that a caller cannot move is one it does not supply.
+    const all = this.records();
+    const firstOf = (test) => all.find(test);
+    const lastOf = (test) => [...all].reverse().find(test);
+
+    const formationFrom = firstOf((r) => r.lineage === lineage);
+    const approval = lastOf(
+      (r) => r.lineage === lineage && r.kind.startsWith('contract_approved'),
+    );
+    const attempt = firstOf(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    const verdict = lastOf(
+      (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
+    );
+    for (const [which, record] of [
+      ['the lineage', formationFrom], ['an approval', approval],
+      ['an attempt', attempt], ['a Gate verdict', verdict],
     ]) {
-      at(from, `${which}_from`);
-      at(to, `${which}_to`);
-      if (!(to > from)) {
-        fail('cost_incomparable', 'a boundary does not enclose an interval', { which, from, to });
+      if (!record) {
+        fail('run_facts_incomplete', `there is no ${which} to measure from`, { lineage, run });
       }
     }
+    if (!(approval.seq > formationFrom.seq) || !(verdict.seq > attempt.seq)) {
+      fail('cost_incomparable', 'a boundary does not enclose an interval', { lineage, run });
+    }
+
     const base = {
       lineage, run,
-      formation_from: formationFrom, formation_to: formationTo,
-      change_from: changeFrom, change_to: changeTo,
-      formation_elapsed: formationTo - formationFrom,
-      change_elapsed: changeTo - changeFrom,
+      formation_from: formationFrom.seq, formation_to: approval.seq,
+      change_from: attempt.seq, change_to: verdict.seq,
+      formation_elapsed: approval.seq - formationFrom.seq,
+      change_elapsed: verdict.seq - attempt.seq,
       trace_outcome: traceOutcome,
       went_wrong: wentWrong,
     };
@@ -1134,6 +1150,7 @@ export class Kernel {
     }
     return this.#ledger.append({ kind: 'run_record_clean', ...base });
   }
+
 
   // The index resolves from the log and takes nothing from a caller. An earlier
   // version accepted `index` and `inputsNow` as parameters, which let the party
@@ -1308,10 +1325,8 @@ export class Kernel {
       fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
     }
     const { contract } = approved;
+    // `contractForRun` resolved the Assignment already, and refuses without one.
     const assignment = this.assignmentFor(lineage, run);
-    if (!assignment) {
-      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
-    }
     const records = this.records();
     const index = this.index({ lineage, run });
     const inputsNow = this.#inputsNowFor(lineage);
@@ -1471,10 +1486,15 @@ export class Kernel {
     // The arm has to have been reached, not merely claimed. A record the Gate
     // found inadmissible — a substituted request, say — left the obligation
     // `invalid`, and the Human Owner could still record a choice about it.
-    const reached = this.verdictsNow({ lineage, run });
-    const anyUnavailable = [...reached.values()].includes('unavailable');
-    const unavailable = anyUnavailable ? this.records().find(
-      (r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run,
+    // The event the Gate reduced, not the first one in the run. Taking the first
+    // meant a decision could answer an inadmissible record from an earlier
+    // attempt while the Gate had reported `unavailable` about a later one — which
+    // is exactly the relation `answers` exists to keep.
+    const reduced = this.#reduce({ lineage, run }).byObligation;
+    const answered = Object.values(reduced).find((v) => v.status === 'unavailable');
+    const unavailable = answered ? this.records().find(
+      (r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run
+        && r.attempt === answered.attempt,
     ) : null;
     if (!unavailable) {
       // A pre-authorized choice is not a decision about something that had not

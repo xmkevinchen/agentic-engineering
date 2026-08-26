@@ -341,34 +341,48 @@ export function completionTests() {
     refuses('a judgement about a run with no facts', 'run_facts_incomplete',
       () => k.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' }));
 
-    // Boundaries are positions of records that already exist. Formation runs from
-    // the log's first record to the approval; the change from the attempt to the
-    // Gate's verdict — so both figures are counts of the same thing, and neither
-    // is a number anyone typed.
+    // Boundaries are derived, not chosen. Formation runs from the lineage's first
+    // record to the approval; the change from the run's attempt to the Gate's
+    // verdict — both counts of positions in one log, so the two figures are of the
+    // same kind and neither end is a number anyone picked.
     const seqOf = (kind) => k.records().find((r) => r.kind === kind).seq;
     const gateResult = k.records().filter((r) => r.kind === 'gate_result').pop();
-    refuses('a boundary that encloses nothing', 'cost_incomparable',
-      () => k.recordRun({
-        lineage: 'L', run: w.run,
-        formationFrom: 0, formationTo: 0,
-        changeFrom: seqOf('attempt_opened'), changeTo: gateResult.seq,
-        traceOutcome: 'caught_nothing', wentWrong: '',
-      }));
+
     refuses('a trace outcome nothing supports', 'trace_outcome_unsupported',
       () => k.recordRun({
-        lineage: 'L', run: w.run,
-        formationFrom: 0, formationTo: seqOf('contract_approved_genesis'),
-        changeFrom: seqOf('attempt_opened'), changeTo: gateResult.seq,
-        traceOutcome: 'caught_something', wentWrong: '',
+        lineage: 'L', run: w.run, traceOutcome: 'caught_something', wentWrong: '',
       }));
+    // A run with no Gate verdict has no boundary to measure the change to.
+    const unjudged = fresh();
+    const u = walk(unjudged);
+    refuses('a run the Gate has not reported on', 'run_facts_incomplete',
+      () => unjudged.recordRun({
+        lineage: 'L', run: u.run, traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
+
     const facts = k.recordRun({
-      lineage: 'L', run: w.run,
-      formationFrom: 0, formationTo: seqOf('contract_approved_genesis'),
-      changeFrom: seqOf('attempt_opened'), changeTo: gateResult.seq,
-      traceOutcome: 'caught_nothing', wentWrong: '',
+      lineage: 'L', run: w.run, traceOutcome: 'caught_nothing', wentWrong: '',
     });
-    eq('formation cost is derived from its boundaries',
-      facts.formation_elapsed, seqOf('contract_approved_genesis') - 0);
+    eq('formation is measured to the approval',
+      facts.formation_to, seqOf('contract_approved_genesis'));
+    eq('and the change from the attempt', facts.change_from, seqOf('attempt_opened'));
+    eq('to the Gate\'s verdict', facts.change_to, gateResult.seq);
+    eq('with the cost derived from them',
+      facts.formation_elapsed, facts.formation_to - facts.formation_from);
+
+    // And the supported `caught_something` shape, which only its refusal had been
+    // exercising: the record carries the discrepancy and what was done about it.
+    const caught = fresh();
+    const c = walk(caught);
+    caught.status({ lineage: 'L', run: c.run });
+    const held = caught.recordRun({
+      lineage: 'L', run: c.run, traceOutcome: 'caught_something',
+      discrepancy: 'the package named an input the run never read',
+      disposition: 'the Contract now names the inputs',
+      wentWrong: '',
+    });
+    eq('the discrepancy is recorded', held.kind, 'run_record_caught');
+    eq('with what was done about it', held.disposition, 'the Contract now names the inputs');
     refuses('by someone the Kernel does not serve', 'authority_not_granted',
       () => k.decideWorth({ lineage: 'L', run: w.run, actor: 'P', choice: 'yes' }));
     const worth = k.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' });

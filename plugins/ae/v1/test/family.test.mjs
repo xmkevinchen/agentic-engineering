@@ -203,6 +203,55 @@ export function familyTests() {
     eq('under the revision that asked for it', out.approvedRevision, 'r2');
   });
 
+  group('AC-7 · the choice answers the event the Gate reduced', () => {
+    // An inadmissible unavailable record on the first attempt, an admissible one
+    // on a retry. Taking the first record in the run meant the decision answered
+    // the one the Gate had refused, while the Gate had reported `unavailable`
+    // about the other — which is the relation `answers` exists to keep.
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1w-')), 'log.ndjson'), {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const c = asObject(contractDoc(cross));
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+      actor: OWNER, rendered: RENDERED(c.bytes),
+    });
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
+    });
+
+    // First attempt: a dispatch a seat answered, so its unavailable record is
+    // inadmissible.
+    const first = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({
+      lineage: 'L', run: 'run1', attempt: first.attempt, obligation: 'O',
+      answeredFamily: 'anthropic',
+    });
+    const refusedEvent = k.recordUnavailable({
+      lineage: 'L', run: 'run1', obligation: 'O', attempt: first.attempt,
+    });
+
+    // A retry, this time with nothing answering.
+    const retry = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: retry.attempt, obligation: 'O' });
+    const realEvent = k.recordUnavailable({
+      lineage: 'L', run: 'run1', obligation: 'O', attempt: retry.attempt,
+    });
+
+    eq('the Gate reports the retry',
+      k.status({ lineage: 'L', run: 'run1' }).byObligation.O.status, 'unavailable');
+    const decision = k.decideUnavailable({
+      lineage: 'L', run: 'run1', actor: OWNER, choice: 'stop',
+    });
+    eq('and the choice answers that event', decision.answers, realEvent.seq);
+    ok('not the one the Gate refused', decision.answers !== refusedEvent.seq);
+  });
+
   group('AC-7 · the choice is recorded, and only after the fact', () => {
     // "After the capability was found unavailable" is a property of the append:
     // there is a record the decision must follow. It used to be checked at
