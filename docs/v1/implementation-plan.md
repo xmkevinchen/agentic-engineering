@@ -51,8 +51,11 @@ the slice was the wrong idea, stated before it is built.
 
 **No new production behavior.** V0 changes documents and Git topology only.
 
-**Exit:** the user confirms the scope, and an independent cross-family review
-confirms the consolidation is complete and internally consistent.
+**Exit — met 2026-08-25.** The user confirmed the scope (and re-confirmed it
+twice as review findings widened it), and independent cross-family review
+returned zero findings. It took fourteen rounds and 39 findings, none of them
+spurious; what that cost bought is recorded in
+[`history.md` §7](history.md#7-what-the-consolidation-review-cost-and-found).
 
 **Retreat:** if the seven questions in [`design.md` §12](design.md#12-the-seven-questions-this-design-must-answer)
 still require reading several plans and the archived specification to answer,
