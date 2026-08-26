@@ -32,3 +32,6 @@ docs/decisions/
 # but never committed). AE uses this for AE-internal process detail (GTD model,
 # feature dir layout, frontmatter schemas, autonomy boundary).
 CLAUDE.local.md
+
+# Scratch dir reviewers point TMPDIR at when their sandbox forbids the system one.
+.tmp-review/

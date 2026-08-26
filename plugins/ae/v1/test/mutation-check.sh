@@ -22,15 +22,19 @@ run() { node "$V1/test/all.mjs" >/dev/null 2>&1 && echo GREEN || echo RED; }
 PLANTED=""
 restore_all() {
   for f in $PLANTED; do
-    [ -f "${TMPDIR:-/tmp}/$f.mut.bak" ] && cp "${TMPDIR:-/tmp}/$f.mut.bak" "$V1/lib/$f"
+    [ -f "$(bak "$f")" ] && cp "$(bak "$f")" "$V1/lib/$f"
   done
   PLANTED=""
 }
 trap 'restore_all' EXIT INT TERM PIPE
 
+# Backups are named flatly. A path like `../schema/records.mjs` used to become
+# `$TMPDIR/../schema/records.mjs.mut.bak`, which is a backup written outside the
+# temporary directory — in one run, into the repository itself.
+bak() { echo "${TMPDIR:-/tmp}/$(echo "$1" | tr '/.' '__').mut.bak"; }
+
 plant() { # file, from, to
-  mkdir -p "$(dirname "${TMPDIR:-/tmp}/$1.mut.bak")"
-  cp "$V1/lib/$1" "${TMPDIR:-/tmp}/$1.mut.bak"
+  cp "$V1/lib/$1" "$(bak "$1")"
   PLANTED="$PLANTED $1"
   python3 - "$V1/lib/$1" "$2" "$3" <<'PY'
 import io,sys
@@ -40,7 +44,7 @@ assert a in s, f"pattern not found: {a[:50]}"
 io.open(p,'w',encoding='utf-8').write(s.replace(a,b,1))
 PY
 }
-revert() { cp "${TMPDIR:-/tmp}/$1.mut.bak" "$V1/lib/$1"; PLANTED=""; }
+revert() { cp "$(bak "$1")" "$V1/lib/$1"; PLANTED=""; }
 
 echo "baseline                                $(run)"
 

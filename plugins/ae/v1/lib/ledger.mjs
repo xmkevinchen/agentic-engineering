@@ -93,11 +93,24 @@ export class Ledger {
     }
     // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
     // canonical spelling and `parseNdjson` will refuse anything else later.
-    appendFileSync(this.path, encodeNdjson([record]));
+    const line = encodeNdjson([record]);
+    appendFileSync(this.path, line);
     // Re-read, because between the length above and this append another process
-    // may have written. The returned record carries the position it actually got.
+    // may have written. The returned record carries the position it actually got
+    // — found by its own bytes, not by being last: under a concurrent writer the
+    // last line is not necessarily mine.
+    // Searched forward from the length seen before the append: my line is at or
+    // after that position. Two byte-identical records are indistinguishable in a
+    // log — that is what byte-identical means — so the first match from there is
+    // mine or something no reader could tell from mine.
+    const wanted = line.toString('utf8').trimEnd();
     const all = this.read();
-    return all[all.length - 1];
+    for (let i = seq; i < all.length; i += 1) {
+      const { seq: _at, ...stored } = all[i];
+      if (encodeNdjson([stored]).toString('utf8').trimEnd() === wanted) return all[i];
+    }
+    fail('record_not_appended', 'the record did not land in the log', { kind: record.kind });
+    return null;
   }
 
   // Replay is a check, not a re-enactment: the same records must reconstruct the
