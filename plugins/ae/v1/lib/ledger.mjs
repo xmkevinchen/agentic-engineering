@@ -24,6 +24,7 @@ export const KINDS = Object.freeze({
   attempt_opened: { producer: 'implementer', consumer: ['gate'] },
   command_result: { producer: 'harness', consumer: ['admissibility', 'gate'] },
   observation: { producer: 'implementer', consumer: ['gate'] },
+  gate_result: { producer: 'gate', consumer: ['completion', 'replay'] },
   capability_unavailable: { producer: 'harness', consumer: ['gate'] },
   dispatch_attempt: { producer: 'harness', consumer: ['family', 'gate'] },
   delivery: { producer: 'harness', consumer: ['formation'] },
@@ -78,6 +79,53 @@ export class Ledger {
   // Replay is a check, not a re-enactment: the same records must reconstruct the
   // same state in a fresh process. A state reachable in the real flow that replay
   // cannot rebuild is the defect this exists to catch.
+  // Bucketing is not reconstruction. `replay` sorts records so a caller can find
+  // them; `reconstruct` rebuilds the state a run reached, which is what AC-13
+  // actually asks for — including the Gate verdicts and the human decisions,
+  // since those are what completion relied on.
+  reconstruct(scope) {
+    const matches = (r) => Object.entries(scope).every(([k, v]) => r[k] === v);
+    const mine = this.read().filter(matches);
+    const state = {
+      approvedRevision: null,
+      attempts: [],
+      gateVerdicts: {},
+      humanDecisions: {},
+      signoff: null,
+      completion: null,
+      unavailable: null,
+    };
+    for (const r of mine) {
+      switch (r.kind) {
+        case 'contract_approved_genesis':
+        case 'contract_approved_revision':
+          state.approvedRevision = r.revision;
+          break;
+        case 'attempt_opened':
+          state.attempts.push(r.attempt);
+          break;
+        case 'gate_result':
+          state.gateVerdicts[r.obligation] = r.status;
+          break;
+        case 'human_decision':
+          state.humanDecisions[r.operation] = r.choice || r.revision || true;
+          break;
+        case 'human_signoff':
+          state.signoff = r.seq;
+          break;
+        case 'completion_committed':
+          state.completion = r.acceptance;
+          break;
+        case 'capability_unavailable':
+          state.unavailable = r.seq;
+          break;
+        default:
+          break;
+      }
+    }
+    return state;
+  }
+
   replay() {
     const records = this.read();
     const state = {
@@ -85,6 +133,7 @@ export class Ledger {
       assignments: [],
       attempts: [],
       observations: [],
+      gateResults: [],
       commandResults: [],
       unavailable: [],
       dispatches: [],
@@ -100,6 +149,7 @@ export class Ledger {
       assignment_issued: 'assignments',
       attempt_opened: 'attempts',
       observation: 'observations',
+      gate_result: 'gateResults',
       command_result: 'commandResults',
       capability_unavailable: 'unavailable',
       dispatch_attempt: 'dispatches',
@@ -120,26 +170,51 @@ export class Ledger {
   // Every kind the Gate or a human relied on must have been written. This is the
   // completeness half of AC-13: not "can we replay what we wrote", but "did we
   // write what we relied on".
-  assertRecorded(reliedOn) {
-    const present = new Set(this.read().map((r) => r.kind));
+  assertRecorded(reliedOn, scope = {}) {
+    // Scoped. "Some record of this kind exists somewhere in the log" is not "the
+    // fact this run relied on was recorded" — an earlier draft checked the first
+    // and a completed run from last week would have satisfied it.
+    const matches = (r) => Object.entries(scope).every(([k, v]) => r[k] === v);
+    const present = new Set(this.read().filter(matches).map((r) => r.kind));
     for (const kind of reliedOn) {
       if (!present.has(kind)) {
-        fail('record_not_appended', `a relied-on fact was never recorded: ${kind}`, { kind });
+        fail('record_not_appended', `a relied-on fact was never recorded: ${kind}`, {
+          kind, scope,
+        });
       }
     }
     return true;
   }
 }
 
-// Every declared kind has a producer and a consumer, and nothing is declared that
-// no one writes or no one reads. AC-12's producer-and-consumer check.
-export function auditKinds() {
+// Every declared kind must be produced and consumed by real code, not by a
+// hand-written label. An earlier draft checked that the metadata rows had
+// non-empty strings in them, which is a check on the comment rather than on the
+// program: several labels were simply wrong.
+//
+// The universe scanned is this directory — closed, small, and stated. It is not a
+// reachability proof over the whole host, which is X4b and needs a closed
+// universe v1 does not have.
+export function auditKinds({ readdirSync, readFileSync, dir }) {
+  const sources = readdirSync(dir)
+    .filter((f) => f.endsWith('.mjs'))
+    .map((f) => ({ name: f, text: readFileSync(`${dir}/${f}`, 'utf8') }));
+
   const problems = [];
-  for (const [kind, meta] of Object.entries(KINDS)) {
-    if (!meta.producer) problems.push({ kind, code: 'kind_without_producer' });
-    if (!meta.consumer || meta.consumer.length === 0) {
-      problems.push({ kind, code: 'kind_without_consumer' });
-    }
+  for (const kind of Object.keys(KINDS)) {
+    // Produced: something appends it.
+    const produced = sources.some(({ name, text }) => name !== 'ledger.mjs'
+      && new RegExp(`kind:\\s*'${kind}'`).test(text));
+    // Consumed: something reads it back — by kind, or through a reconstruction
+    // branch in the ledger itself.
+    const consumed = sources.some(({ name, text }) => (
+      name !== 'ledger.mjs' && new RegExp(`===\\s*'${kind}'|'${kind}'\\s*===`).test(text)
+    )) || new RegExp(`case '${kind}':`).test(
+      sources.find((f) => f.name === 'ledger.mjs')?.text || '',
+    );
+
+    if (!produced) problems.push({ kind, code: 'kind_without_producer' });
+    if (!consumed) problems.push({ kind, code: 'kind_without_consumer' });
   }
   return problems;
 }

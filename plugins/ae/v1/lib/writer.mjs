@@ -64,11 +64,35 @@ function assertInsideLocation(root, target) {
 // The sole writer. Named as a single exported function because "exactly one
 // component writes completion" is a property a test can check by enumerating
 // callers, and a second entry point would make that enumeration a lie.
-export function commitCompletion({ root, path, bytes, allowStaging = false }) {
+//
+// It takes the Acceptance and the verdicts it rests on, not arbitrary bytes. An
+// earlier draft accepted any path and any content with no Gate input at all,
+// which made "the completion write" a file write that happened to be called that.
+export function commitCompletion({
+  root, path, acceptance, verdicts, allowStaging = false,
+}) {
   if (allowStaging) {
     // Present only so a fixture can attempt the prohibited shape and be refused.
     fail('write_staged', 'completion is written in place, never staged and moved', { path });
   }
+
+  if (!acceptance) {
+    fail('not_all_passed', 'completion writes an Acceptance, not arbitrary bytes', { path });
+  }
+  // The verdicts are re-read here rather than trusted from the caller's summary:
+  // the writer is the last place a non-passing obligation can be caught, and it
+  // is cheap to look.
+  const notPassed = Object.entries(verdicts || {}).find(([, v]) => v !== 'passed');
+  if (!verdicts || Object.keys(verdicts).length === 0) {
+    fail('not_all_passed', 'completion requires the verdicts it rests on', { path });
+  }
+  if (notPassed) {
+    fail('not_all_passed', 'completion requires every obligation to be passed', {
+      obligation: notPassed[0], status: notPassed[1],
+    });
+  }
+
+  const bytes = Buffer.from(JSON.stringify(acceptance));
 
   const target = resolve(path);
   // Symlink first: it is the more specific reason, and a link pointing outside

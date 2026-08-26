@@ -9,6 +9,7 @@
 // observation nobody made, which is the substitution this refuses.
 
 import { fail } from './codes.mjs';
+import { deepFreeze } from './freeze.mjs';
 
 export function requestedFamily(contract) {
   const ind = contract.independence || {};
@@ -31,10 +32,12 @@ export function dispatchRecord({ contract, lineage, run, attempt, obligation }) 
   return {
     kind: 'dispatch_attempt',
     lineage, run, attempt, obligation,
-    // A copy, frozen. Storing the Contract's own array by reference meant that
-    // mutating the dispatch mutated the Contract, and the survival check then
-    // compared a value with itself.
-    requested: Object.freeze([...requested]),
+    // A copy, deeply frozen. Storing the Contract's own array by reference meant
+    // that mutating the dispatch mutated the Contract, and the survival check
+    // then compared a value with itself. Shallow freezing would stop the array
+    // growing while leaving anything inside it editable — the same defect one
+    // level in, which is what `deepFreeze` exists for.
+    requested: deepFreeze([...requested]),
     // `observed` and `effective` are absent, and stay absent until a backend
     // answers. V1 has no successful path (that is V3), so in V1 they never
     // appear — and their absence is exactly what AC-8 checks.

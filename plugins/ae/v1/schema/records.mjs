@@ -79,6 +79,25 @@ export const RECORDS = Object.freeze({
       package: id, command_result: id, satisfied: { type: 'boolean' }, seq,
     },
   },
+  // The Gate's own verdict. AC-13 says everything the Gate or the Human Owner
+  // relies on is recorded, and completion relies on this — an earlier draft had
+  // no record of it at all, so replay could not reconstruct why an Acceptance was
+  // permitted.
+  gate_result: {
+    type: 'object', additional: false,
+    required: ['kind', 'lineage', 'run', 'contract_revision', 'obligation', 'status', 'seq'],
+    properties: {
+      kind: text, lineage: id, run: id, contract_revision: id, obligation: id,
+      status: {
+        type: 'enum',
+        values: ['pending', 'passed', 'failed', 'invalid', 'unavailable', 'stale'],
+      },
+      code: text,
+      attempt: id,
+      selected: digest,
+      seq,
+    },
+  },
   capability_unavailable: {
     type: 'object', additional: false,
     required: ['kind', 'lineage', 'obligation', 'attempt', 'requested', 'origin', 'seq'],

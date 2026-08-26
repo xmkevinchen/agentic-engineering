@@ -8,6 +8,7 @@
 // keeping only one is a defect rather than a simplification.
 
 import { canonicalDigest, digestBytes, parseStrict } from './canonical-json.mjs';
+import { deepFreeze } from './freeze.mjs';
 import { fail } from './codes.mjs';
 
 // The frozen parser takes Buffers — it checks `Buffer.isBuffer` rather than
@@ -20,7 +21,7 @@ function asBuffer(bytes) {
 export function identify(bytes) {
   const raw = asBuffer(bytes);
   const value = parseStrict(raw);
-  return Object.freeze({
+  return deepFreeze({
     byte_sha256: digestBytes(raw),
     canonical_sha256: canonicalDigest(value),
     length: raw.length,

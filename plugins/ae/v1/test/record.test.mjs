@@ -1,8 +1,11 @@
 // AC-11, AC-12, AC-13 — the write, the formats, the record.
 
-import { mkdtempSync, mkdirSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, symlinkSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 import { commitCompletion } from '../lib/writer.mjs';
 import { Ledger, KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
@@ -18,18 +21,27 @@ export function recordTests() {
     mkdirSync(out);
     mkdirSync(join(root, 'inside'));
 
-    eq('a first write succeeds',
-      commitCompletion({ root, path: join(out, 'a.json'), bytes: Buffer.from('{}') }).outcome,
-      'created');
-    refuses('it does not overwrite', 'write_would_clobber',
-      () => commitCompletion({ root, path: join(out, 'a.json'), bytes: Buffer.from('{}') }));
+    const acceptance = { lineage: 'L', decision: { outcome: 'accepted' } };
+    const verdicts = { O: 'passed' };
+    const write = (path, over = {}) => commitCompletion({ root, path, acceptance, verdicts, ...over });
+
+    eq('a first write succeeds', write(join(out, 'a.json')).outcome, 'created');
+    refuses('it does not overwrite', 'write_would_clobber', () => write(join(out, 'a.json')));
     refuses('it does not stage', 'write_staged',
-      () => commitCompletion({
-        root, path: join(out, 'b.json'), bytes: Buffer.from('{}'), allowStaging: true,
-      }));
+      () => write(join(out, 'b.json'), { allowStaging: true }));
     refuses('traversal cannot leave the location', 'write_escapes_location',
+      () => write(join(out, '..', '..', 'escaped.json')));
+
+    // The writer takes an Acceptance and the verdicts it rests on. An earlier
+    // draft accepted any path and any bytes with no Gate input, which made this
+    // a file write that happened to be called completion.
+    refuses('arbitrary bytes with no Acceptance', 'not_all_passed',
+      () => commitCompletion({ root, path: join(out, 'c.json'), verdicts }));
+    refuses('an Acceptance with no verdicts', 'not_all_passed',
+      () => commitCompletion({ root, path: join(out, 'd.json'), acceptance }));
+    refuses('an obligation that did not pass', 'not_all_passed',
       () => commitCompletion({
-        root, path: join(out, '..', '..', 'escaped.json'), bytes: Buffer.from('{}'),
+        root, path: join(out, 'e.json'), acceptance, verdicts: { O: 'failed' },
       }));
 
     // Both kinds of symlink, because `O_EXCL` refuses one at the final component
@@ -38,9 +50,9 @@ export function recordTests() {
     symlinkSync(elsewhere, join(root, 'outlink'));
     symlinkSync(join(root, 'inside'), join(root, 'inlink'));
     refuses('a parent symlink pointing outside', 'write_through_symlink',
-      () => commitCompletion({ root, path: join(root, 'outlink', 'c.json'), bytes: Buffer.from('{}') }));
+      () => write(join(root, 'outlink', 'f.json')));
     refuses('a parent symlink pointing inside', 'write_through_symlink',
-      () => commitCompletion({ root, path: join(root, 'inlink', 'd.json'), bytes: Buffer.from('{}') }));
+      () => write(join(root, 'inlink', 'g.json')));
   });
 
   group('AC-12 · every schema is closed, recursively', () => {
@@ -108,7 +120,12 @@ export function recordTests() {
   });
 
   group('AC-12 · every persisted kind has a producer and a consumer', () => {
-    eq('no kind is orphaned', auditKinds().length, 0);
+    // Real call sites, not hand-written labels. An earlier draft checked that the
+    // metadata rows contained non-empty strings, which is a check on the comment
+    // rather than on the program — and several of those labels were wrong. The
+    // first run of this version found twelve.
+    const problems = auditKinds({ readdirSync, readFileSync, dir: libDir });
+    eq('no kind is orphaned', problems.map((p) => `${p.kind}:${p.code}`).join(','), '');
     ok('the set is non-empty', Object.keys(KINDS).length > 0);
   });
 

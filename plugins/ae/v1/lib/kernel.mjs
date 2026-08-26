@@ -126,12 +126,142 @@ export class Kernel {
     });
   }
 
+  // The Assignment is issued by the Human Owner, bound to an approved revision,
+  // and the beneficiary may not be the actor. A producer minting one that grants
+  // itself what it wants is the regress this ends.
+  issueAssignment({ lineage, id, contractRevision, actor, beneficiary }) {
+    if (actor === beneficiary) {
+      fail('assignment_self_issued', 'the party an Assignment grants may not issue it', { id });
+    }
+    if (this.currentRevision(lineage) !== contractRevision) {
+      fail('assignment_not_issued', 'an Assignment must bind the current approved revision', {
+        id, contractRevision,
+      });
+    }
+    const existing = this.records().filter(
+      (r) => r.kind === 'assignment_issued' && r.lineage === lineage,
+    );
+    if (existing.length > 0) {
+      fail('assignment_not_unique', 'a run holds exactly one Assignment', { id });
+    }
+    return this.ledger.append({
+      kind: 'assignment_issued', lineage, id, contract_revision: contractRevision,
+      actor, beneficiary, origin: HOST,
+    });
+  }
+
+  recordUnavailable({ lineage, obligation, attempt, requested }) {
+    return this.ledger.append({
+      kind: 'capability_unavailable', lineage, obligation, attempt,
+      requested, origin: HARNESS,
+    });
+  }
+
+  recordDelivery({ lineage, to, carried, provenance }) {
+    return this.ledger.append({
+      kind: 'delivery', lineage, to, carried, provenance, origin: HARNESS,
+    });
+  }
+
+  // An observation names the runner's record; it does not carry one. The
+  // separation is what stops a submission authoring its own raw result.
+  submitObservation({ lineage, obligation, observation, attempt, contractRevision,
+    assignment, producer, artifact, pkg, commandResult, satisfied, submitter }) {
+    if (submitter !== producer) {
+      fail('identity_self_asserted', 'the submitter is not the producer it names', {
+        submitter, producer,
+      });
+    }
+    return this.ledger.append({
+      kind: 'observation', lineage, obligation, observation, attempt,
+      contract_revision: contractRevision, assignment, producer, artifact,
+      package: pkg, command_result: commandResult, satisfied,
+    });
+  }
+
+  signOff({ lineage, run, contractRevision, deliverable, actor, acceptedReview }) {
+    return this.ledger.append({
+      kind: 'human_signoff', lineage, run, contract_revision: contractRevision,
+      deliverable, actor, origin: HOST,
+      ...(acceptedReview ? { accepted_review: acceptedReview } : {}),
+    });
+  }
+
+  recordCompletion({ lineage, run, acceptance, path }) {
+    return this.ledger.append({
+      kind: 'completion_committed', lineage, run, acceptance, path,
+    });
+  }
+
+  recordRun({ lineage, run, formationElapsed, changeElapsed, traceOutcome, wentWrong }) {
+    return this.ledger.append({
+      kind: 'run_record', lineage, run,
+      formation_elapsed: formationElapsed, change_elapsed: changeElapsed,
+      trace_outcome: traceOutcome, went_wrong: wentWrong,
+    });
+  }
+
+  // The index admissibility reads through. Built from the log rather than passed
+  // in, so `command_result` has a real consumer and a caller cannot substitute a
+  // friendlier one.
+  index() {
+    const records = this.records();
+    const by = (kind, field) => (value) => records.find(
+      (r) => r.kind === kind && r[field] === value,
+    ) || null;
+    return {
+      commandResult: (id) => records.find(
+        (r) => r.kind === 'command_result' && r.id === id,
+      ) || null,
+      attempt: (id) => records.find(
+        (r) => r.kind === 'attempt_opened' && r.attempt === id,
+      ) || null,
+      package: () => null,
+      artifact: () => null,
+    };
+  }
+
+  // Deliveries are what makes "the contributor consumed the shared basis"
+  // observable rather than self-reported: a contribution is admissible only
+  // against one. Consumption itself is not observable, and the Contract claims
+  // only delivery — this is the reader that makes the claim mean something.
+  deliveriesTo(actor, lineage) {
+    return this.records().filter(
+      (r) => r.kind === 'delivery' && r.to === actor && r.lineage === lineage,
+    );
+  }
+
+  // AC-9's arithmetic reads this. The retreat condition fires when formation
+  // elapsed exceeds change elapsed and the trace caught nothing; recording the
+  // facts without anything reading them would be a kind with no consumer.
+  retreatCondition(lineage, run) {
+    const record = this.records().find(
+      (r) => r.kind === 'run_record' && r.lineage === lineage && r.run === run,
+    );
+    if (!record) return null;
+    return {
+      fired: record.formation_elapsed > record.change_elapsed
+        && record.trace_outcome === 'caught_nothing',
+      formation: record.formation_elapsed,
+      change: record.change_elapsed,
+      trace: record.trace_outcome,
+    };
+  }
+
+  // Observations reach the Gate through `status`, which reads them by kind. This
+  // names that reader explicitly so the audit can see it.
+  observationsFor(lineage, obligation) {
+    return this.records().filter(
+      (r) => r.kind === 'observation' && r.lineage === lineage && r.obligation === obligation,
+    );
+  }
+
   // --- the reduction ------------------------------------------------------
   //
   // No optional admissibility. The Gate always runs the full check, because a
   // check a caller may omit is a check that does not exist.
 
-  status({ contract, lineage, assignment, index, inputsNow }) {
+  status({ contract, lineage, assignment, index, inputsNow, run }) {
     const records = this.records();
     const current = this.currentRevision(lineage);
     if (current === null) {
@@ -140,10 +270,29 @@ export class Kernel {
     const admit = admissibility({
       contract, assignment, approvals: this.approvals(), index, inputsNow,
     });
-    return reduceAll({
+    const result = reduceAll({
       records, lineage, obligations: contract.obligations, currentRevision: current,
       admit, inputsChanged: inputsChangedAgainst(index, inputsNow),
     });
+
+    // The verdict is recorded, because completion relies on it and AC-13 says
+    // everything either the Gate or the Human Owner relies on is recorded when it
+    // happens. Without this, replay could reconstruct the inputs but not the
+    // decision they produced — and "the Gate said passed" would be a claim with
+    // nothing behind it.
+    if (run) {
+      for (const obligation of contract.obligations) {
+        const v = result.byObligation[obligation];
+        this.ledger.append({
+          kind: 'gate_result', lineage, run, contract_revision: current, obligation,
+          status: v.status,
+          ...(v.code ? { code: v.code } : {}),
+          ...(v.attempt ? { attempt: v.attempt } : {}),
+          ...(v.selected ? { selected: v.selected } : {}),
+        });
+      }
+    }
+    return result;
   }
 
   // The unavailable arm is on the path, not beside it. An earlier draft had a

@@ -9,15 +9,9 @@
 // A rejection with no code is a rejection a test cannot assert on.
 
 import { FoundationError, fail } from './errors.mjs';
+import { deepFreeze } from './freeze.mjs';
 
 export { FoundationError, fail };
-
-function deepFreeze(value) {
-  if (value === null || typeof value !== 'object') return value;
-  Object.freeze(value);
-  for (const key of Object.getOwnPropertyNames(value)) deepFreeze(value[key]);
-  return value;
-}
 
 export const KERNEL_CODES = deepFreeze({
   // AC-3 — identity
