@@ -1,0 +1,62 @@
+#!/bin/sh
+# Mutation check — plant a defect, confirm the suite turns red, revert.
+#
+# A suite that stays green under a planted defect is not testing what it claims.
+# This run already earned its keep: it found that removing the empty-schema guard
+# left everything green, because the guard was unreachable — any `{}` has no type,
+# so the type check caught it first. An unreachable second layer is not defence in
+# depth, it is a claim of protection no test can hold to account. The guard was
+# removed rather than given a test.
+#
+# Run: sh plugins/ae/v1/test/mutation-check.sh
+# Not part of the standard suite: it edits sources in place, so it is run
+# deliberately rather than on every commit.
+set -e
+V1=$(cd "$(dirname "$0")/.." && pwd)
+run() { node "$V1/test/all.mjs" >/dev/null 2>&1 && echo GREEN || echo RED; }
+
+plant() { # file, from, to
+  cp "$V1/lib/$1" "${TMPDIR:-/tmp}/$1.mut.bak"
+  python3 - "$V1/lib/$1" "$2" "$3" <<'PY'
+import io,sys
+p,a,b=sys.argv[1],sys.argv[2],sys.argv[3]
+s=io.open(p,encoding='utf-8').read()
+assert a in s, f"pattern not found: {a[:50]}"
+io.open(p,'w',encoding='utf-8').write(s.replace(a,b,1))
+PY
+}
+revert() { cp "${TMPDIR:-/tmp}/$1.mut.bak" "$V1/lib/$1"; }
+
+echo "baseline                                $(run)"
+
+plant gate.mjs "if (outcomes.size > 1) {" "if (false) {"
+printf "contradiction no longer fails closed   %s\n" "$(run)"; revert gate.mjs
+
+plant gate.mjs "const latest = attempts[attempts.length - 1];" "const latest = attempts[0];"
+printf "earliest attempt decides instead       %s\n" "$(run)"; revert gate.mjs
+
+plant gate.mjs "if (record.contract_revision !== ctx.currentRevision) {" "if (false) {"
+printf "superseded revision not stale          %s\n" "$(run)"; revert gate.mjs
+
+plant identity.mjs "if (actual.byte_sha256 !== recorded.byte_sha256) {" "if (false) {"
+printf "lexical mutation undetected            %s\n" "$(run)"; revert identity.mjs
+
+plant authority.mjs "if (!input || input.origin !== 'host') {" "if (false) {"
+printf "model output accepted as human input   %s\n" "$(run)"; revert authority.mjs
+
+plant writer.mjs "assertNoSymlinkComponents(resolve(root), target);" ""
+printf "symlink parent unchecked               %s\n" "$(run)"; revert writer.mjs
+
+plant schema.mjs "if (!schema.type || !TYPES.includes(schema.type)) {" "if (false) {"
+printf "untyped schema accepted as closed      %s\n" "$(run)"; revert schema.mjs
+
+plant schema.mjs "if (schema.additional !== false) {" "if (false) {"
+printf "object admitting extras called closed  %s\n" "$(run)"; revert schema.mjs
+
+plant admissibility.mjs "if (result.origin !== 'harness') return 'result_self_authored';" ""
+printf "submission-authored result accepted    %s\n" "$(run)"; revert admissibility.mjs
+
+plant family.mjs "fail('observed_without_answer'" "return true; fail('observed_without_answer'"
+printf "observed present with no answer        %s\n" "$(run)"; revert family.mjs
+
+echo "after revert                            $(run)"

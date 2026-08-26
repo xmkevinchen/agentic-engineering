@@ -28,12 +28,19 @@ export function lintSchema(schema, path = '$') {
     problems.push({ path, code: 'format_open', why: 'not a schema object' });
     return problems;
   }
-  if (Object.keys(schema).length === 0) {
-    problems.push({ path, code: 'format_open', why: 'empty schema admits anything' });
-    return problems;
-  }
+  // `{}` is caught here rather than by its own check: an empty schema has no
+  // type, so a separate emptiness test would be unreachable. A mutation run
+  // proved that — removing the emptiness test left the suite green, which is the
+  // signature of a guard that guards nothing. An unreachable second layer is not
+  // defence in depth; it is a claim of protection that no test can hold to
+  // account.
   if (!schema.type || !TYPES.includes(schema.type)) {
-    problems.push({ path, code: 'format_open', why: `missing or unknown type: ${schema.type}` });
+    problems.push({
+      path, code: 'format_open',
+      why: Object.keys(schema).length === 0
+        ? 'empty schema: no type, so it admits anything'
+        : `missing or unknown type: ${schema.type}`,
+    });
     return problems;
   }
 

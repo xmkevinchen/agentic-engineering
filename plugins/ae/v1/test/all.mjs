@@ -8,6 +8,7 @@ import { recordTests } from './record.test.mjs';
 import { familyTests } from './family.test.mjs';
 import { knowledgeTests } from './knowledge.test.mjs';
 import { completionTests } from './completion.test.mjs';
+import { structureTests } from './structure.test.mjs';
 import { report } from './harness.mjs';
 
 gateTests();
@@ -18,5 +19,6 @@ recordTests();
 familyTests();
 knowledgeTests();
 completionTests();
+structureTests();
 
 process.exit(report() ? 0 : 1);
