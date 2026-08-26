@@ -11,7 +11,7 @@ import { Kernel } from '../lib/kernel.mjs';
 const [, , logPath, sourceRoot, what, index, startAt, outPath] = process.argv;
 
 const RENDERED = (bytes) => `--- rendered ---\n${bytes}\n`;
-const k = new Kernel(logPath, { sourceRoot, render: RENDERED });
+const k = new Kernel(logPath, { sourceRoot, render: RENDERED, owner: 'Human Owner' });
 
 // Spin until the agreed instant, so the writers collide rather than queue.
 while (Date.now() < Number(startAt)) { /* wait */ }

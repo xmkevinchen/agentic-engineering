@@ -25,10 +25,14 @@ const identity = {
 // A material input is named and carries the identity it had when observed. Both
 // halves are needed: the name so completeness can be checked against what the run
 // used, the identity so a later change is detectable.
+// Named, and pointed at a file. Without the path an id was a label the producer
+// chose, and the latest observation for that label won whatever it had read: the
+// packaged input could change while a decoy under the same id was observed
+// unchanged, and the run stayed `passed`.
 const materialInput = {
   type: 'object', additional: false,
-  required: ['id', 'identity'],
-  properties: { id, identity: digest },
+  required: ['id', 'path', 'identity'],
+  properties: { id, path: text, identity: digest },
 };
 
 export const CONTRACT = {

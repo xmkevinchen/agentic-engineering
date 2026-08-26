@@ -34,7 +34,6 @@ export const KINDS = Object.freeze({
   gate_result: { producer: 'gate', consumer: ['completion', 'replay'] },
   capability_unavailable: { producer: 'harness', consumer: ['gate'] },
   dispatch_attempt: { producer: 'harness', consumer: ['family', 'gate'] },
-  review_recorded: { producer: 'harness', consumer: ['completion'] },
   input_observed: { producer: 'harness', consumer: ['gate'] },
   input_gone: { producer: 'harness', consumer: ['gate'] },
   human_decision_activation: { producer: 'human', consumer: ['identity', 'replay'] },

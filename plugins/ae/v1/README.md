@@ -94,6 +94,13 @@ thing: **a submission cannot author its own provenance.** The observation is a
 separate append from the runner's record, the Assignment from the attempt that
 uses it, the approval from the evidence judged under it.
 
+**A required cross-family review cannot be obtained, and V1 says so.** There was
+a `recordReview` that took a digest and a family and stamped them
+`origin: harness`, so the party being judged wrote its own judge into being and
+got an Acceptance carrying a digest of nothing. V1 has no successful cross-family
+path — that is V3 — so a Contract requiring independent review now refuses to
+complete, which is where AC-7 already sends it.
+
 The three facts that decide a run are **produced, not accepted**. The Kernel runs
 the command and reads its exit status; it digests the artifact file; it digests
 each material input to see whether it has changed. Each of those used to be an
@@ -109,15 +116,24 @@ read as unestablishable rather than as zero.
 identity come "from the record of who acted, not from a field the actor wrote
 about itself". In-process there is no such record: `actor`, `producer` and
 `submitter` are strings the caller passes, and comparing two of them establishes
-nothing about who acted. Everything downstream is bound — the Contract names who
-may sign, the Assignment names who may produce, and neither can be chosen by the
-party they constrain — but the *name* at the root is still asserted.
+nothing about who acted.
 
-Closing it needs a principal the Kernel does not mint: a host adapter that
+What *is* settled: the Human Owner is configured when the Kernel is built,
+outside any Contract, and approval refuses a Contract naming a different signer.
+So the earlier hole — write a Contract naming yourself, approve it with the
+matching string, then hold every authority it grants — is closed: the root sits
+outside what it authorises. What remains is that the configured name is still
+only a name.
+
+Closing that needs a principal the Kernel does not mint: a host adapter that
 authenticates the human and is the only thing that may append a host record. That
 is the same boundary N7 draws for the repository mutation path, and it is not this
-slice. Recorded here rather than argued away, because eight rounds of review kept
-arriving at it and each time the honest answer was the same one.
+slice.
+
+**This is a gap in a normative criterion, not a caveat.** A README cannot waive an
+acceptance criterion, and this one does not try to: V1 does not satisfy AC-5 in
+full, and whether that is answered by extending the slice or by amending the
+Contract is the Human Owner's call, not the implementer's.
 
 What did close: the Harness runs the command and digests the files, so the
 outcome, the deliverable and staleness are no longer things a caller states. The

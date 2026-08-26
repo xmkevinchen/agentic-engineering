@@ -15,6 +15,8 @@ import { validate } from '../lib/schema.mjs';
 import { CONTRACT, ASSIGNMENT, EVIDENCE_PACKAGE } from '../schema/objects.mjs';
 import { digestBytes } from '../lib/canonical-json.mjs';
 
+export const OWNER = 'Human Owner';
+
 export const sha = (s) => digestBytes(Buffer.from(s, 'utf8'));
 
 // A real command, run for real. The subject count is a line the command prints,
@@ -91,7 +93,7 @@ export function packageDoc(over = {}) {
     artifact: 'art1',
     command_result: 'cr1',
     changed_paths: ['docs/v1/a.md'],
-    material_inputs: [{ id: 'in1', identity: sha('in1') }],
+    material_inputs: [{ id: 'in1', path: 'in1.txt', identity: sha('in1') }],
     deviations: [],
     known_risks: [],
     ...over,
@@ -174,7 +176,9 @@ export function walk(k, over = {}) {
 
   const pkg = asObject(packageDoc({
     attempt: attempt.attempt,
-    material_inputs: [{ id: 'in1', identity: digestBytes(readFileSync(inputPath)) }],
+    material_inputs: [{
+      id: 'in1', path: inputPath, identity: digestBytes(readFileSync(inputPath)),
+    }],
     ...pkgOver,
   }));
   k.recordPackage({

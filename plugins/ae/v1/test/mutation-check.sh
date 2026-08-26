@@ -143,24 +143,8 @@ plant kernel.mjs "      decision: { outcome: 'accepted', origin: HOST, run, seq:
 printf "an Acceptance carrying an extra field   %s\n" "$(run)"; revert kernel.mjs
 
 # Round 4's findings.
-plant kernel.mjs "    if (actor !== contract.final_signer) {" "    if (false) {"
-printf "anyone signs the completion off         %s\n" "$(run)"; revert kernel.mjs
-
-plant kernel.mjs "      fail('authority_not_granted', \"only the Contract's final signer approves it\", {" \
-  "      if (false) fail('authority_not_granted', \"x\", {"
-printf "anyone activates the Contract           %s\n" "$(run)"; revert kernel.mjs
-
-plant kernel.mjs "    if (actor !== approved.contract.final_signer) {" "    if (false) {"
-printf "anyone decides on the unavailable arm   %s\n" "$(run)"; revert kernel.mjs
-
-plant kernel.mjs "      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
-      origin: HARNESS," \
-  "      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
-      origin: 'submission',"
+plant kernel.mjs "      path, identity, origin: HARNESS," "      path, identity, origin: 'submission',"
 printf "the artifact recorded by a submission   %s\n" "$(run)"; revert kernel.mjs
-
-plant kernel.mjs "      if (!recorded) {" "      if (false) {"
-printf "a review nobody recorded is carried     %s\n" "$(run)"; revert kernel.mjs
 
 plant kernel.mjs "    const stale = checkVerifiableSources(" \
   "    const stale = []; const unusedStale = checkVerifiableSources("
@@ -173,9 +157,6 @@ printf "a package from another lineage filed    %s\n" "$(run)"; revert kernel.mj
 plant admissibility.mjs "    if (result.artifact !== record.artifact) return 'binding_cross_execution';" ""
 printf "a green run vouches for any artifact    %s\n" "$(run)"; revert admissibility.mjs
 
-plant kernel.mjs "    if (actor !== approvedContract.contract.final_signer) {" "    if (false) {"
-printf "anyone issues an Assignment             %s\n" "$(run)"; revert kernel.mjs
-
 plant formation.mjs "    if (!text.includes(entry.quote)) {" "    if (false) {"
 printf "a citation to a passage nobody wrote    %s\n" "$(run)"; revert formation.mjs
 
@@ -186,19 +167,29 @@ plant kernel.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }))
   "    return parseNdjson(bytes).map((r) => ({ ...r, seq: 0 }));"
 printf "every record claims the same position   %s\n" "$(run)"; revert kernel.mjs
 
-plant kernel.mjs "    if (actor !== approved.contract.final_signer) {
-      fail('authority_not_granted', \"only the Contract's final signer signs\", {" \
-  "    if (false) {
-      fail('authority_not_granted', \"x\", {"
-printf "anyone signs for the run                %s\n" "$(run)"; revert kernel.mjs
-
 plant kernel.mjs "    const deliverable = this.deliverableFor({ lineage, run, contract: approved.contract });" \
   "    const deliverable = { identity: 'sha256:' + '0'.repeat(64) };"
 printf "a sign-off names any deliverable        %s\n" "$(run)"; revert kernel.mjs
 
+# Round 9's findings.
+plant kernel.mjs "        if (r.attempt !== latest) continue;" ""
+printf "a superseded attempt still decides      %s\n" "$(run)"; revert kernel.mjs
+
+plant admissibility.mjs "      if (now.path !== input.path) return 'material_input_incomplete';" ""
+printf "a decoy is observed under an input's id %s\n" "$(run)"; revert admissibility.mjs
+
+plant kernel.mjs "    if (contract.independence.required === 'cross_family_required') {" "    if (false) {"
+printf "a cross-family Contract completes       %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    if (actor !== this.#owner) {" "    if (false) {"
+printf "anyone acts as the Human Owner          %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    if (contract.final_signer !== this.#owner) {" "    if (false) {"
+printf "a Contract nominates its own signer     %s\n" "$(run)"; revert kernel.mjs
+
 # Round 8's findings.
-plant kernel.mjs "    const dir = realpathSync(dirname(path));" "    const dir = dirname(path);"
-printf "an aliased path takes its own lock      %s\n" "$(run)"; revert kernel.mjs
+plant kernel.mjs "      this.path = realpathSync(path);" "      this.path = path;"
+printf "an aliased log takes its own lock       %s\n" "$(run)"; revert kernel.mjs
 
 plant admissibility.mjs "      if (!(now.seq > pkg.seq)) return 'material_input_incomplete';" ""
 printf "an input observed before the evidence   %s\n" "$(run)"; revert admissibility.mjs
@@ -231,10 +222,6 @@ printf "a run with two Assignments proceeds     %s\n" "$(run)"; revert kernel.mj
 # its call site inside `complete` only matters when another process advances the
 # log between the reduction and the write, and there is no seam to schedule
 # against. A mutation that cannot turn red would say the guard is covered.
-
-plant kernel.mjs "      if (!contract.independence.requested_family.includes(recorded.family)) {" \
-  "      if (false) {"
-printf "a same-family review satisfies the ask  %s\n" "$(run)"; revert kernel.mjs
 
 # AC-13: a log that replays into a different verdict cannot account for its own
 # Acceptance. The fresh-process check is what catches this; nothing in-process can.

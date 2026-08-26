@@ -7,7 +7,7 @@ import { requestedFamily, dispatchRecord } from '../lib/family.mjs';
 import { Kernel } from '../lib/kernel.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT, OWNER } from './fixtures.mjs';
 
 const contract = {
   independence: {
@@ -56,7 +56,7 @@ export function familyTests() {
 
   group('AC-7 · the unavailable arm reaches its status through the same reduction', () => {
     const build = (dispatchOver = {}, unavailableOver = {}) => {
-      const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
+      const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
       const c = asObject(contractDoc(cross));
       k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
@@ -97,7 +97,7 @@ export function familyTests() {
 
     // And a solo Contract cannot have an unavailable arm at all: nothing was
     // requested, so nothing can have been missing.
-    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
     const c = asObject(contractDoc());
     k.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
@@ -122,7 +122,7 @@ export function familyTests() {
     // there is a record the decision must follow. It used to be checked at
     // completion, which an unavailable run never reaches — completion stops at
     // `not_all_passed` first — so the ordering check sat in an unreachable branch.
-    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1u-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1u-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
     const c = asObject(contractDoc(cross));
     k.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,

@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { Kernel } from '../lib/kernel.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT, OWNER } from './fixtures.mjs';
 
 const writer = fileURLToPath(new URL('./concurrent-writer.mjs', import.meta.url));
 const WRITERS = 4;
@@ -40,7 +40,7 @@ function race(dir, logPath, what, env = {}, pathFor = () => logPath) {
 function prepared() {
   const dir = mkdtempSync(join(tmpdir(), 'v1c-'));
   const logPath = join(dir, 'log.ndjson');
-  const k = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED });
+  const k = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
   const c = asObject(contractDoc());
   k.approve({
     lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
@@ -84,11 +84,20 @@ export function concurrentTests() {
     k.issueAssignment({
       lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
     });
+    // A link whose final component is the log itself, not a link to its
+    // directory: resolving only the directory left `alias.ndjson` and
+    // `log.ndjson` naming one file and taking two locks.
+    const alias = join(dir, 'alias.ndjson');
+    symlinkSync(logPath, alias);
+    const viaLink = new Kernel(alias, {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
     const linkDir = join(dir, 'via-link');
     symlinkSync(dir, linkDir);
-    const viaLink = new Kernel(join(linkDir, 'log.ndjson'), {
-      sourceRoot: SOURCE_ROOT, render: RENDERED,
+    const viaDirLink = new Kernel(join(linkDir, 'log.ndjson'), {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
     });
+    eq('a linked directory resolves too', viaDirLink.logPath, k.logPath);
     eq('both names see one log', k.records().length, viaLink.records().length);
 
     // The lock is named after this, so the two must agree on it. Asserted

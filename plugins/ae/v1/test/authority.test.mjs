@@ -14,9 +14,9 @@ import { appendFileSync } from 'node:fs';
 import { Kernel } from '../lib/kernel.mjs';
 import { encodeNdjson } from '../lib/canonical-json.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha, SOURCE_ROOT } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha, SOURCE_ROOT, OWNER } from './fixtures.mjs';
 
-const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1a-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
+const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1a-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
 
 function approved(k, over = {}) {
   const contract = asObject(contractDoc(over));
@@ -60,8 +60,8 @@ export function authorityTests() {
     // with two holds none.
     const dir = mkdtempSync(join(tmpdir(), 'v1two-'));
     const logPath = join(dir, 'log.ndjson');
-    const k1 = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED });
-    const k2 = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const k1 = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+    const k2 = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
     approved(k1);
     const a = asObject(assignmentDoc());
     const args = {

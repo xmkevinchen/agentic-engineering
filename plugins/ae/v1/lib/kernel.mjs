@@ -70,8 +70,14 @@ class Ledger {
     // it — took different locks and both believed they held the log. One opener
     // then received another's position, which is the execution-merging defect the
     // lock exists to close.
-    const dir = realpathSync(dirname(path));
-    this.path = join(dir, basename(path));
+    // The file itself when it exists, so a link whose *final* component is the
+    // log resolves too. Resolving only the directory left `alias.ndjson` and
+    // `log.ndjson` taking different locks while naming one file.
+    try {
+      this.path = realpathSync(path);
+    } catch {
+      this.path = join(realpathSync(dirname(path)), basename(path));
+    }
   }
 
   // Appends are serialized by an exclusive-create lock, so a writer knows exactly
@@ -258,7 +264,6 @@ class Ledger {
       inputObservations: [],
       unavailable: [],
       dispatches: [],
-      reviews: [],
       decisions: [],
       signoffs: [],
       completions: [],
@@ -276,7 +281,6 @@ class Ledger {
       command_result: 'commandResults',
       capability_unavailable: 'unavailable',
       dispatch_attempt: 'dispatches',
-      review_recorded: 'reviews',
       input_observed: 'inputObservations',
       input_gone: 'inputObservations',
       human_decision_activation: 'decisions',
@@ -319,11 +323,18 @@ export class Kernel {
   // anything at all.
   #render;
 
-  constructor(logPath, { completionRoot, sourceRoot, render } = {}) {
+  // Who the Human Owner is, configured outside any Contract. Reading the signer
+  // out of the Contract being approved let one caller write a Contract naming
+  // itself, approve it with the matching string, and hold every authority the
+  // Contract grants. The root has to sit outside what it authorises.
+  #owner;
+
+  constructor(logPath, { completionRoot, sourceRoot, render, owner } = {}) {
     this.#ledger = new Ledger(logPath);
     this.#completionRoot = completionRoot || null;
     this.#sourceRoot = sourceRoot || null;
     this.#render = typeof render === 'function' ? render : null;
+    this.#owner = owner || null;
   }
 
   // --- reads -------------------------------------------------------------
@@ -545,8 +556,8 @@ export class Kernel {
       fail('binding_unresolved', 'the artifact does not resolve', { id, path });
     }
     return this.#ledger.append({
-      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
-      origin: HARNESS,
+      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind,
+      path, identity, origin: HARNESS,
     });
   }
 
@@ -645,9 +656,23 @@ export class Kernel {
     // row: the Human Owner, and no model. The Contract names who that is, so
     // approval is the first place it can be checked — and a Contract approved by
     // someone it does not name is approved by nobody in particular.
-    if (actor !== contract.final_signer) {
-      fail('authority_not_granted', "only the Contract's final signer approves it", {
-        actor, final_signer: contract.final_signer,
+    if (!this.#owner) {
+      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot approve', {});
+    }
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
+      });
+    }
+    // Approval is where the two are bound: the Kernel serves one Human Owner,
+    // configured outside any Contract, and a Contract names who signs it. They
+    // must be the same party, or the document under review would be nominating
+    // its own authority. Every operation after this compares the actor with the
+    // owner alone — restating the Contract's field downstream was a second copy
+    // of a fact this line already settles.
+    if (contract.final_signer !== this.#owner) {
+      fail('authority_not_granted', 'the Contract names a signer this Kernel does not serve', {
+        final_signer: contract.final_signer,
       });
     }
 
@@ -705,9 +730,12 @@ export class Kernel {
     if (approvedContract === null) {
       fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
     }
-    if (actor !== approvedContract.contract.final_signer) {
-      fail('authority_not_granted', "only the Contract's final signer issues an Assignment", {
-        actor, final_signer: approvedContract.contract.final_signer,
+    if (!this.#owner) {
+      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot issue an Assignment', {});
+    }
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
       });
     }
     const current = this.currentRevision(lineage);
@@ -825,11 +853,6 @@ export class Kernel {
     });
   }
 
-  recordReview({ lineage, run, identity, family }) {
-    return this.#ledger.append({
-      kind: 'review_recorded', lineage, run, identity, family, origin: HARNESS,
-    });
-  }
 
   // An observation names the runner's record; it does not carry one. The
   // separation is what stops a submission authoring its own raw result.
@@ -881,9 +904,12 @@ export class Kernel {
     if (!approved) {
       fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
     }
-    if (actor !== approved.contract.final_signer) {
-      fail('authority_not_granted', "only the Contract's final signer signs", {
-        actor, final_signer: approved.contract.final_signer,
+    if (!this.#owner) {
+      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot sign', {});
+    }
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
       });
     }
     const reported = this.records().some(
@@ -1075,42 +1101,25 @@ export class Kernel {
       });
     }
 
-    // The Contract names who signs. `actor` was whatever the caller wrote, so a
-    // run could be signed off by a party the Contract never nominated.
-    if (actor !== contract.final_signer) {
-      fail('authority_not_granted', "only the Contract's final signer completes a run", {
-        actor, final_signer: contract.final_signer,
+    // A Contract that requires independent review cannot complete in V1.
+    //
+    // There was a `recordReview` that took a digest and a family and stamped them
+    // `origin: harness`, and completion checked only that such a record existed —
+    // so the party being judged wrote its own judge into being, and got an
+    // Acceptance carrying a digest of nothing. It is deleted rather than guarded:
+    // V1 has no successful cross-family path at all (that is V3), so the only
+    // honest outcome here is the unavailable arm, which is where AC-7 already
+    // sends it. An Acceptance is not reachable either way; the difference is
+    // whether the machinery pretends otherwise.
+    if (contract.independence.required === 'cross_family_required') {
+      fail('review_required_absent', 'V1 cannot obtain an independent review, so it cannot complete', {
+        requested: contract.independence.requested_family,
       });
     }
-
-    const required = contract.independence.required === 'cross_family_required';
-    if (required) {
-      if (!acceptedReview) {
-        fail('review_required_absent', 'the Contract required a review and none is carried', {});
-      }
-      // And it must resolve. A digest the caller chose is a claim about a review
-      // nobody else saw; this is the record it answers to.
-      const recorded = this.records().find(
-        (r) => r.kind === 'review_recorded' && r.lineage === lineage && r.run === run
-          && r.identity === acceptedReview,
-      );
-      if (!recorded) {
-        fail('review_required_absent', 'the review the Acceptance carries was never recorded', {
-          acceptedReview,
-        });
-      }
-      // And it must come from a family the Contract asked for. Only the digest
-      // was checked, so a review recorded as the implementer's own family
-      // satisfied a cross-family requirement — which is the substitution AC-7
-      // refuses, arriving through the review rather than through the dispatch.
-      if (!contract.independence.requested_family.includes(recorded.family)) {
-        fail('same_family_substituted', 'the review is not from a family the Contract requested', {
-          recorded: recorded.family, requested: contract.independence.requested_family,
-        });
-      }
-    } else if (acceptedReview) {
+    if (acceptedReview) {
       fail('review_required_absent', 'a review is carried where the Contract required none', {});
     }
+    const required = false;
 
     // The deliverable is the artifact the evidence attests to, resolved from the
     // record. Taking it as an argument let an Acceptance name one thing while the
@@ -1136,11 +1145,6 @@ export class Kernel {
     // The write is the last step of this method, not a function a caller invokes
     // afterwards with whatever it likes. Its destination belongs to the Kernel,
     // and the verdicts it reads are the ones just recorded.
-    if (!this.#completionRoot) {
-      fail('writer_not_sole', 'this Kernel has no completion root, so it cannot complete', {
-        run,
-      });
-    }
     const written = this.#commitCompletion({
       acceptance, obligations: contract.obligations, run, revision: current,
     });
@@ -1158,11 +1162,20 @@ export class Kernel {
   // means the Acceptance would have to pick, and picking is not resolving.
   deliverableFor({ lineage, run, contract }) {
     const index = this.index({ lineage, run });
+    // Only the attempt the Gate selected. Reading every observation in the run
+    // meant a failed first attempt naming one artifact and a passing retry naming
+    // another left completion with two — so an attempt the Gate had already
+    // superseded still decided what could be accepted.
+    const attempts = this.records().filter(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    const latest = attempts.length > 0 ? attempts[attempts.length - 1].seq : null;
     const named = new Set();
     for (const obligation of contract.obligations) {
       for (const r of this.records()) {
         if (r.kind !== 'observation') continue;
         if (r.lineage !== lineage || r.run !== run || r.obligation !== obligation) continue;
+        if (r.attempt !== latest) continue;
         named.add(r.artifact);
       }
     }
@@ -1188,9 +1201,12 @@ export class Kernel {
     if (approved === null) {
       fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
     }
-    if (actor !== approved.contract.final_signer) {
-      fail('authority_not_granted', "only the Contract's final signer decides on an unavailable capability", {
-        actor, final_signer: approved.contract.final_signer,
+    if (!this.#owner) {
+      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot decide', {});
+    }
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
       });
     }
     if (!['wait', 'stop', 'amend'].includes(choice)) {

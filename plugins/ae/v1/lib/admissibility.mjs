@@ -168,6 +168,10 @@ export function admissibility({
       // observation taken before the evidence was packaged says the input was
       // current at some earlier moment, which is not what staleness asks.
       if (!(now.seq > pkg.seq)) return 'material_input_incomplete';
+      // And it must be an observation of the file the package named. An id is a
+      // label the producer chose, so without this the packaged input could change
+      // while a decoy under the same label was observed unchanged.
+      if (now.path !== input.path) return 'material_input_incomplete';
     }
 
     return null;
@@ -212,6 +216,7 @@ export function inputsChangedAgainst(index, inputsNow) {
       const now = inputsNow(input.id);
       if (now === undefined) return false;
       if (now === null) return true;
+      if (now.path !== input.path) return true;
       if (now.identity !== input.identity) return true;
     }
     return false;

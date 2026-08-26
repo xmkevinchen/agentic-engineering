@@ -173,9 +173,9 @@ export const RECORDS = Object.freeze({
   },
   artifact_recorded: {
     type: 'object', additional: false,
-    required: ['kind', 'id', 'lineage', 'run', 'artifact_kind', 'identity', 'origin', 'seq'],
+    required: ['kind', 'id', 'lineage', 'run', 'artifact_kind', 'path', 'identity', 'origin', 'seq'],
     properties: {
-      kind: text, id, lineage: id, run: id,
+      kind: text, id, lineage: id, run: id, path: text,
       artifact_kind: { type: 'enum', values: ['commit', 'diff', 'file'] },
       identity: digest,
       origin: { type: 'const', value: 'harness' }, seq,
@@ -201,17 +201,6 @@ export const RECORDS = Object.freeze({
       substituted_family: id,
       answered_family: id,
       seq,
-    },
-  },
-  // An independent review, as the Harness received it. A digest a caller hands to
-  // completion is a claim about a review nobody else saw; this is the record it
-  // has to resolve against.
-  review_recorded: {
-    type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'identity', 'family', 'origin', 'seq'],
-    properties: {
-      kind: text, lineage: id, run: id, identity: digest, family: id,
-      origin: { type: 'const', value: 'harness' }, seq,
     },
   },
   // One shape per operation, not one shape with every operation's fields optional.

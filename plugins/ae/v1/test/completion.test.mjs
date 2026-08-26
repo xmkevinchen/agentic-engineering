@@ -17,7 +17,7 @@ import { group, ok, eq, refuses } from './harness.mjs';
 import { validate } from '../lib/schema.mjs';
 import { digestBytes } from '../lib/canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, FAILING, VACUOUS, UNCOUNTABLE, SOURCE_ROOT, DESIGN_SHA } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, FAILING, VACUOUS, UNCOUNTABLE, SOURCE_ROOT, DESIGN_SHA, OWNER } from './fixtures.mjs';
 
 const CONTRACT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -29,7 +29,7 @@ const CONTRACT = join(
 // calls the write.
 function fresh() {
   const dir = mkdtempSync(join(tmpdir(), 'ac1-'));
-  return new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
+  return new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
 }
 
 const run = (over = {}) => walk(fresh(), over);
@@ -146,8 +146,8 @@ export function completionTests() {
     // sequence number, with Assignment ids unique only within a run.
     const dir = mkdtempSync(join(tmpdir(), 'two-'));
     const logPath = join(dir, 'log.ndjson');
-    const k1 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
-    const k2 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const k1 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+    const k2 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
 
     const c = asObject(contractDoc());
     k1.approve({
@@ -182,13 +182,13 @@ export function completionTests() {
     const dir = mkdtempSync(join(tmpdir(), 'race-'));
     const logPath = join(dir, 'log.ndjson');
     const k1 = new Kernel(logPath, {
-      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED,
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
     });
     const w = walk(k1);
     eq('the run passes', k1.status({ lineage: 'L', run: w.run }).byObligation.O.status, 'passed');
 
     const k2 = new Kernel(logPath, {
-      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED,
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
     });
     // The second Kernel opens an attempt and does *not* reduce. Reading the last
     // recorded verdict would still say `passed` — that was the defect: a stale
@@ -200,6 +200,40 @@ export function completionTests() {
       k1.verdictsNow({ lineage: 'L', run: w.run }).get('O'), 'pending');
     refuses('so completion does not land', 'not_all_passed',
       () => k1.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
+  });
+
+  group('AC-4 · a superseded attempt does not decide the deliverable', () => {
+    // A failed first attempt naming one artifact, then a passing retry naming
+    // another. `deliverableFor` read every observation in the run, so completion
+    // saw two artifacts and refused — an attempt the Gate had already superseded
+    // still deciding what could be accepted.
+    const k = fresh();
+    const w = walk(k, { command: FAILING });
+    const second = join(w.world, 'artifact2.txt');
+    writeFileSync(second, 'the retry\n');
+    const retry = k.openAttempt({
+      lineage: 'L', run: w.run, producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordArtifact({ id: 'art2', lineage: 'L', run: w.run, artifactKind: 'file', path: second });
+    k.runObservation({
+      id: 'cr2', lineage: 'L', run: w.run, attempt: retry.attempt,
+      command: FAILING, artifact: 'art2', inputsUsed: ['in1'],
+    });
+    const pkg2 = asObject({
+      ...w.pkg.value, id: 'pkg2', attempt: retry.attempt, artifact: 'art2', command_result: 'cr2',
+    });
+    k.recordPackage({
+      lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
+    });
+    k.observeInput({ lineage: 'L', id: 'in1', path: w.inputPath });
+    k.submitObservation({
+      lineage: 'L', run: w.run, obligation: 'O', observation: FAILING,
+      attempt: retry.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
+      commandResult: 'cr2', submitter: 'P',
+    });
+    eq('the retry decides', k.deliverableFor({
+      lineage: 'L', run: w.run, contract: k.contractFor('L').contract,
+    }).identity, digestBytes(readFileSync(second)));
   });
 
   group('AC-1 · the deliverable is the artifact the evidence exercised', () => {
@@ -274,15 +308,52 @@ export function completionTests() {
     eq('externally produced', signed.origin, 'host');
   });
 
-  group('AC-1 · the Contract names who signs', () => {
-    // `actor` was whatever the caller wrote, so a run could be signed off by a
-    // party the Contract never nominated.
-    const w = run();
-    refuses('someone the Contract did not nominate', 'authority_not_granted',
-      () => complete(w, { actor: 'P' }));
+  group('AC-5 · the Contract may not nominate its own signer', () => {
+    // The Kernel serves one Human Owner, configured outside any Contract, and a
+    // Contract names who signs it. Approval is where the two are bound: reading
+    // the signer out of the document under review is what let a caller write a
+    // Contract naming itself and hold every authority it granted.
+    const k = fresh();
+    const other = asObject(contractDoc({ final_signer: 'Someone Else' }));
+    refuses('a Contract naming another signer', 'authority_not_granted',
+      () => k.approve({
+        lineage: 'L', revision: 'r1', bytes: other.bytes, identity: other.identity,
+        actor: OWNER, rendered: RENDERED(other.bytes),
+      }));
   });
 
-  group('AC-1 · review is stated, never left empty', () => {
+  group('AC-5 · every authority operation answers to the same owner', () => {
+    // Downstream operations compare the actor with the owner alone. Restating the
+    // Contract's field at each one was a second copy of a fact approval settles,
+    // and a planted defect could not tell the two apart.
+    const w = run();
+    refuses('completion by someone else', 'authority_not_granted',
+      () => complete(w, { actor: 'P' }));
+    refuses('a sign-off by someone else', 'authority_not_granted',
+      () => w.k.signOff({ lineage: 'L', run: w.run, actor: 'P' }));
+  });
+
+  group('AC-2 · an observation of a decoy is not an observation of the input', () => {
+    // An id is a label the producer chose. Without the path, the packaged input
+    // could change while something else under the same label was observed
+    // unchanged, and the run stayed `passed`.
+    const k = fresh();
+    const w = walk(k);
+    const decoy = join(w.world, 'decoy.txt');
+    writeFileSync(decoy, 'in1\n');
+    writeFileSync(w.inputPath, 'the input moved\n');
+    k.observeInput({ lineage: 'L', id: 'in1', path: decoy });
+    eq('the observation answers a different file',
+      k.status({ lineage: 'L', run: w.run }).byObligation.O.code, 'material_input_incomplete');
+  });
+
+  group('AC-1 · V1 cannot obtain a review, and does not pretend to', () => {
+    // There was a `recordReview` that took a digest and a family and stamped them
+    // `origin: harness`, and completion checked only that such a record existed —
+    // so the party being judged wrote its own judge into being and got an
+    // Acceptance carrying a digest of nothing. V1 has no successful cross-family
+    // path at all, so a Contract that requires one cannot complete, and there is
+    // no method through which a review could be claimed.
     const cross = {
       contract: {
         independence: {
@@ -291,44 +362,26 @@ export function completionTests() {
         },
       },
     };
-    refuses('a required review that is absent', 'review_required_absent',
-      () => complete(run(cross)));
-
-    // A digest the caller chose is a claim about a review nobody else saw. It
-    // used to be enough that it was truthy.
-    refuses('a review nobody recorded', 'review_required_absent',
-      () => complete(run(cross), { acceptedReview: sha('imagined') }));
-
-    // And it must come from a family the Contract asked for. Only the digest was
-    // checked, so a review recorded as the implementer's own family satisfied a
-    // cross-family requirement.
-    const wrongFamily = run(cross);
-    wrongFamily.k.recordReview({
-      lineage: wrongFamily.lineage, run: wrongFamily.run,
-      identity: sha('the review'), family: 'anthropic',
-    });
-    refuses('a review from the implementer\'s own family', 'same_family_substituted',
-      () => complete(wrongFamily, { acceptedReview: sha('the review') }));
-
     const w = run(cross);
-    w.k.recordReview({
-      lineage: w.lineage, run: w.run, identity: sha('the review'), family: 'openai',
-    });
-    const { acceptance } = complete(w, { acceptedReview: sha('the review') });
-    eq('a recorded one is carried', acceptance.review.accepted_review, sha('the review'));
+    ok('there is no way to record a review', w.k.recordReview === undefined);
+    refuses('and a Contract requiring one cannot complete', 'review_required_absent',
+      () => complete(w));
+    refuses('nor by carrying a digest of its own', 'review_required_absent',
+      () => complete(w, { acceptedReview: sha('imagined') }));
 
-    // And the other direction: a Contract requiring none cannot carry one, or the
-    // Acceptance would say something the Contract does not.
+    // And a Contract requiring none may not carry one either: the Acceptance
+    // would say something the Contract does not.
     refuses('a review where none was required', 'review_required_absent',
       () => complete(run(), { acceptedReview: sha('unasked for') }));
   });
+
 
   group('AC-11 · completion has no second entry point', () => {
     // The write is the last step of `complete`, and its destination belongs to
     // the Kernel. A Kernel with no completion root cannot complete at all, which
     // is the honest answer to "where would it write".
     const dir = mkdtempSync(join(tmpdir(), 'ac11-'));
-    const k = new Kernel(join(dir, 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const k = new Kernel(join(dir, 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
     const w = walk(k);
     refuses('no root, no completion', 'writer_not_sole',
       () => k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' }));
@@ -408,7 +461,8 @@ export function completionTests() {
 
     // And a Kernel that cannot resolve them cannot approve at all, rather than
     // skipping the check because nobody configured a root.
-    const blind = new Kernel(join(mkdtempSync(join(tmpdir(), 'blind-')), 'log.ndjson'));
+    const blind = new Kernel(join(mkdtempSync(join(tmpdir(), 'blind-')), 'log.ndjson'),
+      { render: RENDERED, owner: OWNER });
     const good = asObject(contractDoc());
     refuses('a Kernel with nowhere to resolve them', 'citation_unknown',
       () => blind.approve({
