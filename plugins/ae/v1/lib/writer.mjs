@@ -1,0 +1,84 @@
+// The completion write — AC-11.
+//
+// Exactly one component writes completion. It does not overwrite, its destination
+// cannot be moved outside the allowed location, a failed write is detectable
+// rather than silently partial, and it does not stage through a temporary
+// location.
+//
+// That last one is a mechanism-level requirement rather than an outcome, and the
+// Contract says so: the settled disposition keeps the frozen no-replace primitive
+// as it is, and staging would change that mechanism rather than repair it.
+
+import { lstatSync, realpathSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { atomicFileNoReplace } from './fs-noreplace.mjs';
+import { fail } from './codes.mjs';
+
+// `O_EXCL` refuses a symlink at the final component and nowhere else, so the
+// parents are the caller's problem. Walking them is not belt-and-braces: a parent
+// swapped for a symlink redirects the write, and the primitive cannot see it.
+function assertNoSymlinkComponents(root, target) {
+  const rel = relative(root, target);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    fail('write_escapes_location', 'the target lies outside the allowed location', { root, target });
+  }
+  let current = root;
+  for (const part of rel.split('/').slice(0, -1)) {
+    current = join(current, part);
+    let stat;
+    try {
+      stat = lstatSync(current);
+    } catch (error) {
+      if (error.code === 'ENOENT') continue; // nothing below to check yet
+      throw error;
+    }
+    if (stat.isSymbolicLink()) {
+      fail('write_through_symlink', 'a path component is a symlink', { component: current });
+    }
+  }
+}
+
+// Traversal, not only symlinks: `a/../../b` resolves outside without any link
+// being involved. Both are checked because both redirect the write.
+function assertInsideLocation(root, target) {
+  const resolvedRoot = realpathSync(root);
+  const resolvedParent = (() => {
+    let dir = dirname(target);
+    for (;;) {
+      try { return realpathSync(dir); } catch (e) {
+        if (e.code !== 'ENOENT') throw e;
+        const up = dirname(dir);
+        if (up === dir) return dir;
+        dir = up;
+      }
+    }
+  })();
+  const rel = relative(resolvedRoot, resolvedParent);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    fail('write_escapes_location', 'the resolved target escapes the allowed location', {
+      root: resolvedRoot, resolved: resolvedParent,
+    });
+  }
+}
+
+// The sole writer. Named as a single exported function because "exactly one
+// component writes completion" is a property a test can check by enumerating
+// callers, and a second entry point would make that enumeration a lie.
+export function commitCompletion({ root, path, bytes, allowStaging = false }) {
+  if (allowStaging) {
+    // Present only so a fixture can attempt the prohibited shape and be refused.
+    fail('write_staged', 'completion is written in place, never staged and moved', { path });
+  }
+
+  const target = resolve(path);
+  // Symlink first: it is the more specific reason, and a link pointing outside
+  // would otherwise be reported as plain traversal, losing what actually happened.
+  assertNoSymlinkComponents(resolve(root), target);
+  assertInsideLocation(root, target);
+
+  const result = atomicFileNoReplace({ path: target, bytes });
+  if (result.outcome === 'exists') {
+    fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });
+  }
+  return result;
+}
