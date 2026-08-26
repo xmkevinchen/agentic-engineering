@@ -221,9 +221,6 @@ export function completionTests() {
     const retry = k.openAttempt({
       lineage: 'L', run: w.run, producer: 'P', obligations: ['O'], submitter: 'P',
     });
-    k.recordArtifact({
-      id: 'art2', lineage: 'L', run: w.run, obligation: 'O', artifactKind: 'file',
-    });
     k.runObservation({
       id: 'cr2', lineage: 'L', run: w.run, attempt: retry.attempt,
       obligation: 'O', artifact: 'art2',
@@ -234,7 +231,7 @@ export function completionTests() {
     k.recordPackage({
       lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
     });
-    k.observeInput({ lineage: 'L', id: INPUT, path: INPUT });
+    k.observeInput({ lineage: 'L', path: INPUT });
     k.submitObservation({
       lineage: 'L', run: w.run, obligation: 'O', observation: FAILING,
       attempt: retry.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
@@ -265,9 +262,6 @@ export function completionTests() {
         grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O', 'O2'] },
       },
     });
-    k.recordArtifact({
-      id: 'art2', lineage: 'L', run: w.run, obligation: 'O2', artifactKind: 'file',
-    });
     k.runObservation({
       id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt,
       obligation: 'O2', artifact: 'art2',
@@ -278,7 +272,7 @@ export function completionTests() {
     k.recordPackage({
       lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
     });
-    k.observeInput({ lineage: 'L', id: INPUT, path: INPUT });
+    k.observeInput({ lineage: 'L', path: INPUT });
     k.submitObservation({
       lineage: 'L', run: w.run, obligation: 'O2', observation: COMMAND,
       attempt: w.attempt.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
@@ -326,6 +320,17 @@ export function completionTests() {
       }));
   });
 
+  group('AC-1 · there is nothing to sign for in a run that failed', () => {
+    // It checked only that the Gate had reported *something*, so a failing run
+    // produced a host sign-off record — a durable statement that the Human Owner
+    // signed for work the Gate had refused.
+    const k = fresh();
+    const w = walk(k, { command: FAILING });
+    k.status({ lineage: 'L', run: w.run });
+    refuses('a sign-off for a failing run', 'not_all_passed',
+      () => k.signOff({ lineage: 'L', run: w.run, actor: OWNER }));
+  });
+
   group('AC-5 · every authority operation answers to the same owner', () => {
     // Downstream operations compare the actor with the owner alone. Restating the
     // Contract's field at each one was a second copy of a fact approval settles,
@@ -337,18 +342,30 @@ export function completionTests() {
       () => w.k.signOff({ lineage: 'L', run: w.run, actor: 'P' }));
   });
 
-  group('AC-2 · an observation of a decoy is not an observation of the input', () => {
-    // An id is a label the producer chose. Without the path, the packaged input
-    // could change while something else under the same label was observed
-    // unchanged, and the run stayed `passed`.
+  group('AC-2 · a decoy cannot stand in for the input', () => {
+    // A material input is identified by the path the Contract states, so there is
+    // no label for a producer to reuse. `observeInput` took an id and a path, and
+    // the packaged file could change while something else was observed unchanged
+    // under its name.
     const k = fresh();
     const w = walk(k);
     const decoy = 'work/decoy.txt';
     writeFileSync(join(SOURCE_ROOT, decoy), 'in1\n');
     writeFileSync(join(SOURCE_ROOT, INPUT), 'the input moved\n');
-    k.observeInput({ lineage: 'L', id: INPUT, path: decoy });
-    eq('the observation answers a different file',
-      k.status({ lineage: 'L', run: w.run }).byObligation.O.code, 'material_input_incomplete');
+    // Observing the decoy records the decoy, and says nothing about the input:
+    // the id is the path, so there is no name to borrow.
+    k.observeInput({ lineage: 'L', path: decoy });
+    const recorded = k.records().filter((r) => r.kind === 'input_observed');
+    eq('the decoy is recorded as itself', recorded[recorded.length - 1].id, decoy);
+
+    // The Gate still reads the last observation *of the input*, which is the one
+    // the run made — the world moving is not something the log knows until the
+    // Harness looks again. When it does, the evidence is stale.
+    eq('and has not been made to answer for the input',
+      k.status({ lineage: 'L', run: w.run }).byObligation.O.status, 'passed');
+    k.observeInput({ lineage: 'L', path: INPUT });
+    eq('looking at the input itself shows it moved',
+      k.status({ lineage: 'L', run: w.run }).byObligation.O.status, 'stale');
   });
 
   group('AC-1 · V1 cannot obtain a review, and does not pretend to', () => {

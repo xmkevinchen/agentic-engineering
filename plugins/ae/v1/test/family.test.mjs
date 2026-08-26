@@ -95,6 +95,13 @@ export function familyTests() {
     eq('a request nobody made', swapped.status({ lineage: 'L', run: 'run1' }).byObligation.O.code,
       'requested_substituted');
 
+    // And an arm the Gate refused is not one the Human Owner may decide about:
+    // the choice answers an event, and there was no admissible event.
+    refuses('a choice about an arm the Gate refused', 'human_input_absent',
+      () => swapped.decideUnavailable({
+        lineage: 'L', run: 'run1', actor: 'Human Owner', choice: 'stop',
+      }));
+
     // And a solo Contract cannot have an unavailable arm at all: nothing was
     // requested, so nothing can have been missing.
     const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });

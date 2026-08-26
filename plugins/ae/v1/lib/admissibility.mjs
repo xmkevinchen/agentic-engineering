@@ -160,10 +160,13 @@ export function admissibility({
     // the Contract by the Kernel, so counting it against the Contract counts one
     // list against itself. What is worth checking is that the package — which the
     // producer wrote — records every input the Contract states.
+    // Against the Contract's list. The runner's `inputs_used` is copied from that
+    // same list by the Kernel, so comparing the two compared one list with its own
+    // copy; what is worth checking is that the package — which the producer wrote
+    // — records every input the Contract states.
     const stated = entry.material_inputs || [];
     const recorded = new Set((pkg.material_inputs || []).map((i) => i.id));
     for (const used of stated) {
-      if (!result.inputs_used.includes(used)) return 'material_input_incomplete';
       if (!recorded.has(used)) return 'material_input_incomplete';
     }
     for (const input of pkg.material_inputs || []) {
@@ -177,10 +180,9 @@ export function admissibility({
       // observation taken before the evidence was packaged says the input was
       // current at some earlier moment, which is not what staleness asks.
       if (!(now.seq > pkg.seq)) return 'material_input_incomplete';
-      // And it must be an observation of the file the package named. An id is a
-      // label the producer chose, so without this the packaged input could change
-      // while a decoy under the same label was observed unchanged.
-      if (now.path !== input.path) return 'material_input_incomplete';
+      // No path comparison beside the id. A material input *is* its path now —
+      // the Contract states paths and `observeInput` takes nothing else — so
+      // comparing the two compared a value with itself.
     }
 
     return null;

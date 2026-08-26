@@ -143,8 +143,14 @@ declare it read nothing and thereby make staleness unreachable.
 
 The residue, stated once: **nothing establishes that the command actually read
 the artifact and the inputs the Contract names.** Proving that needs execution
-instrumentation V1 does not have. What is established is that the producer chose
-none of them.
+instrumentation — a tracing or hermetic adapter, platform-specific in practice —
+which V1 does not have. What is established is that the producer chose none of
+them, that the artifact is digested by the run rather than before it, and that a
+material input is its Contract-stated path with no label to reuse.
+
+This is a shortfall against AC-2, not a footnote. Like AC-5's, answering it means
+either extending the slice or amending the criterion, and that is the Human
+Owner's call.
 
 ## What is not built yet
 

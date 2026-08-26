@@ -168,13 +168,21 @@ printf "a refusal with an unknown code          %s\n" "$(run)"; revert codes.mjs
 plant kernel.mjs "          state.unavailableDecision = { choice: r.choice, answers: r.answers };" ""
 printf "replay forgets what the choice answers  %s\n" "$(run)"; revert kernel.mjs
 
-# Round 10's findings: what a run is run against, and what it reads.
-plant kernel.mjs "    const command = entry.observation;
-    const inputsUsed = entry.material_inputs;" \
-  "    const command = entry.observation;
-    const inputsUsed = [];"
-printf "a run that declares it read nothing     %s\n" "$(run)"; revert kernel.mjs
+# Round 11's findings.
+plant kernel.mjs "    const labels = new Set();" "    const labels = new Set(); if (true) return prior;"
+printf "a revision label used twice             %s\n" "$(run)"; revert kernel.mjs
 
+plant kernel.mjs "    this.#recordArtifact({ id: artifact, lineage, run, obligation, artifactKind: 'file' });" ""
+printf "the artifact is never digested          %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "      if (verdicts.get(obligation) !== 'passed') {" "      if (false) {"
+printf "a failing run is signed for             %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    const anyUnavailable = [...reached.values()].includes('unavailable');" \
+  "    const anyUnavailable = true;"
+printf "a choice about an inadmissible arm      %s\n" "$(run)"; revert kernel.mjs
+
+# Round 10's findings: what a run is run against, and what it reads.
 plant kernel.mjs "    const path = \`\${this.#sourceRoot}/\${entry.artifact}\`;" \
   "    const path = \`\${this.#sourceRoot}/work/decoy-artifact.txt\`;"
 printf "the artifact is not the one named       %s\n" "$(run)"; revert kernel.mjs
@@ -185,9 +193,6 @@ printf "a package that omits a stated input     %s\n" "$(run)"; revert admissibi
 # Round 9's findings.
 plant kernel.mjs "        if (r.attempt !== latest) continue;" ""
 printf "a superseded attempt still decides      %s\n" "$(run)"; revert kernel.mjs
-
-plant admissibility.mjs "      if (now.path !== input.path) return 'material_input_incomplete';" ""
-printf "a decoy is observed under an input's id %s\n" "$(run)"; revert admissibility.mjs
 
 plant kernel.mjs "    if (contract.independence.required === 'cross_family_required') {" "    if (false) {"
 printf "a cross-family Contract completes       %s\n" "$(run)"; revert kernel.mjs

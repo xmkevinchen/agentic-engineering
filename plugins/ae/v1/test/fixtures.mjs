@@ -173,15 +173,14 @@ export function walk(k, over = {}) {
 
   const attempt = k.openAttempt({ lineage, run, producer, obligations, submitter: producer });
 
-  const artifact = k.recordArtifact({
-    id: 'art1', lineage, run, obligation: obligations[0], artifactKind: 'file',
-  });
+  // One operation: the command runs, and what it ran against is digested after.
   k.runObservation({
     id: 'cr1', lineage, run, attempt: attempt.attempt,
     obligation: obligations[0], artifact: 'art1',
   });
+  const artifact = k.records().find((r) => r.kind === 'artifact_recorded' && r.id === 'art1');
 
-  if (observeBeforePackaging) k.observeInput({ lineage, id: INPUT, path: INPUT });
+  if (observeBeforePackaging) k.observeInput({ lineage, path: INPUT });
 
   const pkg = asObject(packageDoc({
     attempt: attempt.attempt,
@@ -195,7 +194,7 @@ export function walk(k, over = {}) {
   });
 
   if (inputNow) writeFileSync(inputPath, inputNow);
-  if (!observeBeforePackaging) k.observeInput({ lineage, id: INPUT, path: INPUT });
+  if (!observeBeforePackaging) k.observeInput({ lineage, path: INPUT });
 
   for (const obligation of obligations) {
     k.submitObservation({

@@ -407,6 +407,18 @@ export class Kernel {
         lineage, count: genesis.length,
       });
     }
+    // One label, one set of bytes. Currentness is the revision string, so two
+    // approvals sharing a label meant evidence captured under the first stayed
+    // `passed` while completion named the second's identity.
+    const labels = new Set();
+    for (const a of prior) {
+      if (labels.has(a.revision)) {
+        fail('lineage_immutable', 'a revision label is used twice in this lineage', {
+          lineage, revision: a.revision,
+        });
+      }
+      labels.add(a.revision);
+    }
     for (let i = 1; i < prior.length; i += 1) {
       if (prior[i].predecessor !== prior[i - 1].identity.byte_sha256) {
         fail('lineage_predecessor_wrong', 'the approval history forks', {
@@ -463,6 +475,11 @@ export class Kernel {
   // `AE-SUBJECTS: <n>`. A command that prints none leaves the count absent, which
   // admissibility reads as unestablishable — not as zero, and not as "assume it
   // exercised something".
+  // Running the command and digesting what it ran against are one operation.
+  //
+  // They were two, and the artifact was normally recorded first: record A, change
+  // it to B, run against B, and the Acceptance carried A's digest. Digesting
+  // after the command binds the identity to the execution that produced it.
   runObservation({ id, lineage, run, attempt, obligation, artifact }) {
     // What is run, and what it reads, both come from the Contract. `command` and
     // `inputsUsed` were arguments: a producer could declare it had read nothing,
@@ -497,6 +514,8 @@ export class Kernel {
       exit = typeof error.status === 'number' ? error.status : 1;
       raw = `${error.stdout || ''}${error.stderr || ''}`;
     }
+    // After the command, not before.
+    this.#recordArtifact({ id: artifact, lineage, run, obligation, artifactKind: 'file' });
     const marker = /^AE-SUBJECTS:\s*(\d+)\s*$/m.exec(raw);
     return this.#ledger.append({
       kind: 'command_result', id, lineage, run, attempt, command, artifact, exit,
@@ -547,7 +566,11 @@ export class Kernel {
   // Paths are repository-relative, resolved against the root — the same root the
   // Harness runs in and cited sources resolve from. An absolute path from a
   // caller would be a way to point "now" at a file nobody else can see.
-  observeInput({ lineage, id, path }) {
+  observeInput({ lineage, path }) {
+    // No `id`. A material input is identified by the path the Contract states,
+    // so there is nothing for a producer to label: it used to pass both, and
+    // could observe a decoy under the id of the file it had packaged.
+    const id = path;
     // The path is recorded with the identity. Without it the log said an input
     // had a digest and not what had been looked at, so replay could not say
     // where "now" was read from — and nothing tied two observations of the same
@@ -586,7 +609,7 @@ export class Kernel {
   // Digested here, not declared. The identity recorded is the deliverable the
   // Acceptance names, so accepting one as an argument let the producer name what
   // its own evidence would be taken to have exercised.
-  recordArtifact({ id, lineage, run, obligation, artifactKind }) {
+  #recordArtifact({ id, lineage, run, obligation, artifactKind }) {
     // The path comes from the Contract's entry for this obligation, not from the
     // caller. It was an argument, so the producer chose which file its passing
     // command would be taken to have exercised.
@@ -961,11 +984,24 @@ export class Kernel {
         actor,
       });
     }
+    // A verdict has to have been *recorded*, not merely computable: reducing on
+    // demand always produces a status, so asking the reduction whether the Gate
+    // had reported was asking it to answer for itself.
     const reported = this.records().some(
       (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
     );
     if (!reported) {
       fail('signoff_before_gate', 'the sign-off predates the Gate result', { lineage, run });
+    }
+    const verdicts = this.verdictsNow({ lineage, run });
+    // And it signs for a run that passed. It checked only that the Gate had
+    // reported *something*, so a failing run produced a host sign-off record.
+    for (const obligation of approved.contract.obligations) {
+      if (verdicts.get(obligation) !== 'passed') {
+        fail('not_all_passed', 'there is nothing here to sign for', {
+          obligation, status: verdicts.get(obligation),
+        });
+      }
     }
     const deliverable = this.deliverableFor({ lineage, run, contract: approved.contract });
     return this.#ledger.append({
@@ -1086,7 +1122,14 @@ export class Kernel {
   // as parameters, so the party being judged supplied the standard, the authority
   // and the notion of "current" — three different ways to pass without changing
   // anything true.
-  status({ lineage, run }) {
+  // Reducing and recording the verdict are one operation. They were two, so
+  // another writer could open a newer attempt between them and the log kept a
+  // `passed` a replay recomputes as `pending`.
+  status(args) {
+    return this.#ledger.transaction(() => this.#statusLocked(args));
+  }
+
+  #statusLocked({ lineage, run }) {
     const result = this.#reduce({ lineage, run });
     const current = this.currentRevision(lineage);
     const { contract } = this.contractFor(lineage);
@@ -1272,9 +1315,14 @@ export class Kernel {
     if (!['wait', 'stop', 'amend'].includes(choice)) {
       fail('human_input_absent', 'the decision must be wait, stop, or amend', { choice });
     }
-    const unavailable = this.records().find(
+    // The arm has to have been reached, not merely claimed. A record the Gate
+    // found inadmissible — a substituted request, say — left the obligation
+    // `invalid`, and the Human Owner could still record a choice about it.
+    const reached = this.verdictsNow({ lineage, run });
+    const anyUnavailable = [...reached.values()].includes('unavailable');
+    const unavailable = anyUnavailable ? this.records().find(
       (r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run,
-    );
+    ) : null;
     if (!unavailable) {
       // A pre-authorized choice is not a decision about something that had not
       // happened yet.
@@ -1350,17 +1398,10 @@ export class Kernel {
     // operations, which narrowed the window rather than closing it — and "the
     // latest attempt decides at the moment the bytes land" is either an invariant
     // or a hope.
-    // Already under `complete`'s lock, so nothing has moved since it reduced.
-    // This re-derivation stays because the write is where the invariant has to
-    // hold, and reading it here says so at the point it matters.
-    const latest = this.verdictsNow({ lineage: acceptance.lineage, run });
-    for (const obligation of obligations) {
-      if (latest.get(obligation) !== 'passed') {
-        fail('not_all_passed', 'the run stopped passing before the Acceptance landed', {
-          obligation, status: latest.get(obligation),
-        });
-      }
-    }
+    // No second reduction here. The whole of completion holds one lock, so
+    // nothing can have moved since it reduced — re-deriving under the same lock
+    // reads the same records and reaches the same answer, which is a copy rather
+    // than a check.
     const result = atomicFileNoReplace({ path: target, bytes });
     if (result.outcome === 'exists') {
       fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });

@@ -30,10 +30,10 @@ try {
     // passes — the genesis really is the prior approval it saw — and the result
     // is a fan rather than a chain.
     const doc = JSON.parse(process.env.CONTRACT_BYTES);
-    const bytes = JSON.stringify({ ...doc, revision: `r${index}`, predecessor: process.env.GENESIS });
+    const bytes = JSON.stringify({ ...doc, revision: `rev${index}`, predecessor: process.env.GENESIS });
     const { identify } = await import('../lib/identity.mjs');
     k.approve({
-      lineage: 'L', revision: `r${index}`, bytes, identity: identify(bytes),
+      lineage: 'L', revision: `rev${index}`, bytes, identity: identify(bytes),
       predecessor: process.env.GENESIS, actor: 'Human Owner', rendered: RENDERED(bytes),
     });
   } else if (what === 'attempt') {
