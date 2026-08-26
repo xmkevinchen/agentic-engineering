@@ -266,11 +266,11 @@ preserved wherever each is available. A provider label is a request. What the
 archive says the backend actually did is an observation. Only a correlated
 observation supports an effective-family claim.
 
-How far that preservation is *exercised* depends on what ships. Without a
-backend that answers, only the `requested` half is observable: AE must retain
-what the Contract asked for and claim nothing about an observation it never
-made. The correlation from a populated `observed` to `effective` becomes
-exercisable only when a provider answers — see
+Which half is *exercisable* depends on whether a backend answers in that
+particular run. When none does, only the `requested` half is observable: AE must
+retain what the Contract asked for and claim nothing about an observation it
+never made. The correlation from a populated `observed` to `effective` is
+exercised only in a run where a provider answers — see
 [`acceptance.md` X2a/X2b](acceptance.md#5-cross-family-criteria) for the
 split and its owners.
 
@@ -292,8 +292,9 @@ does not maintain a second workflow or a second Gate for cross-family work.
 The table above is about *a user choosing* a seat, and that choice stays optional
 and risk-driven. It is not about whether AE must **prove** the seat behaves. AE
 ships a live cross-family capability, so proving it never passes off a request as
-an observation is mandatory regardless of whether any Contract ever selects it —
-see [`acceptance.md` §5](acceptance.md#5-cross-family-criteria).
+an observation is mandatory regardless of whether any **user's** Contract ever
+selects it. AE supplies that proof from a Contract of its own — see
+[`acceptance.md` §5](acceptance.md#5-cross-family-criteria).
 
 ## 6. Knowledge Feedback
 

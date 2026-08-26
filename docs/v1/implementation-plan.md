@@ -214,9 +214,11 @@ Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
   same-family reviewer;
 - the same `Review` shape as a same-family seat.
 
-**Exit:** one Contract that declares a high-risk cross-family review runs through
-the bridge with a provider that actually answers, and is accepted —
-[`acceptance.md` X1 and X2b](acceptance.md#5-cross-family-criteria). V1 already
+**Exit:** AE's own **release-qualification Contract** — declaring
+`cross_family_required` over real AE-on-AE work, not a synthetic fixture — runs
+through the bridge with a provider that actually answers, and is accepted
+([`acceptance.md` X1 and X2b](acceptance.md#5-cross-family-criteria)). The
+release cannot wait for a user to declare cross-family, so AE declares it. V1 already
 proved the unavailable branch, so V3 does not re-demonstrate it; what V3 must
 additionally show is that adding a real provider introduced no second workflow
 and no second Gate (X4).
@@ -319,8 +321,9 @@ V0 ──▶ V1 ──▶ V2 ──▶ V3   ── all three are release prerequ
 - V1 depends on V0 only for scope confirmation, not for new mechanisms.
 - V2 depends on V1's Contract, Assignment, Evidence, and Gate being real.
 - V3 depends on V2's `Review` object; it adds a seat, not a workflow.
-- V4 depends on having real records, which means at least V1 and V2 have run
-  more than once.
+- V4 depends on having real records from V1, V2 **and** V3 — all three are
+  release prerequisites, so all three will have run more than once by the time
+  V4 has anything worth learning from.
 - V5 depends on an observed failure. It has no schedule.
 
 ## 5. What this plan refuses to do

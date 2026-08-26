@@ -120,6 +120,16 @@ on the mainline.
 
 All five must run before release.
 
+**Who declares it.** A user may never write `cross_family_required` into a
+Contract of their own, and that stays their choice — so the obligation cannot
+rest on one appearing. AE supplies its own: a **release-qualification Contract**,
+declaring `cross_family_required`, over real AE-on-AE work. It is an ordinary
+Contract that goes through the ordinary flow and produces an ordinary
+Acceptance; what makes it a qualification Contract is only that the release
+requires one to exist. A synthetic fixture would not do — every slice must run
+on real repository work, and a path proven only against a mock is a path proven
+against a mock.
+
 | # | Criterion | Owner |
 |---|---|---|
 | X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | V3 |
@@ -138,7 +148,7 @@ the release needs both.
 
 ### Why there is no N/A exemption here
 
-Six attempts were made to write one, and each named a condition that can change
+Four formulations were attempted, and each named a condition that can change
 without a release. They are recorded so none grows back:
 
 | Rejected as evidence of unreachability | Why |
