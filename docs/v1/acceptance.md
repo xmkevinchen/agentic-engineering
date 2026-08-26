@@ -22,7 +22,7 @@ AE v1 is releasable when all six hold:
 | 2 | The V2 Agent Teams flow has completed at least one real feature including a finding that required rework and re-review. |
 | 3 | The Kernel integrity criteria in §3 all fail closed. |
 | 4 | The Agent Teams handoff criteria in §4 hold, including under lost coordination state. |
-| 5 | Every cross-family criterion in §5 has run — both the unavailable arm and the successful path. AE ships a live cross-family capability, so AE must show it does not lie about what answered. |
+| 5 | All six cross-family criteria in §5 have run — the unavailable arm and the successful path. AE ships a live cross-family capability, so AE must show it does not lie about what answered. |
 | 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
 **V4 and V5 are not release prerequisites. V3 is** — reversed on 2026-08-25 after
@@ -118,7 +118,7 @@ that failure is reachable because the capability is live: `plugin.json` register
 the Codex, Gemini, and OpenAI-compatible MCP servers, and the bridge is already
 on the mainline.
 
-All five must run before release.
+All six must run before release.
 
 **Who declares it.** A user may never write `cross_family_required` into a
 Contract of their own, and that stays their choice — so the obligation cannot
@@ -158,11 +158,10 @@ Two things it must not become:
   prove nothing about the machinery under review.
 
 **These are distinct Contracts and distinct runs.** The unavailable arm — X2a,
-X3, and X4 on that path — is V1's non-terminating test-corpus Contract, which
-produces no Acceptance by construction. The qualification Contract — X1, X2b,
-and X4 rechecked with a live backend — is V3's, and it terminates. X4 is the one
-criterion both runs exercise, which is why its owner column names both. Nothing
-requires the two Contracts to be the same, and they cannot be.
+X3 and X4a — is V1's non-terminating test-corpus Contract, which produces no
+Acceptance by construction. The qualification Contract — X1, X2b and X4b — is
+V3's, and it terminates. Nothing requires the two Contracts to be the same, and
+they cannot be.
 
 | # | Criterion | Owner |
 |---|---|---|
@@ -170,10 +169,23 @@ requires the two Contracts to be the same, and they cannot be.
 | X2a | The `requested` identity **the Contract states** appears in AE's dispatch-attempt and unavailable records with an identical **canonical-JSON encoding** (equivalently, an identical canonical digest), bound to the same Contract revision and run, while `observed` and `effective` are **absent — not `null`, not empty**. A request field is never reported as an effective-family claim. | V1 |
 | X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | V3 |
 | X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | V1 |
-| X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | V1 establishes it on the unavailable path; **V3 rechecks it** once a real provider answers |
+| X4a | Both arms reach their status through the same reducer and commit through the same writer. | V1 |
+| X4b | There is no second pipeline: cross-family adds a seat, not a path of its own. | V3 |
 
-The split between X2a and X2b is about *when each is exercisable*, not about
-whether either is required. An unavailable run proves AE does not invent an
+**X2 and X4 are each split for the same reason:** one half is provable before any
+provider answers and the other is not. Both halves of both are required; the split
+says *when* each becomes exercisable, not whether it matters.
+
+For X4 the line is sharper than it looks. *One reducer, one writer* is observable
+in V1 — there is one of each, and both arms can be traced through them. *No second
+pipeline* is not: establishing that nothing else can reach a status needs a closed
+universe of callable entry points, and v1 has none. The release manifest closes
+file membership, not reachability — which is exactly why the X2b exemption was
+deleted. A release shipping X4a alone and calling it X4 would assert the property
+this document exists to refuse. V1 therefore owns what it can observe, and V3 owns
+the rest, alongside the provider that makes it observable.
+
+The X2 split follows the same logic. An unavailable run proves AE does not invent an
 effective identity out of nothing — X2a, bounded deliberately at AE's own
 records, because a run that stops before the backend handoff cannot show what a
 provider received. Only a backend that answers exercises the correlation from a

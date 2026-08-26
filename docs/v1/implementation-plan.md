@@ -133,10 +133,9 @@ human intent
   seventh durable object; it is an event, and without it "a human decided" is a
   claim with nothing behind it.
 
-  Owner of [X2a and X3](acceptance.md#5-cross-family-criteria), and of X4 on the
-  unavailable path — V3 rechecks X4 once a real provider answers, since a second
-  workflow is exactly the kind of thing a live backend could introduce. V3 owns
-  X1 and X2b; [criterion 5](acceptance.md#1-release-criteria) requires all five. X2a is bounded at **AE's
+  Owner of [X2a, X3 and X4a](acceptance.md#5-cross-family-criteria) — the halves
+  observable before any provider answers. V3 owns X1, X2b and X4b, which need one;
+  [criterion 5](acceptance.md#1-release-criteria) requires all six. X2a is bounded at **AE's
   own records**, not at the provider: the `requested` identity the Contract
   states — the sole authoritative source ([`design.md` §9](design.md#9-minimal-durable-objects))
   — appearing in the dispatch-attempt and unavailable records with an identical
@@ -229,8 +228,9 @@ wait for a user to declare cross-family, so the Human Owner declares it, and the
 Contract records why that work earns source independence rather than citing the
 release's need for it. V1 already
 proved the unavailable branch, so V3 does not re-demonstrate it; what V3 must
-additionally show is that adding a real provider introduced no second workflow
-and no second Gate (X4).
+additionally show is X4b — that adding a real provider introduced no second
+pipeline, which V1 cannot establish because it has no closed universe of callable
+entry points to enumerate.
 
 **V3 is a release prerequisite** — reversed on 2026-08-25. It was scoped as
 optional on the assumption that a release could decline to ship the successful
