@@ -188,6 +188,10 @@ plant kernel.mjs "      const found = records.filter((r) => r.kind === kind && r
   "      const found = records.filter((r) => r.kind === kind && r[field] === value).slice(0, 1);"
 probe RED "two records under one name"; revert kernel.mjs
 
+plant gate.mjs "  if (ctx.inputsChanged(record, ctx)) {" \
+  "  if (record.at > 0 && ctx.inputsChanged(record, ctx)) {"
+probe RED "a verdict that reads the clock"; revert gate.mjs
+
 # Round 16's findings: cost is time, and an operation has its own event.
 plant kernel.mjs "      formation_elapsed: approval.at - formationFrom.at," \
   "      formation_elapsed: approval.seq - formationFrom.seq,"

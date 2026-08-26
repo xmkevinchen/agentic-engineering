@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
-import { auditWritePath } from '../lib/source-audit.mjs';
+import { auditWritePath, auditReductionIgnoresTime } from '../lib/source-audit.mjs';
 import { KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
@@ -201,6 +201,16 @@ export function recordTests() {
     // original run decided. A log that replays into a different verdict is a log
     // that cannot account for its own Acceptance.
     eq('and recomputing agrees', out.recomputed.O, 'passed');
+  });
+
+  group('AC-4 · the verdict does not read when a record landed', () => {
+    // Records carry `at` because AC-9 asks a question about the world. A verdict
+    // reading it would depend on how long something took — and the noninterference
+    // cases below cannot catch that, because they replay one log and a stored
+    // timestamp is the same on every replay.
+    const timely = auditReductionIgnoresTime({ readFileSync, dir: libDir });
+    eq('the reduction ignores it',
+      timely.map((t) => `${t.file}:${t.source}`).join(','), '');
   });
 
   group('AC-13 · the verdict depends on the log and nothing else', () => {

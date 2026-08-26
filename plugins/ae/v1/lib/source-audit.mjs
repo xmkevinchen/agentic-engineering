@@ -46,3 +46,22 @@ export function auditOriginSurface({ readFileSync, dir, file = 'kernel.mjs' }) {
   }
   return found;
 }
+
+// AC-4 — the reduction does not read when a record landed.
+//
+// Records carry `at`, observed by the writer, because AC-9 asks a question about
+// the world and nothing else can answer it. A verdict that read it would be a
+// verdict that depends on how long something took.
+//
+// The noninterference cases cannot catch that: they replay one log with the
+// environment varied, and a stored timestamp is the same on every replay. So this
+// is checked where it can be — the reduction's own source.
+export function auditReductionIgnoresTime({ readFileSync, dir, files = ['gate.mjs', 'admissibility.mjs'] }) {
+  const found = [];
+  for (const name of files) {
+    const text = readFileSync(`${dir}/${name}`, 'utf8');
+    if (/\.at\b/.test(text)) found.push({ file: name, source: '.at' });
+    if (/Date\.now/.test(text)) found.push({ file: name, source: 'Date.now' });
+  }
+  return found;
+}
