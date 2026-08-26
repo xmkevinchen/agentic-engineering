@@ -157,10 +157,12 @@ Two things it must not become:
   lineage would be the self-report AE exists to reject, and the review would
   prove nothing about the machinery under review.
 
-**These are distinct Contracts and distinct runs.** The unavailable arm (X2a,
-X3) is V1's non-terminating test-corpus Contract, which produces no Acceptance
-by construction. The qualification Contract (X1, X2b) is V3's, and it
-terminates. Nothing requires them to be the same Contract, and they cannot be.
+**These are distinct Contracts and distinct runs.** The unavailable arm — X2a,
+X3, and X4 on that path — is V1's non-terminating test-corpus Contract, which
+produces no Acceptance by construction. The qualification Contract — X1, X2b,
+and X4 rechecked with a live backend — is V3's, and it terminates. X4 is the one
+criterion both runs exercise, which is why its owner column names both. Nothing
+requires the two Contracts to be the same, and they cannot be.
 
 | # | Criterion | Owner |
 |---|---|---|
