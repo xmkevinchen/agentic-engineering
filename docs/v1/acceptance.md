@@ -231,6 +231,11 @@ These need a decision and are not resolvable from the code or the handoff.
 | 4 | **Whether the archived `finalized/**` specification should stay in `docs/`** now that it is a design input rather than the plan. | It is 3,159 lines of archived normative prose. Keeping it is defensible; so is moving it beside the other design history. |
 | 5 | **Whether v1 ships as `0.15.x` or `1.0.0`** of the `ae` plugin (currently `0.14.2`). | The name "AE v1" and the plugin's semver are not the same thing, and conflating them would be a release claim. |
 
+**None of items 2–5 blocks V1.** Two are tidying (4, 5), one is a confirmation of
+a choice already made (2), and one is a data disposition whose consumer — rollout
+— is deferred (3). They are listed because they are unresolved, not because
+anything waits on them.
+
 ## 8. What this document does not do
 
 It is not a Gate, a waiver, a scorecard, or a receipt. It states what would have
