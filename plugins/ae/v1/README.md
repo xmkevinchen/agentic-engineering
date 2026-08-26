@@ -10,19 +10,23 @@ purpose: a reduction, an identity check, an admissibility check, a record, and
 one writer — reached through one object.
 
 ```text
-lib/kernel.mjs         the channel: every operation, and the only way to any of them
+lib/kernel.mjs         the channel: every operation, the log itself, and the only way to either
 lib/codes.mjs          typed refusals — every Contract falsifier has a name
 lib/gate.mjs           the reduction: select, then reduce, by a stated table
 lib/identity.mjs       two identities per object
 lib/admissibility.mjs  what makes an observation count as evidence
 lib/family.mjs         the requested identity, and the unavailable arm
 lib/formation.mjs      the provenance trace, including the landing check
-lib/ledger.mjs         append-only record, closed at the append boundary — not exported
+lib/ledger.mjs         the closed set of record kinds, and the audit that keeps it so
 lib/write-path.mjs     where a completion write may land
 lib/source-audit.mjs   properties only the source can answer: staging, origin
 lib/schema.mjs         closed-format validation, and validation of the schemas
 schema/objects.mjs     the four durable objects
 schema/records.mjs     the closed shape of every record kind
+
+canonical-json.mjs, errors.mjs, freeze.mjs and fs-noreplace.mjs are copies of the
+frozen foundation corpus, kept byte-identical on purpose — see Q-01. Some of what
+they export has no V1 consumer, and pruning it would fork the copy.
 ```
 
 Run: `sh plugins/ae/tests/scripts/test-v1-kernel.sh`
