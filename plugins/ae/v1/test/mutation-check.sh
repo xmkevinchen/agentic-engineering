@@ -168,6 +168,11 @@ printf "a refusal with an unknown code          %s\n" "$(run)"; revert codes.mjs
 plant kernel.mjs "          state.unavailableDecision = { choice: r.choice, answers: r.answers };" ""
 printf "replay forgets what the choice answers  %s\n" "$(run)"; revert kernel.mjs
 
+plant gate.mjs "import { canonicalDigest } from './canonical-json.mjs';" \
+  "import { canonicalDigest } from './canonical-json.mjs';
+import { readFileSync } from 'node:fs';"
+printf "the reduction reaches for the world     %s\n" "$(run)"; revert gate.mjs
+
 # Round 11's findings.
 plant kernel.mjs "    const labels = new Set();" "    const labels = new Set(); if (true) return prior;"
 printf "a revision label used twice             %s\n" "$(run)"; revert kernel.mjs

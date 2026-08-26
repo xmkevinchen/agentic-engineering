@@ -46,3 +46,31 @@ export function auditOriginSurface({ readFileSync, dir, file = 'kernel.mjs' }) {
   }
   return found;
 }
+
+// AC-13 — the reduction reads records and nothing else.
+//
+// This is the completeness half stated as a property of the program rather than
+// as a list of record kinds to look for. If the Gate can only see what was
+// written down, then whatever it relied on was written down, and a replay from
+// the log alone reaches the same verdict — which the fresh-process cases assert
+// for both arms.
+//
+// A list of kinds cannot say this: it is satisfied by whatever the author
+// happened to enumerate, and says nothing about an input arriving from somewhere
+// else. Reading the world — a file, the clock, the environment — is what would
+// break it, so that is what is checked.
+const AMBIENT = [
+  "from 'node:fs'", "from 'node:child_process'", "from 'node:os'",
+  'process.env', 'Date.now', 'Math.random', 'new Date',
+];
+
+export function auditReductionPurity({ readFileSync, dir, files = ['gate.mjs', 'admissibility.mjs'] }) {
+  const found = [];
+  for (const name of files) {
+    const text = readFileSync(`${dir}/${name}`, 'utf8').replace(/const AMBIENT[\s\S]*?\];/, '');
+    for (const source of AMBIENT) {
+      if (text.includes(source)) found.push({ file: name, source });
+    }
+  }
+  return found;
+}

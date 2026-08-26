@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
-import { auditWritePath } from '../lib/source-audit.mjs';
+import { auditWritePath, auditReductionPurity } from '../lib/source-audit.mjs';
 import { KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
@@ -199,6 +199,17 @@ export function recordTests() {
     // original run decided. A log that replays into a different verdict is a log
     // that cannot account for its own Acceptance.
     eq('and recomputing agrees', out.recomputed.O, 'passed');
+  });
+
+  group('AC-13 · the reduction reads records and nothing else', () => {
+    // The completeness half — "did we write what we relied on" — stated as a
+    // property of the program. If the Gate can only see what was written down,
+    // then whatever it relied on was written down, and replay from the log alone
+    // reaches the same verdict. Enumerating record kinds instead would be
+    // satisfied by whatever anyone happened to list.
+    const ambient = auditReductionPurity({ readFileSync, dir: libDir });
+    eq('the reduction touches nothing ambient',
+      ambient.map((a) => `${a.file}:${a.source}`).join(','), '');
   });
 
   group('AC-13 · the unavailable arm replays too', () => {
