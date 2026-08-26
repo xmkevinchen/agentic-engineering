@@ -51,8 +51,15 @@ export function admissibility({
   approvals,       // approval history, for activation ordering
   index,           // resolvers: package(id), attempt(id), artifact(id), commandResult(id)
   inputsNow,       // the Harness's latest observation of a material input
+  run,             // the execution being judged
 }) {
   return function admit(record) {
+    // Not a duplicate of selection's attempt filter. Attempt ids are minted from
+    // an Assignment id and a sequence number, and an Assignment id is unique only
+    // within a run — so two runs can mint the same attempt and each other's
+    // submissions become selectable. This is the comparison that separates them.
+    if (record.run !== run) return 'binding_cross_execution';
+
     if (record.kind === 'capability_unavailable') {
       return admitUnavailable(record, { contract, assignment, index });
     }

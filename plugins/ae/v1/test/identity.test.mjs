@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { identify, verify, currentRevision } from '../lib/identity.mjs';
 import { Kernel } from '../lib/kernel.mjs';
-import { asObject, contractDoc, RENDERED } from './fixtures.mjs';
+import { asObject, contractDoc, RENDERED, SOURCE_ROOT } from './fixtures.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 
 export function identityTests() {
@@ -37,7 +37,7 @@ export function identityTests() {
   // `checkApproval`, which the tests called and the approval path did not — so
   // every case passed and none of it was reached.
   group('AC-3 · lineage relations', () => {
-    const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1i-')), 'log.ndjson'));
+    const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1i-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
     const approve = (k, over, extra = {}) => {
       const c = asObject(contractDoc(over));
       return k.approve({

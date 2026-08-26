@@ -187,6 +187,17 @@ export const RECORDS = Object.freeze({
       seq,
     },
   },
+  // An independent review, as the Harness received it. A digest a caller hands to
+  // completion is a claim about a review nobody else saw; this is the record it
+  // has to resolve against.
+  review_recorded: {
+    type: 'object', additional: false,
+    required: ['kind', 'lineage', 'run', 'identity', 'family', 'origin', 'seq'],
+    properties: {
+      kind: text, lineage: id, run: id, identity: digest, family: id,
+      origin: { type: 'const', value: 'harness' }, seq,
+    },
+  },
   delivery: {
     type: 'object', additional: false,
     required: ['kind', 'lineage', 'to', 'carried', 'provenance', 'origin', 'seq'],
@@ -234,8 +245,8 @@ export const RECORDS = Object.freeze({
   },
   completion_committed: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'acceptance', 'path', 'seq'],
-    properties: { kind: text, lineage: id, run: id, acceptance: digest, path: text, seq },
+    required: ['kind', 'lineage', 'run', 'identity', 'path', 'seq'],
+    properties: { kind: text, lineage: id, run: id, identity, path: text, seq },
   },
   run_record: {
     type: 'object', additional: false,

@@ -6,79 +6,77 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
-import { commitCompletion } from '../lib/writer.mjs';
 import { auditWritePath } from '../lib/write-audit.mjs';
 import { Ledger, KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
 import { execFileSync } from 'node:child_process';
 import { Kernel } from '../lib/kernel.mjs';
-import { walk } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, RENDERED, SOURCE_ROOT } from './fixtures.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 
 const tmp = (p) => mkdtempSync(join(tmpdir(), p));
 
 export function recordTests() {
   group('AC-11 · the completion write', () => {
-    const root = tmp('v1w-');
-    const out = join(root, 'done');
-    mkdirSync(out);
-    mkdirSync(join(root, 'inside'));
-
-    // A real Acceptance: the writer validates the shape now, not merely that
-    // something truthy was passed.
-    const d = (s) => `sha256:${'0'.repeat(64 - s.length)}${s}`;
-    const acceptance = {
-      lineage: 'L', contract_revision: 'r1',
-      contract_identity: { byte_sha256: d('a'), canonical_sha256: d('b'), length: 10 },
-      deliverable: { kind: 'commit', identity: d('c') },
-      decision: { outcome: 'accepted', origin: 'host', run: 'run1', seq: 9 },
-      review: { required: false, statement: 'none required' },
+    // Through `complete`, because there is no other way in. It used to be an
+    // exported `commitCompletion(root, path, acceptance, verdicts)`, which was a
+    // second completion entry point however carefully the Kernel called it:
+    // importing the module wrote an Acceptance with no Gate and no sign-off.
+    const completed = () => {
+      const dir = tmp('v1w-');
+      const k = new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT });
+      const w = walk(k);
+      return { dir, k, w };
     };
-    const recordedVerdicts = [{
-      kind: 'gate_result', run: 'run1', contract_revision: 'r1',
-      obligation: 'O', status: 'passed',
-    }];
-    const write = (path, over = {}) => commitCompletion({
-      root, path, acceptance, recordedVerdicts, obligations: ['O'],
-      run: 'run1', revision: 'r1', ...over,
-    });
 
-    eq('a first write succeeds', write(join(out, 'a.json')).outcome, 'created');
-    refuses('it does not overwrite', 'write_would_clobber', () => write(join(out, 'a.json')));
+    const { k, w, dir } = completed();
+    const written = k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' });
+    eq('a first write succeeds', written.written.outcome, 'created');
+    refuses('it does not overwrite', 'write_would_clobber',
+      () => k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' }));
+    ok('and it landed inside the root', written.written.path.startsWith(dir));
+
     // Not a flag a fixture sets to be refused — that only proves a `fail` fires
     // when asked. The write path's own call sites are read, so a move, link or
     // copy is found whether or not anyone thought to test for it.
     const staging = auditWritePath({ readFileSync, dir: libDir });
     eq('it does not stage', staging.map((f) => `${f.file}:${f.call}`).join(','), '');
-    refuses('traversal cannot leave the location', 'write_escapes_location',
-      () => write(join(out, '..', '..', 'escaped.json')));
 
-    // The writer takes an Acceptance and the verdicts it rests on. An earlier
-    // draft accepted any path and any bytes with no Gate input, which made this
-    // a file write that happened to be called completion.
-    refuses('arbitrary bytes with no Acceptance', 'not_all_passed',
-      () => write(join(out, 'c.json'), { acceptance: undefined }));
-    refuses('an obligation with no recorded verdict', 'record_not_appended',
-      () => write(join(out, 'd.json'), { obligations: ['O', 'NEVER-RUN'] }));
-    refuses('an obligation that did not pass', 'not_all_passed',
-      () => write(join(out, 'e.json'), {
-        recordedVerdicts: [{ ...recordedVerdicts[0], status: 'failed' }],
-      }));
-    refuses('a verdict from another run', 'record_not_appended',
-      () => write(join(out, 'h.json'), {
-        recordedVerdicts: [{ ...recordedVerdicts[0], run: 'other' }],
-      }));
+    // The destination is built from the lineage and the run, so those are the two
+    // ways a caller could aim it somewhere else.
+    const esc = completed();
+    const escaping = new Kernel(join(esc.dir, 'log.ndjson'), { completionRoot: esc.dir, sourceRoot: SOURCE_ROOT });
+    refuses('a lineage that climbs out of the root', 'write_escapes_location', () => {
+      const c = asObject(contractDoc({ lineage: '../../escaped' }));
+      escaping.approve({
+        lineage: '../../escaped', revision: 'r1', bytes: c.bytes, identity: c.identity,
+        actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      });
+      const a2 = asObject(assignmentDoc({ lineage: '../../escaped' }));
+      escaping.issueAssignment({
+        lineage: '../../escaped', run: 'run1', bytes: a2.bytes, identity: a2.identity,
+        actor: 'Owner',
+      });
+      escaping.completionPathFor({ lineage: '../../escaped', run: 'run1' });
+    });
 
     // Both kinds of symlink, because `O_EXCL` refuses one at the final component
     // and nothing at the parents — which is why the preflight exists.
+    const linked = tmp('v1l-');
     const elsewhere = tmp('v1o-');
-    symlinkSync(elsewhere, join(root, 'outlink'));
-    symlinkSync(join(root, 'inside'), join(root, 'inlink'));
-    refuses('a parent symlink pointing outside', 'write_through_symlink',
-      () => write(join(root, 'outlink', 'f.json')));
-    refuses('a parent symlink pointing inside', 'write_through_symlink',
-      () => write(join(root, 'inlink', 'g.json')));
+    mkdirSync(join(linked, 'inside'));
+    symlinkSync(elsewhere, join(linked, 'outlink'));
+    symlinkSync(join(linked, 'inside'), join(linked, 'inlink'));
+    for (const [name, root] of [
+      ['a parent symlink pointing outside', join(linked, 'outlink')],
+      ['a parent symlink pointing inside', join(linked, 'inlink')],
+    ]) {
+      const k2 = new Kernel(join(linked, `${name.length}.ndjson`), { completionRoot: root, sourceRoot: SOURCE_ROOT });
+      const w2 = walk(k2);
+      refuses(name, 'write_through_symlink',
+        () => k2.complete({ lineage: w2.lineage, run: w2.run, actor: 'Human Owner' }));
+    }
   });
 
   group('AC-12 · every schema is closed, recursively', () => {
@@ -161,9 +159,9 @@ export function recordTests() {
   group('AC-13 · a fresh process rebuilds what the run reached', () => {
     const dir = mkdtempSync(join(tmpdir(), 'v1r-'));
     const logPath = join(dir, 'log.ndjson');
-    const k = new Kernel(logPath, { completionRoot: dir });
+    const k = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT });
     const w = walk(k);
-    const { acceptance } = k.complete({ lineage: w.lineage, run: w.run, actor: 'Owner' });
+    const { acceptance } = k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' });
 
     const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
     const out = JSON.parse(execFileSync(
@@ -174,8 +172,13 @@ export function recordTests() {
     eq('the attempt comes back', out.attempts.join(','), w.attempt.attempt);
     eq('the Gate verdict comes back', out.gateVerdicts.O, 'passed');
     ok('the sign-off comes back', out.signoffPresent);
-    eq('the completion comes back', out.completion, acceptance ? out.completion : null);
-    ok('and a completion was recorded at all', typeof out.completion === 'string');
+    // Both identities, like the other three durable objects: a single digest
+    // cannot tell a lexical mutation of the written file from the same content
+    // spelled differently, which is the pair's whole reason.
+    ok('the completion comes back with two identities',
+      typeof out.completion?.byte_sha256 === 'string'
+        && typeof out.completion?.canonical_sha256 === 'string');
+    ok('and it is the Acceptance that was written', acceptance.decision.run === w.run);
 
     // The decisive half: recomputing from the records alone agrees with what the
     // original run decided. A log that replays into a different verdict is a log

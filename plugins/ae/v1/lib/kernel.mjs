@@ -13,16 +13,20 @@
 // exposed. Forging one means writing the log file directly, which is the OS-level
 // access §4 already concedes and does not pretend to resist.
 
+import { resolve } from 'node:path';
 import { Ledger } from './ledger.mjs';
 import { reduceAll, STATUS } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
 import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
-import { checkRequestedSurvives, checkUnanswered, dispatchRecord, requestedFamily } from './family.mjs';
-import { commitCompletion } from './writer.mjs';
-import { formationProblems } from './formation.mjs';
+import { dispatchRecord } from './family.mjs';
+import { assertInsideLocation, assertNoSymlinkComponents } from './write-path.mjs';
+import { atomicFileNoReplace } from './fs-noreplace.mjs';
+import { checkVerifiableSources, formationProblems } from './formation.mjs';
 import { parseStrict, digestBytes } from './canonical-json.mjs';
 import { validate } from './schema.mjs';
-import { ASSIGNMENT, CONTRACT, EVIDENCE_PACKAGE, checkContractRelations } from '../schema/objects.mjs';
+import {
+  ACCEPTANCE, ASSIGNMENT, CONTRACT, EVIDENCE_PACKAGE, checkContractRelations,
+} from '../schema/objects.mjs';
 import { fail } from './codes.mjs';
 
 // A durable object goes in as bytes and comes out only through here. `verify`
@@ -57,9 +61,15 @@ export class Kernel {
   // completion" is.
   #completionRoot;
 
-  constructor(logPath, { completionRoot } = {}) {
+  // Where cited sources are resolved from. Approval checks the digest a Contract
+  // records for each cited file against the file itself, so a citation to
+  // something that has since changed is a citation to something else.
+  #sourceRoot;
+
+  constructor(logPath, { completionRoot, sourceRoot } = {}) {
     this.#ledger = new Ledger(logPath);
     this.#completionRoot = completionRoot || null;
+    this.#sourceRoot = sourceRoot || null;
   }
 
   // --- reads -------------------------------------------------------------
@@ -126,6 +136,14 @@ export class Kernel {
   // identity, like the other three durable objects.
   recordPackage({ lineage, run, bytes, identity, submitter }) {
     const pkg = openObject(bytes, identity, EVIDENCE_PACKAGE, 'Evidence Package');
+    // Its own bytes must name the lineage it is filed under. Only the envelope
+    // was checked, so a package whose bytes named another lineage was recorded
+    // and admitted here whenever the other identifiers happened to match.
+    if (pkg.lineage !== lineage) {
+      fail('binding_cross_execution', 'the package names another lineage', {
+        lineage, named: pkg.lineage,
+      });
+    }
     const assignment = this.assignmentFor(lineage, run);
     if (!assignment) {
       fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
@@ -211,6 +229,27 @@ export class Kernel {
         problems: formation,
       });
     }
+    // And the cited files must still be what was cited. Checking the ids without
+    // checking the digests establishes that a citation is well-formed, not that
+    // it points at the content it claims.
+    //
+    // Not conditional on the caller having supplied a root: every Contract cites
+    // at least one verifiable source, so a Kernel that cannot resolve them cannot
+    // approve. Running the check only when a root happened to be configured is
+    // the optional check this whole slice exists to stop having.
+    if (!this.#sourceRoot) {
+      fail('citation_unknown', 'this Kernel cannot resolve cited sources, so it cannot approve', {
+        lineage,
+      });
+    }
+    const stale = checkVerifiableSources(
+      contract.provenance, (source) => `${this.#sourceRoot}/${source}`,
+    );
+    if (stale.length > 0) {
+      fail('citation_unknown', 'a cited source does not resolve, or has changed', {
+        problems: stale,
+      });
+    }
 
     const prior = this.approvals().filter((a) => a.lineage === lineage);
     if (prior.length === 0 && predecessor != null) {
@@ -234,13 +273,17 @@ export class Kernel {
     if (typeof rendered !== 'string' || rendered.length === 0) {
       fail('human_input_absent', 'approval must record what was shown', { lineage });
     }
-    if (typeof render === 'function') {
-      const expected = render(bytes);
-      if (digestBytes(Buffer.from(expected, 'utf8')) !== digestBytes(Buffer.from(rendered, 'utf8'))) {
-        fail('identity_mismatch', 'the recorded rendering is not what those bytes render to', {
-          lineage,
-        });
-      }
+    // Required. When this ran only if a caller passed a renderer, omitting one
+    // accepted any non-empty string as the view — and AC-6 asks for a derivation
+    // that is checkable, which an unchecked one is not.
+    if (typeof render !== 'function') {
+      fail('human_input_absent', 'approval must be able to re-derive what was shown', { lineage });
+    }
+    const expected = render(bytes);
+    if (digestBytes(Buffer.from(expected, 'utf8')) !== digestBytes(Buffer.from(rendered, 'utf8'))) {
+      fail('identity_mismatch', 'the recorded rendering is not what those bytes render to', {
+        lineage,
+      });
     }
     const view = {
       renders_sha256: identity.byte_sha256,
@@ -392,6 +435,12 @@ export class Kernel {
     });
   }
 
+  recordReview({ lineage, run, identity, family }) {
+    return this.#ledger.append({
+      kind: 'review_recorded', lineage, run, identity, family, origin: HARNESS,
+    });
+  }
+
   recordDelivery({ lineage, to, carried, provenance }) {
     return this.#ledger.append({
       kind: 'delivery', lineage, to, carried, provenance, origin: HARNESS,
@@ -442,9 +491,22 @@ export class Kernel {
 
   // Private. A public one appended `completion_committed` without the write ever
   // happening, which is a record of a completion that does not exist.
-  #recordCompletion({ lineage, run, acceptance, path }) {
+  // Where a run's Acceptance goes. Named rather than inlined so the destination
+  // can be checked without writing: the lineage and the run are the only two
+  // things that shape it, and both come from records.
+  completionPathFor({ lineage, run }) {
+    if (!this.#completionRoot) {
+      fail('writer_not_sole', 'this Kernel has no completion root, so it cannot complete', { run });
+    }
+    const path = `${this.#completionRoot}/${lineage}.${run}.acceptance.json`;
+    assertNoSymlinkComponents(resolve(this.#completionRoot), resolve(path));
+    assertInsideLocation(this.#completionRoot, resolve(path));
+    return path;
+  }
+
+  #recordCompletion({ lineage, run, identity, path }) {
     return this.#ledger.append({
-      kind: 'completion_committed', lineage, run, acceptance, path,
+      kind: 'completion_committed', lineage, run, identity, path,
     });
   }
 
@@ -564,7 +626,7 @@ export class Kernel {
     const inputsNow = this.inputsNowFor(lineage);
     const current = approved.revision;
     const admit = admissibility({
-      contract, assignment, approvals: this.approvals(), index, inputsNow,
+      contract, assignment, approvals: this.approvals(), index, inputsNow, run,
     });
     const result = reduceAll({
       records, lineage, run, obligations: contract.obligations, currentRevision: current,
@@ -607,13 +669,32 @@ export class Kernel {
       });
     }
 
-    // The unavailable arm is checked here too: a Contract that declared
-    // cross-family cannot complete while its dispatch guarantees are unmet.
-    this.checkUnavailableArm({ contract, lineage });
+    // The Contract names who signs. `actor` was whatever the caller wrote, so a
+    // run could be signed off by a party the Contract never nominated.
+    if (actor !== contract.final_signer) {
+      fail('authority_not_granted', "only the Contract's final signer completes a run", {
+        actor, final_signer: contract.final_signer,
+      });
+    }
 
     const required = contract.independence.required === 'cross_family_required';
-    if (required && !acceptedReview) {
-      fail('review_required_absent', 'the Contract required a review and none is carried', {});
+    if (required) {
+      if (!acceptedReview) {
+        fail('review_required_absent', 'the Contract required a review and none is carried', {});
+      }
+      // And it must resolve. A digest the caller chose is a claim about a review
+      // nobody else saw; this is the record it answers to.
+      const recorded = this.records().find(
+        (r) => r.kind === 'review_recorded' && r.lineage === lineage && r.run === run
+          && r.identity === acceptedReview,
+      );
+      if (!recorded) {
+        fail('review_required_absent', 'the review the Acceptance carries was never recorded', {
+          acceptedReview,
+        });
+      }
+    } else if (acceptedReview) {
+      fail('review_required_absent', 'a review is carried where the Contract required none', {});
     }
 
     // The deliverable is the artifact the evidence attests to, resolved from the
@@ -663,18 +744,12 @@ export class Kernel {
         run,
       });
     }
-    const written = commitCompletion({
-      root: this.#completionRoot,
-      path: `${this.#completionRoot}/${lineage}.${run}.acceptance.json`,
-      acceptance,
-      recordedVerdicts: this.records().filter((r) => r.kind === 'gate_result'),
-      obligations: contract.obligations,
-      run,
-      revision: current,
-    });
+    const written = this.#commitCompletion({ acceptance, run, revision: current });
+    // Two identities, like the other three durable objects. It used to record one
+    // digest, which cannot tell a lexical mutation of the written file from the
+    // same content spelled differently — the exact thing AC-3 keeps a pair for.
     this.#recordCompletion({
-      lineage, run, acceptance: digestBytes(Buffer.from(JSON.stringify(acceptance), 'utf8')),
-      path: written.path,
+      lineage, run, identity: identify(written.bytes), path: written.path,
     });
     return { acceptance, written };
   }
@@ -704,39 +779,80 @@ export class Kernel {
     return { kind: record.artifact_kind, identity: record.identity };
   }
 
-  // The unavailable arm is on the path, not beside it. An earlier draft had a
-  // function that checked it and nothing that called that function.
-  checkUnavailableArm({ contract, lineage }) {
-    if (requestedFamily(contract) === null) return null;
-    const records = this.records();
-    const dispatches = records.filter((r) => r.kind === 'dispatch_attempt' && r.lineage === lineage);
-    for (const d of dispatches) {
-      checkRequestedSurvives(contract, d);
-      checkUnanswered(d);
-      if (d.substituted_family || d.answered_family) {
-        fail('same_family_substituted', 'a seat answered for the unavailable one', {});
-      }
+  // AC-7's choice, recorded when it is made. "After the capability was found
+  // unavailable" is a property of the append — there is a record it must follow —
+  // so it is checked here rather than at completion, where an unavailable run
+  // never arrives: completion stops at `not_all_passed` first, which left the
+  // ordering check sitting in a branch nothing could reach.
+  decideUnavailable({ lineage, run, actor, choice }) {
+    if (!['wait', 'stop', 'amend'].includes(choice)) {
+      fail('human_input_absent', 'the decision must be wait, stop, or amend', { choice });
     }
-    const unavailable = records.find(
-      (r) => r.kind === 'capability_unavailable' && r.lineage === lineage,
+    const unavailable = this.records().find(
+      (r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run,
     );
-    if (!unavailable) return null;
-    const decision = records.find(
-      (r) => r.kind === 'human_decision' && r.operation === 'unavailable_decision'
-        && r.lineage === lineage && r.seq > unavailable.seq,
-    );
-    if (!decision) {
-      fail('human_input_absent', 'the unavailable arm requires a decision recorded after it', {
-        unavailable: unavailable.seq,
+    if (!unavailable) {
+      // A pre-authorized choice is not a decision about something that had not
+      // happened yet.
+      fail('human_input_absent', 'nothing has been found unavailable in this run', {
+        lineage, run,
       });
     }
-    if (!['wait', 'stop', 'amend'].includes(decision.choice)) {
-      fail('human_input_absent', 'the decision must be wait, stop, or amend', {
-        choice: decision.choice,
-      });
-    }
-    return { unavailable: unavailable.seq, choice: decision.choice };
+    return this.collectHumanInput({
+      operation: 'unavailable_decision', actor, lineage, choice,
+    });
   }
+
+
+
+  // The completion write — AC-11. Private, and the last step of `complete`.
+  //
+  // It was an exported function taking a root, a path, an Acceptance and a verdict
+  // array, which made it a second completion entry point however carefully the
+  // Kernel called it: importing the module was enough to write an Acceptance with
+  // no Gate, no sign-off and no record.
+  #commitCompletion({ acceptance, run, revision }) {
+    const path = this.completionPathFor({ lineage: acceptance.lineage, run });
+
+    // The shape, checked against the schema rather than against truthiness — an
+    // earlier version tested `if (!acceptance)` and wrote `{}`. This is the one
+    // check left here: the verdict re-derivation that used to sit beside it read
+    // the same records `complete` had just reduced, and no planted defect could
+    // turn the copy red now that nothing else can call this.
+    const problems = validate(ACCEPTANCE, acceptance);
+    if (problems.length > 0) {
+      fail('format_open', 'the Acceptance does not match its closed shape', { problems });
+    }
+    if (acceptance.decision.run !== run || acceptance.contract_revision !== revision) {
+      fail('signoff_wrong_run', 'the Acceptance belongs to another run or revision', {
+        run, revision, acceptance: acceptance.decision.run,
+      });
+    }
+
+    const bytes = Buffer.from(JSON.stringify(acceptance), 'utf8');
+
+    // The destination was checked when it was derived; this is where it lands.
+    const target = resolve(path);
+
+    // What the preflight does not close: it walks the parents, then `O_EXCL` opens
+    // the final component, and those are separate syscalls. A parent swapped for a
+    // symlink between them redirects the write, and nothing here detects it. Closing
+    // that needs directory handles held across both operations — `openat` relative
+    // to a held fd — which Node does not expose.
+    //
+    // Under §2's boundary this is expected: swapping a parent mid-write requires
+    // the same OS access that could edit the log directly. It is stated because the
+    // preflight otherwise reads as a guarantee it is not.
+
+    const result = atomicFileNoReplace({ path: target, bytes });
+    if (result.outcome === 'exists') {
+      fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });
+    }
+    // The resolved target, so what gets recorded is where the bytes actually went
+    // rather than the path someone asked for.
+    return { ...result, path: target, bytes: bytes.toString('utf8') };
+  }
+
 }
 
 export { STATUS };

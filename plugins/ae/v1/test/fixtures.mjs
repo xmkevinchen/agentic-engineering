@@ -6,7 +6,11 @@
 // fixture neither would accept. Everything here is validated against its own
 // schema at import time, so that cannot happen quietly again.
 
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { identify } from '../lib/identity.mjs';
+import { fileDigest } from '../lib/formation.mjs';
 import { validate } from '../lib/schema.mjs';
 import { CONTRACT, ASSIGNMENT, EVIDENCE_PACKAGE } from '../schema/objects.mjs';
 import { digestBytes } from '../lib/canonical-json.mjs';
@@ -15,11 +19,18 @@ export const sha = (s) => digestBytes(Buffer.from(s, 'utf8'));
 
 export const COMMAND = 'sh plugins/ae/scripts/ae-run-tests.sh';
 
+// A real cited file, because approval checks the recorded digest against the
+// file. A fixture citing a digest nothing produces would be refused — which is
+// the behaviour under test rather than an inconvenience to work around.
+export const SOURCE_ROOT = mkdtempSync(join(tmpdir(), 'v1src-'));
+mkdirSync(join(SOURCE_ROOT, 'docs', 'v1'), { recursive: true });
+writeFileSync(join(SOURCE_ROOT, 'docs', 'v1', 'design.md'), '# design\n');
+const DESIGN = fileDigest(join(SOURCE_ROOT, 'docs', 'v1', 'design.md'));
+
 // Cited sources. The Contract's statements cite these ids, and approval checks
-// that they do — so a fixture that cites nothing would be refused, which is the
-// behaviour under test rather than an inconvenience to work around.
+// that they do.
 const provenance = {
-  verifiable: [{ id: 'D-01', source: 'docs/v1/design.md', sha256: sha('design') }],
+  verifiable: [{ id: 'D-01', source: 'docs/v1/design.md', sha256: DESIGN }],
   transcribed: [
     { id: 'D-02', statement: 'evidence is externally produced', disposition: 'carried' },
     { id: 'D-03', statement: 'releases are qualified', disposition: 'deferred to V2' },

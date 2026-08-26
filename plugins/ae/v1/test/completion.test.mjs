@@ -16,7 +16,7 @@ import { checkCitations, statementsFrom } from '../lib/formation.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { validate } from '../lib/schema.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, SOURCE_ROOT } from './fixtures.mjs';
 
 const CONTRACT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -28,12 +28,12 @@ const CONTRACT = join(
 // calls the write.
 function fresh() {
   const dir = mkdtempSync(join(tmpdir(), 'ac1-'));
-  return new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir });
+  return new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT });
 }
 
 const run = (over = {}) => walk(fresh(), over);
 const complete = (w, over = {}) => w.k.complete({
-  lineage: w.lineage, run: w.run, actor: 'Owner', ...over,
+  lineage: w.lineage, run: w.run, actor: 'Human Owner', ...over,
 });
 
 export function completionTests() {
@@ -94,7 +94,7 @@ export function completionTests() {
     const k = fresh();
     walk(k);
     refuses('a second run has no Assignment of its own', 'assignment_not_issued',
-      () => k.complete({ lineage: 'L', run: 'run2', actor: 'Owner' }));
+      () => k.complete({ lineage: 'L', run: 'run2', actor: 'Human Owner' }));
 
     // And issuing one for `run2` does not let `run1`'s evidence answer for it:
     // the second run has an Assignment and an attempt, and nothing submitted.
@@ -111,7 +111,43 @@ export function completionTests() {
     eq('and the first run still passes',
       k.status({ lineage: 'L', run: 'run1' }).byObligation.O.status, 'passed');
     refuses('and cannot complete', 'not_all_passed',
-      () => k.complete({ lineage: 'L', run: 'run2', actor: 'Owner' }));
+      () => k.complete({ lineage: 'L', run: 'run2', actor: 'Human Owner' }));
+  });
+
+  group('AC-1 · two Kernels on one log do not mint the same attempt', () => {
+    // The path that showed the run comparison in admissibility was not a
+    // duplicate of selection's attempt filter. Each Ledger used to cache its
+    // sequence number at construction, so two Kernels opened on one log handed
+    // out the same one — and an attempt id is built from an Assignment id and a
+    // sequence number, with Assignment ids unique only within a run.
+    const dir = mkdtempSync(join(tmpdir(), 'two-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k1 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT });
+    const k2 = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT });
+
+    const c = asObject(contractDoc());
+    k1.approve({
+      lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+      actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+    });
+    const a = asObject(assignmentDoc());
+    k1.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Owner',
+    });
+    k2.issueAssignment({
+      lineage: 'L', run: 'run2', bytes: a.bytes, identity: a.identity, actor: 'Owner',
+    });
+    const at1 = k1.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    const at2 = k2.openAttempt({
+      lineage: 'L', run: 'run2', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    ok('the two attempts are distinct', at1.attempt !== at2.attempt);
+
+    // And even if they were not, the run comparison separates the submissions.
+    const seqs = k1.records().map((r) => r.seq);
+    eq('no sequence number is handed out twice', new Set(seqs).size, seqs.length);
   });
 
   group('AC-1 · the deliverable is the artifact the evidence exercised', () => {
@@ -154,19 +190,45 @@ export function completionTests() {
     });
     eq('both obligations pass', k.status({ lineage: 'L', run: w.run }).allPassed, true);
     refuses('but the run names two artifacts', 'binding_cross_execution',
-      () => k.complete({ lineage: 'L', run: w.run, actor: 'Owner' }));
+      () => k.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
+  });
+
+  group('AC-1 · the Contract names who signs', () => {
+    // `actor` was whatever the caller wrote, so a run could be signed off by a
+    // party the Contract never nominated.
+    const w = run();
+    refuses('someone the Contract did not nominate', 'authority_not_granted',
+      () => complete(w, { actor: 'P' }));
   });
 
   group('AC-1 · review is stated, never left empty', () => {
-    const w = run({
+    const cross = {
       contract: {
         independence: {
           required: 'cross_family_required', requested_family: ['openai'],
           assurance: 'workflow_attested',
         },
       },
+    };
+    refuses('a required review that is absent', 'review_required_absent',
+      () => complete(run(cross)));
+
+    // A digest the caller chose is a claim about a review nobody else saw. It
+    // used to be enough that it was truthy.
+    refuses('a review nobody recorded', 'review_required_absent',
+      () => complete(run(cross), { acceptedReview: sha('imagined') }));
+
+    const w = run(cross);
+    w.k.recordReview({
+      lineage: w.lineage, run: w.run, identity: sha('the review'), family: 'openai',
     });
-    refuses('a required review that is absent', 'review_required_absent', () => complete(w));
+    const { acceptance } = complete(w, { acceptedReview: sha('the review') });
+    eq('a recorded one is carried', acceptance.review.accepted_review, sha('the review'));
+
+    // And the other direction: a Contract requiring none cannot carry one, or the
+    // Acceptance would say something the Contract does not.
+    refuses('a review where none was required', 'review_required_absent',
+      () => complete(run(), { acceptedReview: sha('unasked for') }));
   });
 
   group('AC-11 · completion has no second entry point', () => {
@@ -174,10 +236,10 @@ export function completionTests() {
     // the Kernel. A Kernel with no completion root cannot complete at all, which
     // is the honest answer to "where would it write".
     const dir = mkdtempSync(join(tmpdir(), 'ac11-'));
-    const k = new Kernel(join(dir, 'log.ndjson'));
+    const k = new Kernel(join(dir, 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
     const w = walk(k);
     refuses('no root, no completion', 'writer_not_sole',
-      () => k.complete({ lineage: w.lineage, run: w.run, actor: 'Owner' }));
+      () => k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' }));
   });
 
   group('AC-6 · the Contract must trace to its sources', () => {
@@ -205,22 +267,72 @@ export function completionTests() {
       }));
   });
 
+  group('AC-6 · a citation must point at the content it claims', () => {
+    // Checking the ids without checking the digests establishes that a citation
+    // is well-formed, not that it points at what it says. The Contract's
+    // provenance records a digest per cited file; approval compares it.
+    const k = fresh();
+    const c = asObject(contractDoc({
+      provenance: {
+        verifiable: [{ id: 'D-01', source: 'docs/v1/design.md', sha256: sha('something else') }],
+        transcribed: [
+          { id: 'D-02', statement: 'evidence is externally produced', disposition: 'carried' },
+        ],
+        proposals: [],
+        unknowns: [],
+      },
+    }));
+    refuses('a cited file that is not what was cited', 'citation_unknown',
+      () => k.approve({
+        lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      }));
+
+    // And a Kernel that cannot resolve them cannot approve at all, rather than
+    // skipping the check because nobody configured a root.
+    const blind = new Kernel(join(mkdtempSync(join(tmpdir(), 'blind-')), 'log.ndjson'));
+    const good = asObject(contractDoc());
+    refuses('a Kernel with nowhere to resolve them', 'citation_unknown',
+      () => blind.approve({
+        lineage: 'L', revision: 'r1', bytes: good.bytes, identity: good.identity,
+        actor: 'Human Owner', rendered: RENDERED(good.bytes), render: RENDERED,
+      }));
+  });
+
+  group('AC-2 · a package names the lineage it is filed under', () => {
+    const k = fresh();
+    const w = walk(k);
+    const foreign = asObject({ ...w.pkg.value, id: 'pkg9', lineage: 'ELSEWHERE' });
+    refuses('bytes naming another lineage', 'binding_cross_execution',
+      () => k.recordPackage({
+        lineage: 'L', run: w.run, bytes: foreign.bytes, identity: foreign.identity,
+        submitter: 'P',
+      }));
+  });
+
   group('AC-6 · the presented view is derived from the approved bytes', () => {
     const k = fresh();
     const c = asObject(contractDoc());
     refuses('a rendering of something else', 'identity_mismatch',
       () => k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Owner', rendered: 'VIEW OF SOMETHING ELSE', render: RENDERED,
+        actor: 'Human Owner', rendered: 'VIEW OF SOMETHING ELSE', render: RENDERED,
       }));
     refuses('nothing shown at all', 'human_input_absent',
       () => k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-        actor: 'Owner', render: RENDERED,
+        actor: 'Human Owner', render: RENDERED,
+      }));
+    // The derivation must be checkable, so the renderer is required. When it ran
+    // only if a caller passed one, omitting it accepted any non-empty string.
+    refuses('no way to re-derive what was shown', 'human_input_absent',
+      () => k.approve({
+        lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+        actor: 'Human Owner', rendered: 'ANYTHING AT ALL',
       }));
     const approved = k.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
-      actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+      actor: 'Human Owner', rendered: RENDERED(c.bytes), render: RENDERED,
     });
     eq('a derived view is recorded', approved.identity.byte_sha256, c.identity.byte_sha256);
   });

@@ -8,7 +8,7 @@ import {
 } from '../lib/family.mjs';
 import { Kernel } from '../lib/kernel.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, RENDERED } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT } from './fixtures.mjs';
 
 const contract = {
   independence: {
@@ -59,16 +59,17 @@ export function familyTests() {
   // path invoked; the Kernel's own arm check ran only after completion had
   // established everything passed, which is precisely the case an unavailable
   // result rules out.
+  const cross = {
+    independence: {
+      required: 'cross_family_required',
+      requested_family: ['openai', 'qwen'],
+      assurance: 'workflow_attested',
+    },
+  };
+
   group('AC-7 · the unavailable arm reaches its status through the same reduction', () => {
-    const cross = {
-      independence: {
-        required: 'cross_family_required',
-        requested_family: ['openai', 'qwen'],
-        assurance: 'workflow_attested',
-      },
-    };
     const build = (dispatchOver = {}, unavailableOver = {}) => {
-      const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'));
+      const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
       const c = asObject(contractDoc(cross));
       k.approve({
         lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
@@ -109,7 +110,7 @@ export function familyTests() {
 
     // And a solo Contract cannot have an unavailable arm at all: nothing was
     // requested, so nothing can have been missing.
-    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'));
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1f-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
     const c = asObject(contractDoc());
     k.approve({
       lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
@@ -127,5 +128,48 @@ export function familyTests() {
     });
     eq('an unavailable arm on a solo Contract',
       k.status({ lineage: 'L', run: 'run1' }).byObligation.O.code, 'requested_from_wrong_source');
+  });
+
+  group('AC-7 · the choice is recorded, and only after the fact', () => {
+    // "After the capability was found unavailable" is a property of the append:
+    // there is a record the decision must follow. It used to be checked at
+    // completion, which an unavailable run never reaches — completion stops at
+    // `not_all_passed` first — so the ordering check sat in an unreachable branch.
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1u-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
+    const c = asObject(contractDoc(cross));
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+      actor: 'Owner', rendered: RENDERED(c.bytes), render: RENDERED,
+    });
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Owner',
+    });
+    const at = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+
+    refuses('a choice before anything was unavailable', 'human_input_absent',
+      () => k.decideUnavailable({ lineage: 'L', run: 'run1', actor: 'Owner', choice: 'stop' }));
+
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
+    k.recordUnavailable({
+      lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
+      requested: ['openai', 'qwen'],
+    });
+
+    refuses('a choice outside wait/stop/amend', 'human_input_absent',
+      () => k.decideUnavailable({ lineage: 'L', run: 'run1', actor: 'Owner', choice: 'proceed' }));
+
+    const decision = k.decideUnavailable({
+      lineage: 'L', run: 'run1', actor: 'Owner', choice: 'stop',
+    });
+    eq('the choice is recorded', decision.choice, 'stop');
+    eq('externally produced', decision.origin, 'host');
+    ok('and after the record it responds to',
+      decision.seq > k.records().find((r) => r.kind === 'capability_unavailable').seq);
+
+    // And the run still produces no Acceptance: `unavailable` is not `passed`.
+    ok('the arm reaches no completion', k.status({ lineage: 'L', run: 'run1' }).allPassed === false);
   });
 }

@@ -42,11 +42,11 @@ function build(over = {}) {
     artifact: (id) => (id === 'art1' ? {} : null),
     commandResult: (id) => (id === 'cr1' ? R : null),
   };
-  const admit = admissibility({ contract, assignment, approvals, index, inputsNow });
+  const admit = admissibility({ contract, assignment, approvals, index, inputsNow, run: 'run1' });
   const record = {
     kind: 'observation', lineage: 'L', obligation: 'O',
     observation: 'sh plugins/ae/scripts/ae-run-tests.sh',
-    contract_revision: 'r1', assignment: 'A1', attempt: 'at1', producer: 'P',
+    run: 'run1', contract_revision: 'r1', assignment: 'A1', attempt: 'at1', producer: 'P',
     artifact: 'art1', package: 'pkg1', command_result: 'cr1',
     ...recOver,
   };
@@ -106,6 +106,13 @@ export function evidenceTests() {
     const foreignResult = build({ resultOver: { attempt: 'OTHER' } });
     eq('a command result from another attempt',
       foreignResult.admit(foreignResult.record), 'binding_cross_execution');
+    // A submission naming another run while pointing at this run's attempt.
+    // Nothing stops a party writing that: `submitObservation` takes the attempt
+    // as an argument and does not require it to belong to the run. Selection
+    // matches it by attempt, so this comparison is what keeps the runs apart.
+    const foreignRun = build({ run: 'run2' });
+    eq('a submission belonging to another run',
+      foreignRun.admit(foreignRun.record), 'binding_cross_execution');
   });
 
   group('AC-2 · the observation postdates activation', () => {

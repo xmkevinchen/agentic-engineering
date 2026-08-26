@@ -29,6 +29,7 @@ export const KINDS = Object.freeze({
   gate_result: { producer: 'gate', consumer: ['completion', 'replay'] },
   capability_unavailable: { producer: 'harness', consumer: ['gate'] },
   dispatch_attempt: { producer: 'harness', consumer: ['family', 'gate'] },
+  review_recorded: { producer: 'harness', consumer: ['completion'] },
   delivery: { producer: 'harness', consumer: ['formation'] },
   input_observed: { producer: 'harness', consumer: ['gate'] },
   input_gone: { producer: 'harness', consumer: ['gate'] },
@@ -42,7 +43,14 @@ export const KINDS = Object.freeze({
 export class Ledger {
   constructor(path) {
     this.path = path;
-    this.seq = this.read().length;
+  }
+
+  // Read at append time, never cached. Two Ledgers on one log each held their own
+  // count, so both handed out the same sequence number — and since an attempt id
+  // is built from one, two runs could mint the same attempt and each other's
+  // evidence became selectable.
+  get seq() {
+    return this.read().length;
   }
 
   read() {
@@ -69,15 +77,15 @@ export class Ledger {
     if (!schema) {
       fail('kind_without_consumer', `no record schema for ${record.kind}`, { kind: record.kind });
     }
-    const problems = validate(schema, { ...record, seq: this.seq });
+    const seq = this.seq;
+    const problems = validate(schema, { ...record, seq });
     if (problems.length > 0) {
       fail('format_open', `record does not match its closed shape: ${record.kind}`, { problems });
     }
     // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
     // canonical spelling and `parseNdjson` will refuse anything else later.
-    const stamped = { ...record, seq: this.seq };
+    const stamped = { ...record, seq };
     appendFileSync(this.path, encodeNdjson([stamped]));
-    this.seq += 1;
     return stamped;
   }
 
@@ -129,7 +137,7 @@ export class Ledger {
           state.signoff = r.seq;
           break;
         case 'completion_committed':
-          state.completion = r.acceptance;
+          state.completion = r.identity;
           break;
         case 'capability_unavailable':
           state.unavailable = r.seq;
@@ -161,6 +169,7 @@ export class Ledger {
       inputObservations: [],
       unavailable: [],
       dispatches: [],
+      reviews: [],
       deliveries: [],
       decisions: [],
       signoffs: [],
@@ -179,6 +188,7 @@ export class Ledger {
       command_result: 'commandResults',
       capability_unavailable: 'unavailable',
       dispatch_attempt: 'dispatches',
+      review_recorded: 'reviews',
       delivery: 'deliveries',
       input_observed: 'inputObservations',
       input_gone: 'inputObservations',

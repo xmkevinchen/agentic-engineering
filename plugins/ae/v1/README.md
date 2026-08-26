@@ -18,7 +18,7 @@ lib/admissibility.mjs  what makes an observation count as evidence
 lib/family.mjs         the requested identity, and the unavailable arm
 lib/formation.mjs      the provenance trace, including the landing check
 lib/ledger.mjs         append-only record, closed at the append boundary
-lib/writer.mjs         the sole completion write
+lib/write-path.mjs     where a completion write may land
 lib/write-audit.mjs    AC-11's no-staging property, read off the write path
 lib/schema.mjs         closed-format validation, and validation of the schemas
 schema/objects.mjs     the four durable objects
@@ -76,12 +76,22 @@ one path a party can take. Standalone helpers — `checkAssignment`, `checkGrant
 than kept beside it: each was correct, tested, and called by nothing, which made
 the suite green about functions instead of about the program.
 
-**The trust root is named once.** Three criteria each pushed authorization up a
-level — the runner would vouch for the result, the Assignment for the runner's
-producer, and nothing for the Assignment. The root is the host's interaction
-surface and the Harness's own write path, and it buys exactly one thing: a
-submission cannot author its own provenance. It does not resist a process that
-owns the machine, and nothing here claims it does.
+**The trust root is named once, and it is narrow.** Three criteria each pushed
+authorization up a level — the runner would vouch for the result, the Assignment
+for the runner's producer, and nothing for the Assignment. The root is the host's
+interaction surface and the Harness's own write path, and it buys exactly one
+thing: **a submission cannot author its own provenance.** The observation is a
+separate append from the runner's record, the Assignment from the attempt that
+uses it, the approval from the evidence judged under it.
+
+What it does not buy, said plainly because reviewers keep finding it and are
+right to: a single caller holding the whole machinery can drive every surface. It
+can approve as the Contract's signer, issue an Assignment to a producer it also
+plays, and record a command result that never ran. §4 concedes exactly this — a
+process running as the same OS user can edit the repository, the records and the
+machinery together — and adding an in-process marker to resist it is the thing §4
+names and refuses. Closing it needs a Harness-controlled mutation path, which is
+N7 and not V1.
 
 ## What is not built yet
 

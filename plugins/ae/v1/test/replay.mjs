@@ -8,6 +8,7 @@
 import { copyFileSync } from 'node:fs';
 import { Ledger } from '../lib/ledger.mjs';
 import { Kernel } from '../lib/kernel.mjs';
+import { SOURCE_ROOT } from './fixtures.mjs';
 
 const [, , path, lineage, run] = process.argv;
 
@@ -20,7 +21,7 @@ const state = ledger.reconstruct({ lineage, run });
 // check. What it recomputes must equal what the original run recorded.
 const copy = `${path}.replay`;
 copyFileSync(path, copy);
-const k = new Kernel(copy);
+const k = new Kernel(copy, { sourceRoot: SOURCE_ROOT });
 const recomputed = k.status({ lineage, run }).byObligation;
 
 process.stdout.write(JSON.stringify({

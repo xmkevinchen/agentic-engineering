@@ -15,9 +15,9 @@ import { Kernel } from '../lib/kernel.mjs';
 import { validate } from '../lib/schema.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, RENDERED, COMMAND } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, RENDERED, COMMAND, SOURCE_ROOT } from './fixtures.mjs';
 
-const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'k-')), 'log.ndjson'));
+const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'k-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
 
 const doc = asObject(contractDoc());
 const approve = (k, over = {}) => k.approve({

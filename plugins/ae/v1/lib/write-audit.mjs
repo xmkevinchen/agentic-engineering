@@ -1,9 +1,7 @@
 // AC-11's staging property, checked against the write path's own source.
 //
-// Separate from `writer.mjs` on purpose: that module holds exactly one export,
-// and the test that asserts so is how "one completion writer" stays checkable.
-// An audit is not a writer, and putting it there would have cost that assertion
-// its precision.
+// Separate from the write path on purpose: an audit is not a writer, and the
+// enumeration of what writes completion has to stay short enough to read.
 // AC-11 — "written in place, never staged and moved", checked against the write
 // path's own source rather than against a flag.
 //
@@ -17,7 +15,7 @@ const STAGING_CALLS = [
   'copyFile', 'copyFileSync', 'cp', 'cpSync',
 ];
 
-export function auditWritePath({ readFileSync, dir, files = ['writer.mjs', 'fs-noreplace.mjs'] }) {
+export function auditWritePath({ readFileSync, dir, files = ['kernel.mjs', 'write-path.mjs', 'fs-noreplace.mjs'] }) {
   const found = [];
   for (const name of files) {
     // Strip this audit's own list, or the check reports itself.

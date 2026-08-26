@@ -58,8 +58,8 @@ printf "lexical mutation undetected            %s\n" "$(run)"; revert identity.m
 plant kernel.mjs "if (Object.prototype.hasOwnProperty.call(payload, 'origin')) {" "if (false) {"
 printf "caller-written origin accepted          %s\n" "$(run)"; revert kernel.mjs
 
-plant writer.mjs "assertNoSymlinkComponents(resolve(root), target);" ""
-printf "symlink parent unchecked               %s\n" "$(run)"; revert writer.mjs
+plant kernel.mjs "    assertNoSymlinkComponents(resolve(this.#completionRoot), resolve(path));" ""
+printf "symlink parent unchecked               %s\n" "$(run)"; revert kernel.mjs
 
 plant schema.mjs "if (!schema.type || !TYPES.includes(schema.type)) {" "if (false) {"
 printf "untyped schema accepted as closed      %s\n" "$(run)"; revert schema.mjs
@@ -85,9 +85,6 @@ plant kernel.mjs "const issued = this.records().find(" \
   "const issued = { grants: { attempt_producer: producer } } || this.records().find("
 printf "self-selected grants accepted           %s\n" "$(run)"; revert kernel.mjs
 
-plant writer.mjs "const forRun = recordedVerdicts.filter(" \
-  "const forRun = recordedVerdicts.concat(obligations.map((o) => ({ obligation: o, status: 'passed', run, contract_revision: revision }))).filter("
-printf "completion over invented verdicts       %s\n" "$(run)"; revert writer.mjs
 
 plant admissibility.mjs "if (!(result.subjects > 0)) return 'vacuous_observation';" ""
 printf "a run that exercised nothing passes     %s\n" "$(run)"; revert admissibility.mjs
@@ -117,15 +114,51 @@ printf "a Contract tracing to nothing approved  %s\n" "$(run)"; revert kernel.mj
 plant kernel.mjs "    if (named.size !== 1) {" "if (false) { named.add('art1');"
 printf "a deliverable nothing evidenced         %s\n" "$(run)"; revert kernel.mjs
 
+plant kernel.mjs "      decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq }," \
+  "      decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq, why: 'because' },"
+printf "an Acceptance carrying an extra field   %s\n" "$(run)"; revert kernel.mjs
+
+# Round 4's findings.
+plant kernel.mjs "    if (actor !== contract.final_signer) {" "    if (false) {"
+printf "anyone signs the completion off         %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "      const recorded = this.records().find(" \
+  "      const recorded = true || this.records().find("
+printf "a review nobody recorded is carried     %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    const stale = checkVerifiableSources(" \
+  "    const stale = []; const unusedStale = checkVerifiableSources("
+printf "a citation to changed content accepted  %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    if (typeof render !== 'function') {" "    if (false) {"
+printf "an underivable view approved            %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    if (pkg.lineage !== lineage) {" "    if (false) {"
+printf "a package from another lineage filed    %s\n" "$(run)"; revert kernel.mjs
+
 # AC-13: a log that replays into a different verdict cannot account for its own
 # Acceptance. The fresh-process check is what catches this; nothing in-process can.
+plant ledger.mjs "  get seq() {
+    return this.read().length;
+  }" "  get seq() {
+    if (this._cached === undefined) this._cached = this.read().length;
+    return this._cached++;
+  }"
+printf "two Kernels share a sequence number     %s\n" "$(run)"; revert ledger.mjs
+
+plant admissibility.mjs "    if (record.run !== run) return 'binding_cross_execution';" ""
+printf "a submission from another run admitted  %s\n" "$(run)"; revert admissibility.mjs
+
+plant kernel.mjs "    if (!unavailable) {" "    if (false) {"
+printf "a pre-authorized choice accepted        %s\n" "$(run)"; revert kernel.mjs
+
 plant ledger.mjs "      ([k, v]) => r[k] === undefined || r[k] === v," "      ([k, v]) => r[k] === v,"
 printf "replay cannot say which Contract ran    %s\n" "$(run)"; revert ledger.mjs
 
 # Not a defect in a branch — a staging call introduced onto the write path, which
 # is what AC-11's no-staging property is actually about.
-plant writer.mjs "const result = atomicFileNoReplace({ path: target, bytes });" \
+plant kernel.mjs "const result = atomicFileNoReplace({ path: target, bytes });" \
   "renameSync(target + '.staged', target); const result = atomicFileNoReplace({ path: target, bytes });"
-printf "completion staged then moved            %s\n" "$(run)"; revert writer.mjs
+printf "completion staged then moved            %s\n" "$(run)"; revert kernel.mjs
 
 echo "after revert                            $(run)"

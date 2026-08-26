@@ -12,9 +12,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Kernel } from '../lib/kernel.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha, SOURCE_ROOT } from './fixtures.mjs';
 
-const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1a-')), 'log.ndjson'));
+const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1a-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT });
 
 function approved(k, over = {}) {
   const contract = asObject(contractDoc(over));

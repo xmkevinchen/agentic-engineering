@@ -55,11 +55,17 @@ export function structureTests() {
     const importers = files.filter(
       ({ text }) => /from '\.\/fs-noreplace\.mjs'/.test(text),
     ).map((f) => f.name);
-    eq('atomicFileNoReplace has one importer', importers.join(','), 'writer.mjs');
+    eq('atomicFileNoReplace has one importer', importers.join(','), 'kernel.mjs');
 
-    const writer = files.find((f) => f.name === 'writer.mjs').text;
-    const exported = [...writer.matchAll(/^export function (\w+)/gm)].map((m) => m[1]);
-    eq('writer exports one function', exported.join(','), 'commitCompletion');
+    // And the write is a private method, so there is no exported function to
+    // import. It used to be `commitCompletion(root, path, acceptance, verdicts)`,
+    // which was a second completion entry point however carefully the Kernel
+    // called it — importing the module was enough to write an Acceptance with no
+    // Gate, no sign-off and no record.
+    const kernel = files.find((f) => f.name === 'kernel.mjs').text;
+    ok('the completion write is private', /#commitCompletion\(/.test(kernel));
+    const exported = [...kernel.matchAll(/^export (?:function|class) (\w+)/gm)].map((m) => m[1]);
+    eq('the Kernel module exports only the Kernel', exported.join(','), 'Kernel');
   });
 
   group('AC-5 · no in-process marker stands in for external origin', () => {
