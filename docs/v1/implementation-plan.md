@@ -130,8 +130,10 @@ human intent
   seventh durable object; it is an event, and without it "a human decided" is a
   claim with nothing behind it.
 
-  Owner of [X2a, X3, X4](acceptance.md#5-cross-family-criteria); V3 owns X1 and
-  X2b, and [criterion 5](acceptance.md#1-release-criteria) requires all five. X2a is bounded at **AE's
+  Owner of [X2a and X3](acceptance.md#5-cross-family-criteria), and of X4 on the
+  unavailable path — V3 rechecks X4 once a real provider answers, since a second
+  workflow is exactly the kind of thing a live backend could introduce. V3 owns
+  X1 and X2b; [criterion 5](acceptance.md#1-release-criteria) requires all five. X2a is bounded at **AE's
   own records**, not at the provider: the `requested` identity the Contract
   states — the sole authoritative source ([`design.md` §9](design.md#9-minimal-durable-objects))
   — appearing in the dispatch-attempt and unavailable records with an identical
@@ -215,13 +217,14 @@ Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
 - the same `Review` shape as a same-family seat.
 
 **Exit:** the **release-qualification Contract** — declaring
-`cross_family_required` over real AE-on-AE work, commissioned and signed by a
-human release owner, not declared by AE and not a synthetic fixture — runs
+`cross_family_required` over real AE-on-AE work, commissioned and signed by the
+[Human Owner](design.md#81-roles), not declared by AE and not a synthetic
+fixture — runs
 through the bridge with a provider that actually answers, and is accepted
 ([`acceptance.md` §5](acceptance.md#5-cross-family-criteria)). The release cannot
-wait for a user to declare cross-family, so the release owner declares it, and
-the Contract records why that work earns source independence rather than citing
-the release's need for it. V1 already
+wait for a user to declare cross-family, so the Human Owner declares it, and the
+Contract records why that work earns source independence rather than citing the
+release's need for it. V1 already
 proved the unavailable branch, so V3 does not re-demonstrate it; what V3 must
 additionally show is that adding a real provider introduced no second workflow
 and no second Gate (X4).

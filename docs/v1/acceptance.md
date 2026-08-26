@@ -128,10 +128,12 @@ AE-on-AE work.
 
 It is an ordinary `Contract` producing an ordinary `Acceptance` — not a seventh
 durable object. "Release-qualification" is the release policy's description of
-it, nothing more. And **AE does not declare it.** A human release owner
-commissions or approves the work, approves the `cross_family_required` risk
-requirement, is the Contract's declared final signer, and gives the Acceptance
-sign-off. AE proposing its own material boundary and approving it is precisely
+it, nothing more. And **AE does not declare it.** The
+[Human Owner](design.md#81-roles) — the role that already holds Contract
+confirmation, material-risk acceptance and final sign-off — commissions or
+approves the work, approves the `cross_family_required` risk requirement, is the
+Contract's declared final signer, and gives the Acceptance sign-off. No new role
+is introduced; this is the existing one doing what it already does. AE proposing its own material boundary and approving it is precisely
 what [`design.md` §7.2](design.md#72-the-rules) forbids; a Contract that
 self-authorized would be invalid under AE's own formation model.
 
@@ -148,6 +150,13 @@ Two things it must not become:
   what another model's answer may be claimed to be, so having a different family
   review it is warranted on the work's own merits, not on the release's need.
 
+  Reviewing the bridge *through* the bridge is sound self-hosting, but only
+  under one boundary: **the reviewer's answer never attests to the reviewer's own
+  identity.** What family actually answered is established by correlated backend
+  observation (X2b) and refused when uncorrelated (K5). A seat asserting its own
+  lineage would be the self-report AE exists to reject, and the review would
+  prove nothing about the machinery under review.
+
 **These are distinct Contracts and distinct runs.** The unavailable arm (X2a,
 X3) is V1's non-terminating test-corpus Contract, which produces no Acceptance
 by construction. The qualification Contract (X1, X2b) is V3's, and it
@@ -159,7 +168,7 @@ terminates. Nothing requires them to be the same Contract, and they cannot be.
 | X2a | The `requested` identity **the Contract states** appears in AE's dispatch-attempt and unavailable records with an identical **canonical-JSON encoding** (equivalently, an identical canonical digest), bound to the same Contract revision and run, while `observed` and `effective` are **absent — not `null`, not empty**. A request field is never reported as an effective-family claim. | V1 |
 | X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | V3 |
 | X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | V1 |
-| X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | V1 |
+| X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | V1 establishes it on the unavailable path; **V3 rechecks it** once a real provider answers |
 
 The split between X2a and X2b is about *when each is exercisable*, not about
 whether either is required. An unavailable run proves AE does not invent an

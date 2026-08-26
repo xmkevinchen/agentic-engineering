@@ -293,8 +293,9 @@ The table above is about *a user choosing* a seat, and that choice stays optiona
 and risk-driven. It is not about whether AE must **prove** the seat behaves. AE
 ships a live cross-family capability, so proving it never passes off a request as
 an observation is mandatory regardless of whether any **user's** Contract ever
-selects it. AE supplies that proof from a Contract of its own — see
-[`acceptance.md` §5](acceptance.md#5-cross-family-criteria).
+selects it. The proof comes from a Contract the **Human Owner** commissions and
+signs for that purpose — AE neither declares it nor approves it, for the reasons
+in §7.2 — see [`acceptance.md` §5](acceptance.md#5-cross-family-criteria).
 
 ## 6. Knowledge Feedback
 
