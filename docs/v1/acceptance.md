@@ -26,8 +26,8 @@ AE v1 is releasable when all six hold:
 | 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
 **V3, V4, and V5 are not release prerequisites** — but read that precisely for
-V3. What V3 adds is a *successful* cross-family invocation, and that stays
-optional. Criterion 5's negative arm is **not** optional: it is owned by V1 and
+V3. What V3 adds is a *successful* cross-family invocation and the correlation it
+makes exercisable — X1 and X2b — and that stays optional. Criterion 5's negative arm is **not** optional: it is owned by V1 and
 must have run before release. Using a cross-family seat in production is a
 choice; proving that a missing one cannot become a pass is not.
 
@@ -102,7 +102,7 @@ cross-family invocation.
 | # | Criterion | Required for release | Owner |
 |---|---|---|---|
 | X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | **Optional** — this is the successful path | V3 |
-| X2a | The exact request the Contract and Assignment specified is retained **unchanged in AE's own dispatch-attempt and unavailable records**, bound to the same Contract revision and run, while `observed` and `effective` remain **absent**. A request field is never reported as an effective-family claim. | **Yes** | V1 |
+| X2a | The `requested` identity **the Contract states** is retained byte-identical in AE's own dispatch-attempt and unavailable records, bound to the same Contract revision and run, while `observed` and `effective` remain **absent**. A request field is never reported as an effective-family claim. | **Yes** | V1 |
 | X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | **Optional**, with X1 | V3 |
 | X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | **Yes** — this is release criterion 5's negative arm | V1 |
 | X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | **Yes** | V1 |
@@ -123,13 +123,24 @@ provider received — that is *exact input handoff*, and V3 owns it. What V1 can
 and must show is that AE preserved the request it was given and claimed nothing
 about an observation it never made.
 
-**X2b may be N/A only when the successful path is structurally unreachable in
-the shipped release** — the V3 code is not published, or a release-bound
-selector disables it. A provider that merely *happens* to be unavailable does
-not qualify: credentials, quotas, and networks recover, and the path is then
-reachable in a release that never proved it. If V3 ships and is enabled, X1 and
-X2b must run. As with any AE N/A, the unreachability itself needs evidence; an
-unevidenced blank is not an N/A, and neither is a temporary observation.
+**X2b may be N/A only when the V3 integration code is not published in the
+release.** That is the only form of unreachability v1 can evidence. Two weaker
+forms were considered and rejected:
+
+- *Every configured provider reports `unavailable`.* Credentials, quotas and
+  networks recover, and the path is then live in a release that never proved it.
+  A temporary observation is not a structural fact — the exact substitution this
+  document exists to refuse.
+- *A release-bound selector disables it.* AE's selector today is editable project
+  configuration, so a user flips it and the unproved path is live. Making that
+  branch sound would need an immutable release capability manifest, treating any
+  activation as a separately qualified release — and that machinery is
+  [deferred to V5](mechanism-disposition.md#3-defer). A v1 criterion may not rest
+  on a deferred mechanism.
+
+So: if the V3 code ships, X1 and X2b must run, whatever the provider happens to
+be doing at release time. As with any AE N/A, the unreachability itself needs
+evidence; an unevidenced blank is not an N/A.
 
 ## 6. Knowledge non-authority criteria
 

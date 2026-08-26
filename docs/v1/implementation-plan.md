@@ -132,12 +132,16 @@ human intent
 
   Owner of [`acceptance.md` criterion 5](acceptance.md#1-release-criteria) and of
   [X2a, X3, X4](acceptance.md#5-cross-family-criteria). X2a is bounded at **AE's
-  own records**, not at the provider: the exact request the Contract and
-  Assignment specified is retained unchanged in the dispatch-attempt and
-  unavailable records, bound to the same Contract revision and run, with
-  `observed` and `effective` absent. An unavailable run may stop before the
-  backend handoff, so it cannot show what a provider received — that is exact
-  input handoff, and V3 owns it along with the correlation half (X2b).
+  own records**, not at the provider: the `requested` identity the Contract
+  states — the sole authoritative source ([`design.md` §9](design.md#9-minimal-durable-objects))
+  — retained byte-identical in the dispatch-attempt and unavailable records,
+  bound to the same Contract revision and run, with `observed` and `effective`
+  absent. The test uses a **distinctive sentinel** request and reads the durable
+  records back on replay, so a default substitution, a dropped field, or a
+  cross-run misbinding is visible rather than indistinguishable from a correct
+  pass. An unavailable run may stop before the backend handoff, so it cannot show
+  what a provider received — that is exact input handoff, and V3 owns it along
+  with the correlation half (X2b).
 - **Knowledge isolation tests.** The `.ae/graph` corpus already exists, so V1
   proves it contributes nothing to any Gate status — including N6's differential:
   delete the corpus, and no proof result changes. Owner of
@@ -218,11 +222,12 @@ requires it to have actually run ([`acceptance.md` §1](acceptance.md#1-release-
 X2b** — a real provider answering, and the correlation that only then becomes
 exercisable — and that is the part a release may ship without.
 
-Shipping without it means the successful path is **structurally** absent: the V3
-code is unpublished, or a release-bound selector disables it. A provider that
-merely happens to be unavailable does not make X1/X2b N/A — it recovers, and the
-path is live in a release that never proved it. If V3 ships enabled, X1 and X2b
-must run.
+Shipping without it means the V3 integration code is **not published** — the only
+unreachability v1 can evidence. A provider that merely happens to be unavailable
+does not make X1/X2b N/A, and neither does a disabled selector: AE's selector is
+editable project configuration, and the immutable release capability manifest
+that would make that branch sound is deferred to V5. If the V3 code ships, X1 and
+X2b must run.
 
 A provider being silently swapped for a same-family reviewer blocks the release,
 and always did.

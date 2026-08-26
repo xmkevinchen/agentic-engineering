@@ -262,9 +262,17 @@ rebuild it.
 - write lifecycle completion.
 
 The distinction between `requested`, `observed`, and `effective` identity is
-preserved end to end. A provider label is a request. What the archive says the
-backend actually did is an observation. Only a correlated observation supports
-an effective-family claim.
+preserved wherever each is available. A provider label is a request. What the
+archive says the backend actually did is an observation. Only a correlated
+observation supports an effective-family claim.
+
+How far that preservation is *exercised* depends on what ships. Without a
+backend that answers, only the `requested` half is observable: AE must retain
+what the Contract asked for and claim nothing about an observation it never
+made. The correlation from a populated `observed` to `effective` becomes
+exercisable only when a provider answers — see
+[`acceptance.md` X2a/X2b](acceptance.md#5-cross-family-criteria) for the
+split and its owners.
 
 ### 5.1 Cross-family is risk-driven, not ceremonial
 
@@ -418,10 +426,17 @@ consume. Each must be justified by a real producer and a real consumer in the
 slice that introduces it. Nothing here is frozen for the sake of future-proofing.
 
 **`Contract`** — intent; scope and non-goals; acceptance criteria; required
-Evidence; independence requirement; final signer; **formation provenance**
+Evidence; independence requirement — including, when it requires source
+independence, the **`requested` family or provider identity**, which is the sole
+authoritative source of that identity; final signer; **formation provenance**
 (§7.2). The provenance travels inside the Contract rather than beside it: it is
 the one shared formation basis, canonicalized with the Contract and covered by
 the same digest, so approving a Contract approves the trace that produced it.
+
+The `Assignment` carries the Contract's identity, never a second copy of the
+requested family. An Assignment asserting a family that disagrees with its
+Contract is `invalid`, not a conflict to resolve: two sources for one fact is
+how the fact gets quietly changed.
 
 **`Assignment`** — task ID; owner role/session; dependencies; allowed change
 boundary; the exact Contract identity it serves.
