@@ -9,7 +9,12 @@ import { group, ok, eq } from './harness.mjs';
 // schema-valid Contract would have had every observation rejected. A fixture the
 // schema would refuse cannot demonstrate anything about schema-valid input.
 const contract = {
-  observations: [{ obligation: 'O', observation: 'sh plugins/ae/scripts/ae-run-tests.sh' }],
+  observations: [{
+    obligation: 'O',
+    observation: 'sh plugins/ae/scripts/ae-run-tests.sh',
+    artifact: 'work/artifact.txt',
+    material_inputs: ['in1'],
+  }],
 };
 const assignment = { id: 'A1', contract_revision: 'r1', boundary: ['docs/v1'] };
 const approvals = [{ lineage: 'L', revision: 'r1', seq: 5 }];

@@ -63,8 +63,17 @@ export const CONTRACT = {
       type: 'array', minItems: 1,
       items: {
         type: 'object', additional: false,
-        required: ['obligation', 'observation'],
-        properties: { obligation: id, observation: text },
+        // The Contract names what is run, what it is run against, and what it
+        // reads. All three used to be arguments: the producer chose which
+        // artifact its passing command vouched for, and which inputs counted as
+        // material — so it could declare none and nothing was stale, ever.
+        required: ['obligation', 'observation', 'artifact', 'material_inputs'],
+        properties: {
+          obligation: id,
+          observation: text,
+          artifact: text,
+          material_inputs: { type: 'array', minItems: 0, items: text },
+        },
       },
     },
     required_evidence: { type: 'array', minItems: 1, items: text },

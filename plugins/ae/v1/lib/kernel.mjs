@@ -64,6 +64,8 @@ const HARNESS = 'harness';
 // concede. The Kernel owns the only instance, and the readers a caller
 // legitimately needs are its methods.
 class Ledger {
+  #held = 0;
+
   constructor(path) {
     // Resolved, and through any symlink. The lock is named after this path, so
     // two Kernels reaching one log by different names — a real path and a link to
@@ -94,6 +96,13 @@ class Ledger {
   // and the next writer fails with a named code rather than waiting forever or
   // silently breaking in.
   #withLock(fn) {
+    // Reentrant. Completion holds it across reducing, signing and writing, and
+    // each of those appends — without this, the second acquisition would wait for
+    // a lock the same call stack already holds.
+    if (this.#held > 0) {
+      this.#held += 1;
+      try { return fn(); } finally { this.#held -= 1; }
+    }
     const lockPath = `${this.path}.lock`;
     let fd = null;
     const deadline = 5000;
@@ -109,9 +118,11 @@ class Ledger {
         }
       }
     }
+    this.#held = 1;
     try {
       return fn();
     } finally {
+      this.#held = 0;
       closeSync(fd);
       unlinkSync(lockPath);
     }
@@ -443,7 +454,22 @@ export class Kernel {
   // `AE-SUBJECTS: <n>`. A command that prints none leaves the count absent, which
   // admissibility reads as unestablishable — not as zero, and not as "assume it
   // exercised something".
-  runObservation({ id, lineage, run, attempt, command, artifact, inputsUsed }) {
+  runObservation({ id, lineage, run, attempt, obligation, artifact }) {
+    // What is run, and what it reads, both come from the Contract. `command` and
+    // `inputsUsed` were arguments: a producer could declare it had read nothing,
+    // and then nothing could ever be stale.
+    const { contract } = this.contractFor(lineage) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+    }
+    const entry = contract.observations.find((o) => o.obligation === obligation);
+    if (!entry) {
+      fail('observation_not_named', 'the Contract names no observation for this obligation', {
+        obligation,
+      });
+    }
+    const command = entry.observation;
+    const inputsUsed = entry.material_inputs;
     // No `cwd`. It was a parameter, so a command could be run somewhere the
     // deliverable was not: the approved command ran, exited zero, and exercised a
     // decoy. The Harness runs where the Kernel is rooted, which is the same place
@@ -509,6 +535,9 @@ export class Kernel {
   // The Harness looks, and records what it found. It took the identity as an
   // argument, so the party whose evidence would be judged stale decided whether
   // it was.
+  // Paths are repository-relative, resolved against the root — the same root the
+  // Harness runs in and cited sources resolve from. An absolute path from a
+  // caller would be a way to point "now" at a file nobody else can see.
   observeInput({ lineage, id, path }) {
     // The path is recorded with the identity. Without it the log said an input
     // had a digest and not what had been looked at, so replay could not say
@@ -516,7 +545,7 @@ export class Kernel {
     // id to the same file.
     let identity;
     try {
-      identity = digestBytes(readFileSync(path));
+      identity = digestBytes(readFileSync(`${this.#sourceRoot}/${path}`));
     } catch {
       return this.#ledger.append({ kind: 'input_gone', lineage, id, path, origin: HARNESS });
     }
@@ -548,7 +577,21 @@ export class Kernel {
   // Digested here, not declared. The identity recorded is the deliverable the
   // Acceptance names, so accepting one as an argument let the producer name what
   // its own evidence would be taken to have exercised.
-  recordArtifact({ id, lineage, run, artifactKind, path }) {
+  recordArtifact({ id, lineage, run, obligation, artifactKind }) {
+    // The path comes from the Contract's entry for this obligation, not from the
+    // caller. It was an argument, so the producer chose which file its passing
+    // command would be taken to have exercised.
+    const { contract } = this.contractFor(lineage) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+    }
+    const entry = contract.observations.find((o) => o.obligation === obligation);
+    if (!entry) {
+      fail('observation_not_named', 'the Contract names no observation for this obligation', {
+        obligation,
+      });
+    }
+    const path = `${this.#sourceRoot}/${entry.artifact}`;
     let identity;
     try {
       identity = digestBytes(readFileSync(path));
@@ -904,9 +947,6 @@ export class Kernel {
     if (!approved) {
       fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
     }
-    if (!this.#owner) {
-      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot sign', {});
-    }
     if (actor !== this.#owner) {
       fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
         actor,
@@ -1091,7 +1131,18 @@ export class Kernel {
   // its own module, call the reducer itself, and forward admissibility as an
   // optional argument — so the channel could be walked around by importing the
   // other thing. It is deleted rather than deprecated.
-  complete({ lineage, run, actor, acceptedReview }) {
+  // The whole of completion happens under one lock.
+  //
+  // Reducing, resolving the deliverable, signing and writing were four separate
+  // moments: a newer passing attempt could land between the deliverable being
+  // resolved and the bytes being written, so the Acceptance named an artifact the
+  // final reduction had not judged. "The latest attempt decides at the moment the
+  // bytes land" is either one operation or it is a hope.
+  complete(args) {
+    return this.#ledger.transaction(() => this.#completeLocked(args));
+  }
+
+  #completeLocked({ lineage, run, actor, acceptedReview }) {
     const { contract, identity: contractIdentity, revision: current } = this.contractFor(lineage);
     const { byObligation, allPassed } = this.status({ lineage, run });
     if (!allPassed) {
@@ -1119,7 +1170,7 @@ export class Kernel {
     if (acceptedReview) {
       fail('review_required_absent', 'a review is carried where the Contract required none', {});
     }
-    const required = false;
+
 
     // The deliverable is the artifact the evidence attests to, resolved from the
     // record. Taking it as an argument let an Acceptance name one thing while the
@@ -1137,16 +1188,16 @@ export class Kernel {
       contract_identity: contractIdentity,
       deliverable,
       decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq },
-      review: required
-        ? { required: true, accepted_review: acceptedReview }
-        : { required: false, statement: 'no independent review required by this Contract' },
+      // Always the stated absence: a Contract requiring a review was refused
+      // above, so this is the only shape completion can reach in V1.
+      review: { required: false, statement: 'no independent review required by this Contract' },
     };
 
     // The write is the last step of this method, not a function a caller invokes
     // afterwards with whatever it likes. Its destination belongs to the Kernel,
     // and the verdicts it reads are the ones just recorded.
     const written = this.#commitCompletion({
-      acceptance, obligations: contract.obligations, run, revision: current,
+      acceptance, obligations: contract.obligations, run,
     });
     // Two identities, like the other three durable objects. It used to record one
     // digest, which cannot tell a lexical mutation of the written file from the
@@ -1247,7 +1298,7 @@ export class Kernel {
     return new Map(Object.entries(byObligation).map(([o, v]) => [o, v.status]));
   }
 
-  #commitCompletion({ acceptance, obligations, run, revision }) {
+  #commitCompletion({ acceptance, obligations, run }) {
     const path = this.completionPathFor({ lineage: acceptance.lineage, run });
 
     // Re-derived here, not carried from the reduction above.
@@ -1290,17 +1341,18 @@ export class Kernel {
     // operations, which narrowed the window rather than closing it — and "the
     // latest attempt decides at the moment the bytes land" is either an invariant
     // or a hope.
-    const result = this.#ledger.transaction(() => {
-      const latest = this.verdictsNow({ lineage: acceptance.lineage, run });
-      for (const obligation of obligations) {
-        if (latest.get(obligation) !== 'passed') {
-          fail('not_all_passed', 'the run stopped passing before the Acceptance landed', {
-            obligation, status: latest.get(obligation),
-          });
-        }
+    // Already under `complete`'s lock, so nothing has moved since it reduced.
+    // This re-derivation stays because the write is where the invariant has to
+    // hold, and reading it here says so at the point it matters.
+    const latest = this.verdictsNow({ lineage: acceptance.lineage, run });
+    for (const obligation of obligations) {
+      if (latest.get(obligation) !== 'passed') {
+        fail('not_all_passed', 'the run stopped passing before the Acceptance landed', {
+          obligation, status: latest.get(obligation),
+        });
       }
-      return atomicFileNoReplace({ path: target, bytes });
-    });
+    }
+    const result = atomicFileNoReplace({ path: target, bytes });
     if (result.outcome === 'exists') {
       fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });
     }

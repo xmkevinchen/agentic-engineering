@@ -17,7 +17,11 @@ import { group, ok, eq, refuses } from './harness.mjs';
 import { validate } from '../lib/schema.mjs';
 import { digestBytes } from '../lib/canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, FAILING, VACUOUS, UNCOUNTABLE, SOURCE_ROOT, DESIGN_SHA, OWNER } from './fixtures.mjs';
+import {
+  asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, OWNER,
+  COMMAND, FAILING, VACUOUS, UNCOUNTABLE, ARTIFACT, INPUT,
+  SOURCE_ROOT, DESIGN_SHA,
+} from './fixtures.mjs';
 
 const CONTRACT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -202,22 +206,23 @@ export function completionTests() {
       () => k1.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
   });
 
-  group('AC-4 · a superseded attempt does not decide the deliverable', () => {
-    // A failed first attempt naming one artifact, then a passing retry naming
-    // another. `deliverableFor` read every observation in the run, so completion
-    // saw two artifacts and refused — an attempt the Gate had already superseded
-    // still deciding what could be accepted.
+  group('AC-1 · a retry cannot change what the run delivers', () => {
+    // The Contract names the artifact for each obligation, so a second attempt
+    // answers for the same file the first did. It used to be an argument, and a
+    // failed attempt naming one artifact followed by a passing retry naming
+    // another left completion with two — an attempt the Gate had superseded still
+    // deciding what could be accepted.
     const k = fresh();
     const w = walk(k, { command: FAILING });
-    const second = join(w.world, 'artifact2.txt');
-    writeFileSync(second, 'the retry\n');
     const retry = k.openAttempt({
       lineage: 'L', run: w.run, producer: 'P', obligations: ['O'], submitter: 'P',
     });
-    k.recordArtifact({ id: 'art2', lineage: 'L', run: w.run, artifactKind: 'file', path: second });
+    k.recordArtifact({
+      id: 'art2', lineage: 'L', run: w.run, obligation: 'O', artifactKind: 'file',
+    });
     k.runObservation({
       id: 'cr2', lineage: 'L', run: w.run, attempt: retry.attempt,
-      command: FAILING, artifact: 'art2', inputsUsed: ['in1'],
+      obligation: 'O', artifact: 'art2',
     });
     const pkg2 = asObject({
       ...w.pkg.value, id: 'pkg2', attempt: retry.attempt, artifact: 'art2', command_result: 'cr2',
@@ -225,45 +230,43 @@ export function completionTests() {
     k.recordPackage({
       lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
     });
-    k.observeInput({ lineage: 'L', id: 'in1', path: w.inputPath });
+    k.observeInput({ lineage: 'L', id: INPUT, path: INPUT });
     k.submitObservation({
       lineage: 'L', run: w.run, obligation: 'O', observation: FAILING,
       attempt: retry.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
       commandResult: 'cr2', submitter: 'P',
     });
-    eq('the retry decides', k.deliverableFor({
+    eq('the retry answers for the same file', k.deliverableFor({
       lineage: 'L', run: w.run, contract: k.contractFor('L').contract,
-    }).identity, digestBytes(readFileSync(second)));
+    }).identity, digestBytes(readFileSync(join(SOURCE_ROOT, ARTIFACT))));
   });
 
-  group('AC-1 · the deliverable is the artifact the evidence exercised', () => {
-    // Two obligations, each fully evidenced against its own artifact. Both pass,
-    // so the run reaches the point where the Acceptance must name a deliverable —
-    // and there is no single thing to name. Picking one is not resolving.
+  group('AC-1 · a run that delivers two things delivers none', () => {
+    // Two obligations, each naming its own artifact — a coherent Contract, and
+    // one the Acceptance cannot answer: there is no single deliverable to name,
+    // and picking one is not resolving.
+    const second = 'work/artifact2.txt';
+    writeFileSync(join(SOURCE_ROOT, second), 'another artifact\n');
     const k = fresh();
     const w = walk(k, {
       obligations: ['O', 'O2'],
       contract: {
         obligations: ['O', 'O2'],
         observations: [
-          { obligation: 'O', observation: COMMAND },
-          { obligation: 'O2', observation: COMMAND },
+          { obligation: 'O', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT] },
+          { obligation: 'O2', observation: COMMAND, artifact: second, material_inputs: [INPUT] },
         ],
       },
       assignment: {
         grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O', 'O2'] },
       },
     });
-    // `walk` answered both obligations against `art1`. Replace the second with a
-    // complete, admissible chain of its own naming a different artifact.
-    const second = join(w.world, 'artifact2.txt');
-    writeFileSync(second, 'another artifact\n');
     k.recordArtifact({
-      id: 'art2', lineage: 'L', run: w.run, artifactKind: 'file', path: second,
+      id: 'art2', lineage: 'L', run: w.run, obligation: 'O2', artifactKind: 'file',
     });
     k.runObservation({
-      id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt, command: COMMAND,
-      artifact: 'art2', inputsUsed: ['in1'],
+      id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt,
+      obligation: 'O2', artifact: 'art2',
     });
     const pkg2 = asObject({
       ...w.pkg.value, id: 'pkg2', artifact: 'art2', command_result: 'cr2',
@@ -271,10 +274,7 @@ export function completionTests() {
     k.recordPackage({
       lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
     });
-    // Observed after this package, as staleness requires: an observation taken
-    // before the evidence was packaged says the input was current at some earlier
-    // moment, which is not what is being asked.
-    k.observeInput({ lineage: 'L', id: 'in1', path: w.inputPath });
+    k.observeInput({ lineage: 'L', id: INPUT, path: INPUT });
     k.submitObservation({
       lineage: 'L', run: w.run, obligation: 'O2', observation: COMMAND,
       attempt: w.attempt.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
@@ -282,7 +282,7 @@ export function completionTests() {
     });
     eq('both obligations pass', k.status({ lineage: 'L', run: w.run }).allPassed, true);
     refuses('but the run names two artifacts', 'binding_cross_execution',
-      () => k.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
+      () => k.complete({ lineage: 'L', run: w.run, actor: OWNER }));
   });
 
   group('AC-1 · a sign-off before the Gate reported is refused', () => {
@@ -339,10 +339,10 @@ export function completionTests() {
     // unchanged, and the run stayed `passed`.
     const k = fresh();
     const w = walk(k);
-    const decoy = join(w.world, 'decoy.txt');
-    writeFileSync(decoy, 'in1\n');
-    writeFileSync(w.inputPath, 'the input moved\n');
-    k.observeInput({ lineage: 'L', id: 'in1', path: decoy });
+    const decoy = 'work/decoy.txt';
+    writeFileSync(join(SOURCE_ROOT, decoy), 'in1\n');
+    writeFileSync(join(SOURCE_ROOT, INPUT), 'the input moved\n');
+    k.observeInput({ lineage: 'L', id: INPUT, path: decoy });
     eq('the observation answers a different file',
       k.status({ lineage: 'L', run: w.run }).byObligation.O.code, 'material_input_incomplete');
   });

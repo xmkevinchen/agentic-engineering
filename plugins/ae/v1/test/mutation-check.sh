@@ -15,33 +15,32 @@ set -e
 V1=$(cd "$(dirname "$0")/.." && pwd)
 run() { node "$V1/test/all.mjs" >/dev/null 2>&1 && echo GREEN || echo RED; }
 
-# An interrupted run used to leave a planted defect in the working tree — piping
-# this script's output into `head` is enough to do it, since the write that gets
-# SIGPIPE dies before its revert. Every plant registers itself here, and the trap
-# puts back whatever is still out.
-PLANTED=""
+# The whole tree is snapshotted before anything is planted, and put back at the
+# end whatever happened in between.
+#
+# Two earlier versions tracked which files were currently planted and restored
+# those. Both leaked: bookkeeping that a failed plant, a signal, or one revert
+# clearing another's record can get wrong is bookkeeping that will get it wrong,
+# and the symptom is a planted defect left in the working tree — or worse, a
+# source file quietly reverted to a copy predating real edits. Both happened.
+#
+# Restoring everything unconditionally cannot be got wrong, and the verification
+# at the end says so out loud rather than leaving it to be discovered.
+RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/ae-mutation.XXXXXX")
+SNAP="$RUNDIR/snapshot"
+mkdir -p "$SNAP"
+cp -R "$V1/lib" "$SNAP/lib"
+cp -R "$V1/schema" "$SNAP/schema"
+
 restore_all() {
-  for f in $PLANTED; do
-    [ -f "$(bak "$f")" ] && cp "$(bak "$f")" "$V1/lib/$f"
-  done
-  PLANTED=""
+  [ -d "$SNAP/lib" ] || return 0
+  cp -R "$SNAP/lib/." "$V1/lib/"
+  cp -R "$SNAP/schema/." "$V1/schema/"
 }
 cleanup() { restore_all; rm -rf "$RUNDIR"; }
 trap 'cleanup' EXIT INT TERM PIPE
 
-# Backups live in a directory this run creates, and nothing else can write to.
-#
-# They used to be named after the file in a shared temporary directory, so a
-# backup left behind by an earlier run was still there for a later one to restore
-# from — and it did: a run reverted a source file to a copy predating edits made
-# between the two runs, silently discarding them. A backup that outlives its run
-# is a way to lose work, not a safety net.
-RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/ae-mutation.XXXXXX")
-bak() { echo "$RUNDIR/$(echo "$1" | tr '/.' '__').mut.bak"; }
-
 plant() { # file, from, to
-  cp "$V1/lib/$1" "$(bak "$1")"
-  PLANTED="$PLANTED $1"
   python3 - "$V1/lib/$1" "$2" "$3" <<'PY'
 import io,sys
 p,a,b=sys.argv[1],sys.argv[2],sys.argv[3]
@@ -50,11 +49,7 @@ assert a in s, f"pattern not found: {a[:50]}"
 io.open(p,'w',encoding='utf-8').write(s.replace(a,b,1))
 PY
 }
-revert() {
-  [ -f "$(bak "$1")" ] || { echo "no backup for $1 from this run — refusing to revert"; exit 1; }
-  cp "$(bak "$1")" "$V1/lib/$1"
-  PLANTED=""
-}
+revert() { cp "$SNAP/lib/$1" "$V1/lib/$1"; }
 
 echo "baseline                                $(run)"
 
@@ -171,6 +166,23 @@ plant kernel.mjs "    const deliverable = this.deliverableFor({ lineage, run, co
   "    const deliverable = { identity: 'sha256:' + '0'.repeat(64) };"
 printf "a sign-off names any deliverable        %s\n" "$(run)"; revert kernel.mjs
 
+plant codes.mjs "  if (!KNOWN.has(code)) {" "  if (false) {"
+printf "a refusal with an unknown code          %s\n" "$(run)"; revert codes.mjs
+
+# Round 10's findings: what a run is run against, and what it reads.
+plant kernel.mjs "    const command = entry.observation;
+    const inputsUsed = entry.material_inputs;" \
+  "    const command = entry.observation;
+    const inputsUsed = [];"
+printf "a run that declares it read nothing     %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    const path = \`\${this.#sourceRoot}/\${entry.artifact}\`;" \
+  "    const path = \`\${this.#sourceRoot}/work/decoy-artifact.txt\`;"
+printf "the artifact is not the one named       %s\n" "$(run)"; revert kernel.mjs
+
+plant admissibility.mjs "      if (!recorded.has(used)) return 'material_input_incomplete';" ""
+printf "a package that omits a stated input     %s\n" "$(run)"; revert admissibility.mjs
+
 # Round 9's findings.
 plant kernel.mjs "        if (r.attempt !== latest) continue;" ""
 printf "a superseded attempt still decides      %s\n" "$(run)"; revert kernel.mjs
@@ -198,14 +210,16 @@ printf "an input observed before the evidence   %s\n" "$(run)"; revert admissibi
 plant kernel.mjs "      exit = typeof error.status === 'number' ? error.status : 1;" "      exit = 0;"
 printf "a failing command reports success       %s\n" "$(run)"; revert kernel.mjs
 
-plant kernel.mjs "  recordArtifact({ id, lineage, run, artifactKind, path }) {
-    let identity;
+plant kernel.mjs "    let identity;
     try {
-      identity = digestBytes(readFileSync(path));" \
-  "  recordArtifact({ id, lineage, run, artifactKind, path }) {
-    let identity;
+      identity = digestBytes(readFileSync(path));
+    } catch {
+      fail('binding_unresolved'" \
+  "    let identity = digestBytes(Buffer.from('a constant'));
     try {
-      identity = digestBytes(Buffer.from('a constant'));"
+      if (false) identity = digestBytes(readFileSync(path));
+    } catch {
+      fail('binding_unresolved'"
 printf "the artifact is not actually digested   %s\n" "$(run)"; revert kernel.mjs
 
 plant kernel.mjs "    for (let i = 1; i < prior.length; i += 1) {" "    for (let i = 1; i < 0; i += 1) {"
@@ -236,8 +250,19 @@ printf "replay cannot say which Contract ran    %s\n" "$(run)"; revert kernel.mj
 
 # Not a defect in a branch — a staging call introduced onto the write path, which
 # is what AC-11's no-staging property is actually about.
-plant kernel.mjs "      return atomicFileNoReplace({ path: target, bytes });" \
-  "      renameSync(target + '.staged', target); return atomicFileNoReplace({ path: target, bytes });"
+plant kernel.mjs "    const result = atomicFileNoReplace({ path: target, bytes });" \
+  "    renameSync(target + '.staged', target); const result = atomicFileNoReplace({ path: target, bytes });"
 printf "completion staged then moved            %s\n" "$(run)"; revert kernel.mjs
 
 echo "after revert                            $(run)"
+
+# Said out loud, because a leak here is silent by nature: the suite goes green
+# again either way, and the defect travels in the working tree.
+restore_all
+if diff -r "$SNAP/lib" "$V1/lib" >/dev/null 2>&1 \
+  && diff -r "$SNAP/schema" "$V1/schema" >/dev/null 2>&1; then
+  echo "sources restored                        VERIFIED"
+else
+  echo "sources restored                        FAILED — the tree still differs"
+  exit 1
+fi

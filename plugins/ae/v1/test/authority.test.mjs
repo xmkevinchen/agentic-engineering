@@ -14,7 +14,7 @@ import { appendFileSync } from 'node:fs';
 import { Kernel } from '../lib/kernel.mjs';
 import { encodeNdjson } from '../lib/canonical-json.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha, SOURCE_ROOT, OWNER } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha, SOURCE_ROOT, OWNER, ARTIFACT, INPUT } from './fixtures.mjs';
 
 const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'v1a-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
 
@@ -128,8 +128,11 @@ export function authorityTests() {
     approved(k, {
       obligations: ['O', 'O2'],
       observations: [
-        { obligation: 'O', observation: COMMAND },
-        { obligation: 'O2', observation: 'sh other.sh' },
+        { obligation: 'O', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT] },
+        {
+          obligation: 'O2', observation: 'sh other.sh',
+          artifact: ARTIFACT, material_inputs: [INPUT],
+        },
       ],
     });
     issue(k);

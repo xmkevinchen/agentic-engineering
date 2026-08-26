@@ -11,6 +11,7 @@ import { KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
 import { RECORDS } from '../schema/records.mjs';
+import { fail, ALL_KERNEL_CODES } from '../lib/codes.mjs';
 import { execFileSync } from 'node:child_process';
 import { Kernel } from '../lib/kernel.mjs';
 import { asObject, assignmentDoc, contractDoc, walk, RENDERED, SOURCE_ROOT, OWNER } from './fixtures.mjs';
@@ -77,6 +78,19 @@ export function recordTests() {
       const w2 = walk(k2);
       refuses(name, 'write_through_symlink',
         () => k2.complete({ lineage: w2.lineage, run: w2.run, actor: 'Human Owner' }));
+    }
+  });
+
+  group('AC-12 · a refusal names a code the taxonomy knows', () => {
+    // "Every falsifier in the Contract that says a thing is refused names a code
+    // here" was a sentence in a comment with no reader: nothing compared a raised
+    // code against the taxonomy, so a typo travelled as a plausible-looking
+    // string that no test could assert on.
+    refuses('a code no taxonomy names', 'kind_without_consumer',
+      () => fail('invented_code', 'something went wrong', {}));
+    ok('the taxonomy is not empty', ALL_KERNEL_CODES.length > 0);
+    for (const code of ['not_all_passed', 'binding_cross_execution', 'write_would_clobber']) {
+      ok(`${code} is named`, ALL_KERNEL_CODES.includes(code));
     }
   });
 

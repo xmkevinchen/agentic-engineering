@@ -153,8 +153,17 @@ export function admissibility({
     // An absent `inputs_used` is not "used nothing" — it is a runner that did not
     // report, and assuming completeness from silence is the vacuity this refuses.
     if (!Array.isArray(result.inputs_used)) return 'material_input_incomplete';
+    // Against the Contract's list, not against the producer's. Comparing the
+    // package with the runner's record compared two statements by the same party:
+    // declare nothing in both and the set was complete, so nothing could go stale.
+    // No length comparison beside this: the runner's `inputs_used` is copied from
+    // the Contract by the Kernel, so counting it against the Contract counts one
+    // list against itself. What is worth checking is that the package — which the
+    // producer wrote — records every input the Contract states.
+    const stated = entry.material_inputs || [];
     const recorded = new Set((pkg.material_inputs || []).map((i) => i.id));
-    for (const used of result.inputs_used) {
+    for (const used of stated) {
+      if (!result.inputs_used.includes(used)) return 'material_input_incomplete';
       if (!recorded.has(used)) return 'material_input_incomplete';
     }
     for (const input of pkg.material_inputs || []) {

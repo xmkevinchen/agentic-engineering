@@ -8,10 +8,10 @@
 // Every falsifier in the Contract that says a thing is refused names a code here.
 // A rejection with no code is a rejection a test cannot assert on.
 
-import { FoundationError, fail } from './errors.mjs';
+import { FoundationError, fail as raise, ALL_CODES } from './errors.mjs';
 import { deepFreeze } from './freeze.mjs';
 
-export { FoundationError, fail };
+export { FoundationError };
 
 export const KERNEL_CODES = deepFreeze({
   // AC-3 — identity
@@ -120,4 +120,18 @@ export const ALL_KERNEL_CODES = deepFreeze(Object.values(KERNEL_CODES).flat());
     }
     seen.add(code);
   }
+}
+
+// Refusing with a code the taxonomy does not name is refusing with nothing a test
+// can assert on, and the taxonomy had no reader at all — "every falsifier in the
+// Contract that says a thing is refused names a code here" was a sentence in a
+// comment. This is what makes it true: a typo, or a code invented at the call
+// site, fails here rather than travelling as a plausible-looking string.
+const KNOWN = new Set([...ALL_KERNEL_CODES, ...ALL_CODES]);
+
+export function fail(code, message, detail) {
+  if (!KNOWN.has(code)) {
+    raise('kind_without_consumer', `refusal with a code no taxonomy names: ${code}`, { code });
+  }
+  return raise(code, message, detail);
 }

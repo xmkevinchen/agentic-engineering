@@ -137,8 +137,14 @@ Contract is the Human Owner's call, not the implementer's.
 
 What did close: the Harness runs the command and digests the files, so the
 outcome, the deliverable and staleness are no longer things a caller states. The
-command string comes from the Contract and the paths from the caller, so a caller
-can still point the Harness at the wrong place — but it cannot skip the looking.
+Contract names all three — the command, the artifact it runs against, and the
+inputs it reads — so a producer cannot point the run at a decoy, and cannot
+declare it read nothing and thereby make staleness unreachable.
+
+The residue, stated once: **nothing establishes that the command actually read
+the artifact and the inputs the Contract names.** Proving that needs execution
+instrumentation V1 does not have. What is established is that the producer chose
+none of them.
 
 ## What is not built yet
 

@@ -19,12 +19,17 @@ export const OWNER = 'Human Owner';
 
 export const sha = (s) => digestBytes(Buffer.from(s, 'utf8'));
 
-// A real command, run for real. The subject count is a line the command prints,
-// so nothing about the outcome is supplied by the party being judged.
-export const COMMAND = "echo GREEN; echo 'AE-SUBJECTS: 69'";
-export const FAILING = "echo 'AE-SUBJECTS: 69'; exit 1";
-export const VACUOUS = "echo 'AE-SUBJECTS: 0'";
-export const UNCOUNTABLE = 'echo GREEN';
+// A real command, run for real, against real files. The subject count is a line
+// the command prints, so nothing about the outcome is supplied by the party being
+// judged — and the command, the artifact it runs against and the inputs it reads
+// are all named by the Contract, so none of those is chosen by it either.
+export const ARTIFACT = 'work/artifact.txt';
+export const INPUT = 'work/in1.txt';
+const read = `cat ${ARTIFACT} ${INPUT} >/dev/null`;
+export const COMMAND = `${read}; echo GREEN; echo 'AE-SUBJECTS: 69'`;
+export const FAILING = `${read}; echo 'AE-SUBJECTS: 69'; exit 1`;
+export const VACUOUS = `${read}; echo 'AE-SUBJECTS: 0'`;
+export const UNCOUNTABLE = `${read}; echo GREEN`;
 
 // A real cited file, because approval checks the recorded digest against the
 // file. A fixture citing a digest nothing produces would be refused — which is
@@ -60,7 +65,9 @@ export function contractDoc(over = {}) {
     scope: ['S1 the completion path (D-01)'],
     non_goals: ['N1 no release concept (D-01)'],
     obligations: ['O'],
-    observations: [{ obligation: 'O', observation: COMMAND }],
+    observations: [{
+      obligation: 'O', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT],
+    }],
     required_evidence: ['E1 a command result the Harness wrote (D-02)'],
     independence: { required: 'none', assurance: 'workflow_attested' },
     final_signer: 'Human Owner',
@@ -93,7 +100,7 @@ export function packageDoc(over = {}) {
     artifact: 'art1',
     command_result: 'cr1',
     changed_paths: ['docs/v1/a.md'],
-    material_inputs: [{ id: 'in1', path: 'in1.txt', identity: sha('in1') }],
+    material_inputs: [{ id: INPUT, path: INPUT, identity: sha('in1') }],
     deviations: [],
     known_risks: [],
     ...over,
@@ -134,12 +141,12 @@ export function walk(k, over = {}) {
     obligations = ['O'],
   } = over;
 
-  // Real files, because the Harness digests what is there rather than being told
-  // what to record. A run whose artifact and inputs are strings the caller chose
-  // is a run whose deliverable and staleness the caller chose.
-  const world = mkdtempSync(join(tmpdir(), 'v1w-'));
-  const artifactPath = join(world, 'artifact.txt');
-  const inputPath = join(world, 'in1.txt');
+  // Real files, under the root the Harness runs in — the Contract names them by
+  // repository-relative path, so they have to be somewhere the Kernel can resolve.
+  const world = join(SOURCE_ROOT, 'work');
+  mkdirSync(world, { recursive: true });
+  const artifactPath = join(SOURCE_ROOT, ARTIFACT);
+  const inputPath = join(SOURCE_ROOT, INPUT);
   writeFileSync(artifactPath, 'the artifact\n');
   writeFileSync(inputPath, 'in1\n');
 
@@ -148,7 +155,9 @@ export function walk(k, over = {}) {
   // reason — the observation answered a command the Contract had not named, so
   // the outcome was never consulted at all.
   const contract = asObject(contractDoc({
-    observations: obligations.map((o) => ({ obligation: o, observation: command })),
+    observations: obligations.map((o) => ({
+      obligation: o, observation: command, artifact: ARTIFACT, material_inputs: [INPUT],
+    })),
     obligations,
     ...contractOver,
   }));
@@ -165,19 +174,19 @@ export function walk(k, over = {}) {
   const attempt = k.openAttempt({ lineage, run, producer, obligations, submitter: producer });
 
   const artifact = k.recordArtifact({
-    id: 'art1', lineage, run, artifactKind: 'file', path: artifactPath,
+    id: 'art1', lineage, run, obligation: obligations[0], artifactKind: 'file',
   });
   k.runObservation({
-    id: 'cr1', lineage, run, attempt: attempt.attempt, command,
-    artifact: 'art1', inputsUsed: ['in1'],
+    id: 'cr1', lineage, run, attempt: attempt.attempt,
+    obligation: obligations[0], artifact: 'art1',
   });
 
-  if (observeBeforePackaging) k.observeInput({ lineage, id: 'in1', path: inputPath });
+  if (observeBeforePackaging) k.observeInput({ lineage, id: INPUT, path: INPUT });
 
   const pkg = asObject(packageDoc({
     attempt: attempt.attempt,
     material_inputs: [{
-      id: 'in1', path: inputPath, identity: digestBytes(readFileSync(inputPath)),
+      id: INPUT, path: INPUT, identity: digestBytes(readFileSync(inputPath)),
     }],
     ...pkgOver,
   }));
@@ -186,7 +195,7 @@ export function walk(k, over = {}) {
   });
 
   if (inputNow) writeFileSync(inputPath, inputNow);
-  if (!observeBeforePackaging) k.observeInput({ lineage, id: 'in1', path: inputPath });
+  if (!observeBeforePackaging) k.observeInput({ lineage, id: INPUT, path: INPUT });
 
   for (const obligation of obligations) {
     k.submitObservation({
