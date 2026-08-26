@@ -21,7 +21,8 @@ import { group, ok, eq } from './harness.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const libDir = join(here, '..', 'lib');
-const REPO = join(here, '..', '..', '..', '..');
+// `AE_REPO_ROOT` for the mutation check, which runs this suite from a copy.
+const REPO = process.env.AE_REPO_ROOT || join(here, '..', '..', '..', '..');
 
 const sources = () => readdirSync(libDir)
   .filter((f) => f.endsWith('.mjs'))

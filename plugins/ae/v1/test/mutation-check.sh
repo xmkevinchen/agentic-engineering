@@ -9,39 +9,35 @@
 # removed rather than given a test.
 #
 # Run: sh plugins/ae/v1/test/mutation-check.sh
-# Not part of the standard suite: it edits sources in place, so it is run
-# deliberately rather than on every commit.
+# Not part of the standard suite: it is slow, and it is run deliberately rather
+# than on every commit.
 set -e
 V1=$(cd "$(dirname "$0")/.." && pwd)
-run() { node "$V1/test/all.mjs" >/dev/null 2>&1 && echo GREEN || echo RED; }
 
-# The whole tree is snapshotted before anything is planted, and put back at the
-# end whatever happened in between.
+# Nothing here touches the repository. The slice is copied into a scratch tree and
+# every defect is planted there.
 #
-# Two earlier versions tracked which files were currently planted and restored
-# those. Both leaked: bookkeeping that a failed plant, a signal, or one revert
-# clearing another's record can get wrong is bookkeeping that will get it wrong,
-# and the symptom is a planted defect left in the working tree — or worse, a
-# source file quietly reverted to a copy predating real edits. Both happened.
+# Three earlier versions edited the sources in place and tried to put them back:
+# per-file backups keyed by name (which a later run restored from, over real
+# edits), then per-run backups (which leaked a planted defect when the bookkeeping
+# went wrong), then an unconditional whole-tree restore — which is safe against
+# both and still wrong, because it overwrites any edit made while it runs and then
+# reports success by comparing against what it just erased.
 #
-# Restoring everything unconditionally cannot be got wrong, and the verification
-# at the end says so out loud rather than leaving it to be discovered.
+# A copy cannot get any of that wrong. The working tree is never written to, so
+# there is nothing to restore and nothing to verify.
 RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/ae-mutation.XXXXXX")
-SNAP="$RUNDIR/snapshot"
-mkdir -p "$SNAP"
-cp -R "$V1/lib" "$SNAP/lib"
-cp -R "$V1/schema" "$SNAP/schema"
-
-restore_all() {
-  [ -d "$SNAP/lib" ] || return 0
-  cp -R "$SNAP/lib/." "$V1/lib/"
-  cp -R "$SNAP/schema/." "$V1/schema/"
-}
-cleanup() { restore_all; rm -rf "$RUNDIR"; }
-trap 'cleanup' EXIT INT TERM PIPE
+trap 'rm -rf "$RUNDIR"' EXIT INT TERM PIPE
+cp -R "$V1" "$RUNDIR/v1"
+WORK="$RUNDIR/v1"
+# The copy sits in a temporary directory, so the one test that reads the
+# repository's own Contract is told where the repository is.
+AE_REPO_ROOT=$(cd "$V1/../../.." && pwd)
+export AE_REPO_ROOT
+run() { node "$WORK/test/all.mjs" >/dev/null 2>&1 && echo GREEN || echo RED; }
 
 plant() { # file, from, to
-  python3 - "$V1/lib/$1" "$2" "$3" <<'PY'
+  python3 - "$WORK/lib/$1" "$2" "$3" <<'PY'
 import io,sys
 p,a,b=sys.argv[1],sys.argv[2],sys.argv[3]
 s=io.open(p,encoding='utf-8').read()
@@ -49,7 +45,7 @@ assert a in s, f"pattern not found: {a[:50]}"
 io.open(p,'w',encoding='utf-8').write(s.replace(a,b,1))
 PY
 }
-revert() { cp "$SNAP/lib/$1" "$V1/lib/$1"; }
+revert() { cp "$V1/lib/$1" "$WORK/lib/$1"; }
 
 echo "baseline                                $(run)"
 
@@ -259,13 +255,5 @@ printf "completion staged then moved            %s\n" "$(run)"; revert kernel.mj
 
 echo "after revert                            $(run)"
 
-# Said out loud, because a leak here is silent by nature: the suite goes green
-# again either way, and the defect travels in the working tree.
-restore_all
-if diff -r "$SNAP/lib" "$V1/lib" >/dev/null 2>&1 \
-  && diff -r "$SNAP/schema" "$V1/schema" >/dev/null 2>&1; then
-  echo "sources restored                        VERIFIED"
-else
-  echo "sources restored                        FAILED — the tree still differs"
-  exit 1
-fi
+# No restoration step: the repository was never written to.
+echo "sources untouched                       BY CONSTRUCTION"

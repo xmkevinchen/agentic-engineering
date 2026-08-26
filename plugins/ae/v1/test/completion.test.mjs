@@ -23,10 +23,14 @@ import {
   SOURCE_ROOT, DESIGN_SHA,
 } from './fixtures.mjs';
 
+// The activated Contract, in the repository. `AE_REPO_ROOT` exists because the
+// mutation check runs the suite from a copy of this slice, and a path relative to
+// the module would resolve into the copy's parent — which is a temporary
+// directory with no repository in it.
+const REPO = process.env.AE_REPO_ROOT
+  || join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const CONTRACT = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..', '..', '..', '..', '.ae', 'features', 'active',
-  'F-086-v1-minimal-kernel', 'contract.md',
+  REPO, '.ae', 'features', 'active', 'F-086-v1-minimal-kernel', 'contract.md',
 );
 
 // A Kernel that can complete: the destination belongs to it, not to whoever

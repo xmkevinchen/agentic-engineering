@@ -13,7 +13,9 @@ import { dirname, join } from 'node:path';
 import { group, ok, eq } from './harness.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const CONTRACT = join(here, '..', '..', '..', '..', '.ae', 'features', 'active',
+// `AE_REPO_ROOT` for the mutation check, which runs this suite from a copy.
+const REPO = process.env.AE_REPO_ROOT || join(here, '..', '..', '..', '..');
+const CONTRACT = join(REPO, '.ae', 'features', 'active',
   'F-086-v1-minimal-kernel', 'contract.md');
 
 // Criteria the Contract states, read from the Contract rather than restated here.
