@@ -1,6 +1,8 @@
 // AC-11, AC-12, AC-13 — the write, the formats, the record.
 
-import { mkdtempSync, mkdirSync, symlinkSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  mkdtempSync, mkdirSync, symlinkSync, readdirSync, readFileSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -235,7 +237,24 @@ export function recordTests() {
       { encoding: 'utf8', env: { ...process.env, ...env }, cwd: env.CWD || process.cwd() },
     )).recomputed.O;
 
+    // Two logs identical but for when each record landed. The environment cases
+    // below hold one log fixed, so a verdict reading a *stored* timestamp would be
+    // the same on every replay and pass them; this is what covers that dataflow,
+    // through the readers assembled in `kernel.mjs` rather than only the two
+    // modules a source audit can read.
+    const shifted = join(dir, 'shifted.ndjson');
+    writeFileSync(shifted, readFileSync(logPath, 'utf8')
+      .split('\n').filter(Boolean)
+      .map((line, i) => {
+        const record = JSON.parse(line);
+        return JSON.stringify({ ...record, at: 1_000_000 + i * 7919 });
+      }).join('\n') + '\n');
+    const shiftedVerdict = JSON.parse(execFileSync(
+      process.execPath, [here, shifted, w.lineage, w.run], { encoding: 'utf8' },
+    )).recomputed.O;
+
     const plain = verdict({});
+    eq('a log with every timestamp changed agrees', shiftedVerdict, plain);
     eq('a second process agrees', verdict({}), plain);
     eq('a different timezone and locale agree',
       verdict({ TZ: 'Asia/Tokyo', LANG: 'ja_JP.UTF-8' }), plain);

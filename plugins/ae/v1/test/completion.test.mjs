@@ -342,10 +342,9 @@ export function completionTests() {
     refuses('a judgement about a run with no facts', 'run_facts_incomplete',
       () => k.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' }));
 
-    // Boundaries are derived, not chosen. Formation runs from the lineage's first
-    // record to the approval; the change from the run's attempt to the Gate's
-    // verdict — both counts of positions in one log, so the two figures are of the
-    // same kind and neither end is a number anyone picked.
+    // Boundaries are derived, not chosen: formation from the record that opened it
+    // to the approval, the change from the run's attempt to the Gate finishing.
+    // Both are records that exist for other reasons.
     const seqOf = (kind) => k.records().find((r) => r.kind === kind).seq;
     refuses('a trace outcome nothing supports', 'trace_outcome_unsupported',
       () => k.recordRun({
@@ -358,6 +357,71 @@ export function completionTests() {
       () => unjudged.recordRun({
         lineage: 'L', run: u.run, traceOutcome: 'caught_nothing', wentWrong: '',
       }));
+
+    // Formation opened after the Contract was approved: the records exist, and
+    // the interval they name runs the wrong way.
+    const late = fresh();
+    const l = walk(late, { skipFormation: true });
+    late.openFormation({ lineage: 'L', actor: OWNER });
+    late.status({ lineage: 'L', run: l.run });
+    refuses('formation opening after the approval', 'cost_incomparable',
+      () => late.recordRun({
+        lineage: 'L', run: l.run, traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
+
+    // Two records that landed in the same millisecond, in the wrong order. The
+    // clock comparison passes — the duration is zero, not negative — so this is
+    // what the order comparison is for, and the two are not the same check.
+    for (const [what, first, second] of [
+      ['formation', 'formation_opened', 'contract_approved_genesis'],
+      ['the change', 'attempt_opened', 'gate_completed'],
+    ]) {
+      const dir = mkdtempSync(join(tmpdir(), 'tie-'));
+      const logPath = join(dir, 'log.ndjson');
+      const src = fresh();
+      const r = walk(src);
+      src.status({ lineage: 'L', run: r.run });
+      const lines = src.records().map(({ seq, ...record }) => record);
+      const a = lines.findIndex((x) => x.kind === first);
+      const b = lines.findIndex((x) => x.kind === second);
+      lines[a].at = 1_000;
+      lines[b].at = 1_000;
+      [lines[a], lines[b]] = [lines[b], lines[a]];
+      writeFileSync(logPath, lines.map((x) => JSON.stringify(x)).join('\n') + '\n');
+      const tied = new Kernel(logPath, {
+        sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+      });
+      refuses(`${what} out of order within one millisecond`, 'cost_incomparable',
+        () => tied.recordRun({
+          lineage: 'L', run: r.run, traceOutcome: 'caught_nothing', wentWrong: '',
+        }));
+    }
+
+    // A clock that went backwards between two appends. The order of the records
+    // is right and the durations they imply are not, which is the case the two
+    // clock comparisons exist for — and the only way to reach it is a log whose
+    // timestamps say so.
+    for (const [what, kind] of [
+      ['formation', 'contract_approved_genesis'],
+      ['the change', 'gate_completed'],
+    ]) {
+      const dir = mkdtempSync(join(tmpdir(), 'clock-'));
+      const logPath = join(dir, 'log.ndjson');
+      const src = fresh();
+      const r = walk(src);
+      src.status({ lineage: 'L', run: r.run });
+      writeFileSync(logPath, src.records()
+        .map(({ seq, ...record }) => JSON.stringify(
+          record.kind === kind ? { ...record, at: 0 } : record,
+        )).join('\n') + '\n');
+      const rolled = new Kernel(logPath, {
+        sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+      });
+      refuses(`${what} running backwards on the clock`, 'cost_incomparable',
+        () => rolled.recordRun({
+          lineage: 'L', run: r.run, traceOutcome: 'caught_nothing', wentWrong: '',
+        }));
+    }
 
     // A lineage that never marked the start of formation has nothing to measure
     // it from. Nothing else in the log stands in: the earliest record is the
@@ -402,35 +466,34 @@ export function completionTests() {
     eq('to the completed Gate evaluation', facts.change_to, seqOf('gate_completed'));
 
     // The cost is elapsed time between those records, observed when each landed.
-    // Subtracting positions measured protocol traffic: unrecorded drafting
-    // weighed nothing and unrelated records weighed one apiece, which is enough
-    // to reverse a retreat decision without the run changing at all.
     const atOf = (kind) => k.records().find((r) => r.kind === kind).at;
-    eq('the cost is the time between them',
+    // The property, stated exactly: each cost *is* the difference between its two
+    // endpoints' clocks. Nothing can add a per-record increment to a quantity
+    // defined as a subtraction of two specific values.
+    //
+    // A probe that appended ten unrelated records and checked the figures had not
+    // moved was weaker than it read: the records landed inside the *change*
+    // interval while the assertions looked at formation, and unrelated appends
+    // take real time anyway, so "did not move" was never quite the claim.
+    eq('formation is the time between its endpoints',
       facts.formation_elapsed, atOf('contract_approved_genesis') - atOf('formation_opened'));
-    // The case that showed positions were the wrong meter: append records under
-    // an unrelated lineage between the boundaries, and the figures must not move.
-    const quiet = fresh();
-    const q = walk(quiet);
-    quiet.status({ lineage: 'L', run: q.run });
-    const clean = quiet.recordRun({
-      lineage: 'L', run: q.run, traceOutcome: 'caught_nothing', wentWrong: '',
-    });
+    eq('the change is the time between its endpoints',
+      facts.change_elapsed, atOf('gate_completed') - atOf('attempt_opened'));
 
+    // And unrelated records between the endpoints add nothing of their own: the
+    // figure is still exactly the endpoint difference, whatever landed between.
     const noisy = fresh();
     const n = walk(noisy);
-    for (let i = 0; i < 10; i += 1) {
-      noisy.observeInput({ lineage: 'ELSEWHERE', path: INPUT });
-    }
+    for (let i = 0; i < 10; i += 1) noisy.observeInput({ lineage: 'ELSEWHERE', path: INPUT });
     noisy.status({ lineage: 'L', run: n.run });
     const withNoise = noisy.recordRun({
       lineage: 'L', run: n.run, traceOutcome: 'caught_nothing', wentWrong: '',
     });
-    eq('ten unrelated records do not lengthen formation',
-      withNoise.formation_to - withNoise.formation_from > 10,
-      clean.formation_to - clean.formation_from > 10);
-    ok('because the cost is not the distance between them',
-      withNoise.formation_elapsed < 10_000 && clean.formation_elapsed < 10_000);
+    const noisyAt = (kind) => noisy.records().find((r) => r.kind === kind).at;
+    ok('ten records landed inside the change interval',
+      withNoise.change_to - withNoise.change_from > 10);
+    eq('and the change is still the endpoint difference',
+      withNoise.change_elapsed, noisyAt('gate_completed') - noisyAt('attempt_opened'));
 
     // And the supported `caught_something` shape, which only its refusal had been
     // exercising: the record carries the discrepancy and what was done about it.

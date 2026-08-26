@@ -64,15 +64,22 @@ export function structureTests() {
     // Gate, no sign-off and no record.
     const kernel = files.find((f) => f.name === 'kernel.mjs').text;
     ok('the completion write is private', /#commitCompletion\(/.test(kernel));
-    // Every export, including a re-export list. The regex read declarations only,
-    // so `export { STATUS }` was invisible and the assertion was false.
-    const declared = [...kernel.matchAll(/^export (?:function|class|const) (\w+)/gm)]
-      .map((m) => m[1]);
-    const listed = [...kernel.matchAll(/^export \{([^}]*)\};/gm)]
-      .flatMap((m) => m[1].split(',').map((n) => n.trim().split(/\s+as\s+/).pop()))
-      .filter(Boolean);
-    eq('the Kernel module exports only the Kernel',
-      [...declared, ...listed].join(','), 'Kernel');
+    // Every line that begins an export, whatever form it takes. The check read
+    // `export function|class` only, so `export { STATUS }` was invisible and the
+    // claim was false; naming the forms one at a time is how that recurs, so this
+    // catches the keyword and reports anything it cannot account for.
+    const exports = [...kernel.matchAll(/^export\s+(.*)$/gm)].map((m) => m[1]);
+    const names = exports.map((line) => {
+      const declared = /^(?:function|class|const|let|var)\s+(\w+)/.exec(line);
+      if (declared) return declared[1];
+      const listed = /^\{([^}]*)\}/.exec(line);
+      if (listed) {
+        return listed[1].split(',').map((n) => n.trim().split(/\s+as\s+/).pop())
+          .filter(Boolean).join(',');
+      }
+      return `unaccounted:${line}`;
+    });
+    eq('the Kernel module exports only the Kernel', names.join(','), 'Kernel');
   });
 
   group('AC-5 · no in-process marker stands in for external origin', () => {

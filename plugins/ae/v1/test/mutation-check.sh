@@ -215,9 +215,19 @@ probe RED "a choice answering a lookalike event"; revert kernel.mjs
 plant kernel.mjs "    if (existing.length > 0) {" "    if (false) {"
 probe RED "a run records its facts twice"; revert kernel.mjs
 
-plant kernel.mjs "    if (!(approval.at >= formationFrom.at) || !(verdict.seq > attempt.seq)) {" \
-  "    if (false) {"
-probe RED "an interval that runs backwards"; revert kernel.mjs
+# One falsifier per clause. They were a single predicate, so disabling it turned
+# red on whichever half a test reached and covered the other by appearance.
+plant kernel.mjs "    if (!(approval.seq > formationFrom.seq)) {" "    if (false) {"
+probe RED "formation enclosing nothing"; revert kernel.mjs
+
+plant kernel.mjs "    if (!(verdict.seq > attempt.seq)) {" "    if (false) {"
+probe RED "a change enclosing nothing"; revert kernel.mjs
+
+plant kernel.mjs "    if (!(approval.at >= formationFrom.at)) {" "    if (false) {"
+probe RED "formation running backwards on the clock"; revert kernel.mjs
+
+plant kernel.mjs "    if (!(verdict.at >= attempt.at)) {" "    if (false) {"
+probe RED "a change running backwards on the clock"; revert kernel.mjs
 
 # Round 13's findings.
 plant gate.mjs "  const superseded = boundRevision !== currentRevision;" "  const superseded = false;"

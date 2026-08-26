@@ -21,7 +21,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { encodeNdjson, parseNdjson, parseStrict, digestBytes } from './canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { KINDS } from './ledger.mjs';
-import { reduceAll, STATUS } from './gate.mjs';
+import { reduceAll } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
 import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
 import { dispatchRecord, requestedFamily } from './family.mjs';
@@ -177,9 +177,18 @@ class Ledger {
     // Validated with the position it will occupy if nothing else appends first.
     // The stored line carries no `seq`: it would be a second source for a fact the
     // line's position already states, and the two could disagree.
+    const seq = this.seq;
+    const problems = validate(schema, { ...record, at: 0, seq });
+    if (problems.length > 0) {
+      fail('format_open', `record does not match its closed shape: ${record.kind}`, { problems });
+    }
     // `at` is when the record landed, observed here rather than supplied — the
     // same surface that observes a command's exit status. It is stored, because
     // unlike a position it cannot be derived from the file.
+    //
+    // Sampled immediately before the write, after reading and validating, so it
+    // means what it says. Taken at the top it meant "the append began", which is
+    // a different quantity by however long validation took.
     //
     // Cost was measured by subtracting positions, which is an odometer that
     // advances whenever anything moves: unrecorded drafting weighed nothing and
@@ -187,11 +196,6 @@ class Ledger {
     // Nothing the Gate reads consults this; it is a fact about the world, for the
     // one question that asks about the world.
     const stamped = { ...record, at: Date.now() };
-    const seq = this.seq;
-    const problems = validate(schema, { ...stamped, seq });
-    if (problems.length > 0) {
-      fail('format_open', `record does not match its closed shape: ${record.kind}`, { problems });
-    }
     // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
     // canonical spelling and `parseNdjson` will refuse anything else later.
     appendFileSync(this.path, encodeNdjson([stamped]));
@@ -1123,17 +1127,15 @@ export class Kernel {
   }
 
   recordRun({ lineage, run, traceOutcome, discrepancy, disposition, wentWrong }) {
-    // The boundaries are derived, not chosen. Formation runs from the lineage's
-    // first record to the approval that fixed the Contract; the change from the
-    // run's first attempt to the Gate's last verdict on it. Both are counts of
-    // positions in one log, so they are quantities of the same kind, and neither
-    // end is a number anyone picked.
+    // The boundaries are derived, not chosen. Formation runs from the record that
+    // opened it to the approval that fixed the Contract; the change from the run's
+    // attempt to the Gate finishing. Both are records that exist for other
+    // reasons, so neither end is something anyone picked for this purpose.
     //
-    // They were four caller-supplied positions. Deriving the elapsed values from
-    // them fixed the arithmetic and not the provenance: nothing checked their
-    // kind, lineage, run or role, so facts could be recorded for one run out of
-    // another's boundaries. AC-9 asks for boundaries fixed before the run, and
-    // the only version of that a caller cannot move is one it does not supply.
+    // They were four caller-supplied positions, and nothing checked their kind,
+    // lineage, run or role — facts could be recorded for one run out of another's
+    // boundaries. AC-9 asks for boundaries fixed before the run, and the only
+    // version of that a caller cannot move is one it does not supply.
     const all = this.records();
     const only = (which, test) => {
       const found = all.filter(test);
@@ -1182,8 +1184,26 @@ export class Kernel {
     // weighed nothing, and ten unrelated records weighed ten — enough to reverse
     // a retreat decision without anything about the run having changed. Two
     // durations are quantities of the same kind whatever else the log is doing.
-    if (!(approval.at >= formationFrom.at) || !(verdict.seq > attempt.seq)) {
-      fail('cost_incomparable', 'a boundary does not enclose an interval', { lineage, run });
+    //
+    // Each interval is checked on its own. They were one predicate, so a mutation
+    // that disabled both turned red on whichever half a test happened to reach,
+    // and the other half was covered by appearance only.
+    //
+    // Both ends of both intervals, because the clock is `Date.now()` and a
+    // rollback between two appends makes a valid ordering produce a negative
+    // duration. The two figures are comparable only if they are durations; a
+    // negative one is not the smaller of two durations, it is neither.
+    if (!(approval.seq > formationFrom.seq)) {
+      fail('cost_incomparable', 'formation does not enclose an interval', { lineage, run });
+    }
+    if (!(verdict.seq > attempt.seq)) {
+      fail('cost_incomparable', 'the change does not enclose an interval', { lineage, run });
+    }
+    if (!(approval.at >= formationFrom.at)) {
+      fail('cost_incomparable', 'formation ran backwards on the clock', { lineage, run });
+    }
+    if (!(verdict.at >= attempt.at)) {
+      fail('cost_incomparable', 'the change ran backwards on the clock', { lineage, run });
     }
 
     const base = {
@@ -1397,10 +1417,7 @@ export class Kernel {
     }
     // The reduction is over. One event for the operation, because the per-
     // obligation verdicts are its components and no component marks its end.
-    this.#ledger.append({
-      kind: 'gate_completed', lineage, run, contract_revision: bound,
-      obligations: contract.obligations,
-    });
+    this.#ledger.append({ kind: 'gate_completed', lineage, run });
     return result;
   }
 

@@ -8,8 +8,10 @@
 const id = { type: 'string', minLength: 1 };
 const text = { type: 'string', minLength: 1 };
 const seq = { type: 'integer', minimum: 0 };
-// When the record landed, observed by the writer. Every kind carries it, so the
-// requirement is stated once here and added to each shape below.
+// When the record landed, observed by the writer. Every kind carries it, like
+// every kind carries its position: both are facts about the record rather than
+// about its content, and both are read only where a question needs them. AC-12's
+// producer-and-consumer rule is about kinds, not about every field of one.
 const at = { type: 'integer', minimum: 0 };
 const digest = { type: 'digest' };
 
@@ -150,12 +152,11 @@ export const RECORDS = Object.freeze({
   // every repetition. An operation needs its own event.
   gate_completed: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'contract_revision', 'obligations', 'seq', 'at'],
-    properties: {
-      kind: text, lineage: id, run: id, contract_revision: id,
-      obligations: { type: 'array', minItems: 1, items: id },
-      seq, at,
-    },
+    // What was reduced is in the verdicts this event follows; restating the
+    // revision and the obligation list here gave two of them no reader and a
+    // second place to disagree.
+    required: ['kind', 'lineage', 'run', 'seq', 'at'],
+    properties: { kind: text, lineage: id, run: id, seq, at },
   },
   // The package is a record, not an object a caller hands the Gate. An earlier
   // version resolved it through a caller-supplied index, which let the party
@@ -310,10 +311,10 @@ export const RECORDS = Object.freeze({
       origin: { type: 'const', value: 'host' }, seq, at,
     },
   },
-  // AC-9's four facts. Boundaries are positions of records that exist for other
-  // reasons, so the two cost figures are quantities of the same kind by
-  // construction — and derived rather than supplied, which is what stops
-  // "formation cost more than the change" being an opinion wearing a number.
+  // AC-9's four facts. The boundaries are records that exist for other reasons,
+  // and each cost is the time between two of them — derived rather than supplied,
+  // which is what stops "formation cost more than the change" being an opinion
+  // wearing a number. Positions were tried first and measured protocol traffic.
   //
   // Two shapes, because `caught_something` means something only when the record
   // holds the discrepancy and what was done about it. One shape with optional
