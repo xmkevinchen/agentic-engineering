@@ -11,6 +11,9 @@ import { auditWritePath } from '../lib/write-audit.mjs';
 import { Ledger, KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
+import { execFileSync } from 'node:child_process';
+import { Kernel } from '../lib/kernel.mjs';
+import { walk } from './fixtures.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 
 const tmp = (p) => mkdtempSync(join(tmpdir(), p));
@@ -150,6 +153,34 @@ export function recordTests() {
     const problems = auditKinds({ readdirSync, readFileSync, dir: libDir });
     eq('no kind is orphaned', problems.map((p) => `${p.kind}:${p.code}`).join(','), '');
     ok('the set is non-empty', Object.keys(KINDS).length > 0);
+  });
+
+  // AC-13's actual wording: the same records reconstruct the same state in a
+  // fresh process. Reconstructing in the process that wrote the log establishes
+  // that the objects in memory agree with themselves, which is not the claim.
+  group('AC-13 · a fresh process rebuilds what the run reached', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'v1r-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, { completionRoot: dir });
+    const w = walk(k);
+    const { acceptance } = k.complete({ lineage: w.lineage, run: w.run, actor: 'Owner' });
+
+    const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const out = JSON.parse(execFileSync(
+      process.execPath, [here, logPath, w.lineage, w.run], { encoding: 'utf8' },
+    ));
+
+    eq('the approved revision comes back', out.approvedRevision, 'r1');
+    eq('the attempt comes back', out.attempts.join(','), w.attempt.attempt);
+    eq('the Gate verdict comes back', out.gateVerdicts.O, 'passed');
+    ok('the sign-off comes back', out.signoffPresent);
+    eq('the completion comes back', out.completion, acceptance ? out.completion : null);
+    ok('and a completion was recorded at all', typeof out.completion === 'string');
+
+    // The decisive half: recomputing from the records alone agrees with what the
+    // original run decided. A log that replays into a different verdict is a log
+    // that cannot account for its own Acceptance.
+    eq('and recomputing agrees', out.recomputed.O, 'passed');
   });
 
   group('AC-13 · the record appends, closes, and replays', () => {

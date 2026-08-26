@@ -117,6 +117,11 @@ printf "a Contract tracing to nothing approved  %s\n" "$(run)"; revert kernel.mj
 plant kernel.mjs "    if (named.size !== 1) {" "if (false) { named.add('art1');"
 printf "a deliverable nothing evidenced         %s\n" "$(run)"; revert kernel.mjs
 
+# AC-13: a log that replays into a different verdict cannot account for its own
+# Acceptance. The fresh-process check is what catches this; nothing in-process can.
+plant ledger.mjs "      ([k, v]) => r[k] === undefined || r[k] === v," "      ([k, v]) => r[k] === v,"
+printf "replay cannot say which Contract ran    %s\n" "$(run)"; revert ledger.mjs
+
 # Not a defect in a branch — a staging call introduced onto the write path, which
 # is what AC-11's no-staging property is actually about.
 plant writer.mjs "const result = atomicFileNoReplace({ path: target, bytes });" \

@@ -88,8 +88,14 @@ export class Ledger {
   // them; `reconstruct` rebuilds the state a run reached, which is what AC-13
   // actually asks for — including the Gate verdicts and the human decisions,
   // since those are what completion relied on.
+  // `scope` names the run. Matching every key against every record dropped the
+  // approval and the unavailable decision, because those are facts about the
+  // lineage rather than about one execution — so a run-scoped reconstruction
+  // could not say which Contract it ran under.
   reconstruct(scope) {
-    const matches = (r) => Object.entries(scope).every(([k, v]) => r[k] === v);
+    const matches = (r) => Object.entries(scope).every(
+      ([k, v]) => r[k] === undefined || r[k] === v,
+    );
     const mine = this.read().filter(matches);
     const state = {
       approvedRevision: null,
@@ -99,6 +105,7 @@ export class Ledger {
       signoff: null,
       completion: null,
       unavailable: null,
+      runFacts: null,
     };
     for (const r of mine) {
       switch (r.kind) {
@@ -126,6 +133,12 @@ export class Ledger {
           break;
         case 'capability_unavailable':
           state.unavailable = r.seq;
+          break;
+        case 'run_record':
+          state.runFacts = {
+            formation: r.formation_elapsed, change: r.change_elapsed,
+            trace: r.trace_outcome, wentWrong: r.went_wrong,
+          };
           break;
         default:
           break;
