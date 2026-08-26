@@ -169,6 +169,9 @@ printf "a sign-off names any deliverable        %s\n" "$(run)"; revert kernel.mj
 plant codes.mjs "  if (!KNOWN.has(code)) {" "  if (false) {"
 printf "a refusal with an unknown code          %s\n" "$(run)"; revert codes.mjs
 
+plant kernel.mjs "          state.unavailableDecision = { choice: r.choice, answers: r.answers };" ""
+printf "replay forgets what the choice answers  %s\n" "$(run)"; revert kernel.mjs
+
 # Round 10's findings: what a run is run against, and what it reads.
 plant kernel.mjs "    const command = entry.observation;
     const inputsUsed = entry.material_inputs;" \

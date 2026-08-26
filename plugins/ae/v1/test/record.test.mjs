@@ -201,6 +201,51 @@ export function recordTests() {
     eq('and recomputing agrees', out.recomputed.O, 'passed');
   });
 
+  group('AC-13 · the unavailable arm replays too', () => {
+    // The ordinary path was the only one a fresh process rebuilt. AC-7's arm has
+    // its own state — a request, a capability that was missing, and the Human
+    // Owner's answer to *that* event — and a reconstruction that keeps the choice
+    // without what it answers cannot say which event was decided about.
+    const dir = tmp('v1u-');
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+    const cross = asObject(contractDoc({
+      independence: {
+        required: 'cross_family_required',
+        requested_family: ['openai', 'qwen'],
+        assurance: 'workflow_attested',
+      },
+    }));
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: cross.bytes, identity: cross.identity,
+      actor: OWNER, rendered: RENDERED(cross.bytes),
+    });
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
+    });
+    const at = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
+    const missing = k.recordUnavailable({
+      lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
+      requested: ['openai', 'qwen'],
+    });
+    k.status({ lineage: 'L', run: 'run1' });
+    k.decideUnavailable({ lineage: 'L', run: 'run1', actor: OWNER, choice: 'stop' });
+
+    const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const out = JSON.parse(execFileSync(
+      process.execPath, [here, logPath, 'L', 'run1'], { encoding: 'utf8' },
+    ));
+    eq('the request comes back', (out.requested || []).join(','), 'openai,qwen');
+    eq('so does the capability that was missing', out.unavailable, missing.seq);
+    eq('and the choice', out.unavailableDecision.choice, 'stop');
+    eq('bound to the event it answers', out.unavailableDecision.answers, missing.seq);
+    eq('and the arm did not become a pass', out.gateVerdicts.O, 'unavailable');
+  });
+
   group('AC-13 · the record appends, closes, and replays', () => {
     // Through a Kernel, because there is no other way to append. `Ledger` was
     // exported, so `import { Ledger }` and `append` was a second way into the log

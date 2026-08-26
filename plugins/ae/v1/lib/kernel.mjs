@@ -217,6 +217,8 @@ class Ledger {
       signoff: null,
       completion: null,
       unavailable: null,
+      requested: null,
+      unavailableDecision: null,
       runFacts: null,
     };
     for (const r of mine) {
@@ -236,8 +238,14 @@ class Ledger {
           state.humanDecisions[r.operation] = r.revision;
           break;
         case 'human_decision_choice':
-        case 'human_decision_unavailable':
           state.humanDecisions[r.operation] = r.choice;
+          break;
+        case 'human_decision_unavailable':
+          // The choice and what it answers. Keeping only the choice lost the
+          // relation: replay could say the Human Owner chose `stop` and not which
+          // unavailable event they were choosing about.
+          state.humanDecisions[r.operation] = r.choice;
+          state.unavailableDecision = { choice: r.choice, answers: r.answers };
           break;
         case 'human_signoff':
           state.signoff = r.seq;
@@ -247,6 +255,7 @@ class Ledger {
           break;
         case 'capability_unavailable':
           state.unavailable = r.seq;
+          state.requested = r.requested;
           break;
         case 'run_record':
           state.runFacts = {

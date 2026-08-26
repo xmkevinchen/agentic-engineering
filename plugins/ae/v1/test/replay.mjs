@@ -20,10 +20,14 @@ const state = new Kernel(path).reconstruct({ lineage, run });
 const copy = `${path}.replay`;
 copyFileSync(path, copy);
 const k = new Kernel(copy, { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
-const recomputed = k.status({ lineage, run }).byObligation;
+let recomputed = {};
+try { recomputed = k.status({ lineage, run }).byObligation; } catch { recomputed = {}; }
 
 process.stdout.write(JSON.stringify({
   approvedRevision: state.approvedRevision,
+  unavailable: state.unavailable,
+  requested: state.requested,
+  unavailableDecision: state.unavailableDecision,
   attempts: state.attempts,
   gateVerdicts: state.gateVerdicts,
   signoffPresent: state.signoff !== null,
