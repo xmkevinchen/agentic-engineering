@@ -130,7 +130,11 @@ human intent
   seventh durable object; it is an event, and without it "a human decided" is a
   claim with nothing behind it.
 
-  Owner of [`acceptance.md` criterion 5](acceptance.md#1-release-criteria).
+  Owner of [`acceptance.md` criterion 5](acceptance.md#1-release-criteria) and of
+  [X2a, X3, X4](acceptance.md#5-cross-family-criteria) — the half of the identity
+  distinction an unanswered provider can prove: `requested` survives, and a
+  missing `observed` is never promoted to `effective`. The correlation half (X2b)
+  needs a backend that answers and belongs to V3.
 - **Knowledge isolation tests.** The `.ae/graph` corpus already exists, so V1
   proves it contributes nothing to any Gate status — including N6's differential:
   delete the corpus, and no proof result changes. Owner of
@@ -189,15 +193,17 @@ Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
 
 - exact input handoff into a Codex or Gemini seat;
 - raw output capture;
-- honest `requested` / `observed` / `effective` distinction — never presenting a
-  request field as an effective-family claim;
+- the correlation half of the identity distinction — [X2b](acceptance.md#5-cross-family-criteria):
+  a **populated** `observed` identity maps correctly to `effective`. V1 already
+  proved AE does not invent one from nothing (X2a); only a backend that answers
+  can exercise what happens when one is actually reported;
 - `unavailable` handling that stops rather than silently substituting a
   same-family reviewer;
 - the same `Review` shape as a same-family seat.
 
 **Exit (of the slice, not of the release):** one Contract that declares a
 high-risk cross-family review runs through the bridge with a provider that
-actually answers, and is accepted — [`acceptance.md` X1](acceptance.md#5-cross-family-criteria).
+actually answers, and is accepted — [`acceptance.md` X1 and X2b](acceptance.md#5-cross-family-criteria).
 V1 already proved the unavailable branch, so V3 does not re-demonstrate it; what
 V3 must additionally show is that adding a real provider introduced no second
 workflow and no second Gate (X4).

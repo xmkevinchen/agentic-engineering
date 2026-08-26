@@ -102,12 +102,26 @@ cross-family invocation.
 | # | Criterion | Required for release | Owner |
 |---|---|---|---|
 | X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | **Optional** — this is the successful path | V3 |
-| X2 | `requested`, `observed`, and `effective` identity stay distinct end to end. A request field is never reported as an effective-family claim. | **Yes** | V1 |
+| X2a | `requested` survives the run intact, and a **missing** `observed` identity is never promoted to `effective`. A request field is never reported as an effective-family claim. | **Yes** | V1 |
+| X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | **Optional**, with X1 | V3 |
 | X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | **Yes** — this is release criterion 5's negative arm | V1 |
 | X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | **Yes** | V1 |
 
-Only X1 needs a provider that actually answers. X2, X3, and X4 are provable
-with the provider forced unavailable, which is why they do not wait for V3.
+X1, X3, and X4 are unambiguous. X2 is the one that needed splitting, and an
+earlier draft of this table got it wrong by claiming the whole property was
+provable against an unavailable provider.
+
+It is not. An unavailable run proves that AE does not *invent* an effective
+identity out of nothing — that is X2a, it is the half that matters most, and V1
+owns it. It cannot exercise the correlation logic that runs when the archive
+actually reports what a backend did, because nothing answered. That is X2b, and
+it needs a provider that answers.
+
+**X2b is not skipped when a release ships without V3 — it is unreachable, and
+that has to be shown.** A release with no answering provider must evidence the
+unreachability (no provider configured, or every configured provider reporting
+`unavailable`), the same standard AE applies to any other N/A. An unevidenced
+blank is not an N/A.
 
 ## 6. Knowledge non-authority criteria
 
