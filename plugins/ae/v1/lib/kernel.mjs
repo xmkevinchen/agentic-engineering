@@ -663,9 +663,14 @@ export class Kernel {
   // be re-rendered and compared.
   approve({ lineage, revision, bytes, identity, predecessor, actor, rendered }) {
     const contract = openObject(bytes, identity, CONTRACT, 'Contract');
-    if (contract.lineage !== lineage || contract.revision !== revision) {
-      fail('identity_mismatch', 'the Contract names another lineage or revision', {
-        lineage, revision, named: { lineage: contract.lineage, revision: contract.revision },
+    if (contract.lineage !== lineage) {
+      fail('identity_mismatch', 'the Contract names another lineage', {
+        lineage, named: contract.lineage,
+      });
+    }
+    if (contract.revision !== revision) {
+      fail('identity_mismatch', 'the Contract names another revision', {
+        revision, named: contract.revision,
       });
     }
     const relations = checkContractRelations(contract);
@@ -1216,10 +1221,13 @@ export class Kernel {
       went_wrong: wentWrong,
     };
     if (traceOutcome === 'caught_something') {
-      if (!discrepancy || !disposition) {
-        fail('trace_outcome_unsupported', 'caught_something needs the discrepancy and what was done', {
-          run,
-        });
+      // Two conditions, two refusals. As one predicate, a test that omitted both
+      // turned it red while saying nothing about either.
+      if (!discrepancy) {
+        fail('trace_outcome_unsupported', 'caught_something needs the discrepancy', { run });
+      }
+      if (!disposition) {
+        fail('trace_outcome_unsupported', 'caught_something needs what was done about it', { run });
       }
       return this.#ledger.append({ kind: 'run_record_caught', ...base, discrepancy, disposition });
     }

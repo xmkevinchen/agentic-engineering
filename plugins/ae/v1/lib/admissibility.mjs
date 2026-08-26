@@ -47,9 +47,10 @@ function admitUnavailable(record, { contract, assignment, index }) {
   // No check for `observed` or `effective` here. The dispatch schema has no
   // position for either, so a record carrying one is not a record — and a copy of
   // the rule at this level was a layer no planted defect could turn red.
-  if (dispatch.substituted_family || dispatch.answered_family) {
-    return 'same_family_substituted';
-  }
+  // Two ways a seat can have answered, and they are different facts about what
+  // happened — one stood in, the other replied.
+  if (dispatch.substituted_family) return 'same_family_substituted';
+  if (dispatch.answered_family) return 'same_family_substituted';
   return null;
 }
 
@@ -141,7 +142,10 @@ export function admissibility({
       (a) => a.lineage === record.lineage && a.revision === record.contract_revision,
     );
     if (activation === -1) return 'binding_unresolved';
-    if (result.seq == null || result.seq <= approvals[activation].seq) {
+    // No `seq == null` clause beside this: the Ledger assigns a position to every
+    // record, so a result without one is not a record. It was a second condition
+    // sharing one refusal, which is how a clause gets covered by appearance.
+    if (result.seq <= approvals[activation].seq) {
       return 'capture_before_activation';
     }
 

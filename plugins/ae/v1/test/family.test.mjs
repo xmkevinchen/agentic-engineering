@@ -91,8 +91,10 @@ export function familyTests() {
     eq('a substitute seat answering is invalid, not unavailable',
       substituted.status({ lineage: 'L', run: 'run1' }).byObligation.O.code,
       'same_family_substituted');
+    // Two different facts about what happened: one seat stood in, another
+    // replied. They shared a refusal, so a case reaching either covered both.
     const answered = build({ answeredFamily: 'anthropic' });
-    eq('a same-family seat standing in',
+    eq('a seat that replied',
       answered.status({ lineage: 'L', run: 'run1' }).byObligation.O.code,
       'same_family_substituted');
     // A request nobody made is not constructible: `recordUnavailable` reads the

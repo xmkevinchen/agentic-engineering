@@ -117,6 +117,8 @@ export function kernelTests() {
       () => approve(k, { bytes: JSON.stringify(contractDoc({ intent: 'tampered' })) }));
     refuses('a Contract naming another lineage', 'identity_mismatch',
       () => approve(k, { lineage: 'ELSEWHERE' }));
+    refuses('a Contract naming another revision', 'identity_mismatch',
+      () => approve(k, { revision: 'r9' }));
     // Schema-valid and incoherent: an obligation with no named observation. It
     // used to be approved and fail later, somewhere else, as something else.
     const broken = asObject(contractDoc({ obligations: ['O', 'UNNAMED'] }));

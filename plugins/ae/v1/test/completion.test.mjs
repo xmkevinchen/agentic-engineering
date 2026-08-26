@@ -346,9 +346,17 @@ export function completionTests() {
     // to the approval, the change from the run's attempt to the Gate finishing.
     // Both are records that exist for other reasons.
     const seqOf = (kind) => k.records().find((r) => r.kind === kind).seq;
-    refuses('a trace outcome nothing supports', 'trace_outcome_unsupported',
+    // Each half on its own: as one predicate, a case omitting both turned it red
+    // while saying nothing about either.
+    refuses('caught_something with no discrepancy', 'trace_outcome_unsupported',
       () => k.recordRun({
-        lineage: 'L', run: w.run, traceOutcome: 'caught_something', wentWrong: '',
+        lineage: 'L', run: w.run, traceOutcome: 'caught_something',
+        disposition: 'the Contract now names the inputs', wentWrong: '',
+      }));
+    refuses('caught_something with nothing done about it', 'trace_outcome_unsupported',
+      () => k.recordRun({
+        lineage: 'L', run: w.run, traceOutcome: 'caught_something',
+        discrepancy: 'the package named an input the run never read', wentWrong: '',
       }));
     // A run with no Gate verdict has no boundary to measure the change to.
     const unjudged = fresh();

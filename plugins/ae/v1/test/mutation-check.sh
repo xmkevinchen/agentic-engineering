@@ -192,6 +192,18 @@ plant gate.mjs "  if (ctx.inputsChanged(record, ctx)) {" \
   "  if (record.at > 0 && ctx.inputsChanged(record, ctx)) {"
 probe RED "a verdict that reads the clock"; revert gate.mjs
 
+plant admissibility.mjs "  if (dispatch.substituted_family) return 'same_family_substituted';" ""
+probe RED "a seat that stood in"; revert admissibility.mjs
+
+plant admissibility.mjs "  if (dispatch.answered_family) return 'same_family_substituted';" ""
+probe RED "a seat that replied"; revert admissibility.mjs
+
+plant kernel.mjs "    if (contract.lineage !== lineage) {" "    if (false) {"
+probe RED "a Contract naming another lineage"; revert kernel.mjs
+
+plant kernel.mjs "    if (contract.revision !== revision) {" "    if (false) {"
+probe RED "a Contract naming another revision"; revert kernel.mjs
+
 # Round 16's findings: cost is time, and an operation has its own event.
 plant kernel.mjs "      formation_elapsed: approval.at - formationFrom.at," \
   "      formation_elapsed: approval.seq - formationFrom.seq,"
@@ -239,8 +251,11 @@ probe RED "stale outranks invalid"; revert gate.mjs
 plant kernel.mjs "    if (arithmetic && arithmetic.fired !== (choice === 'yes')) {" "    if (false) {"
 probe RED "a decision against the arithmetic"; revert kernel.mjs
 
-plant kernel.mjs "      if (!discrepancy || !disposition) {" "      if (false) {"
-probe RED "caught_something supported by nothing"; revert kernel.mjs
+plant kernel.mjs "      if (!discrepancy) {" "      if (false) {"
+probe RED "caught_something with no discrepancy"; revert kernel.mjs
+
+plant kernel.mjs "      if (!disposition) {" "      if (false) {"
+probe RED "caught_something with nothing done"; revert kernel.mjs
 
 plant kernel.mjs "    const requested = requestedFamily(bound.contract);" \
   "    const requested = ['anthropic'];"
