@@ -15,8 +15,22 @@ set -e
 V1=$(cd "$(dirname "$0")/.." && pwd)
 run() { node "$V1/test/all.mjs" >/dev/null 2>&1 && echo GREEN || echo RED; }
 
+# An interrupted run used to leave a planted defect in the working tree — piping
+# this script's output into `head` is enough to do it, since the write that gets
+# SIGPIPE dies before its revert. Every plant registers itself here, and the trap
+# puts back whatever is still out.
+PLANTED=""
+restore_all() {
+  for f in $PLANTED; do
+    [ -f "${TMPDIR:-/tmp}/$f.mut.bak" ] && cp "${TMPDIR:-/tmp}/$f.mut.bak" "$V1/lib/$f"
+  done
+  PLANTED=""
+}
+trap 'restore_all' EXIT INT TERM PIPE
+
 plant() { # file, from, to
   cp "$V1/lib/$1" "${TMPDIR:-/tmp}/$1.mut.bak"
+  PLANTED="$PLANTED $1"
   python3 - "$V1/lib/$1" "$2" "$3" <<'PY'
 import io,sys
 p,a,b=sys.argv[1],sys.argv[2],sys.argv[3]
@@ -25,7 +39,7 @@ assert a in s, f"pattern not found: {a[:50]}"
 io.open(p,'w',encoding='utf-8').write(s.replace(a,b,1))
 PY
 }
-revert() { cp "${TMPDIR:-/tmp}/$1.mut.bak" "$V1/lib/$1"; }
+revert() { cp "${TMPDIR:-/tmp}/$1.mut.bak" "$V1/lib/$1"; PLANTED=""; }
 
 echo "baseline                                $(run)"
 
@@ -71,11 +85,17 @@ plant kernel.mjs "const issued = this.records().find(" \
   "const issued = { grants: { attempt_producer: producer } } || this.records().find("
 printf "self-selected grants accepted           %s\n" "$(run)"; revert kernel.mjs
 
-plant writer.mjs "const forRun = (recordedVerdicts || []).filter(" \
-  "const forRun = (recordedVerdicts || []).concat(obligations.map((o) => ({ obligation: o, status: 'passed', run, contract_revision: revision }))).filter("
+plant writer.mjs "const forRun = recordedVerdicts.filter(" \
+  "const forRun = recordedVerdicts.concat(obligations.map((o) => ({ obligation: o, status: 'passed', run, contract_revision: revision }))).filter("
 printf "completion over invented verdicts       %s\n" "$(run)"; revert writer.mjs
 
 plant admissibility.mjs "if (!(result.subjects > 0)) return 'vacuous_observation';" ""
 printf "a run that exercised nothing passes     %s\n" "$(run)"; revert admissibility.mjs
+
+# Not a defect in a branch — a staging call introduced onto the write path, which
+# is what AC-11's no-staging property is actually about.
+plant writer.mjs "const result = atomicFileNoReplace({ path: target, bytes });" \
+  "renameSync(target + '.staged', target); const result = atomicFileNoReplace({ path: target, bytes });"
+printf "completion staged then moved            %s\n" "$(run)"; revert writer.mjs
 
 echo "after revert                            $(run)"

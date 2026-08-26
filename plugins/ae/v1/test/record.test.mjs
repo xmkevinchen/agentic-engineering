@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 import { commitCompletion } from '../lib/writer.mjs';
+import { auditWritePath } from '../lib/write-audit.mjs';
 import { Ledger, KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
@@ -42,8 +43,11 @@ export function recordTests() {
 
     eq('a first write succeeds', write(join(out, 'a.json')).outcome, 'created');
     refuses('it does not overwrite', 'write_would_clobber', () => write(join(out, 'a.json')));
-    refuses('it does not stage', 'write_staged',
-      () => write(join(out, 'b.json'), { allowStaging: true }));
+    // Not a flag a fixture sets to be refused — that only proves a `fail` fires
+    // when asked. The write path's own call sites are read, so a move, link or
+    // copy is found whether or not anyone thought to test for it.
+    const staging = auditWritePath({ readFileSync, dir: libDir });
+    eq('it does not stage', staging.map((f) => `${f.file}:${f.call}`).join(','), '');
     refuses('traversal cannot leave the location', 'write_escapes_location',
       () => write(join(out, '..', '..', 'escaped.json')));
 

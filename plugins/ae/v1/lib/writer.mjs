@@ -81,13 +81,8 @@ function assertInsideLocation(root, target) {
 // earlier draft accepted any path and any content with no Gate input at all,
 // which made "the completion write" a file write that happened to be called that.
 export function commitCompletion({
-  root, path, acceptance, recordedVerdicts, obligations, run, revision, allowStaging = false,
+  root, path, acceptance, recordedVerdicts, obligations, run, revision,
 }) {
-  if (allowStaging) {
-    // Present only so a fixture can attempt the prohibited shape and be refused.
-    fail('write_staged', 'completion is written in place, never staged and moved', { path });
-  }
-
   // The Acceptance must be the shape the schema states, not merely truthy. An
   // earlier version checked `if (!acceptance)` and wrote `{}`.
   if (!acceptance) {
@@ -106,7 +101,13 @@ export function commitCompletion({
   // Verdicts come from recorded `gate_result`s for this run and revision, and
   // every obligation the Contract states must be among them. A caller map was
   // previously enough, so `{invented: 'passed'}` reached the write.
-  const forRun = (recordedVerdicts || []).filter(
+  // Required, not defaulted. Omitting it would make every obligation fail for
+  // want of a verdict — closed, but for the wrong reason, and a caller could not
+  // tell "the Gate said no" from "nobody asked the Gate".
+  if (!Array.isArray(recordedVerdicts)) {
+    fail('record_not_appended', 'completion reads recorded verdicts, and none were given', { run });
+  }
+  const forRun = recordedVerdicts.filter(
     (v) => v.run === run && v.contract_revision === revision,
   );
   const byObligation = new Map(forRun.map((v) => [v.obligation, v.status]));
