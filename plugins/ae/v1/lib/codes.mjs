@@ -108,7 +108,44 @@ export const KERNEL_CODES = deepFreeze({
   ],
 });
 
+// Properties the design makes unreachable rather than refuses at runtime, and how.
+//
+// Every falsifier in the Contract names a code, and these are the ones no call
+// site can raise — because the shape of the program has already ruled the failure
+// out. Left in the raisable set they were claims of protection with nothing behind
+// them: `fail` would have accepted them, and no test could ever assert one.
+//
+// Listing them here keeps the mapping from falsifier to code complete while
+// saying, for each, what does the work instead.
+export const BY_CONSTRUCTION = deepFreeze({
+  identity_missing: 'both identities are required fields of every object schema',
+  authority_self_asserted: 'no public operation takes an origin; the Kernel stamps it',
+  human_input_self_supplied: 'the stamper is private, so there is no caller-written origin',
+  write_staged: 'the write path performs no move, link or copy — `auditWritePath` reads it',
+  signoff_wrong_run: 'the sign-off resolves its run rather than accepting one',
+  signoff_wrong_revision: 'it resolves the revision the run was assigned under',
+  signoff_wrong_deliverable: 'it resolves the artifact the evidence exercised',
+  cost_boundary_post_hoc: 'boundaries are derived from records, never supplied',
+  requested_substituted: 'the request is read from the Contract at every point that carries it',
+  observed_without_answer: 'the dispatch shape has no position for `observed` or `effective`',
+});
+
+// Reserved for work this slice does not do, and named so the gap is visible.
+export const RESERVED = deepFreeze({
+  format_unfrozen: "AC-12's freeze, which waits for the real run",
+  format_frozen_early: "AC-12's freeze",
+  format_changed_in_place: "AC-12's freeze",
+  enforcement_unpinned: "AC-12's freeze",
+  retreat_not_acted_on: "AC-9's follow-through, which is the Human Owner's",
+});
+
 export const ALL_KERNEL_CODES = deepFreeze(Object.values(KERNEL_CODES).flat());
+
+// What `fail` will accept: the taxonomy minus what cannot be raised. A refusal
+// with a by-construction code would be a refusal for a failure that cannot happen.
+export const RAISABLE = deepFreeze(ALL_KERNEL_CODES.filter(
+  (c) => !BY_CONSTRUCTION[c] && !RESERVED[c],
+));
 
 // A code must be unique across the whole taxonomy: two groups claiming one code
 // is how a caller ends up branching on a verdict that means two things.
@@ -127,7 +164,7 @@ export const ALL_KERNEL_CODES = deepFreeze(Object.values(KERNEL_CODES).flat());
 // Contract that says a thing is refused names a code here" was a sentence in a
 // comment. This is what makes it true: a typo, or a code invented at the call
 // site, fails here rather than travelling as a plausible-looking string.
-const KNOWN = new Set([...ALL_KERNEL_CODES, ...ALL_CODES]);
+const KNOWN = new Set([...RAISABLE, ...ALL_CODES]);
 
 export function fail(code, message, detail) {
   if (!KNOWN.has(code)) {

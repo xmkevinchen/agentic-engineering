@@ -13,7 +13,9 @@ import { KINDS, auditKinds } from '../lib/ledger.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { fail, ALL_KERNEL_CODES } from '../lib/codes.mjs';
+import {
+  fail, ALL_KERNEL_CODES, RAISABLE, BY_CONSTRUCTION, RESERVED,
+} from '../lib/codes.mjs';
 import { execFileSync } from 'node:child_process';
 import { Kernel } from '../lib/kernel.mjs';
 import {
@@ -93,9 +95,27 @@ export function recordTests() {
     refuses('a code no taxonomy names', 'kind_without_consumer',
       () => fail('invented_code', 'something went wrong', {}));
     ok('the taxonomy is not empty', ALL_KERNEL_CODES.length > 0);
-    for (const code of ['not_all_passed', 'binding_cross_execution', 'write_would_clobber']) {
-      ok(`${code} is named`, ALL_KERNEL_CODES.includes(code));
-    }
+
+    // Every raisable code is raised somewhere, and every by-construction one is
+    // not. A code nothing can raise, sitting in the raisable set, is a claim of
+    // protection no test could ever assert on — and there were ten.
+    const source = readdirSync(libDir).filter((f) => f.endsWith('.mjs'))
+      .filter((f) => f !== 'codes.mjs')
+      .map((f) => readFileSync(join(libDir, f), 'utf8')).join('\n');
+    const missing = RAISABLE.filter((c) => !source.includes(`'${c}'`));
+    eq('every raisable code is raised', missing.join(','), '');
+    const raised = Object.keys(BY_CONSTRUCTION).filter((c) => source.includes(`'${c}'`));
+    eq('and nothing raises one the design rules out', raised.join(','), '');
+
+    // The two sets partition the taxonomy: a code is raisable, ruled out by the
+    // design, or reserved for work this slice does not do — never unaccounted.
+    const accounted = new Set([
+      ...RAISABLE, ...Object.keys(BY_CONSTRUCTION), ...Object.keys(RESERVED),
+    ]);
+    eq('and every code is accounted for',
+      ALL_KERNEL_CODES.filter((c) => !accounted.has(c)).join(','), '');
+    refuses('a code the design rules out', 'kind_without_consumer',
+      () => fail('write_staged', 'this cannot happen', {}));
   });
 
   group('AC-12 · every schema is closed, recursively', () => {

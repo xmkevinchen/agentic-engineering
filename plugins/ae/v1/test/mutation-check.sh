@@ -204,6 +204,9 @@ probe RED "a Contract naming another lineage"; revert kernel.mjs
 plant kernel.mjs "    if (contract.revision !== revision) {" "    if (false) {"
 probe RED "a Contract naming another revision"; revert kernel.mjs
 
+plant codes.mjs "  (c) => !BY_CONSTRUCTION[c] && !RESERVED[c]," "  () => true,"
+probe RED "a code nothing can raise, raisable"; revert codes.mjs
+
 # Round 18's findings: facts sampled before the event that makes them final.
 plant kernel.mjs "        && r.seq > lastAttempt.seq," ""
 probe RED "the change ends before a retry"; revert kernel.mjs
