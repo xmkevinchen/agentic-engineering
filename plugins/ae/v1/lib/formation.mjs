@@ -124,12 +124,6 @@ export function checkCitations(statements, provenance) {
 // no claim of their own; the observation named for each is where the claim is.
 export function formationProblems(contract) {
   const { provenance } = contract;
-  const known = new Set([
-    ...provenance.verifiable.map((v) => v.id),
-    ...provenance.transcribed.map((t) => t.id),
-    ...provenance.proposals.map((p) => p.id),
-  ]);
-  const broad = new Set(provenance.transcribed.filter((t) => t.broad === true).map((t) => t.id));
 
   const statements = [
     ...contract.scope.map((text, i) => ({ id: `scope[${i}]`, cites: citesIn(text) })),
@@ -139,21 +133,18 @@ export function formationProblems(contract) {
     })),
   ];
 
-  const problems = [];
-  const cited = new Set();
-  for (const s of statements) {
-    if (s.cites.length === 0) {
-      problems.push({ code: 'statement_uncited', statement: s.id });
-      continue;
-    }
-    for (const id of s.cites) {
-      cited.add(id);
-      if (!known.has(id)) problems.push({ code: 'citation_unknown', statement: s.id, source: id });
-    }
-    if (s.cites.every((id) => broad.has(id))) {
-      problems.push({ code: 'citation_broad_only', statement: s.id });
-    }
-  }
+  // One citation rule, called from both places that need it: here, over the
+  // statements the Contract makes in its own fields, and over the statements read
+  // out of a Contract document. Restating it made the enforced copy and the
+  // checked-in-a-test copy free to drift.
+  const problems = checkCitations(statements, provenance).map((p) => ({
+    code: {
+      'cites nothing': 'statement_uncited',
+      'cites only a broad entry': 'citation_broad_only',
+    }[p.why] || 'citation_unknown',
+    statement: p.statement,
+  }));
+  const cited = new Set(statements.flatMap((s) => s.cites));
 
   // Inbound coverage, and the landing. A transcribed entry says what became of an
   // obligation a source placed on this work; `carried` means the Contract took it
@@ -165,34 +156,6 @@ export function formationProblems(contract) {
     }
     if (t.disposition === 'carried' && !cited.has(t.id)) {
       problems.push({ code: 'disposition_lands_nowhere', source: t.id });
-    }
-  }
-  return problems;
-}
-
-// Inbound, with the landing check. `carriedBy` answers whether a criterion
-// actually contains an obligation — supplied by the caller, because only the
-// caller knows what its criteria say.
-export function checkDispositions(dispositions, carriedBy) {
-  const problems = [];
-  for (const d of dispositions) {
-    if (!d.disposition) {
-      problems.push({ obligation: d.obligation, why: 'neither carried nor disposed' });
-      continue;
-    }
-    if (d.disposition === 'carried') {
-      if (!d.lands_in || d.lands_in.length === 0) {
-        problems.push({ obligation: d.obligation, why: 'carried but names no landing' });
-        continue;
-      }
-      for (const criterion of d.lands_in) {
-        if (!carriedBy(criterion, d.obligation)) {
-          problems.push({
-            obligation: d.obligation,
-            why: `${criterion} does not contain this obligation`,
-          });
-        }
-      }
     }
   }
   return problems;

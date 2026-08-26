@@ -36,9 +36,9 @@ function admitUnavailable(record, { contract, assignment, index }) {
   if (JSON.stringify(dispatch.requested) !== JSON.stringify(stated)) {
     return 'requested_substituted';
   }
-  for (const field of ['observed', 'effective']) {
-    if (Object.prototype.hasOwnProperty.call(dispatch, field)) return 'observed_without_answer';
-  }
+  // No check for `observed` or `effective` here. The dispatch schema has no
+  // position for either, so a record carrying one is not a record — and a copy of
+  // the rule at this level was a layer no planted defect could turn red.
   if (dispatch.substituted_family || dispatch.answered_family) {
     return 'same_family_substituted';
   }

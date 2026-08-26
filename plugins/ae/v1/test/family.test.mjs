@@ -3,10 +3,9 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  requestedFamily, dispatchRecord, checkUnanswered, checkRequestedSurvives,
-} from '../lib/family.mjs';
+import { requestedFamily, dispatchRecord } from '../lib/family.mjs';
 import { Kernel } from '../lib/kernel.mjs';
+import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT } from './fixtures.mjs';
 
@@ -33,32 +32,20 @@ export function familyTests() {
   });
 
   group('AC-8 · nothing answered means absent, not empty', () => {
+    // Absent, not null and not empty. The record schema has no position for
+    // either field, so a dispatch claiming an answer nobody gave is not a record —
+    // which is stronger than a function that would have refused one.
     const rec = dispatchRecord({ contract, ...base });
     ok('observed is absent', !('observed' in rec));
     ok('effective is absent', !('effective' in rec));
-    ok('an unanswered record passes', checkUnanswered(rec));
-    refuses('observed present with nothing behind it', 'observed_without_answer',
-      () => checkUnanswered({ ...rec, observed: null }));
-    refuses('effective present with nothing behind it', 'observed_without_answer',
-      () => checkUnanswered({ ...rec, effective: '' }));
-    refuses('the request dropped entirely', 'requested_dropped',
-      () => checkUnanswered({ ...rec, requested: undefined }));
+    ok('the schema has no position for observed',
+      RECORDS.dispatch_attempt.properties.observed === undefined);
+    ok('nor for effective',
+      RECORDS.dispatch_attempt.properties.effective === undefined);
+    ok('and it admits nothing beside what it names',
+      RECORDS.dispatch_attempt.additional === false);
   });
 
-  group('AC-8 · the request survives unaltered', () => {
-    const rec = dispatchRecord({ contract, ...base });
-    ok('an unaltered record', checkRequestedSurvives(contract, rec));
-    refuses('a default substituted for it', 'requested_substituted',
-      () => checkRequestedSurvives(contract, { ...rec, requested: ['anthropic'] }));
-    refuses('a narrowed request', 'requested_substituted',
-      () => checkRequestedSurvives(contract, { ...rec, requested: ['openai'] }));
-  });
-
-  // Through the Gate, because that is where the property lives. The previous
-  // version called a standalone `unavailableArm` that nothing on the production
-  // path invoked; the Kernel's own arm check ran only after completion had
-  // established everything passed, which is precisely the case an unavailable
-  // result rules out.
   const cross = {
     independence: {
       required: 'cross_family_required',

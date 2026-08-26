@@ -45,29 +45,3 @@ export function dispatchRecord({ contract, lineage, run, attempt, obligation }) 
 }
 
 const FORBIDDEN_WHEN_UNANSWERED = ['observed', 'effective'];
-
-export function checkUnanswered(record) {
-  for (const field of FORBIDDEN_WHEN_UNANSWERED) {
-    if (Object.prototype.hasOwnProperty.call(record, field)) {
-      fail('observed_without_answer', `${field} is present though nothing answered`, { field });
-    }
-  }
-  if (!record.requested) fail('requested_dropped', 'the requested identity is gone', {});
-  return true;
-}
-
-// The dispatch record must carry the Contract's requested identity unchanged.
-// A default substituted for it is the failure this catches — the record would
-// otherwise look complete while naming a family nobody asked for.
-export function checkRequestedSurvives(contract, record) {
-  const stated = requestedFamily(contract);
-  if (!record.requested) fail('requested_dropped', 'the requested identity is gone', {});
-  const a = JSON.stringify(stated);
-  const b = JSON.stringify(record.requested);
-  if (a !== b) {
-    fail('requested_substituted', 'the recorded request is not the one the Contract states', {
-      stated, recorded: record.requested,
-    });
-  }
-  return true;
-}

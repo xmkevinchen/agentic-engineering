@@ -14,7 +14,6 @@
 // V1 builds no release and adds no build step, so it carries its own checker and
 // pins that instead (AC-12's enforcement identity).
 
-import { fail } from './codes.mjs';
 
 const TYPES = ['object', 'array', 'string', 'integer', 'boolean', 'digest', 'enum', 'const'];
 
@@ -104,14 +103,6 @@ export function lintSchema(schema, path = '$') {
       break;
   }
   return problems;
-}
-
-export function assertClosed(schema, name) {
-  const problems = lintSchema(schema, `$(${name})`);
-  if (problems.length > 0) {
-    fail('format_open', `schema ${name} is not closed`, { problems });
-  }
-  return true;
 }
 
 // ---------------------------------------------------------------------------

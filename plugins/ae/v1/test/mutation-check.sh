@@ -29,6 +29,7 @@ restore_all() {
 trap 'restore_all' EXIT INT TERM PIPE
 
 plant() { # file, from, to
+  mkdir -p "$(dirname "${TMPDIR:-/tmp}/$1.mut.bak")"
   cp "$V1/lib/$1" "${TMPDIR:-/tmp}/$1.mut.bak"
   PLANTED="$PLANTED $1"
   python3 - "$V1/lib/$1" "$2" "$3" <<'PY'
@@ -70,8 +71,12 @@ printf "object admitting extras called closed  %s\n" "$(run)"; revert schema.mjs
 plant admissibility.mjs "if (result.origin !== 'harness') return 'result_self_authored';" ""
 printf "submission-authored result accepted    %s\n" "$(run)"; revert admissibility.mjs
 
-plant family.mjs "fail('observed_without_answer'" "return true; fail('observed_without_answer'"
-printf "observed present with no answer        %s\n" "$(run)"; revert family.mjs
+plant ../schema/records.mjs "      requested: { type: 'array', minItems: 1, items: id },
+      // Present only when a seat actually answered." \
+  "      requested: { type: 'array', minItems: 1, items: id },
+      observed: id,
+      // Present only when a seat actually answered."
+printf "observed given a position in the record %s\n" "$(run)"; revert ../schema/records.mjs
 
 # The four below stand for the defects the second implementation review found: a
 # verdict asserted rather than computed, an Assignment the holder supplied for
