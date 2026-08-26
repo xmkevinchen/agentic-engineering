@@ -169,7 +169,7 @@ export function recordTests() {
     ));
 
     eq('the approved revision comes back', out.approvedRevision, 'r1');
-    eq('the attempt comes back', out.attempts.join(','), w.attempt.attempt);
+    eq('the attempt comes back', out.attempts.join(','), String(w.attempt.attempt));
     eq('the Gate verdict comes back', out.gateVerdicts.O, 'passed');
     ok('the sign-off comes back', out.signoffPresent);
     // Both identities, like the other three durable objects: a single digest
@@ -195,12 +195,12 @@ export function recordTests() {
     // kind. A shorthand fixture would have been refused — which is the point:
     // closure over names is not closure.
     ledger.append({
-      kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1', attempt: 'a1',
+      kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1',
       producer: 'P', obligations: ['O'],
     });
     ledger.append({
       kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O',
-      observation: 'sh run-tests.sh', attempt: 'a1', contract_revision: 'r1',
+      observation: 'sh run-tests.sh', attempt: 0, contract_revision: 'r1',
       assignment: 'A1', producer: 'P', artifact: 'art1', package: 'pkg1',
       command_result: 'cr1',
     });
@@ -213,22 +213,22 @@ export function recordTests() {
     // The payload too. An earlier draft checked the name and accepted anything
     // beside it: missing fields, nulls, and additional properties all appended.
     refuses('a known kind with a field missing', 'format_open',
-      () => ledger.append({ kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a1' }));
+      () => ledger.append({ kind: 'attempt_opened', lineage: 'L', run: 'run1' }));
     refuses('a known kind with a null field', 'format_open',
       () => ledger.append({
-        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: null, attempt: 'a1',
+        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: null,
         producer: 'P', obligations: ['O'],
       }));
     refuses('a known kind with an additional field', 'format_open',
       () => ledger.append({
-        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1', attempt: 'a1',
+        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1',
         producer: 'P', obligations: ['O'], smuggled: 'value',
       }));
     // And the origin markers are constants in the shape, so a record claiming
     // host origin cannot be appended with anything else there.
     refuses('a decision claiming a different origin', 'format_open',
       () => ledger.append({
-        kind: 'human_decision_choice', operation: 'signoff', actor: 'Human Owner', lineage: 'L', choice: 'sign',
+        kind: 'human_decision_choice', operation: 'unavailable_decision', actor: 'Human Owner', lineage: 'L', choice: 'stop',
         origin: 'model',
       }));
 

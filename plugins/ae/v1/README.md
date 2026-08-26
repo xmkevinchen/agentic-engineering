@@ -58,6 +58,16 @@ parameter through which the party being judged supplied the standard it would be
 judged against. There is no longer such a parameter, and that is the property to
 check first when reading `lib/kernel.mjs`.
 
+**Nothing is named by a number that was predicted.** An attempt is identified by
+the position of the record that opened it, and a record's position is assigned
+when the log is read, never stored. Both of those replaced a prediction: a
+sequence number read just before appending, and an attempt id built from the
+position the log was *about* to reach. Two writers can predict the same number;
+two lines cannot occupy one position.
+
+That class of defect is invisible from a single process, so `test/concurrent.test.mjs`
+starts real ones and has them collide.
+
 **The reduction judges; selection does not.** Stage 1 reads the routing envelope —
 lineage, obligation, attempt — and stops. Whether a record is valid, current, or
 authorized is a *reduction verdict*. Two earlier drafts filtered in selection and

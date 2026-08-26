@@ -18,16 +18,16 @@ const approvals = [{ lineage: 'L', revision: 'r1', seq: 5 }];
 // is not binding: a package explicitly bound to another execution resolved fine
 // until this was compared.
 const pkg = {
-  id: 'pkg1', contract_revision: 'r1', assignment: 'A1', attempt: 'at1', producer: 'P',
+  id: 'pkg1', contract_revision: 'r1', assignment: 'A1', attempt: 1, producer: 'P',
   command_result: 'cr1', artifact: 'art1',
   changed_paths: ['docs/v1/a.md'],
   material_inputs: [{ id: 'in1', identity: 'sha256:aa' }],
 };
 const result = {
   origin: 'harness', seq: 9, subjects: 69, inputs_used: ['in1'],
-  attempt: 'at1', artifact: 'art1', command: 'sh plugins/ae/scripts/ae-run-tests.sh',
+  attempt: 1, artifact: 'art1', command: 'sh plugins/ae/scripts/ae-run-tests.sh',
 };
-const attempt = { attempt: 'at1', assignment: 'A1', producer: 'P' };
+const attempt = { seq: 1, assignment: 'A1', producer: 'P' };
 
 function build(over = {}) {
   const {
@@ -38,7 +38,7 @@ function build(over = {}) {
   const T = { ...attempt, ...attemptOver };
   const index = {
     package: (id) => (id === P.id ? P : null),
-    attempt: (id) => (id === T.attempt ? T : null),
+    attempt: (n) => (n === T.seq ? T : null),
     artifact: (id) => (id === 'art1' ? {} : null),
     commandResult: (id) => (id === 'cr1' ? R : null),
   };
@@ -46,7 +46,7 @@ function build(over = {}) {
   const record = {
     kind: 'observation', lineage: 'L', obligation: 'O',
     observation: 'sh plugins/ae/scripts/ae-run-tests.sh',
-    run: 'run1', contract_revision: 'r1', assignment: 'A1', attempt: 'at1', producer: 'P',
+    run: 'run1', contract_revision: 'r1', assignment: 'A1', attempt: 1, producer: 'P',
     artifact: 'art1', package: 'pkg1', command_result: 'cr1',
     ...recOver,
   };
@@ -95,7 +95,7 @@ export function evidenceTests() {
       otherProducer.admit(otherProducer.record), 'binding_cross_execution');
     // The decisive case the earlier draft missed: a package that resolves, and is
     // explicitly bound to a different execution.
-    const foreignPkg = build({ pkgOver: { assignment: 'OTHER', attempt: 'OTHER' } });
+    const foreignPkg = build({ pkgOver: { assignment: 'OTHER', attempt: 9 } });
     eq('a package from another execution',
       foreignPkg.admit(foreignPkg.record), 'binding_cross_execution');
     // The artifact is one of those identities. A package attesting to a different
@@ -103,7 +103,7 @@ export function evidenceTests() {
     const foreignArtifact = build({ pkgOver: { artifact: 'art2' } });
     eq('a package attesting to another artifact',
       foreignArtifact.admit(foreignArtifact.record), 'binding_cross_execution');
-    const foreignResult = build({ resultOver: { attempt: 'OTHER' } });
+    const foreignResult = build({ resultOver: { attempt: 9 } });
     eq('a command result from another attempt',
       foreignResult.admit(foreignResult.record), 'binding_cross_execution');
     // The decisive one: a real green run, paired with an artifact it never

@@ -146,7 +146,8 @@ export class Ledger {
           state.approvedRevision = r.revision;
           break;
         case 'attempt_opened':
-          state.attempts.push(r.attempt);
+          // Its position is its name; there is no other field to push.
+          state.attempts.push(r.seq);
           break;
         case 'gate_result':
           state.gateVerdicts[r.obligation] = r.status;

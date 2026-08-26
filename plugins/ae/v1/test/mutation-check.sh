@@ -91,8 +91,12 @@ plant gate.mjs "const outcome = ctx.outcomeOf(record, ctx);" \
   "const outcome = record.satisfied !== undefined ? record.satisfied : ctx.outcomeOf(record, ctx);"
 printf "a submitted verdict is believed         %s\n" "$(run)"; revert gate.mjs
 
-plant kernel.mjs "const issued = this.records().find(" \
-  "const issued = { grants: { attempt_producer: producer } } || this.records().find("
+plant kernel.mjs "    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (assignment.grants.attempt_producer !== producer) {" \
+  "    const assignment2 = assignment || { grants: { attempt_producer: producer, obligations } };
+    if (assignment2.grants.attempt_producer !== producer) {"
 printf "self-selected grants accepted           %s\n" "$(run)"; revert kernel.mjs
 
 
@@ -145,8 +149,7 @@ plant kernel.mjs "      kind: 'artifact_recorded', id, lineage, run, artifact_ki
       origin: 'submission',"
 printf "the artifact recorded by a submission   %s\n" "$(run)"; revert kernel.mjs
 
-plant kernel.mjs "      const recorded = this.records().find(" \
-  "      const recorded = true || this.records().find("
+plant kernel.mjs "      if (!recorded) {" "      if (false) {"
 printf "a review nobody recorded is carried     %s\n" "$(run)"; revert kernel.mjs
 
 plant kernel.mjs "    const stale = checkVerifiableSources(" \
@@ -172,6 +175,18 @@ printf "an unrenderable Contract approved       %s\n" "$(run)"; revert kernel.mj
 plant ledger.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));" \
   "    return parseNdjson(bytes).map((r) => ({ ...r, seq: 0 }));"
 printf "every record claims the same position   %s\n" "$(run)"; revert ledger.mjs
+
+# Round 6's findings.
+plant kernel.mjs "    if (!reported) {" "    if (false) {"
+printf "a sign-off before the Gate reported     %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    if (issued.length > 1) {" "    if (false) {"
+printf "a run with two Assignments proceeds     %s\n" "$(run)"; revert kernel.mjs
+
+# Not planted: the write's re-reduction. `verdictsNow` is exercised directly, but
+# its call site inside `complete` only matters when another process advances the
+# log between the reduction and the write, and there is no seam to schedule
+# against. A mutation that cannot turn red would say the guard is covered.
 
 # AC-13: a log that replays into a different verdict cannot account for its own
 # Acceptance. The fresh-process check is what catches this; nothing in-process can.

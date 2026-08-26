@@ -56,8 +56,8 @@ export function kernelTests() {
     // there is no longer a way to attempt the append — the Kernel's ledger is
     // private, so every record goes through the operation that guards it.
     const problems = validate(RECORDS.human_decision_choice, {
-      kind: 'human_decision_choice', operation: 'signoff', actor: 'Human Owner', lineage: 'L',
-      choice: 'sign', origin: 'model', seq: 0,
+      kind: 'human_decision_choice', operation: 'unavailable_decision', actor: 'Human Owner', lineage: 'L',
+      choice: 'stop', origin: 'model', seq: 0,
     });
     ok('a decision claiming another origin is not a valid record', problems.length > 0);
   });

@@ -163,7 +163,8 @@ export const EVIDENCE_PACKAGE = {
     lineage: id,
     contract_revision: id,
     assignment: id,
-    attempt: id,
+    // The position of the record that opened the attempt, not a minted name.
+    attempt: { type: 'integer', minimum: 0 },
     producer: id,
     // Both are references to records, never restatements of them. The package
     // names the artifact the Harness recorded and the result the Harness wrote;

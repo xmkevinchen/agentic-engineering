@@ -83,7 +83,7 @@ export function select({ records, lineage, run, obligation }) {
       (r) => SUBMITTED_KINDS.has(r.kind)
         && r.lineage === lineage
         && r.obligation === obligation
-        && r.attempt === latest.attempt,
+        && r.attempt === latest.seq,
     ),
   };
 }
@@ -182,7 +182,7 @@ export function reduce({
     return {
       status: STATUS.INVALID,
       code: 'contradictory_observations',
-      attempt: attempt.attempt,
+      attempt: attempt.seq,
       selected: null,
     };
   }
@@ -193,7 +193,7 @@ export function reduce({
   return {
     status: worst.status,
     code: worst.code,
-    attempt: attempt.attempt,
+    attempt: attempt.seq,
     selected: worst.record ? canonicalDigest(worst.record) : null,
   };
 }

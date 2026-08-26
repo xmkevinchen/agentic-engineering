@@ -81,7 +81,7 @@ export function packageDoc(over = {}) {
     lineage: 'L',
     contract_revision: 'r1',
     assignment: 'A1',
-    attempt: 'A1#0',
+    attempt: 0,
     producer: 'P',
     artifact: 'art1',
     command_result: 'cr1',

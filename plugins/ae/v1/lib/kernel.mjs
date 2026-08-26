@@ -335,6 +335,15 @@ export class Kernel {
   contractFor(lineage) {
     const prior = this.approvals().filter((a) => a.lineage === lineage);
     if (prior.length === 0) return null;
+    // Same reason as the Assignment: "no genesis yet" was checked and then written,
+    // so two approvers could both open one. A lineage with two genesis records has
+    // no single history to be current in.
+    const genesis = prior.filter((a) => a.kind === 'contract_approved_genesis');
+    if (genesis.length > 1) {
+      fail('lineage_second_genesis', 'a lineage may open only one genesis', {
+        lineage, count: genesis.length,
+      });
+    }
     const latest = prior[prior.length - 1];
     return {
       contract: openObject(latest.bytes, latest.identity, CONTRACT, 'Contract'),
@@ -407,11 +416,20 @@ export class Kernel {
   // The run's Assignment, from the issued bytes. Taking it as an argument let a
   // caller keep the issued id and widen the boundary.
   assignmentFor(lineage, run) {
-    const issued = this.records().find(
+    const issued = this.records().filter(
       (r) => r.kind === 'assignment_issued' && r.lineage === lineage && r.run === run,
     );
-    if (!issued) return null;
-    return openObject(issued.bytes, issued.identity, ASSIGNMENT, 'Assignment');
+    if (issued.length === 0) return null;
+    // Uniqueness is enforced here, not only before the append. Checking the log
+    // and then writing is two operations: two issuers both saw none and both
+    // wrote one, and the run then had two — with the reader quietly taking the
+    // first. A run that holds two Assignments holds no Assignment.
+    if (issued.length > 1) {
+      fail('assignment_not_unique', 'a run holds exactly one Assignment', {
+        lineage, run, count: issued.length,
+      });
+    }
+    return openObject(issued[0].bytes, issued[0].identity, ASSIGNMENT, 'Assignment');
   }
 
   // An attempt may be opened only by the producer the Assignment names, for the
@@ -440,10 +458,25 @@ export class Kernel {
         });
       }
     }
-    return this.#ledger.append({
-      kind: 'attempt_opened', lineage, run, assignment: assignment.id,
-      attempt: `${assignment.id}#${this.#ledger.seq}`, producer, obligations,
+    // No minted name. The attempt is identified by where its record landed, which
+    // is a fact rather than a prediction: joining the Assignment id to the position
+    // the log was about to reach let two writers predict the same one, and two
+    // runs then shared an attempt.
+    const opened = this.#ledger.append({
+      kind: 'attempt_opened', lineage, run, assignment: assignment.id, producer, obligations,
     });
+    // The latest attempt for this run, which is the one the Gate will select —
+    // not "the record I just wrote".
+    //
+    // Two attempts opened at once by the same producer for the same obligations
+    // are byte-identical records, so no writer can tell which line is its own.
+    // That is not a gap to paper over: they are indistinguishable because there
+    // is nothing to distinguish. What each opener needs is the attempt its
+    // submissions must name, and an older one would simply never be selected.
+    const mine = this.records().filter(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    return { ...opened, attempt: mine[mine.length - 1].seq };
   }
 
   // The dispatch carries what the Contract states, resolved here. `dispatchRecord`
@@ -511,7 +544,18 @@ export class Kernel {
     });
   }
 
+  // AC-1 requires the sign-off to come after the Gate reported, and names a
+  // pre-Gate sign-off as a case that must be rejected. It is refused here, where
+  // a caller can actually attempt one: `complete` appends its own sign-off after
+  // reducing, so a check downstream of that could never fail through it, and the
+  // rejection AC-1 asks for was not being exercised at all.
   signOff({ lineage, run, contractRevision, deliverable, actor, acceptedReview }) {
+    const reported = this.records().some(
+      (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
+    );
+    if (!reported) {
+      fail('signoff_before_gate', 'the sign-off predates the Gate result', { lineage, run });
+    }
     return this.#ledger.append({
       kind: 'human_signoff', lineage, run, contract_revision: contractRevision,
       deliverable, actor, origin: HOST,
@@ -563,7 +607,7 @@ export class Kernel {
     const packageRecord = findBy('evidence_package', 'id');
     return {
       commandResult: findBy('command_result', 'id'),
-      attempt: findBy('attempt_opened', 'attempt'),
+      attempt: findBy('attempt_opened', 'seq'),
       artifact: findBy('artifact_recorded', 'id'),
       // Parsed through `verify`, so a consumer cannot reach a package whose byte
       // identity does not check out.
@@ -624,6 +668,29 @@ export class Kernel {
   // and the notion of "current" — three different ways to pass without changing
   // anything true.
   status({ lineage, run }) {
+    const result = this.#reduce({ lineage, run });
+    const current = this.currentRevision(lineage);
+    const { contract } = this.contractFor(lineage);
+
+    // The verdict is recorded, because completion relies on it and AC-13 says
+    // everything either the Gate or the Human Owner relies on is recorded when it
+    // happens. Without this, replay could reconstruct the inputs but not the
+    // decision they produced — and "the Gate said passed" would be a claim with
+    // nothing behind it.
+    for (const obligation of contract.obligations) {
+      const v = result.byObligation[obligation];
+      this.#ledger.append({
+        kind: 'gate_result', lineage, run, contract_revision: current, obligation,
+        status: v.status,
+        ...(v.code ? { code: v.code } : {}),
+        ...(v.attempt != null ? { attempt: v.attempt } : {}),
+        ...(v.selected ? { selected: v.selected } : {}),
+      });
+    }
+    return result;
+  }
+
+  #reduce({ lineage, run }) {
     const approved = this.contractFor(lineage);
     if (approved === null) {
       fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
@@ -647,23 +714,6 @@ export class Kernel {
       outcomeOf: this.outcomeReader({ lineage, run }),
     });
 
-    // The verdict is recorded, because completion relies on it and AC-13 says
-    // everything either the Gate or the Human Owner relies on is recorded when it
-    // happens. Without this, replay could reconstruct the inputs but not the
-    // decision they produced — and "the Gate said passed" would be a claim with
-    // nothing behind it.
-    {
-      for (const obligation of contract.obligations) {
-        const v = result.byObligation[obligation];
-        this.#ledger.append({
-          kind: 'gate_result', lineage, run, contract_revision: current, obligation,
-          status: v.status,
-          ...(v.code ? { code: v.code } : {}),
-          ...(v.attempt ? { attempt: v.attempt } : {}),
-          ...(v.selected ? { selected: v.selected } : {}),
-        });
-      }
-    }
     return result;
   }
 
@@ -718,21 +768,6 @@ export class Kernel {
       lineage, run, contractRevision: current,
       deliverable: deliverable.identity, actor, acceptedReview,
     });
-
-    // After the Gate, and bound to this run, revision and deliverable. The
-    // sign-off is appended above, so its position in the log is what orders it —
-    // not a sequence number the caller chose.
-    const lastGateInput = Math.max(
-      ...this.records()
-        .filter((r) => r.kind === 'gate_result' && r.run === run)
-        .map((r) => r.seq),
-      -1,
-    );
-    if (!(signoff.seq > lastGateInput)) {
-      fail('signoff_before_gate', 'the sign-off predates the Gate result', {
-        signoff: signoff.seq, lastGate: lastGateInput,
-      });
-    }
 
     // The Acceptance is exactly the shape the schema states — the verdicts travel
     // beside it rather than inside it, because a closed schema means an extra
@@ -834,16 +869,15 @@ export class Kernel {
   // array, which made it a second completion entry point however carefully the
   // Kernel called it: importing the module was enough to write an Acceptance with
   // no Gate, no sign-off and no record.
-  // The latest recorded verdict per obligation, as the log stands now. Both
-  // `complete` and the write read this: the first to decide, the second to check
-  // that the decision still holds when the bytes land.
-  verdictsRecorded({ lineage, run }) {
-    const latest = new Map();
-    for (const r of this.records()) {
-      if (r.kind !== 'gate_result' || r.lineage !== lineage || r.run !== run) continue;
-      latest.set(r.obligation, r.status);
-    }
-    return latest;
+  // The reduction, run again over the log as it stands now — not a read of what
+  // the last reduction recorded.
+  //
+  // Reading the recorded verdicts was the whole point missed: another writer can
+  // open a newer attempt without reducing, so the newest `gate_result` still says
+  // `passed` while the run is `pending`. A stale answer read twice is one answer.
+  verdictsNow({ lineage, run }) {
+    const { byObligation } = this.#reduce({ lineage, run });
+    return new Map(Object.entries(byObligation).map(([o, v]) => [o, v.status]));
   }
 
   #commitCompletion({ acceptance, obligations, run, revision }) {
@@ -861,7 +895,7 @@ export class Kernel {
     // inside `complete` to schedule against, and adding one for a test would be
     // test-only machinery. `verdictsRecorded` is exercised directly instead, on a
     // log two Kernels advanced. Said plainly rather than left to look covered.
-    const latest = this.verdictsRecorded({ lineage: acceptance.lineage, run });
+    const latest = this.verdictsNow({ lineage: acceptance.lineage, run });
     for (const obligation of obligations) {
       const status = latest.get(obligation);
       if (status === undefined) {

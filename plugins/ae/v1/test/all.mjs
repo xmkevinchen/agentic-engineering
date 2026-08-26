@@ -4,6 +4,7 @@ import { gateTests } from './gate.test.mjs';
 import { identityTests } from './identity.test.mjs';
 import { authorityTests } from './authority.test.mjs';
 import { evidenceTests } from './evidence.test.mjs';
+import { concurrentTests } from './concurrent.test.mjs';
 import { recordTests } from './record.test.mjs';
 import { familyTests } from './family.test.mjs';
 import { knowledgeTests } from './knowledge.test.mjs';
@@ -24,5 +25,7 @@ completionTests();
 structureTests();
 coverageTests();
 kernelTests();
+
+concurrentTests();
 
 process.exit(report() ? 0 : 1);

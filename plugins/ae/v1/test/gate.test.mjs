@@ -7,8 +7,11 @@ import { group, ok, eq } from './harness.mjs';
 
 // Every record carries the run it belongs to. Selection is scoped by it, because
 // a lineage outlives its executions and evidence from one used to decide another.
-const A1 = { kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a1' };
-const A2 = { kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a2' };
+//
+// An attempt is named by the position of the record that opened it. These stand
+// in for records the Ledger would have numbered, so they carry `seq` directly.
+const A1 = { kind: 'attempt_opened', lineage: 'L', run: 'run1', seq: 1 };
+const A2 = { kind: 'attempt_opened', lineage: 'L', run: 'run1', seq: 2 };
 // The observation names its evidence and claims no outcome — the schema has no
 // field for one. `outcome` here is what the *runner's* record would say, threaded
 // through `outcomeOf` below, so these cases exercise the reduction rather than a
@@ -36,47 +39,47 @@ const run = (records, opts = {}) => reduce({
 
 export function gateTests() {
   group('AC-4 · every status reachable by its own condition', () => {
-    eq('passed', run([A1, obs('a1', true)]), STATUS.PASSED);
-    eq('failed', run([A1, obs('a1', false)]), STATUS.FAILED);
+    eq('passed', run([A1, obs(1, true)]), STATUS.PASSED);
+    eq('failed', run([A1, obs(1, false)]), STATUS.FAILED);
     eq('pending — attempt opened, nothing submitted', run([A1]), STATUS.PENDING);
-    eq('unavailable', run([A1, unavailable('a1')]), STATUS.UNAVAILABLE);
-    eq('stale — superseded revision', run([A1, obs('a1', true, 'r0')]), STATUS.STALE);
+    eq('unavailable', run([A1, unavailable(1)]), STATUS.UNAVAILABLE);
+    eq('stale — superseded revision', run([A1, obs(1, true, 'r0')]), STATUS.STALE);
     eq('stale — material input changed',
-      run([A1, obs('a1', true)], { inputsChanged: () => true }), STATUS.STALE);
+      run([A1, obs(1, true)], { inputsChanged: () => true }), STATUS.STALE);
     eq('invalid — inadmissible',
-      run([A1, obs('a1', true)], { admit: () => 'binding_missing' }), STATUS.INVALID);
+      run([A1, obs(1, true)], { admit: () => 'binding_missing' }), STATUS.INVALID);
   });
 
   group('AC-4 · the latest attempt decides', () => {
     // A failure does not survive a legitimate retry.
-    eq('retry after failure', run([A1, obs('a1', false), A2, obs('a2', true)]), STATUS.PASSED);
+    eq('retry after failure', run([A1, obs(1, false), A2, obs(2, true)]), STATUS.PASSED);
     // Nor does an inadmissible earlier attempt poison a later valid one.
     eq('retry after invalid',
-      run([A1, obs('a1', true), A2, obs('a2', true)], {
+      run([A1, obs(1, true), A2, obs(2, true)], {
         admit: (r) => (r.attempt === 'a1' ? 'binding_missing' : null),
       }), STATUS.PASSED);
     // And an older pass does not survive an attempt that produced nothing:
     // a retry with no result is an absence, not a pass.
-    eq('empty latest attempt', run([A1, obs('a1', true), A2]), STATUS.PENDING);
+    eq('empty latest attempt', run([A1, obs(1, true), A2]), STATUS.PENDING);
   });
 
   group('AC-4 · contradiction fails closed', () => {
     eq('failed and passed in one attempt',
-      run([A1, obs('a1', true), obs('a1', false)]), STATUS.INVALID);
+      run([A1, obs(1, true), obs(1, false)]), STATUS.INVALID);
     // Recency must not resolve it. Order both ways to be sure.
     eq('order does not resolve it',
-      run([A1, obs('a1', false), obs('a1', true)]), STATUS.INVALID);
+      run([A1, obs(1, false), obs(1, true)]), STATUS.INVALID);
   });
 
   group('AC-4 · selection judges nothing', () => {
     // The record a status exists to report must survive selection. Two earlier
     // drafts filtered here and each time the status became `pending`.
     eq('superseded evidence is stale, not pending',
-      run([A1, obs('a1', true, 'r0')]), STATUS.STALE);
+      run([A1, obs(1, true, 'r0')]), STATUS.STALE);
     eq('inadmissible evidence is invalid, not pending',
-      run([A1, obs('a1', true)], { admit: () => 'binding_unresolved' }), STATUS.INVALID);
+      run([A1, obs(1, true)], { admit: () => 'binding_unresolved' }), STATUS.INVALID);
     eq('unavailable is unavailable, not pending',
-      run([A1, unavailable('a1')]), STATUS.UNAVAILABLE);
+      run([A1, unavailable(1)]), STATUS.UNAVAILABLE);
   });
 
   group('AC-4 · a supplied status changes nothing', () => {
@@ -84,13 +87,13 @@ export function gateTests() {
     // the reduction used to copy. Neither is read — the verdict comes from the
     // runner's record through `outcomeOf`.
     eq('an asserted status is ignored',
-      run([A1, { ...obs('a1', false), status: 'passed' }]), STATUS.FAILED);
+      run([A1, { ...obs(1, false), status: 'passed' }]), STATUS.FAILED);
     eq('an asserted satisfaction is ignored',
-      run([A1, { ...obs('a1', false), satisfied: true }]), STATUS.FAILED);
+      run([A1, { ...obs(1, false), satisfied: true }]), STATUS.FAILED);
   });
 
   group('AC-4 · the reduction refuses to run without its readers', () => {
-    const records = [A1, obs('a1', true)];
+    const records = [A1, obs(1, true)];
     const base = { records, lineage: 'L', run: 'run1', obligation: 'O', currentRevision: 'r1' };
     for (const missing of ['admit', 'inputsChanged', 'outcomeOf']) {
       const opts = { ...DEFAULTS };
@@ -105,11 +108,11 @@ export function gateTests() {
     // `gate_result` carries the same routing fields, so an earlier version
     // selected it on the next pass and turned a `passed` into an `invalid`.
     const verdict = {
-      kind: 'gate_result', lineage: 'L', obligation: 'O', attempt: 'a1',
+      kind: 'gate_result', lineage: 'L', obligation: 'O', attempt: 1,
       run: 'run1', contract_revision: 'r1', status: 'passed',
     };
     eq('a recorded verdict does not poison the next reduction',
-      run([A1, obs('a1', true), verdict]), STATUS.PASSED);
+      run([A1, obs(1, true), verdict]), STATUS.PASSED);
   });
 
   group('AC-4 · precedence within the selected candidate', () => {
@@ -117,10 +120,10 @@ export function gateTests() {
       PRECEDENCE.join('>'), 'invalid>stale>unavailable>failed>passed');
     // invalid outranks stale: uninterpretable evidence is not interpreted further.
     eq('invalid over stale',
-      run([A1, obs('a1', true, 'r0')], { admit: () => 'binding_missing' }), STATUS.INVALID);
+      run([A1, obs(1, true, 'r0')], { admit: () => 'binding_missing' }), STATUS.INVALID);
     // stale outranks unavailable, and both outrank a plain failure.
     eq('unavailable over failed',
-      run([A1, obs('a1', false), unavailable('a1')]), STATUS.UNAVAILABLE);
+      run([A1, obs(1, false), unavailable(1)]), STATUS.UNAVAILABLE);
   });
 
   group('AC-4 · deterministic across processes', () => {
@@ -128,7 +131,7 @@ export function gateTests() {
     // random seed: that establishes repeatability, not determinism. The real
     // check spawns fresh processes, and varies TZ and locale so an ambient
     // dependence would show up as divergence rather than as a passing test.
-    const records = [A1, obs('a1', true)];
+    const records = [A1, obs(1, true)];
     const args = JSON.stringify(records);
     const here = fileURLToPath(new URL('./determinism.mjs', import.meta.url));
     const run = (env) => execFileSync(process.execPath, [here, args], {
@@ -143,16 +146,16 @@ export function gateTests() {
     // And it is not vacuous: different facts must produce a different result, or
     // the comparison above would pass on a function that ignores its input.
     const different = run({}) === execFileSync(process.execPath, [
-      here, JSON.stringify([A1, obs('a1', false)]),
+      here, JSON.stringify([A1, obs(1, false)]),
     ], { encoding: 'utf8' });
     ok('different facts produce a different result', different === false);
   });
 
   group('AC-1 · completion needs every obligation passed', () => {
     const recs = [
-      { kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a1' },
-      { ...obs('a1', true), obligation: 'O1' },
-      { ...obs('a1', true), obligation: 'O2' },
+      { kind: 'attempt_opened', lineage: 'L', run: 'run1', seq: 1 },
+      { ...obs(1, true), obligation: 'O1' },
+      { ...obs(1, true), obligation: 'O2' },
     ];
     ok('all passed', reduceAll({
       records: recs, lineage: 'L', run: 'run1', obligations: ['O1', 'O2'],

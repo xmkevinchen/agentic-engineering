@@ -34,6 +34,13 @@ const count = { type: 'integer', minimum: 0 };
 // something a caller handed in.
 const bytes = { type: 'string', minLength: 1 };
 
+// An attempt is named by the position of the record that opened it. Minting a
+// name — an Assignment id joined to the position the log was *about* to reach —
+// predicted a number two writers could both predict, and two runs then shared an
+// attempt: the Gate selected one run's observation for the other's newest attempt
+// and reported `passed` where nothing had been submitted.
+const attempt = { type: 'integer', minimum: 0 };
+
 const approvalBase = {
   lineage: id, revision: id, identity, bytes, decision: count, seq,
   kind: { type: 'string', minLength: 1 },
@@ -66,9 +73,9 @@ export const RECORDS = Object.freeze({
   },
   attempt_opened: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'assignment', 'attempt', 'producer', 'obligations', 'seq'],
+    required: ['kind', 'lineage', 'run', 'assignment', 'producer', 'obligations', 'seq'],
     properties: {
-      kind: text, lineage: id, run: id, assignment: id, attempt: id, producer: id,
+      kind: text, lineage: id, run: id, assignment: id, producer: id,
       obligations: { type: 'array', minItems: 1, items: id }, seq,
     },
   },
@@ -79,7 +86,7 @@ export const RECORDS = Object.freeze({
       'exit', 'raw', 'subjects', 'inputs_used', 'origin', 'seq',
     ],
     properties: {
-      kind: text, id, lineage: id, run: id, attempt: id, command: text,
+      kind: text, id, lineage: id, run: id, attempt, command: text,
       // What the command ran against. Without it the result says a command
       // exited zero and nothing about which artifact it exercised — so a
       // producer could pair a real green run with any artifact it liked, and
@@ -102,7 +109,7 @@ export const RECORDS = Object.freeze({
       'assignment', 'producer', 'artifact', 'package', 'command_result', 'seq',
     ],
     properties: {
-      kind: text, lineage: id, run: id, obligation: id, observation: text, attempt: id,
+      kind: text, lineage: id, run: id, obligation: id, observation: text, attempt,
       contract_revision: id, assignment: id, producer: id, artifact: id,
       package: id, command_result: id, seq,
       // No `satisfied`. An observation points at the evidence; it does not say
@@ -124,7 +131,7 @@ export const RECORDS = Object.freeze({
         values: ['pending', 'passed', 'failed', 'invalid', 'unavailable', 'stale'],
       },
       code: text,
-      attempt: id,
+      attempt,
       selected: digest,
       seq,
     },
@@ -175,7 +182,7 @@ export const RECORDS = Object.freeze({
     type: 'object', additional: false,
     required: ['kind', 'lineage', 'run', 'obligation', 'attempt', 'requested', 'origin', 'seq'],
     properties: {
-      kind: text, lineage: id, run: id, obligation: id, attempt: id,
+      kind: text, lineage: id, run: id, obligation: id, attempt,
       requested: { type: 'array', minItems: 1, items: id },
       origin: { type: 'const', value: 'harness' }, seq,
     },
@@ -184,7 +191,7 @@ export const RECORDS = Object.freeze({
     type: 'object', additional: false,
     required: ['kind', 'lineage', 'run', 'attempt', 'obligation', 'requested', 'seq'],
     properties: {
-      kind: text, lineage: id, run: id, attempt: id, obligation: id,
+      kind: text, lineage: id, run: id, attempt, obligation: id,
       requested: { type: 'array', minItems: 1, items: id },
       // Present only when a seat actually answered. Absent is not empty: AC-8's
       // check is that nothing claims an answer nobody gave.
@@ -224,11 +231,13 @@ export const RECORDS = Object.freeze({
       kind: text,
       operation: {
         type: 'enum',
-        values: ['assignment_issuance', 'signoff', 'unavailable_decision',
+        // No `signoff`: signing off is its own kind, `human_signoff`, and an
+        // operation two shapes could carry is a fact with two spellings.
+        values: ['assignment_issuance', 'unavailable_decision',
           'retreat_decision', 'worth_decision'],
       },
       actor: id, lineage: id,
-      choice: { type: 'enum', values: ['wait', 'stop', 'amend', 'issue', 'sign', 'yes', 'no'] },
+      choice: { type: 'enum', values: ['wait', 'stop', 'amend', 'issue', 'yes', 'no'] },
       origin: { type: 'const', value: 'host' }, seq,
     },
   },

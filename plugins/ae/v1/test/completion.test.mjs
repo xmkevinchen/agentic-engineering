@@ -166,11 +166,14 @@ export function completionTests() {
     const k2 = new Kernel(logPath, {
       completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED,
     });
+    // The second Kernel opens an attempt and does *not* reduce. Reading the last
+    // recorded verdict would still say `passed` — that was the defect: a stale
+    // answer read twice is one answer. The write re-runs the reduction.
     k2.openAttempt({ lineage: 'L', run: w.run, producer: 'P', obligations: ['O'], submitter: 'P' });
-    k2.status({ lineage: 'L', run: w.run });
-
-    eq('and stops passing once a newer attempt is opened',
-      k1.verdictsRecorded({ lineage: 'L', run: w.run }).get('O'), 'pending');
+    eq('the recorded verdict is now stale',
+      k1.records().filter((r) => r.kind === 'gate_result').pop().status, 'passed');
+    eq('and re-reducing says otherwise',
+      k1.verdictsNow({ lineage: 'L', run: w.run }).get('O'), 'pending');
     refuses('so completion does not land', 'not_all_passed',
       () => k1.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
   });
@@ -216,6 +219,26 @@ export function completionTests() {
     eq('both obligations pass', k.status({ lineage: 'L', run: w.run }).allPassed, true);
     refuses('but the run names two artifacts', 'binding_cross_execution',
       () => k.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
+  });
+
+  group('AC-1 · a sign-off before the Gate reported is refused', () => {
+    // AC-1 names this as a case that must be rejected, and it was not being
+    // exercised: the check sat downstream of `complete`'s own sign-off, which is
+    // always appended after the reduction, so nothing could reach it. It is
+    // refused where a caller can actually attempt one.
+    const k = fresh();
+    const w = walk(k);
+    refuses('nothing has been reduced yet', 'signoff_before_gate',
+      () => k.signOff({
+        lineage: 'L', run: w.run, contractRevision: 'r1',
+        deliverable: sha('artifact'), actor: 'Human Owner',
+      }));
+    k.status({ lineage: 'L', run: w.run });
+    ok('and accepted once it has',
+      k.signOff({
+        lineage: 'L', run: w.run, contractRevision: 'r1',
+        deliverable: sha('artifact'), actor: 'Human Owner',
+      }).origin === 'host');
   });
 
   group('AC-1 · the Contract names who signs', () => {

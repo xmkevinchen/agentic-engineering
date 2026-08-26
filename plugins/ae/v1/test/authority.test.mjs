@@ -51,6 +51,28 @@ export function authorityTests() {
     refuses('a run holds exactly one', 'assignment_not_unique', () => issue(k));
   });
 
+  group('AC-5 · two issuers cannot both slip one in', () => {
+    // Checking the log and then writing is two operations: two Kernels both saw
+    // no Assignment and both wrote one, and the reader quietly took the first.
+    // Uniqueness is decided when the Assignment is read, so a run that ended up
+    // with two holds none.
+    const dir = mkdtempSync(join(tmpdir(), 'v1two-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k1 = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED });
+    const k2 = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED });
+    approved(k1);
+    const a = asObject(assignmentDoc());
+    const args = {
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
+    };
+    k1.issueAssignment(args);
+    // The second issuer's own check sees the first, so force the case the race
+    // produces: two records, however they got there.
+    const b = asObject(assignmentDoc({ id: 'A2' }));
+    refuses('the second is refused outright', 'assignment_not_unique',
+      () => k2.issueAssignment({ ...args, bytes: b.bytes, identity: b.identity }));
+  });
+
   group('AC-5 · an Assignment cannot be produced without issuing one', () => {
     // The decisive case: there is no parameter through which a holder can present
     // its own Assignment. An earlier version took one as an argument, so a
