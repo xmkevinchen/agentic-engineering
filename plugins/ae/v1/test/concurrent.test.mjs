@@ -58,20 +58,20 @@ export function concurrentTests() {
     eq('and they run without a gap', seqs.join(','), seqs.map((_, i) => i).join(','));
   });
 
-  group('AC-5 · a run that ends up with two Assignments holds none', () => {
-    // Both issuers read no Assignment and both wrote one. Uniqueness is decided
-    // when the Assignment is read, so the run fails closed rather than the reader
-    // quietly taking the first.
+  group('AC-5 · a run never silently picks between two Assignments', () => {
+    // Whether the race opens depends on the schedule, so the assertion is the
+    // invariant that holds either way: one Assignment, or a refusal. A branch that
+    // only sometimes runs is a test that only sometimes tests.
     const { dir, logPath, k } = prepared();
     race(dir, logPath, 'assignment', { ASSIGNMENT_BYTES: JSON.stringify(assignmentDoc()) });
     const issued = k.records().filter((r) => r.kind === 'assignment_issued');
     ok('at least one was issued', issued.length >= 1);
-    if (issued.length > 1) {
-      refuses('and the run refuses to proceed', 'assignment_not_unique',
-        () => k.assignmentFor('L', 'run1'));
-    } else {
-      ok('or exactly one landed', k.assignmentFor('L', 'run1').id.startsWith('A'));
-    }
+
+    let outcome;
+    try { outcome = k.assignmentFor('L', 'run1') ? 'one' : 'none'; } catch (e) { outcome = e.code; }
+    ok('either exactly one, or a refusal — never a quiet choice',
+      (issued.length === 1 && outcome === 'one')
+        || (issued.length > 1 && outcome === 'assignment_not_unique'));
   });
 
   group('AC-3 · a forked approval history has no current revision', () => {

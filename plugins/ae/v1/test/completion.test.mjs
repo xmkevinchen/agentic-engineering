@@ -242,16 +242,19 @@ export function completionTests() {
     const k = fresh();
     const w = walk(k);
     refuses('nothing has been reduced yet', 'signoff_before_gate',
-      () => k.signOff({
-        lineage: 'L', run: w.run, contractRevision: 'r1',
-        deliverable: sha('artifact'), actor: 'Human Owner',
-      }));
+      () => k.signOff({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
     k.status({ lineage: 'L', run: w.run });
-    ok('and accepted once it has',
-      k.signOff({
-        lineage: 'L', run: w.run, contractRevision: 'r1',
-        deliverable: sha('artifact'), actor: 'Human Owner',
-      }).origin === 'host');
+
+    // It stamps `origin: host`, so what it signs for is resolved and only
+    // *whether* to sign is the caller's. It took a caller-chosen actor, revision
+    // and deliverable, and could mint a host record saying an unrelated party had
+    // signed for a revision that did not exist.
+    refuses('someone the Contract does not name', 'authority_not_granted',
+      () => k.signOff({ lineage: 'L', run: w.run, actor: 'P' }));
+    const signed = k.signOff({ lineage: 'L', run: w.run, actor: 'Human Owner' });
+    eq('and what it signs for is resolved', signed.contract_revision, 'r1');
+    eq('including the deliverable', signed.deliverable, w.artifact.identity);
+    eq('externally produced', signed.origin, 'host');
   });
 
   group('AC-1 · the Contract names who signs', () => {

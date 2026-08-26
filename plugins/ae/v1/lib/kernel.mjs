@@ -601,19 +601,36 @@ export class Kernel {
   // a caller can actually attempt one: `complete` appends its own sign-off after
   // reducing, so a check downstream of that could never fail through it, and the
   // rejection AC-1 asks for was not being exercised at all.
-  signOff({ lineage, run, contractRevision, deliverable, actor, acceptedReview }) {
+  // Public, because AC-1 names a pre-Gate sign-off as a case that must be
+  // rejected and a private method cannot be attempted. Bound, because it stamps
+  // `origin: host`: it took a caller-chosen actor, revision and deliverable, so it
+  // could mint a host record saying an unrelated party had signed for a revision
+  // that did not exist. What it signs for is resolved; only *whether* to sign is
+  // the caller's.
+  signOff({ lineage, run, actor, acceptedReview }) {
+    const approved = this.contractFor(lineage);
+    if (!approved) {
+      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
+    }
+    if (actor !== approved.contract.final_signer) {
+      fail('authority_not_granted', "only the Contract's final signer signs", {
+        actor, final_signer: approved.contract.final_signer,
+      });
+    }
     const reported = this.records().some(
       (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
     );
     if (!reported) {
       fail('signoff_before_gate', 'the sign-off predates the Gate result', { lineage, run });
     }
+    const deliverable = this.deliverableFor({ lineage, run, contract: approved.contract });
     return this.#ledger.append({
-      kind: 'human_signoff', lineage, run, contract_revision: contractRevision,
-      deliverable, actor, origin: HOST,
+      kind: 'human_signoff', lineage, run, contract_revision: approved.revision,
+      deliverable: deliverable.identity, actor, origin: HOST,
       ...(acceptedReview ? { accepted_review: acceptedReview } : {}),
     });
   }
+
 
   // Private. A public one appended `completion_committed` without the write ever
   // happening, which is a record of a completion that does not exist.
@@ -825,10 +842,7 @@ export class Kernel {
     // evidence had exercised another.
     const deliverable = this.deliverableFor({ lineage, run, contract });
 
-    const signoff = this.signOff({
-      lineage, run, contractRevision: current,
-      deliverable: deliverable.identity, actor, acceptedReview,
-    });
+    const signoff = this.signOff({ lineage, run, actor, acceptedReview });
 
     // The Acceptance is exactly the shape the schema states — the verdicts travel
     // beside it rather than inside it, because a closed schema means an extra

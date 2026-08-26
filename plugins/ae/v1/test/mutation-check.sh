@@ -176,6 +176,16 @@ plant ledger.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }))
   "    return parseNdjson(bytes).map((r) => ({ ...r, seq: 0 }));"
 printf "every record claims the same position   %s\n" "$(run)"; revert ledger.mjs
 
+plant kernel.mjs "    if (actor !== approved.contract.final_signer) {
+      fail('authority_not_granted', \"only the Contract's final signer signs\", {" \
+  "    if (false) {
+      fail('authority_not_granted', \"x\", {"
+printf "anyone signs for the run                %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    const deliverable = this.deliverableFor({ lineage, run, contract: approved.contract });" \
+  "    const deliverable = { identity: 'sha256:' + '0'.repeat(64) };"
+printf "a sign-off names any deliverable        %s\n" "$(run)"; revert kernel.mjs
+
 # Round 7's findings: facts the Harness must produce rather than accept.
 plant kernel.mjs "      exit = typeof error.status === 'number' ? error.status : 1;" "      exit = 0;"
 printf "a failing command reports success       %s\n" "$(run)"; revert kernel.mjs

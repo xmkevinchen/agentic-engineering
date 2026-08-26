@@ -10,7 +10,9 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { appendFileSync } from 'node:fs';
 import { Kernel } from '../lib/kernel.mjs';
+import { encodeNdjson } from '../lib/canonical-json.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, sha, SOURCE_ROOT } from './fixtures.mjs';
 
@@ -66,11 +68,21 @@ export function authorityTests() {
       lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: 'Human Owner',
     };
     k1.issueAssignment(args);
-    // The second issuer's own check sees the first, so force the case the race
-    // produces: two records, however they got there.
     const b = asObject(assignmentDoc({ id: 'A2' }));
     refuses('the second is refused outright', 'assignment_not_unique',
       () => k2.issueAssignment({ ...args, bytes: b.bytes, identity: b.identity }));
+
+    // And if two ever do land — which they can, since the check and the append
+    // are separate operations — the run refuses rather than taking the first.
+    // Written directly, because the pre-append check makes the state otherwise
+    // unreachable from a single process, and the property is about the reader.
+    appendFileSync(logPath, encodeNdjson([{
+      kind: 'assignment_issued', lineage: 'L', run: 'run1', id: 'A2',
+      contract_revision: 'r1', actor: 'Human Owner', bytes: b.bytes,
+      identity: b.identity, origin: 'host',
+    }]));
+    refuses('a run holding two holds none', 'assignment_not_unique',
+      () => k1.assignmentFor('L', 'run1'));
   });
 
   group('AC-5 · an Assignment cannot be produced without issuing one', () => {
