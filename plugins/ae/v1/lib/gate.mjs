@@ -10,7 +10,6 @@
 // records return the same answer, which is what makes replay a check rather than
 // a re-enactment.
 
-import { canonicalDigest } from './canonical-json.mjs';
 
 export const STATUS = Object.freeze({
   PENDING: 'pending',
@@ -212,7 +211,11 @@ export function reduce({
     status: worst.status,
     code: worst.code,
     attempt: attempt.seq,
-    selected: worst.record ? canonicalDigest(worst.record) : null,
+    // The position of the record the verdict rests on, not a digest of it. A
+    // digest of something already in the log is a second spelling of its
+    // position, and a consumer that wants *that event* had to search for it —
+    // which is how a decision came to answer a different one.
+    selected: worst.record ? worst.record.seq : null,
   });
 }
 

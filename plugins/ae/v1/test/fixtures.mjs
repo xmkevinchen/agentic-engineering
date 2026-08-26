@@ -137,7 +137,7 @@ export function walk(k, over = {}) {
     lineage = 'L', run = 'run1', actor = 'Human Owner', producer = 'P',
     contract: contractOver = {}, assignment: assignmentOver = {},
     package: pkgOver = {}, command = COMMAND, inputNow,
-    observeBeforePackaging = false,
+    observeBeforePackaging = false, reduceBeforeAttempt = false, skipFormation = false,
     obligations = ['O'],
   } = over;
 
@@ -154,6 +154,9 @@ export function walk(k, over = {}) {
   // default made the failing, vacuous and uncountable cases pass for the wrong
   // reason — the observation answered a command the Contract had not named, so
   // the outcome was never consulted at all.
+  // Formation opens before the Contract exists, which is what AC-9 measures from.
+  if (!skipFormation) k.openFormation({ lineage, actor });
+
   const contract = asObject(contractDoc({
     observations: obligations.map((o) => ({
       obligation: o, observation: command, artifact: ARTIFACT, material_inputs: [INPUT],
@@ -170,6 +173,10 @@ export function walk(k, over = {}) {
   k.issueAssignment({
     lineage, run, bytes: assignment.bytes, identity: assignment.identity, actor,
   });
+
+  // The Gate can be asked before an attempt exists; the change is measured from
+  // the attempt to the verdict, so asking early makes that interval run backwards.
+  if (reduceBeforeAttempt) k.status({ lineage, run });
 
   const attempt = k.openAttempt({ lineage, run, producer, obligations, submitter: producer });
 

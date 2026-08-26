@@ -291,6 +291,7 @@ class Ledger {
       decisions: [],
       signoffs: [],
       completions: [],
+      formation: [],
       runRecords: [],
     };
     const bucket = {
@@ -313,6 +314,7 @@ class Ledger {
       human_decision_judgement: 'decisions',
       human_signoff: 'signoffs',
       completion_committed: 'completions',
+      formation_opened: 'formation',
       run_record_clean: 'runRecords',
       run_record_caught: 'runRecords',
     };
@@ -1093,6 +1095,25 @@ export class Kernel {
   // caller passed, which made "formation cost more than the change" an opinion
   // wearing a number: nothing said what was measured, or that the two figures
   // were of the same kind.
+  // The first act of forming a Contract. Recorded because AC-9 measures formation
+  // from it and nothing else marks it: the earliest record of a lineage was the
+  // activation decision, written inside `approve`, so formation measured one
+  // append rather than the work.
+  openFormation({ lineage, actor }) {
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
+      });
+    }
+    const already = this.records().some(
+      (r) => r.kind === 'formation_opened' && r.lineage === lineage,
+    );
+    if (already) {
+      fail('run_facts_incomplete', 'formation opens once for a lineage', { lineage });
+    }
+    return this.#ledger.append({ kind: 'formation_opened', lineage, actor, origin: HOST });
+  }
+
   recordRun({ lineage, run, traceOutcome, discrepancy, disposition, wentWrong }) {
     // The boundaries are derived, not chosen. Formation runs from the lineage's
     // first record to the approval that fixed the Contract; the change from the
@@ -1106,26 +1127,45 @@ export class Kernel {
     // another's boundaries. AC-9 asks for boundaries fixed before the run, and
     // the only version of that a caller cannot move is one it does not supply.
     const all = this.records();
-    const firstOf = (test) => all.find(test);
-    const lastOf = (test) => [...all].reverse().find(test);
-
-    const formationFrom = firstOf((r) => r.lineage === lineage);
-    const approval = lastOf(
-      (r) => r.lineage === lineage && r.kind.startsWith('contract_approved'),
-    );
-    const attempt = firstOf(
-      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
-    );
-    const verdict = lastOf(
-      (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
-    );
-    for (const [which, record] of [
-      ['the lineage', formationFrom], ['an approval', approval],
-      ['an attempt', attempt], ['a Gate verdict', verdict],
-    ]) {
-      if (!record) {
+    const only = (which, test) => {
+      const found = all.filter(test);
+      if (found.length === 0) {
         fail('run_facts_incomplete', `there is no ${which} to measure from`, { lineage, run });
       }
+      return found;
+    };
+    // Each end is the *first* record of its kind, so repeating an operation
+    // cannot move it. Taking the last let a second `status()` call extend the
+    // change interval without anything about the run having changed.
+    const [formationFrom] = only(
+      'record of formation opening', (r) => r.kind === 'formation_opened' && r.lineage === lineage,
+    );
+    const bound = this.contractForRun(lineage, run);
+    if (!bound) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    // The approval this run was assigned under, not the lineage's latest: a
+    // successor approved mid-run moved formation's endpoint.
+    const [approval] = only(
+      'approval for this run', (r) => r.lineage === lineage
+        && r.kind.startsWith('contract_approved') && r.revision === bound.revision,
+    );
+    const [attempt] = only(
+      'attempt', (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    const [verdict] = only(
+      'Gate verdict', (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
+    );
+
+    // One set of facts per run, refused here and at every reader. Two sets meant
+    // the live judgement read the first and replay read the last, so the Human
+    // Owner's decision and the reconstruction of it disagreed.
+    const existing = all.filter(
+      (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
+        && r.lineage === lineage && r.run === run,
+    );
+    if (existing.length > 0) {
+      fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
     }
     if (!(approval.seq > formationFrom.seq) || !(verdict.seq > attempt.seq)) {
       fail('cost_incomparable', 'a boundary does not enclose an interval', { lineage, run });
@@ -1247,10 +1287,13 @@ export class Kernel {
     // Against recorded facts, so the judgement answers something. AC-9's two
     // questions are asked *of* a run's arithmetic, and one asked of nothing is
     // not the judgement the criterion reserves.
-    const facts = this.records().find(
+    const [facts, ...more] = this.records().filter(
       (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
         && r.lineage === lineage && r.run === run,
     );
+    if (more.length > 0) {
+      fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
+    }
     if (!facts) {
       fail('run_facts_incomplete', 'there are no run facts to judge', { lineage, run });
     }
@@ -1260,11 +1303,14 @@ export class Kernel {
   }
 
   retreatCondition(lineage, run) {
-    const record = this.records().find(
+    const [record, ...rest] = this.records().filter(
       (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
         && r.lineage === lineage && r.run === run,
     );
     if (!record) return null;
+    if (rest.length > 0) {
+      fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
+    }
     return {
       fired: record.formation_elapsed > record.change_elapsed
         && record.trace_outcome === 'caught_nothing',
@@ -1468,10 +1514,6 @@ export class Kernel {
   // never arrives: completion stops at `not_all_passed` first, which left the
   // ordering check sitting in a branch nothing could reach.
   decideUnavailable({ lineage, run, actor, choice }) {
-    const approved = this.contractFor(lineage);
-    if (approved === null) {
-      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
-    }
     if (!this.#owner) {
       fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot decide', {});
     }
@@ -1486,16 +1528,15 @@ export class Kernel {
     // The arm has to have been reached, not merely claimed. A record the Gate
     // found inadmissible — a substituted request, say — left the obligation
     // `invalid`, and the Human Owner could still record a choice about it.
-    // The event the Gate reduced, not the first one in the run. Taking the first
-    // meant a decision could answer an inadmissible record from an earlier
-    // attempt while the Gate had reported `unavailable` about a later one — which
-    // is exactly the relation `answers` exists to keep.
+    // The exact event the reduction selected, by position. Matching on lineage,
+    // run and attempt found *a* record like it, and with two obligations under one
+    // attempt that was the wrong one: the Gate reached `unavailable` for the
+    // second and the decision answered the first.
     const reduced = this.#reduce({ lineage, run }).byObligation;
-    const answered = Object.values(reduced).find((v) => v.status === 'unavailable');
-    const unavailable = answered ? this.records().find(
-      (r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run
-        && r.attempt === answered.attempt,
-    ) : null;
+    const entry = Object.entries(reduced).find(([, v]) => v.status === 'unavailable');
+    const unavailable = entry && entry[1].selected != null
+      ? this.records()[entry[1].selected]
+      : null;
     if (!unavailable) {
       // A pre-authorized choice is not a decision about something that had not
       // happened yet.
@@ -1504,29 +1545,11 @@ export class Kernel {
       });
     }
     return this.#collectHumanInput({
-      operation: 'unavailable_decision', actor, lineage, run, choice,
-      answers: unavailable.seq,
+      operation: 'unavailable_decision', actor, lineage, run,
+      obligation: unavailable.obligation, choice, answers: unavailable.seq,
     });
   }
 
-
-
-  // The completion write — AC-11. Private, and the last step of `complete`.
-  //
-  // It was an exported function taking a root, a path, an Acceptance and a verdict
-  // array, which made it a second completion entry point however carefully the
-  // Kernel called it: importing the module was enough to write an Acceptance with
-  // no Gate, no sign-off and no record.
-  // The reduction, run again over the log as it stands now — not a read of what
-  // the last reduction recorded.
-  //
-  // Reading the recorded verdicts was the whole point missed: another writer can
-  // open a newer attempt without reducing, so the newest `gate_result` still says
-  // `passed` while the run is `pending`. A stale answer read twice is one answer.
-  verdictsNow({ lineage, run }) {
-    const { byObligation } = this.#reduce({ lineage, run });
-    return new Map(Object.entries(byObligation).map(([o, v]) => [o, v.status]));
-  }
 
   #commitCompletion({ acceptance, run }) {
     const path = this.completionPathFor({ lineage: acceptance.lineage, run });

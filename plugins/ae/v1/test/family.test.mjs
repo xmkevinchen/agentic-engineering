@@ -9,7 +9,10 @@ import { fileURLToPath } from 'node:url';
 import { Kernel } from '../lib/kernel.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT, OWNER } from './fixtures.mjs';
+import {
+  asObject, assignmentDoc, contractDoc, RENDERED, SOURCE_ROOT, OWNER,
+  COMMAND, ARTIFACT, INPUT,
+} from './fixtures.mjs';
 
 const contract = {
   independence: {
@@ -250,6 +253,62 @@ export function familyTests() {
     });
     eq('and the choice answers that event', decision.answers, realEvent.seq);
     ok('not the one the Gate refused', decision.answers !== refusedEvent.seq);
+    eq('naming the obligation it was about', decision.obligation, 'O');
+  });
+
+  group('AC-7 · two obligations under one attempt do not confuse the choice', () => {
+    // The same defect one level in: matching on lineage, run and attempt found *a*
+    // record like the selected one, and with two obligations under one attempt
+    // that was the wrong one — the Gate reached `unavailable` for the second while
+    // the decision answered the first.
+    const k = new Kernel(join(mkdtempSync(join(tmpdir(), 'v1o-')), 'log.ndjson'), {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const two = asObject(contractDoc({
+      ...cross,
+      obligations: ['O', 'O2'],
+      observations: [
+        { obligation: 'O', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT] },
+        { obligation: 'O2', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT] },
+      ],
+    }));
+    k.openFormation({ lineage: 'L', actor: OWNER });
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: two.bytes, identity: two.identity,
+      actor: OWNER, rendered: RENDERED(two.bytes),
+    });
+    const a = asObject(assignmentDoc({
+      grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O', 'O2'] },
+    }));
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
+    });
+    const at = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O', 'O2'], submitter: 'P',
+    });
+
+    // The first obligation's arm is refused — a seat answered. The second's is not.
+    k.recordDispatch({
+      lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O',
+      answeredFamily: 'anthropic',
+    });
+    const refused = k.recordUnavailable({
+      lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O2' });
+    const real = k.recordUnavailable({
+      lineage: 'L', run: 'run1', obligation: 'O2', attempt: at.attempt,
+    });
+
+    const status = k.status({ lineage: 'L', run: 'run1' }).byObligation;
+    eq('the first arm is refused', status.O.code, 'same_family_substituted');
+    eq('the second is unavailable', status.O2.status, 'unavailable');
+    const decision = k.decideUnavailable({
+      lineage: 'L', run: 'run1', actor: OWNER, choice: 'stop',
+    });
+    eq('and the choice answers the second', decision.answers, real.seq);
+    eq('naming its obligation', decision.obligation, 'O2');
+    ok('not the refused one', decision.answers !== refused.seq);
   });
 
   group('AC-7 · the choice is recorded, and only after the fact', () => {

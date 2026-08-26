@@ -198,14 +198,15 @@ export function completionTests() {
     const k2 = new Kernel(logPath, {
       completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
     });
-    // The second Kernel opens an attempt and does *not* reduce. Reading the last
-    // recorded verdict would still say `passed` — that was the defect: a stale
-    // answer read twice is one answer. The write re-runs the reduction.
+    // The second Kernel opens an attempt and does *not* reduce, so the newest
+    // recorded verdict still says `passed` while the run is `pending`. Reading
+    // that recorded answer was the defect: a stale answer read twice is one
+    // answer. Completion reduces again.
     k2.openAttempt({ lineage: 'L', run: w.run, producer: 'P', obligations: ['O'], submitter: 'P' });
     eq('the recorded verdict is now stale',
       k1.records().filter((r) => r.kind === 'gate_result').pop().status, 'passed');
-    eq('and re-reducing says otherwise',
-      k1.verdictsNow({ lineage: 'L', run: w.run }).get('O'), 'pending');
+    eq('and reducing again says otherwise',
+      k1.status({ lineage: 'L', run: w.run }).byObligation.O.status, 'pending');
     refuses('so completion does not land', 'not_all_passed',
       () => k1.complete({ lineage: 'L', run: w.run, actor: 'Human Owner' }));
   });
@@ -360,11 +361,45 @@ export function completionTests() {
         lineage: 'L', run: u.run, traceOutcome: 'caught_nothing', wentWrong: '',
       }));
 
+    // A lineage that never marked the start of formation has nothing to measure
+    // it from. Nothing else in the log stands in: the earliest record is the
+    // activation decision, written inside `approve`, which would measure one
+    // append rather than the work of forming the Contract.
+    const unmarked = fresh();
+    const m = walk(unmarked, { skipFormation: true });
+    unmarked.status({ lineage: 'L', run: m.run });
+    refuses('a lineage that never opened formation', 'run_facts_incomplete',
+      () => unmarked.recordRun({
+        lineage: 'L', run: m.run, traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
+
+    // And a verdict that predates the attempt encloses nothing: the Gate can be
+    // asked before an attempt is opened, and the change is measured between them.
+    const early = fresh();
+    const e = walk(early, { reduceBeforeAttempt: true });
+    refuses('a change interval that runs backwards', 'cost_incomparable',
+      () => early.recordRun({
+        lineage: 'L', run: e.run, traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
+
+    // One set of facts per run. Two meant the live judgement read the first and
+    // replay read the last, so the decision and the reconstruction of it
+    // disagreed about what was decided.
+    const twice = fresh();
+    const t = walk(twice);
+    twice.status({ lineage: 'L', run: t.run });
+    twice.recordRun({ lineage: 'L', run: t.run, traceOutcome: 'caught_nothing', wentWrong: '' });
+    refuses('a second set of run facts', 'run_facts_incomplete',
+      () => twice.recordRun({
+        lineage: 'L', run: t.run, traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
+
     const facts = k.recordRun({
       lineage: 'L', run: w.run, traceOutcome: 'caught_nothing', wentWrong: '',
     });
-    eq('formation is measured to the approval',
-      facts.formation_to, seqOf('contract_approved_genesis'));
+    eq('formation is measured from the record of its opening',
+      facts.formation_from, seqOf('formation_opened'));
+    eq('to the approval', facts.formation_to, seqOf('contract_approved_genesis'));
     eq('and the change from the attempt', facts.change_from, seqOf('attempt_opened'));
     eq('to the Gate\'s verdict', facts.change_to, gateResult.seq);
     eq('with the cost derived from them',

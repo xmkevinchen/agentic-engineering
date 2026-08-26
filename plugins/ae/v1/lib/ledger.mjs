@@ -47,6 +47,7 @@ export const KINDS = Object.freeze({
   human_decision_judgement: true,
   human_signoff: true,
   completion_committed: true,
+  formation_opened: true,
   run_record_clean: true,
   run_record_caught: true,
 });

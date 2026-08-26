@@ -184,6 +184,18 @@ plant family.mjs "  const requested = requestedFamily(contract);" \
   "  const requested = requestedFamily(contract) || ['openai'];"
 probe RED "a dispatch defaults its request"; revert family.mjs
 
+# Round 15's findings: exact event identity, and one of a thing per run.
+plant kernel.mjs "      ? this.records()[entry[1].selected]" \
+  "      ? this.records().find((r) => r.kind === 'capability_unavailable' && r.lineage === lineage && r.run === run)"
+probe RED "a choice answering a lookalike event"; revert kernel.mjs
+
+plant kernel.mjs "    if (existing.length > 0) {" "    if (false) {"
+probe RED "a run records its facts twice"; revert kernel.mjs
+
+plant kernel.mjs "    if (!(approval.seq > formationFrom.seq) || !(verdict.seq > attempt.seq)) {" \
+  "    if (false) {"
+probe RED "an interval that runs backwards"; revert kernel.mjs
+
 # Round 13's findings.
 plant gate.mjs "  const superseded = boundRevision !== currentRevision;" "  const superseded = false;"
 probe RED "a superseded run is not stale"; revert gate.mjs
@@ -193,13 +205,6 @@ probe RED "stale outranks invalid"; revert gate.mjs
 
 plant kernel.mjs "    if (arithmetic && arithmetic.fired !== (choice === 'yes')) {" "    if (false) {"
 probe RED "a decision against the arithmetic"; revert kernel.mjs
-
-plant kernel.mjs "    const formationFrom = firstOf((r) => r.lineage === lineage);" \
-  "    const formationFrom = lastOf((r) => r.lineage === lineage);"
-probe RED "formation measured from the end"; revert kernel.mjs
-
-plant kernel.mjs "        && r.attempt === answered.attempt," ""
-probe RED "a choice answering another attempt"; revert kernel.mjs
 
 plant kernel.mjs "      if (!discrepancy || !disposition) {" "      if (false) {"
 probe RED "caught_something supported by nothing"; revert kernel.mjs
@@ -218,8 +223,8 @@ probe RED "the artifact is never digested"; revert kernel.mjs
 plant kernel.mjs "      if (verdicts.get(obligation) !== 'passed') {" "      if (false) {"
 probe RED "a failing run is signed for"; revert kernel.mjs
 
-plant kernel.mjs "    const answered = Object.values(reduced).find((v) => v.status === 'unavailable');" \
-  "    const answered = Object.values(reduced)[0];"
+plant kernel.mjs "    const entry = Object.entries(reduced).find(([, v]) => v.status === 'unavailable');" \
+  "    const entry = Object.entries(reduced)[0];"
 probe RED "a choice about an inadmissible arm"; revert kernel.mjs
 
 # Round 10's findings: what a run is run against, and what it reads.

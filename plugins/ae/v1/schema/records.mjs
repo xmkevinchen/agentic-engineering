@@ -135,7 +135,9 @@ export const RECORDS = Object.freeze({
       },
       code: text,
       attempt,
-      selected: digest,
+      // Where the record this verdict rests on is, so a consumer can name that
+      // event rather than search for one like it.
+      selected: { type: 'integer', minimum: 0 },
       seq,
     },
   },
@@ -253,11 +255,14 @@ export const RECORDS = Object.freeze({
   // choice landed last, and replay could not say which event was decided about.
   human_decision_unavailable: {
     type: 'object', additional: false,
-    required: ['kind', 'operation', 'actor', 'lineage', 'run', 'answers', 'choice', 'origin', 'seq'],
+    required: [
+      'kind', 'operation', 'actor', 'lineage', 'run', 'obligation',
+      'answers', 'choice', 'origin', 'seq',
+    ],
     properties: {
       kind: text,
       operation: { type: 'const', value: 'unavailable_decision' },
-      actor: id, lineage: id, run: id,
+      actor: id, lineage: id, run: id, obligation: id,
       answers: { type: 'integer', minimum: 0 },
       choice: { type: 'enum', values: ['wait', 'stop', 'amend'] },
       origin: { type: 'const', value: 'host' }, seq,
@@ -276,6 +281,18 @@ export const RECORDS = Object.freeze({
     type: 'object', additional: false,
     required: ['kind', 'lineage', 'run', 'identity', 'path', 'seq'],
     properties: { kind: text, lineage: id, run: id, identity, path: text, seq },
+  },
+  // Formation's first act. Nothing recorded it, so the boundary AC-9 asks
+  // formation to be measured from did not exist — the earliest record of a
+  // lineage is the activation decision, written inside `approve`, which measures
+  // one append rather than the work of forming the Contract.
+  formation_opened: {
+    type: 'object', additional: false,
+    required: ['kind', 'lineage', 'actor', 'origin', 'seq'],
+    properties: {
+      kind: text, lineage: id, actor: id,
+      origin: { type: 'const', value: 'host' }, seq,
+    },
   },
   // AC-9's four facts. Boundaries are positions of records that exist for other
   // reasons, so the two cost figures are quantities of the same kind by
