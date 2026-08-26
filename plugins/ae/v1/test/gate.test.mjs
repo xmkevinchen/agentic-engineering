@@ -1,6 +1,8 @@
 // AC-4 — the Gate selects, then reduces, and fails closed.
 
 import { reduce, reduceAll, STATUS, PRECEDENCE } from '../lib/gate.mjs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { group, ok, eq } from './harness.mjs';
 
 const A1 = { kind: 'attempt_opened', lineage: 'L', attempt: 'a1' };
@@ -78,11 +80,28 @@ export function gateTests() {
   });
 
   group('AC-4 · deterministic across processes', () => {
+    // Two calls inside one process share module state, a warmed cache and one
+    // random seed: that establishes repeatability, not determinism. The real
+    // check spawns fresh processes, and varies TZ and locale so an ambient
+    // dependence would show up as divergence rather than as a passing test.
     const records = [A1, obs('a1', true)];
-    const a = reduce({ records, lineage: 'L', obligation: 'O', currentRevision: 'r1' });
-    const b = reduce({ records: [...records], lineage: 'L', obligation: 'O', currentRevision: 'r1' });
-    eq('same facts, same status', a.status, b.status);
-    eq('same facts, same selection', a.selected, b.selected);
+    const args = JSON.stringify(records);
+    const here = fileURLToPath(new URL('./determinism.mjs', import.meta.url));
+    const run = (env) => execFileSync(process.execPath, [here, args], {
+      env: { ...process.env, ...env }, encoding: 'utf8',
+    });
+    const a = run({});
+    const b = run({});
+    const c = run({ TZ: 'Asia/Tokyo', LANG: 'ja_JP.UTF-8' });
+    eq('a second process agrees', b, a);
+    eq('a different timezone and locale agree', c, a);
+
+    // And it is not vacuous: different facts must produce a different result, or
+    // the comparison above would pass on a function that ignores its input.
+    const different = run({}) === execFileSync(process.execPath, [
+      here, JSON.stringify([A1, obs('a1', false)]),
+    ], { encoding: 'utf8' });
+    ok('different facts produce a different result', different === false);
   });
 
   group('AC-1 · completion needs every obligation passed', () => {
