@@ -2,10 +2,21 @@
 
 import { createHash } from 'node:crypto';
 import { emitAcceptance } from '../lib/acceptance.mjs';
-import { checkDispositions, checkCitations, checkPresentedView } from '../lib/formation.mjs';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import {
+  checkDispositions, checkCitations, checkPresentedView, statementsFrom,
+} from '../lib/formation.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 
 const sha = (s) => `sha256:${createHash('sha256').update(s).digest('hex')}`;
+
+const CONTRACT = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..', '..', '..', '..', '.ae', 'features', 'active',
+  'F-086-v1-minimal-kernel', 'contract.md',
+);
 
 const contract = {
   obligations: ['O'],
@@ -123,6 +134,29 @@ export function completionTests() {
     eq('citing only a broad entry',
       checkCitations([{ id: 's', cites: ['U-01'] }], prov)[0].why, 'cites only a broad entry');
     ok('citing an unknown source', checkCitations([{ id: 's', cites: ['Z-99'] }], prov).length > 0);
+  });
+
+  group('AC-6 · statements are read from the Contract, not supplied', () => {
+    // The defect this closes: an earlier draft took both the statement list and
+    // the oracle that judged it, so a caller could describe a document that
+    // satisfied every rule and never mention the one that did not.
+    const bytes = readFileSync(CONTRACT);
+    const statements = statementsFrom(bytes);
+    ok('the activated Contract yields statements', statements.length > 10);
+
+    // Every scope row, non-goal and criterion in the real Contract cites
+    // something specific. This is the check running against itself, which is the
+    // only version worth having.
+    const uncited = statements.filter((s) => s.cites.length === 0);
+    eq('none is uncited', uncited.map((s) => s.id).join(','), '');
+
+    // And the parse distinguishes sections: N1 is a non-goal under §3 and a
+    // knowledge clause under AC-10, and reading them as one kind reported six
+    // phantom uncited statements on the first run.
+    const ids = new Set(statements.map((s) => s.id));
+    ok('scope rows are found', ids.has('S1'));
+    ok('non-goals are found', ids.has('N1'));
+    ok('criteria are found', ids.has('AC-1'));
   });
 
   group('AC-6 · the presented view is derived from the approved bytes', () => {

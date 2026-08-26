@@ -37,6 +37,53 @@ export function checkVerifiableSources(provenance, resolve) {
   return problems;
 }
 
+// Read the statements out of the approved Contract rather than taking a caller's
+// account of them. An earlier draft accepted both the statement list and the
+// oracle that judged it, so a caller could describe a document that satisfied
+// every rule and never mention the one that did not.
+export function statementsFrom(contractBytes) {
+  const text = Buffer.isBuffer(contractBytes) ? contractBytes.toString() : String(contractBytes);
+  const lines = text.split('\n');
+  const out = [];
+
+  // Section-aware. `N1` means a non-goal under §3 and a knowledge clause under
+  // AC-10, and reading them as one kind produced six phantom uncited statements
+  // on the first run — the knowledge rows, which are cited once by the criterion
+  // that contains them rather than individually.
+  let section = null;
+  let criterion = null;
+
+  for (const line of lines) {
+    const h2 = line.match(/^## (\d+)\. /);
+    if (h2) { section = h2[1]; criterion = null; }
+
+    const h3 = line.match(/^### (AC-\d+) — (.+)$/);
+    if (h3) {
+      criterion = { id: h3[1], text: h3[2], cites: [] };
+      out.push(criterion);
+      continue;
+    }
+
+    // Scope and non-goal rows are statements in their own right; they sit in
+    // sections 2 and 3 and carry their own citation column.
+    const row = line.match(/^\| (S\d+|N\d+) \|/);
+    if (row && (section === '2' || section === '3')) {
+      out.push({ id: row[1], text: line, cites: citesIn(line) });
+      continue;
+    }
+
+    // Anything inside a criterion's body contributes citations to it.
+    if (criterion) criterion.cites.push(...citesIn(line));
+  }
+  return out;
+}
+
+function citesIn(line) {
+  const ids = [];
+  for (const m of line.matchAll(/\b([DUPQ]-\d+)\b/g)) ids.push(m[1]);
+  return ids;
+}
+
 // Outbound. A statement citing a broad entry that could support anything cites
 // nothing: the check is that the cited id is specific, not merely present.
 export function checkCitations(statements, provenance) {

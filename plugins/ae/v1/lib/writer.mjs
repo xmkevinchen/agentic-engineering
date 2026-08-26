@@ -100,6 +100,16 @@ export function commitCompletion({
   assertNoSymlinkComponents(resolve(root), target);
   assertInsideLocation(root, target);
 
+  // What the preflight does not close: it walks the parents, then `O_EXCL` opens
+  // the final component, and those are separate syscalls. A parent swapped for a
+  // symlink between them redirects the write, and nothing here detects it. Closing
+  // that needs directory handles held across both operations — `openat` relative
+  // to a held fd — which Node does not expose.
+  //
+  // Under §2's boundary this is expected: swapping a parent mid-write requires
+  // the same OS access that could edit the log directly. It is stated because the
+  // preflight otherwise reads as a guarantee it is not.
+
   const result = atomicFileNoReplace({ path: target, bytes });
   if (result.outcome === 'exists') {
     fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });
