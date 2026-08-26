@@ -87,19 +87,32 @@ export function kernelTests() {
 
   group('AC-7 · only the granted producer opens an attempt', () => {
     const k = fresh();
-    const assignment = { id: 'A1', grants: { attempt_producer: 'P' } };
+    k.approve({ lineage: 'L', revision: 'r1', bytes: contractBytes, identity, view, actor: 'H' });
+
+    // No Assignment yet: an attempt cannot be opened against one that was never
+    // issued. An earlier version took the Assignment as an argument, so a caller
+    // supplied one carrying grants it had chosen for itself.
+    refuses('no Assignment was issued', 'assignment_not_issued',
+      () => k.openAttempt({
+        lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+      }));
+
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', id: 'A1', contractRevision: 'r1',
+      actor: 'H', beneficiary: 'P', boundary: ['docs'],
+      grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O'] },
+    });
+
     refuses('an ungranted producer', 'attempt_not_granted',
       () => k.openAttempt({
-        lineage: 'L', assignment, producer: 'Q', obligations: ['O'], submitter: 'Q',
+        lineage: 'L', run: 'run1', producer: 'Q', obligations: ['O'], submitter: 'Q',
       }));
-    // And the opener cannot claim to be someone else: the submitter is compared
-    // with what the record will say.
     refuses('a submitter naming another producer', 'identity_self_asserted',
       () => k.openAttempt({
-        lineage: 'L', assignment, producer: 'P', obligations: ['O'], submitter: 'Q',
+        lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'Q',
       }));
     const opened = k.openAttempt({
-      lineage: 'L', assignment, producer: 'P', obligations: ['O'], submitter: 'P',
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
     });
     eq('the granted producer may', opened.producer, 'P');
   });
@@ -115,21 +128,22 @@ export function kernelTests() {
       observations: [{ obligation: 'O', observation: 'sh run.sh' }],
     };
     const assignment = { id: 'A1', contract_revision: 'r1', boundary: ['docs'] };
-    const empty = { package: () => null, attempt: () => null, artifact: () => null, commandResult: () => null };
 
     k.ledger.append({
-      kind: 'attempt_opened', lineage: 'L', assignment: 'A1', attempt: 'a1',
+      kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1', attempt: 'a1',
       producer: 'P', obligations: ['O'],
     });
     // A bare observation — the shape the old positive test used — reaches the
-    // reduction and is refused there rather than passing.
+    // reduction and is refused there rather than passing. Its references name
+    // nothing in the log, which is the point: they resolve through the Kernel's
+    // own index, and an index built from the log cannot be talked out of it.
     k.ledger.append({
-      kind: 'observation', lineage: 'L', obligation: 'O', observation: 'sh run.sh',
+      kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O', observation: 'sh run.sh',
       attempt: 'a1', contract_revision: 'r1', assignment: 'A1', producer: 'P',
-      artifact: 'art1', package: 'pkg1', command_result: 'cr1', satisfied: true,
+      artifact: 'art1', package: 'pkg1', command_result: 'cr1',
     });
     const { byObligation, allPassed } = k.status({
-      contract, lineage: 'L', assignment, index: empty, inputsNow: () => null,
+      contract, lineage: 'L', assignment, inputsNow: () => null,
     });
     eq('a bare observation does not pass', byObligation.O.status, 'invalid');
     ok('and completion is not reached', allPassed === false);

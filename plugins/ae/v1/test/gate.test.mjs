@@ -7,15 +7,28 @@ import { group, ok, eq } from './harness.mjs';
 
 const A1 = { kind: 'attempt_opened', lineage: 'L', attempt: 'a1' };
 const A2 = { kind: 'attempt_opened', lineage: 'L', attempt: 'a2' };
-const obs = (attempt, satisfied, rev = 'r1') => ({
-  kind: 'observation', lineage: 'L', obligation: 'O', attempt, contract_revision: rev, satisfied,
+// The observation names its evidence and claims no outcome — the schema has no
+// field for one. `outcome` here is what the *runner's* record would say, threaded
+// through `outcomeOf` below, so these cases exercise the reduction rather than a
+// submission's opinion of itself.
+const obs = (attempt, outcome, rev = 'r1') => ({
+  kind: 'observation', lineage: 'L', obligation: 'O', attempt,
+  contract_revision: rev, command_result: outcome ? 'green' : 'red',
 });
 const unavailable = (attempt) => ({
   kind: 'capability_unavailable', lineage: 'L', obligation: 'O', attempt,
 });
 
+// The three readers the reduction requires. None has a permissive default: an
+// optional check is a check that does not exist, and omitting one now throws
+// rather than quietly passing everything.
+const DEFAULTS = {
+  admit: () => null,
+  inputsChanged: () => false,
+  outcomeOf: (r) => r.command_result === 'green',
+};
 const run = (records, opts = {}) => reduce({
-  records, lineage: 'L', obligation: 'O', currentRevision: 'r1', ...opts,
+  records, lineage: 'L', obligation: 'O', currentRevision: 'r1', ...DEFAULTS, ...opts,
 }).status;
 
 export function gateTests() {
@@ -64,8 +77,36 @@ export function gateTests() {
   });
 
   group('AC-4 · a supplied status changes nothing', () => {
-    const forged = { ...obs('a1', false), status: 'passed' };
-    eq('asserted status ignored', run([A1, forged]), STATUS.FAILED);
+    // Two shapes of the same claim: a `status` field, and the `satisfied` field
+    // the reduction used to copy. Neither is read — the verdict comes from the
+    // runner's record through `outcomeOf`.
+    eq('an asserted status is ignored',
+      run([A1, { ...obs('a1', false), status: 'passed' }]), STATUS.FAILED);
+    eq('an asserted satisfaction is ignored',
+      run([A1, { ...obs('a1', false), satisfied: true }]), STATUS.FAILED);
+  });
+
+  group('AC-4 · the reduction refuses to run without its readers', () => {
+    const records = [A1, obs('a1', true)];
+    const base = { records, lineage: 'L', obligation: 'O', currentRevision: 'r1' };
+    for (const missing of ['admit', 'inputsChanged', 'outcomeOf']) {
+      const opts = { ...DEFAULTS };
+      delete opts[missing];
+      let threw = false;
+      try { reduce({ ...base, ...opts }); } catch { threw = true; }
+      ok(`omitting ${missing} throws rather than passing everything`, threw);
+    }
+  });
+
+  group('AC-4 · the Gate does not read its own output', () => {
+    // `gate_result` carries the same routing fields, so an earlier version
+    // selected it on the next pass and turned a `passed` into an `invalid`.
+    const verdict = {
+      kind: 'gate_result', lineage: 'L', obligation: 'O', attempt: 'a1',
+      run: 'run1', contract_revision: 'r1', status: 'passed',
+    };
+    eq('a recorded verdict does not poison the next reduction',
+      run([A1, obs('a1', true), verdict]), STATUS.PASSED);
   });
 
   group('AC-4 · precedence within the selected candidate', () => {
@@ -111,15 +152,15 @@ export function gateTests() {
       { ...obs('a1', true), obligation: 'O2' },
     ];
     ok('all passed', reduceAll({
-      records: recs, lineage: 'L', obligations: ['O1', 'O2'], currentRevision: 'r1',
+      records: recs, lineage: 'L', obligations: ['O1', 'O2'], currentRevision: 'r1', ...DEFAULTS,
     }).allPassed);
     ok('one pending blocks', reduceAll({
-      records: recs, lineage: 'L', obligations: ['O1', 'O2', 'O3'], currentRevision: 'r1',
+      records: recs, lineage: 'L', obligations: ['O1', 'O2', 'O3'], currentRevision: 'r1', ...DEFAULTS,
     }).allPassed === false);
     // An empty obligation list is not "everything passed" — it is a Contract that
     // promised nothing, and vacuous completion is the failure AE exists to catch.
     ok('no obligations is not completion', reduceAll({
-      records: recs, lineage: 'L', obligations: [], currentRevision: 'r1',
+      records: recs, lineage: 'L', obligations: [], currentRevision: 'r1', ...DEFAULTS,
     }).allPassed === false);
   });
 }

@@ -42,25 +42,41 @@ export const RECORDS = Object.freeze({
   },
   assignment_issued: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'id', 'contract_revision', 'actor', 'beneficiary', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'run', 'id', 'contract_revision', 'actor', 'beneficiary', 'boundary', 'grants', 'origin', 'seq'],
     properties: {
-      kind: text, lineage: id, id, contract_revision: id, actor: id, beneficiary: id,
+      kind: text, lineage: id, run: id, id, contract_revision: id, actor: id, beneficiary: id,
+      boundary: { type: 'array', minItems: 1, items: text },
+      grants: {
+        type: 'object', additional: false,
+        required: ['attempt_producer', 'mutation_producer', 'obligations'],
+        properties: {
+          attempt_producer: id, mutation_producer: id,
+          obligations: { type: 'array', minItems: 1, items: id },
+        },
+      },
       origin: { type: 'const', value: 'host' }, seq,
     },
   },
   attempt_opened: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'assignment', 'attempt', 'producer', 'obligations', 'seq'],
+    required: ['kind', 'lineage', 'run', 'assignment', 'attempt', 'producer', 'obligations', 'seq'],
     properties: {
-      kind: text, lineage: id, assignment: id, attempt: id, producer: id,
+      kind: text, lineage: id, run: id, assignment: id, attempt: id, producer: id,
       obligations: { type: 'array', minItems: 1, items: id }, seq,
     },
   },
   command_result: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'run', 'attempt', 'command', 'raw', 'subjects', 'inputs_used', 'origin', 'seq'],
+    required: [
+      'kind', 'id', 'lineage', 'run', 'attempt', 'command',
+      'exit', 'raw', 'subjects', 'inputs_used', 'origin', 'seq',
+    ],
     properties: {
-      kind: text, lineage: id, run: id, attempt: id, command: text,
+      kind: text, id, lineage: id, run: id, attempt: id, command: text,
+      // The outcome the runner observed. The Gate computes `passed` from this
+      // and the subject count; nothing a submission says about the result is
+      // consulted, because that would be its self-report.
+      exit: { type: 'integer' },
       raw: { type: 'string', minLength: 0 },
       subjects: { type: 'integer' },
       inputs_used: { type: 'array', minItems: 0, items: id },
@@ -70,13 +86,16 @@ export const RECORDS = Object.freeze({
   observation: {
     type: 'object', additional: false,
     required: [
-      'kind', 'lineage', 'obligation', 'observation', 'attempt', 'contract_revision',
-      'assignment', 'producer', 'artifact', 'package', 'command_result', 'satisfied', 'seq',
+      'kind', 'lineage', 'run', 'obligation', 'observation', 'attempt', 'contract_revision',
+      'assignment', 'producer', 'artifact', 'package', 'command_result', 'seq',
     ],
     properties: {
-      kind: text, lineage: id, obligation: id, observation: text, attempt: id,
+      kind: text, lineage: id, run: id, obligation: id, observation: text, attempt: id,
       contract_revision: id, assignment: id, producer: id, artifact: id,
-      package: id, command_result: id, satisfied: { type: 'boolean' }, seq,
+      package: id, command_result: id, seq,
+      // No `satisfied`. An observation points at the evidence; it does not say
+      // what the evidence means. `additional: false` makes carrying one a
+      // validation failure rather than a persuasive extra field.
     },
   },
   // The Gate's own verdict. AC-13 says everything the Gate or the Human Owner
@@ -98,11 +117,47 @@ export const RECORDS = Object.freeze({
       seq,
     },
   },
+  // The package is a record, not an object a caller hands the Gate. An earlier
+  // version resolved it through a caller-supplied index, which let the party
+  // being judged supply the evidence universe.
+  evidence_package: {
+    type: 'object', additional: false,
+    required: [
+      'kind', 'id', 'lineage', 'run', 'contract_revision', 'assignment', 'attempt',
+      'producer', 'artifact', 'command_result', 'changed_paths', 'material_inputs',
+      'deviations', 'known_risks', 'seq',
+    ],
+    properties: {
+      kind: text, id, lineage: id, run: id, contract_revision: id, assignment: id,
+      attempt: id, producer: id, artifact: id, command_result: id,
+      changed_paths: { type: 'array', minItems: 0, items: text },
+      material_inputs: {
+        type: 'array', minItems: 0,
+        items: {
+          type: 'object', additional: false,
+          required: ['id', 'identity'],
+          properties: { id, identity: digest },
+        },
+      },
+      deviations: { type: 'array', minItems: 0, items: text },
+      known_risks: { type: 'array', minItems: 0, items: text },
+      seq,
+    },
+  },
+  artifact_recorded: {
+    type: 'object', additional: false,
+    required: ['kind', 'id', 'lineage', 'run', 'artifact_kind', 'identity', 'seq'],
+    properties: {
+      kind: text, id, lineage: id, run: id,
+      artifact_kind: { type: 'enum', values: ['commit', 'diff', 'file'] },
+      identity: digest, seq,
+    },
+  },
   capability_unavailable: {
     type: 'object', additional: false,
-    required: ['kind', 'lineage', 'obligation', 'attempt', 'requested', 'origin', 'seq'],
+    required: ['kind', 'lineage', 'run', 'obligation', 'attempt', 'requested', 'origin', 'seq'],
     properties: {
-      kind: text, lineage: id, obligation: id, attempt: id,
+      kind: text, lineage: id, run: id, obligation: id, attempt: id,
       requested: { type: 'array', minItems: 1, items: id },
       origin: { type: 'const', value: 'harness' }, seq,
     },

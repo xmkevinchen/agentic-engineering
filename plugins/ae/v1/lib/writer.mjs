@@ -12,12 +12,24 @@
 import { lstatSync, realpathSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { atomicFileNoReplace } from './fs-noreplace.mjs';
+import { validate } from './schema.mjs';
+import { ACCEPTANCE } from '../schema/objects.mjs';
 import { fail } from './codes.mjs';
 
 // `O_EXCL` refuses a symlink at the final component and nowhere else, so the
 // parents are the caller's problem. Walking them is not belt-and-braces: a parent
 // swapped for a symlink redirects the write, and the primitive cannot see it.
 function assertNoSymlinkComponents(root, target) {
+  // The root too. `realpathSync(root)` resolves a symlinked root silently and
+  // then treats wherever it points as the allowed destination, so a link used as
+  // the nominal root moved the whole location without tripping anything.
+  try {
+    if (lstatSync(root).isSymbolicLink()) {
+      fail('write_through_symlink', 'the allowed root is itself a symlink', { root });
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
   const rel = relative(root, target);
   if (rel.startsWith('..') || isAbsolute(rel)) {
     fail('write_escapes_location', 'the target lies outside the allowed location', { root, target });
@@ -69,27 +81,48 @@ function assertInsideLocation(root, target) {
 // earlier draft accepted any path and any content with no Gate input at all,
 // which made "the completion write" a file write that happened to be called that.
 export function commitCompletion({
-  root, path, acceptance, verdicts, allowStaging = false,
+  root, path, acceptance, recordedVerdicts, obligations, run, revision, allowStaging = false,
 }) {
   if (allowStaging) {
     // Present only so a fixture can attempt the prohibited shape and be refused.
     fail('write_staged', 'completion is written in place, never staged and moved', { path });
   }
 
+  // The Acceptance must be the shape the schema states, not merely truthy. An
+  // earlier version checked `if (!acceptance)` and wrote `{}`.
   if (!acceptance) {
     fail('not_all_passed', 'completion writes an Acceptance, not arbitrary bytes', { path });
   }
-  // The verdicts are re-read here rather than trusted from the caller's summary:
-  // the writer is the last place a non-passing obligation can be caught, and it
-  // is cheap to look.
-  const notPassed = Object.entries(verdicts || {}).find(([, v]) => v !== 'passed');
-  if (!verdicts || Object.keys(verdicts).length === 0) {
-    fail('not_all_passed', 'completion requires the verdicts it rests on', { path });
+  const problems = validate(ACCEPTANCE, acceptance);
+  if (problems.length > 0) {
+    fail('format_open', 'the Acceptance does not match its closed shape', { problems });
   }
-  if (notPassed) {
-    fail('not_all_passed', 'completion requires every obligation to be passed', {
-      obligation: notPassed[0], status: notPassed[1],
+  if (acceptance.decision.run !== run || acceptance.contract_revision !== revision) {
+    fail('signoff_wrong_run', 'the Acceptance belongs to another run or revision', {
+      run, revision, acceptance: acceptance.decision.run,
     });
+  }
+
+  // Verdicts come from recorded `gate_result`s for this run and revision, and
+  // every obligation the Contract states must be among them. A caller map was
+  // previously enough, so `{invented: 'passed'}` reached the write.
+  const forRun = (recordedVerdicts || []).filter(
+    (v) => v.run === run && v.contract_revision === revision,
+  );
+  const byObligation = new Map(forRun.map((v) => [v.obligation, v.status]));
+  if (obligations.length === 0) {
+    fail('not_all_passed', 'a Contract that promised nothing cannot complete', { run });
+  }
+  for (const obligation of obligations) {
+    const status = byObligation.get(obligation);
+    if (status === undefined) {
+      fail('record_not_appended', 'no recorded verdict for an obligation', { obligation, run });
+    }
+    if (status !== 'passed') {
+      fail('not_all_passed', 'completion requires every obligation to be passed', {
+        obligation, status,
+      });
+    }
   }
 
   const bytes = Buffer.from(JSON.stringify(acceptance));

@@ -19,7 +19,7 @@ const approvals = [{ lineage: 'L', revision: 'r1', seq: 5 }];
 // until this was compared.
 const pkg = {
   id: 'pkg1', contract_revision: 'r1', assignment: 'A1', attempt: 'at1', producer: 'P',
-  command_result: 'cr1', artifact: { identity: 'art1' },
+  command_result: 'cr1', artifact: 'art1',
   changed_paths: ['docs/v1/a.md'],
   material_inputs: [{ id: 'in1', identity: 'sha256:aa' }],
 };
@@ -98,6 +98,11 @@ export function evidenceTests() {
     const foreignPkg = build({ pkgOver: { assignment: 'OTHER', attempt: 'OTHER' } });
     eq('a package from another execution',
       foreignPkg.admit(foreignPkg.record), 'binding_cross_execution');
+    // The artifact is one of those identities. A package attesting to a different
+    // artifact than the observation names is evidence for another product.
+    const foreignArtifact = build({ pkgOver: { artifact: 'art2' } });
+    eq('a package attesting to another artifact',
+      foreignArtifact.admit(foreignArtifact.record), 'binding_cross_execution');
     const foreignResult = build({ resultOver: { attempt: 'OTHER' } });
     eq('a command result from another attempt',
       foreignResult.admit(foreignResult.record), 'binding_cross_execution');

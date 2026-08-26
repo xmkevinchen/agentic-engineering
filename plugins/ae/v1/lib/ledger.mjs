@@ -24,6 +24,8 @@ export const KINDS = Object.freeze({
   attempt_opened: { producer: 'implementer', consumer: ['gate'] },
   command_result: { producer: 'harness', consumer: ['admissibility', 'gate'] },
   observation: { producer: 'implementer', consumer: ['gate'] },
+  evidence_package: { producer: 'implementer', consumer: ['admissibility'] },
+  artifact_recorded: { producer: 'implementer', consumer: ['admissibility'] },
   gate_result: { producer: 'gate', consumer: ['completion', 'replay'] },
   capability_unavailable: { producer: 'harness', consumer: ['gate'] },
   dispatch_attempt: { producer: 'harness', consumer: ['family', 'gate'] },
@@ -133,6 +135,8 @@ export class Ledger {
       assignments: [],
       attempts: [],
       observations: [],
+      packages: [],
+      artifacts: [],
       gateResults: [],
       commandResults: [],
       unavailable: [],
@@ -149,6 +153,8 @@ export class Ledger {
       assignment_issued: 'assignments',
       attempt_opened: 'attempts',
       observation: 'observations',
+      evidence_package: 'packages',
+      artifact_recorded: 'artifacts',
       gate_result: 'gateResults',
       command_result: 'commandResults',
       capability_unavailable: 'unavailable',
@@ -205,10 +211,15 @@ export function auditKinds({ readdirSync, readFileSync, dir }) {
     // Produced: something appends it.
     const produced = sources.some(({ name, text }) => name !== 'ledger.mjs'
       && new RegExp(`kind:\\s*'${kind}'`).test(text));
-    // Consumed: something reads it back — by kind, or through a reconstruction
-    // branch in the ledger itself.
+    // Consumed: something reads it back — by a direct kind comparison, through a
+    // named reader helper that takes the kind as an argument, or through a
+    // reconstruction branch in the ledger itself. The helper form is spelled out
+    // rather than matched loosely: `findBy('x', …)` is a real read of `x`, while
+    // any mention of the string is not.
     const consumed = sources.some(({ name, text }) => (
-      name !== 'ledger.mjs' && new RegExp(`===\\s*'${kind}'|'${kind}'\\s*===`).test(text)
+      name !== 'ledger.mjs' && new RegExp(
+        `===\\s*'${kind}'|'${kind}'\\s*===|findBy\\('${kind}'`,
+      ).test(text)
     )) || new RegExp(`case '${kind}':`).test(
       sources.find((f) => f.name === 'ledger.mjs')?.text || '',
     );

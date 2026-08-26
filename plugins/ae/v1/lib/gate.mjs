@@ -49,6 +49,10 @@ function rank(status) {
 // be reached: a superseded revision surfaced as `pending`, and so did tampered
 // evidence. Selection judges nothing.
 
+// What a party submits for an obligation. Records the Kernel writes about a
+// reduction are not inputs to the next one.
+const SUBMITTED_KINDS = new Set(['observation', 'capability_unavailable']);
+
 export function select({ records, lineage, obligation }) {
   const attempts = records.filter(
     (r) => r.kind === 'attempt_opened' && r.lineage === lineage,
@@ -61,8 +65,13 @@ export function select({ records, lineage, obligation }) {
 
   return {
     attempt: latest,
+    // Only what a party submitted for this obligation. The Gate's own verdict
+    // carries the same routing fields, so an earlier version selected it on the
+    // next pass and, finding a kind it could not read, turned a `passed` into an
+    // `invalid` — the reduction poisoning itself with its own output.
     records: records.filter(
-      (r) => r.lineage === lineage
+      (r) => SUBMITTED_KINDS.has(r.kind)
+        && r.lineage === lineage
         && r.obligation === obligation
         && r.attempt === latest.attempt,
     ),
@@ -96,13 +105,16 @@ function verdictOf(record, ctx) {
     return { status: STATUS.STALE, code: null, record };
   }
 
-  // Only now is the observation's own claim read. A supplied `status` field is
-  // consulted nowhere: the reduction recomputes from facts.
-  return {
-    status: record.satisfied === true ? STATUS.PASSED : STATUS.FAILED,
-    code: null,
-    record,
-  };
+  // The verdict is computed from the external record, never copied from the
+  // submission. An earlier version read a `satisfied` field the submitter wrote
+  // and mapped it straight to `passed`, which left "done" asserted rather than
+  // computed — the one thing this whole slice exists to prevent. A submission
+  // carrying that field is now inadmissible rather than persuasive.
+  const outcome = ctx.outcomeOf(record, ctx);
+  if (outcome === null) {
+    return { status: STATUS.INVALID, code: 'binding_unresolved', record };
+  }
+  return { status: outcome ? STATUS.PASSED : STATUS.FAILED, code: null, record };
 }
 
 export function reduce({
@@ -110,10 +122,23 @@ export function reduce({
   lineage,
   obligation,
   currentRevision,
-  admit = () => null,
-  inputsChanged = () => false,
+  admit,
+  inputsChanged,
+  outcomeOf,
 }) {
-  const ctx = { currentRevision, admit, inputsChanged };
+  // No permissive defaults. An optional check is a check that does not exist:
+  // `reduce` previously defaulted admissibility to a function that always passed,
+  // and omitting it let a bare observation reach `passed`.
+  if (typeof admit !== 'function') {
+    throw new TypeError('reduce requires an admissibility check');
+  }
+  if (typeof inputsChanged !== 'function') {
+    throw new TypeError('reduce requires a staleness check');
+  }
+  if (typeof outcomeOf !== 'function') {
+    throw new TypeError('reduce requires an outcome reader — the verdict is computed, not supplied');
+  }
+  const ctx = { currentRevision, admit, inputsChanged, outcomeOf };
   const { attempt, records: selected } = select({ records, lineage, obligation });
 
   // The attempt opened and submitted nothing for this obligation. An older
@@ -162,12 +187,12 @@ export function reduce({
 // Not a seventh status — AC-1's precondition, computed from the same reduction
 // rather than beside it.
 export function reduceAll({
-  records, lineage, obligations, currentRevision, admit, inputsChanged,
+  records, lineage, obligations, currentRevision, admit, inputsChanged, outcomeOf,
 }) {
   const byObligation = {};
   for (const obligation of obligations) {
     byObligation[obligation] = reduce({
-      records, lineage, obligation, currentRevision, admit, inputsChanged,
+      records, lineage, obligation, currentRevision, admit, inputsChanged, outcomeOf,
     });
   }
   const allPassed = obligations.length > 0

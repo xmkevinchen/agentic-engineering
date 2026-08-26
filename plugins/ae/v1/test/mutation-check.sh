@@ -59,4 +59,23 @@ printf "submission-authored result accepted    %s\n" "$(run)"; revert admissibil
 plant family.mjs "fail('observed_without_answer'" "return true; fail('observed_without_answer'"
 printf "observed present with no answer        %s\n" "$(run)"; revert family.mjs
 
+# The four below stand for the defects the second implementation review found: a
+# verdict asserted rather than computed, an Assignment the holder supplied for
+# itself, a completion write over verdicts the caller named, and a pass over a
+# run that exercised nothing.
+plant gate.mjs "const outcome = ctx.outcomeOf(record, ctx);" \
+  "const outcome = record.satisfied !== undefined ? record.satisfied : ctx.outcomeOf(record, ctx);"
+printf "a submitted verdict is believed         %s\n" "$(run)"; revert gate.mjs
+
+plant kernel.mjs "const issued = this.records().find(" \
+  "const issued = { grants: { attempt_producer: producer } } || this.records().find("
+printf "self-selected grants accepted           %s\n" "$(run)"; revert kernel.mjs
+
+plant writer.mjs "const forRun = (recordedVerdicts || []).filter(" \
+  "const forRun = (recordedVerdicts || []).concat(obligations.map((o) => ({ obligation: o, status: 'passed', run, contract_revision: revision }))).filter("
+printf "completion over invented verdicts       %s\n" "$(run)"; revert writer.mjs
+
+plant admissibility.mjs "if (!(result.subjects > 0)) return 'vacuous_observation';" ""
+printf "a run that exercised nothing passes     %s\n" "$(run)"; revert admissibility.mjs
+
 echo "after revert                            $(run)"

@@ -21,9 +21,24 @@ export function recordTests() {
     mkdirSync(out);
     mkdirSync(join(root, 'inside'));
 
-    const acceptance = { lineage: 'L', decision: { outcome: 'accepted' } };
-    const verdicts = { O: 'passed' };
-    const write = (path, over = {}) => commitCompletion({ root, path, acceptance, verdicts, ...over });
+    // A real Acceptance: the writer validates the shape now, not merely that
+    // something truthy was passed.
+    const d = (s) => `sha256:${'0'.repeat(64 - s.length)}${s}`;
+    const acceptance = {
+      lineage: 'L', contract_revision: 'r1',
+      contract_identity: { byte_sha256: d('a'), canonical_sha256: d('b'), length: 10 },
+      deliverable: { kind: 'commit', identity: d('c') },
+      decision: { outcome: 'accepted', origin: 'host', run: 'run1', seq: 9 },
+      review: { required: false, statement: 'none required' },
+    };
+    const recordedVerdicts = [{
+      kind: 'gate_result', run: 'run1', contract_revision: 'r1',
+      obligation: 'O', status: 'passed',
+    }];
+    const write = (path, over = {}) => commitCompletion({
+      root, path, acceptance, recordedVerdicts, obligations: ['O'],
+      run: 'run1', revision: 'r1', ...over,
+    });
 
     eq('a first write succeeds', write(join(out, 'a.json')).outcome, 'created');
     refuses('it does not overwrite', 'write_would_clobber', () => write(join(out, 'a.json')));
@@ -36,12 +51,16 @@ export function recordTests() {
     // draft accepted any path and any bytes with no Gate input, which made this
     // a file write that happened to be called completion.
     refuses('arbitrary bytes with no Acceptance', 'not_all_passed',
-      () => commitCompletion({ root, path: join(out, 'c.json'), verdicts }));
-    refuses('an Acceptance with no verdicts', 'not_all_passed',
-      () => commitCompletion({ root, path: join(out, 'd.json'), acceptance }));
+      () => write(join(out, 'c.json'), { acceptance: undefined }));
+    refuses('an obligation with no recorded verdict', 'record_not_appended',
+      () => write(join(out, 'd.json'), { obligations: ['O', 'NEVER-RUN'] }));
     refuses('an obligation that did not pass', 'not_all_passed',
-      () => commitCompletion({
-        root, path: join(out, 'e.json'), acceptance, verdicts: { O: 'failed' },
+      () => write(join(out, 'e.json'), {
+        recordedVerdicts: [{ ...recordedVerdicts[0], status: 'failed' }],
+      }));
+    refuses('a verdict from another run', 'record_not_appended',
+      () => write(join(out, 'h.json'), {
+        recordedVerdicts: [{ ...recordedVerdicts[0], run: 'other' }],
       }));
 
     // Both kinds of symlink, because `O_EXCL` refuses one at the final component
@@ -138,14 +157,14 @@ export function recordTests() {
     // kind. A shorthand fixture would have been refused — which is the point:
     // closure over names is not closure.
     ledger.append({
-      kind: 'attempt_opened', lineage: 'L', assignment: 'A1', attempt: 'a1',
+      kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1', attempt: 'a1',
       producer: 'P', obligations: ['O'],
     });
     ledger.append({
-      kind: 'observation', lineage: 'L', obligation: 'O',
+      kind: 'observation', lineage: 'L', run: 'run1', obligation: 'O',
       observation: 'sh run-tests.sh', attempt: 'a1', contract_revision: 'r1',
       assignment: 'A1', producer: 'P', artifact: 'art1', package: 'pkg1',
-      command_result: 'cr1', satisfied: true,
+      command_result: 'cr1',
     });
 
     // Rejection happens at the append boundary, so the Gate never sees it — and
@@ -156,15 +175,15 @@ export function recordTests() {
     // The payload too. An earlier draft checked the name and accepted anything
     // beside it: missing fields, nulls, and additional properties all appended.
     refuses('a known kind with a field missing', 'format_open',
-      () => ledger.append({ kind: 'attempt_opened', lineage: 'L', attempt: 'a1' }));
+      () => ledger.append({ kind: 'attempt_opened', lineage: 'L', run: 'run1', attempt: 'a1' }));
     refuses('a known kind with a null field', 'format_open',
       () => ledger.append({
-        kind: 'attempt_opened', lineage: 'L', assignment: null, attempt: 'a1',
+        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: null, attempt: 'a1',
         producer: 'P', obligations: ['O'],
       }));
     refuses('a known kind with an additional field', 'format_open',
       () => ledger.append({
-        kind: 'attempt_opened', lineage: 'L', assignment: 'A1', attempt: 'a1',
+        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1', attempt: 'a1',
         producer: 'P', obligations: ['O'], smuggled: 'value',
       }));
     // And the origin markers are constants in the shape, so a record claiming

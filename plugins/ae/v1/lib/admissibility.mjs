@@ -65,14 +65,11 @@ export function admissibility({
     if (assignment.contract_revision !== record.contract_revision) return 'binding_cross_execution';
     if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
     if (attempt.producer !== record.producer) return 'binding_cross_execution';
-    for (const field of ['contract_revision', 'assignment', 'attempt', 'producer']) {
+    for (const field of ['contract_revision', 'assignment', 'attempt', 'producer', 'artifact']) {
       if (pkg[field] !== record[field]) return 'binding_cross_execution';
     }
     if (pkg.command_result !== record.command_result) return 'binding_cross_execution';
     if (result.attempt !== record.attempt) return 'binding_cross_execution';
-    if (pkg.artifact && pkg.artifact.identity !== record.artifact) {
-      return 'binding_cross_execution';
-    }
 
     // --- captured after activation ----------------------------------------
     // Ordered by the record, not by a time the submission supplied. Results
@@ -119,7 +116,15 @@ export function admissibility({
 // A change is inside the boundary when some allowed prefix contains it. Prefixes
 // are compared on path segments: `docs/v1` does not contain `docs/v1x`.
 export function withinBoundary(path, boundary) {
-  const parts = path.split('/');
+  // Normalise first. Comparing raw segments accepted `docs/v1/../../src/secret.js`
+  // against boundary `docs/v1`, because the first two segments matched and nobody
+  // asked where the rest went.
+  const parts = [];
+  for (const seg of path.split('/')) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') { parts.pop(); continue; }
+    parts.push(seg);
+  }
   return (boundary || []).some((allowed) => {
     const a = allowed.split('/');
     if (a.length > parts.length) return false;

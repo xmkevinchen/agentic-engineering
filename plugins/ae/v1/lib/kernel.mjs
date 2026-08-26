@@ -67,10 +67,27 @@ export class Kernel {
     });
   }
 
-  recordCommandResult({ lineage, run, attempt, command, raw, subjects, inputsUsed }) {
+  recordCommandResult({ id, lineage, run, attempt, command, exit, raw, subjects, inputsUsed }) {
+    // `inputsUsed` is not defaulted. An omitted argument became `[]`, which reads
+    // as "used nothing" and made the later completeness check unreachable — the
+    // vacuity the check exists to refuse, introduced by the channel that was
+    // supposed to close it.
+    if (!Array.isArray(inputsUsed)) {
+      fail('material_input_incomplete', 'the runner must report which inputs it used', { id });
+    }
     return this.ledger.append({
-      kind: 'command_result', lineage, run, attempt, command,
-      raw, subjects, inputs_used: inputsUsed || [], origin: HARNESS,
+      kind: 'command_result', id, lineage, run, attempt, command, exit,
+      raw, subjects, inputs_used: inputsUsed, origin: HARNESS,
+    });
+  }
+
+  recordPackage(pkg) {
+    return this.ledger.append({ kind: 'evidence_package', ...pkg });
+  }
+
+  recordArtifact({ id, lineage, run, artifactKind, identity }) {
+    return this.ledger.append({
+      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
     });
   }
 
@@ -111,17 +128,26 @@ export class Kernel {
 
   // An attempt may be opened only by the producer the Assignment names, and the
   // record of who opened it is written here rather than claimed by the opener.
-  openAttempt({ lineage, assignment, producer, obligations, submitter }) {
+  openAttempt({ lineage, run, producer, obligations, submitter }) {
     if (submitter !== producer) {
       fail('identity_self_asserted', 'the submitter is not the producer it names', {
         submitter, producer,
       });
     }
-    if (assignment.grants.attempt_producer !== producer) {
+    // Resolved from the log, not accepted as an argument. A caller previously
+    // passed an Assignment object with grants it had chosen itself.
+    const issued = this.records().find(
+      (r) => r.kind === 'assignment_issued' && r.lineage === lineage && r.run === run,
+    );
+    if (!issued) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (issued.grants.attempt_producer !== producer) {
       fail('attempt_not_granted', 'only the granted producer may open an attempt', { producer });
     }
+    const assignment = issued;
     return this.ledger.append({
-      kind: 'attempt_opened', lineage, assignment: assignment.id,
+      kind: 'attempt_opened', lineage, run, assignment: assignment.id,
       attempt: `${assignment.id}#${this.ledger.seq}`, producer, obligations,
     });
   }
@@ -129,7 +155,7 @@ export class Kernel {
   // The Assignment is issued by the Human Owner, bound to an approved revision,
   // and the beneficiary may not be the actor. A producer minting one that grants
   // itself what it wants is the regress this ends.
-  issueAssignment({ lineage, id, contractRevision, actor, beneficiary }) {
+  issueAssignment({ lineage, run, id, contractRevision, actor, beneficiary, boundary, grants }) {
     if (actor === beneficiary) {
       fail('assignment_self_issued', 'the party an Assignment grants may not issue it', { id });
     }
@@ -144,15 +170,18 @@ export class Kernel {
     if (existing.length > 0) {
       fail('assignment_not_unique', 'a run holds exactly one Assignment', { id });
     }
+    // The grants and the boundary are part of the issuance, not something the
+    // holder supplies later. An earlier version recorded who issued it and let
+    // the Assignment object carry self-selected grants.
     return this.ledger.append({
-      kind: 'assignment_issued', lineage, id, contract_revision: contractRevision,
-      actor, beneficiary, origin: HOST,
+      kind: 'assignment_issued', lineage, run, id, contract_revision: contractRevision,
+      actor, beneficiary, boundary, grants, origin: HOST,
     });
   }
 
-  recordUnavailable({ lineage, obligation, attempt, requested }) {
+  recordUnavailable({ lineage, run, obligation, attempt, requested }) {
     return this.ledger.append({
-      kind: 'capability_unavailable', lineage, obligation, attempt,
+      kind: 'capability_unavailable', lineage, run, obligation, attempt,
       requested, origin: HARNESS,
     });
   }
@@ -165,17 +194,20 @@ export class Kernel {
 
   // An observation names the runner's record; it does not carry one. The
   // separation is what stops a submission authoring its own raw result.
-  submitObservation({ lineage, obligation, observation, attempt, contractRevision,
-    assignment, producer, artifact, pkg, commandResult, satisfied, submitter }) {
+  submitObservation({ lineage, run, obligation, observation, attempt, contractRevision,
+    assignment, producer, artifact, pkg, commandResult, submitter }) {
     if (submitter !== producer) {
       fail('identity_self_asserted', 'the submitter is not the producer it names', {
         submitter, producer,
       });
     }
+    // No outcome parameter. What the run produced is in the runner's record; the
+    // observation says which obligation it answers and which evidence it points
+    // at, and stops there.
     return this.ledger.append({
-      kind: 'observation', lineage, obligation, observation, attempt,
+      kind: 'observation', lineage, run, obligation, observation, attempt,
       contract_revision: contractRevision, assignment, producer, artifact,
-      package: pkg, command_result: commandResult, satisfied,
+      package: pkg, command_result: commandResult,
     });
   }
 
@@ -201,23 +233,37 @@ export class Kernel {
     });
   }
 
-  // The index admissibility reads through. Built from the log rather than passed
-  // in, so `command_result` has a real consumer and a caller cannot substitute a
-  // friendlier one.
+  // The index resolves from the log and takes nothing from a caller. An earlier
+  // version accepted `index` and `inputsNow` as parameters, which let the party
+  // being judged supply the evidence universe — packages and command results that
+  // had never been recorded resolved fine and produced `passed`.
   index() {
     const records = this.records();
-    const by = (kind, field) => (value) => records.find(
+    const findBy = (kind, field) => (value) => records.find(
       (r) => r.kind === kind && r[field] === value,
     ) || null;
     return {
-      commandResult: (id) => records.find(
-        (r) => r.kind === 'command_result' && r.id === id,
-      ) || null,
-      attempt: (id) => records.find(
-        (r) => r.kind === 'attempt_opened' && r.attempt === id,
-      ) || null,
-      package: () => null,
-      artifact: () => null,
+      commandResult: findBy('command_result', 'id'),
+      attempt: findBy('attempt_opened', 'attempt'),
+      package: findBy('evidence_package', 'id'),
+      artifact: findBy('artifact_recorded', 'id'),
+    };
+  }
+
+  // The verdict, computed from what the runner observed. Nothing the submission
+  // says is read here — there is no field it could say it in.
+  //
+  // Only the exit status. Non-vacuity is admissibility's (AC-2), and a copy of it
+  // here was unreachable: the reduction calls this only after `admit` returned
+  // null, and `admit` already refuses a result with no subjects. A second layer no
+  // planted defect can turn red is a claim of protection nothing holds to account,
+  // so it states the property once, where it is reachable.
+  outcomeReader() {
+    const index = this.index();
+    return (record) => {
+      const result = index.commandResult(record.command_result);
+      if (!result) return null;
+      return result.exit === 0;
     };
   }
 
@@ -261,8 +307,9 @@ export class Kernel {
   // No optional admissibility. The Gate always runs the full check, because a
   // check a caller may omit is a check that does not exist.
 
-  status({ contract, lineage, assignment, index, inputsNow, run }) {
+  status({ contract, lineage, assignment, inputsNow, run }) {
     const records = this.records();
+    const index = this.index();
     const current = this.currentRevision(lineage);
     if (current === null) {
       fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
@@ -272,7 +319,9 @@ export class Kernel {
     });
     const result = reduceAll({
       records, lineage, obligations: contract.obligations, currentRevision: current,
-      admit, inputsChanged: inputsChangedAgainst(index, inputsNow),
+      admit,
+      inputsChanged: inputsChangedAgainst(index, inputsNow),
+      outcomeOf: this.outcomeReader(),
     });
 
     // The verdict is recorded, because completion relies on it and AC-13 says
@@ -293,6 +342,71 @@ export class Kernel {
       }
     }
     return result;
+  }
+
+  // Completion. There is no second entry point: `emitAcceptance` used to live in
+  // its own module, call the reducer itself, and forward admissibility as an
+  // optional argument — so the channel could be walked around by importing the
+  // other thing. It is deleted rather than deprecated.
+  complete({ contract, lineage, run, assignment, deliverable, actor, inputsNow, acceptedReview }) {
+    const { byObligation, allPassed } = this.status({
+      contract, lineage, assignment, inputsNow, run,
+    });
+    if (!allPassed) {
+      const first = contract.obligations.find((o) => byObligation[o].status !== 'passed');
+      fail('not_all_passed', 'completion requires every obligation to be passed', {
+        obligation: first, status: byObligation[first].status,
+      });
+    }
+
+    // The unavailable arm is checked here too: a Contract that declared
+    // cross-family cannot complete while its dispatch guarantees are unmet.
+    this.checkUnavailableArm({ contract, lineage });
+
+    const current = this.currentRevision(lineage);
+    const required = contract.independence.required === 'cross_family_required';
+    if (required && !acceptedReview) {
+      fail('review_required_absent', 'the Contract required a review and none is carried', {});
+    }
+
+    const signoff = this.signOff({
+      lineage, run, contractRevision: current,
+      deliverable: deliverable.identity, actor, acceptedReview,
+    });
+
+    // After the Gate, and bound to this run, revision and deliverable. The
+    // sign-off is appended above, so its position in the log is what orders it —
+    // not a sequence number the caller chose.
+    const lastGateInput = Math.max(
+      ...this.records()
+        .filter((r) => r.kind === 'gate_result' && r.run === run)
+        .map((r) => r.seq),
+      -1,
+    );
+    if (!(signoff.seq > lastGateInput)) {
+      fail('signoff_before_gate', 'the sign-off predates the Gate result', {
+        signoff: signoff.seq, lastGate: lastGateInput,
+      });
+    }
+
+    // The Acceptance is exactly the shape the schema states — the verdicts travel
+    // beside it rather than inside it, because a closed schema means an extra
+    // field is a validation failure and not a helpful addition.
+    const acceptance = {
+      lineage,
+      contract_revision: current,
+      contract_identity: contract.identity,
+      deliverable,
+      decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq },
+      review: required
+        ? { required: true, accepted_review: acceptedReview }
+        : { required: false, statement: 'no independent review required by this Contract' },
+    };
+    return {
+      acceptance,
+      verdicts: this.records().filter((r) => r.kind === 'gate_result' && r.run === run),
+      obligations: contract.obligations,
+    };
   }
 
   // The unavailable arm is on the path, not beside it. An earlier draft had a
