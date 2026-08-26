@@ -216,10 +216,11 @@ class Ledger {
   // Replay is a check, not a re-enactment: the same records must reconstruct the
   // same state in a fresh process. A state reachable in the real flow that replay
   // cannot rebuild is the defect this exists to catch.
-  // Bucketing is not reconstruction. `replay` sorts records so a caller can find
-  // them; `reconstruct` rebuilds the state a run reached, which is what AC-13
-  // actually asks for — including the Gate verdicts and the human decisions,
-  // since those are what completion relied on.
+  // Bucketing is not reconstruction, and a bucketed projection lived beside this
+  // one with no consumer: comparing two runs of it compared the sorting code with
+  // itself. `reconstruct` rebuilds the state a run reached, which is what AC-13
+  // asks for — the Gate verdicts and the human decisions included, since those are
+  // what completion relied on.
   // `scope` names the run. Matching every key against every record dropped the
   // approval and the unavailable decision, because those are facts about the
   // lineage rather than about one execution — so a run-scoped reconstruction
@@ -229,7 +230,13 @@ class Ledger {
       ([k, v]) => r[k] === undefined || r[k] === v,
     );
     const mine = this.read().filter(matches);
+    // The revision the run was assigned under, followed rather than scanned for.
+    // Taking the last approval of the lineage reported whichever was newest, so a
+    // successor approved mid-run made replay say the run had used it — while the
+    // live Gate, correctly, had judged it against the one its Assignment named.
+    const assigned = mine.find((r) => r.kind === 'assignment_issued');
     const state = {
+      boundRevision: assigned ? assigned.contract_revision : null,
       approvedRevision: null,
       attempts: [],
       gateVerdicts: {},
@@ -245,6 +252,8 @@ class Ledger {
       switch (r.kind) {
         case 'contract_approved_genesis':
         case 'contract_approved_revision':
+          // The lineage's latest, which is what staleness is decided against.
+          // `boundRevision` above is what the run was judged as.
           state.approvedRevision = r.revision;
           break;
         case 'attempt_opened':
@@ -288,66 +297,31 @@ class Ledger {
           };
           break;
         default:
+          // A kind with no branch here contributes nothing to the state a run
+          // reached — which is a claim, so it is stated rather than assumed. A
+          // silent default meant a kind added later would be dropped from every
+          // reconstruction without anything saying so.
+          if (!CONTRIBUTES_NOTHING.has(r.kind)) {
+            fail('replay_incomplete', 'no reconstruction rule for this kind', { kind: r.kind });
+          }
           break;
       }
     }
     return state;
   }
 
-  replay() {
-    const records = this.read();
-    const state = {
-      approvals: [],
-      assignments: [],
-      attempts: [],
-      observations: [],
-      packages: [],
-      artifacts: [],
-      gateResults: [],
-      commandResults: [],
-      inputObservations: [],
-      unavailable: [],
-      dispatches: [],
-      decisions: [],
-      signoffs: [],
-      completions: [],
-      formation: [],
-      runRecords: [],
-    };
-    const bucket = {
-      contract_approved_genesis: 'approvals',
-      contract_approved_revision: 'approvals',
-      assignment_issued: 'assignments',
-      attempt_opened: 'attempts',
-      observation: 'observations',
-      evidence_package: 'packages',
-      artifact_recorded: 'artifacts',
-      gate_result: 'gateResults',
-      gate_completed: 'gateResults',
-      command_result: 'commandResults',
-      capability_unavailable: 'unavailable',
-      dispatch_attempt: 'dispatches',
-      input_observed: 'inputObservations',
-      input_gone: 'inputObservations',
-      human_decision_activation: 'decisions',
-      human_decision_choice: 'decisions',
-      human_decision_unavailable: 'decisions',
-      human_decision_judgement: 'decisions',
-      human_signoff: 'signoffs',
-      completion_committed: 'completions',
-      formation_opened: 'formation',
-      run_record_clean: 'runRecords',
-      run_record_caught: 'runRecords',
-    };
-    for (const r of records) {
-      const key = bucket[r.kind];
-      if (!key) fail('replay_incomplete', `no replay rule for kind ${r.kind}`, { kind: r.kind });
-      state[key].push(r);
-    }
-    return { records, state };
-  }
 
 }
+
+// Kinds that carry no part of the state a run reached. Their content is read
+// during the reduction — an observation's bindings, a package's bytes — and what
+// it produced is already in the verdicts and decisions the reconstruction keeps.
+const CONTRIBUTES_NOTHING = new Set([
+  'assignment_issued', 'command_result', 'observation', 'evidence_package',
+  'artifact_recorded', 'input_observed', 'input_gone', 'dispatch_attempt',
+  'gate_completed', 'formation_opened', 'human_decision_activation',
+  'human_decision_choice',
+]);
 
 export class Kernel {
   // Private. A public `ledger` let anything holding a Kernel append a record
@@ -397,8 +371,6 @@ export class Kernel {
 
   // The log's own readers. They live here because the Ledger is not reachable
   // from outside — a caller that could construct one could also append to it.
-  replay() { return this.#ledger.replay(); }
-
   reconstruct(scope) { return this.#ledger.reconstruct(scope); }
 
   // No `assertRecorded`. AC-13's completeness half — "did we write what we relied

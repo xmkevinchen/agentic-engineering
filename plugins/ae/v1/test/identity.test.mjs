@@ -60,6 +60,17 @@ export function identityTests() {
     refuses('a predecessor must be the prior revision', 'lineage_predecessor_wrong',
       () => approve(k, { revision: 'r2', predecessor: ZERO }, { predecessor: ZERO }));
 
+    // The Contract's own bytes name a predecessor too, and it must be the same
+    // one. Both were wrong together in the case above, so the envelope check
+    // fired first and the bytes check was never reached: deleting it left the
+    // suite green.
+    refuses('a Contract naming a different predecessor than its approval',
+      'lineage_predecessor_wrong',
+      () => approve(
+        k, { revision: 'r2', predecessor: ZERO },
+        { predecessor: genesis.identity.byte_sha256 },
+      ));
+
     const prior = genesis.identity.byte_sha256;
     approve(k, { revision: 'r2', predecessor: prior }, { predecessor: prior });
     eq('a correct predecessor supersedes it', k.currentRevision('L'), 'r2');

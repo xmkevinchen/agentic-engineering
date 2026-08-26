@@ -205,7 +205,17 @@ export function familyTests() {
       process.execPath, [here, logPath, 'L', 'run2'], { encoding: 'utf8' },
     ));
     eq('and replay reads the second run\'s request', (out.requested || []).join(','), 'qwen');
-    eq('under the revision that asked for it', out.approvedRevision, 'r2');
+    eq('under the revision that asked for it', out.boundRevision, 'r2');
+
+    // And the first run, replayed while a successor is approved: it was assigned
+    // under `r1` and judged against `r1`. Replay took the lineage's latest
+    // approval, so it said the run had used `r2` — a reconstruction that
+    // disagrees with the Gate about what was being judged.
+    const earlier = JSON.parse(execFileSync(
+      process.execPath, [here, logPath, 'L', 'run1'], { encoding: 'utf8' },
+    ));
+    eq('the first run is still bound to its own revision', earlier.boundRevision, 'r1');
+    eq('while the lineage has moved on', earlier.approvedRevision, 'r2');
   });
 
   group('AC-7 · two dispatches for one obligation resolve to neither', () => {

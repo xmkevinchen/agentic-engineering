@@ -25,6 +25,7 @@ try { recomputed = k.status({ lineage, run }).byObligation; } catch { recomputed
 
 process.stdout.write(JSON.stringify({
   approvedRevision: state.approvedRevision,
+  boundRevision: state.boundRevision,
   unavailable: state.unavailable,
   requested: state.requested,
   unavailableDecision: state.unavailableDecision,

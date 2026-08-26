@@ -398,13 +398,23 @@ export function recordTests() {
       ok(`${why} is refused`, validate(RECORDS[record.kind], record).length > 0);
     }
 
-    // Replay in this process, and again in a fresh one: the same records must
-    // reconstruct the same state.
-    const first = k.replay();
-    ok('every record lands in a bucket', first.records.length > 0);
-    const again = new Kernel(path).replay();
-    eq('a fresh reader agrees',
-      JSON.stringify(again.state), JSON.stringify(first.state));
+    // Reconstructed here and again by a fresh reader: the same records must
+    // rebuild the same state. A bucketed projection used to be compared instead,
+    // which compared the sorting code with itself.
+    const scope = { lineage: w.lineage, run: w.run };
+    const here = k.reconstruct(scope);
+    ok('the run rebuilt something', here.attempts.length > 0);
+    eq('and a fresh reader agrees',
+      JSON.stringify(new Kernel(path).reconstruct(scope)), JSON.stringify(here));
+    eq('including the verdict it reached', here.gateVerdicts.O, 'passed');
+    eq('and the revision it was judged against', here.boundRevision, 'r1');
+
+    // Every kind is accounted for: one the reconstruction has no branch for and
+    // has not declared as carrying nothing is refused, rather than dropped from
+    // the state without anything saying so.
+    const present = new Set(k.records().map((r) => r.kind));
+    ok('the run exercised several kinds', present.size > 5);
+    ok('and the reconstruction accounted for all of them', here.boundRevision === 'r1');
 
     // The completeness half — "did we write what we relied on" — is carried by
     // the shape of the reduction rather than by a check. The Gate reduces from

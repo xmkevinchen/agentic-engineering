@@ -210,6 +210,18 @@ probe RED "a code nothing can raise, raisable"; revert codes.mjs
 plant kernel.mjs "    if (opened && !opened.obligations.includes(obligation)) {" "    if (false) {"
 probe RED "a surface writing out of scope"; revert kernel.mjs
 
+# Round 20's findings: cause 1 in replay, cause 3 in two guards.
+plant kernel.mjs "      boundRevision: assigned ? assigned.contract_revision : null," \
+  "      boundRevision: null,"
+probe RED "replay forgets what the run was judged as"; revert kernel.mjs
+
+plant kernel.mjs "      if (contract.predecessor !== last.identity.byte_sha256) {" "      if (false) {"
+probe RED "a Contract naming another predecessor"; revert kernel.mjs
+
+plant kernel.mjs "  'gate_completed', 'formation_opened', 'human_decision_activation'," \
+  "  'gate_completed', 'human_decision_activation',"
+probe RED "a kind accounted for nowhere"; revert kernel.mjs
+
 # Round 19's finding: authority a child record narrowed, regained downstream.
 plant admissibility.mjs "  if (!(attempt.obligations || []).includes(record.obligation)) {" \
   "  if (false) {"
