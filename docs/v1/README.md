@@ -55,6 +55,7 @@ Full reading order and the reason for each status is in
 | | |
 |---|---|
 | Slice reached | **V0** — consolidation and product boundary |
+| Release prerequisites | V1, V2, **V3**. V4 and V5 are not. |
 | Production behavior changed by V0 | none |
 | Next | Scope re-confirmed 2026-08-25, widened ([`acceptance.md` §7](acceptance.md#7-open-items-for-the-human)). **V0 has not exited:** independent review of this consolidation is still returning findings, and V0 exits on the first round that returns none. [V1](implementation-plan.md#v1--minimal-kernel--solo-workflow) starts after that. |
 | Open decisions | [`acceptance.md` §7](acceptance.md#7-open-items-for-the-human) |

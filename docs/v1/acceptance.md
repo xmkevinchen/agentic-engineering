@@ -22,14 +22,31 @@ AE v1 is releasable when all six hold:
 | 2 | The V2 Agent Teams flow has completed at least one real feature including a finding that required rework and re-review. |
 | 3 | The Kernel integrity criteria in §3 all fail closed. |
 | 4 | The Agent Teams handoff criteria in §4 hold, including under lost coordination state. |
-| 5 | One **negative arm must actually run** before release: a Contract declaring `cross_family_required`, with the provider forced unavailable, reports `unavailable`, performs no same-family substitution, and records the human's `wait`/`stop`/`amend` decision bound to that Contract revision and run. The arm produces no Acceptance — `unavailable` is not `passed` — and needs none. Owned by V1 (§5). A *successful* cross-family invocation stays optional with V3. |
+| 5 | Every cross-family criterion in §5 has run — both the unavailable arm and the successful path. AE ships a live cross-family capability, so AE must show it does not lie about what answered. |
 | 6 | Knowledge holds no authority per §6, tested against the knowledge surfaces that exist at release time. |
 
-**V3, V4, and V5 are not release prerequisites** — but read that precisely for
-V3. What V3 adds is a *successful* cross-family invocation and the correlation it
-makes exercisable — X1 and X2b — and that stays optional. Criterion 5's negative arm is **not** optional: it is owned by V1 and
-must have run before release. Using a cross-family seat in production is a
-choice; proving that a missing one cannot become a pass is not.
+**V4 and V5 are not release prerequisites. V3 is** — reversed on 2026-08-25 after
+six failed attempts to write an exemption for it.
+
+The exemption was supposed to say when the successful cross-family path is
+unreachable and therefore need not be proven. Every formulation named a condition
+that can change without a release: provider state recovers, a selector is
+editable project configuration, and "the integration code is unpublished" has no
+boundary — the bridge it would integrate is already on the mainline. The release
+manifest closes file membership and integrity, not reachability: it carries no
+dispatch nodes, no host entry points, no capability declarations, and the
+launcher sits outside the member set by design. Meanwhile `plugin.json` registers
+three MCP servers and a dozen skills already reference cross-family.
+
+So the capability is live and v1 cannot evidence otherwise. A live path must be
+proven. The lesson was not that the evidence standard needed one more revision —
+it was that the exemption should never have existed.
+
+**Two different things stay separate**: *using* a cross-family seat remains
+optional and risk-driven, chosen per Contract ([`design.md` §5.1](design.md#51-cross-family-is-risk-driven-not-ceremonial)).
+*Proving the shipped capability does not misreport what answered* is mandatory.
+A user may never declare `cross_family_required`; AE still may not ship a path
+that could pass off a request as an observation.
 
 V4 improves the product over time. V5 responds to failures that, by definition,
 have not happened yet.
@@ -94,66 +111,49 @@ Plus two properties:
 
 ## 5. Cross-family criteria
 
-*Using* a cross-family seat is optional. *Proving it cannot degrade silently* is
-not. The failure this section guards is claiming a property AE never observed —
-and that failure is reachable whether or not anyone ever runs a successful
-cross-family invocation.
+*Using* a cross-family seat is optional and risk-driven, chosen per Contract.
+*Proving the shipped capability cannot misreport what answered* is mandatory.
+The failure this section guards is AE claiming a property it never observed, and
+that failure is reachable because the capability is live: `plugin.json` registers
+the Codex, Gemini, and OpenAI-compatible MCP servers, and the bridge is already
+on the mainline.
 
-| # | Criterion | Required for release | Owner |
-|---|---|---|---|
-| X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | **Optional** — this is the successful path | V3 |
-| X2a | The `requested` identity **the Contract states** appears in AE's dispatch-attempt and unavailable records with an identical **canonical-JSON encoding** (equivalently, an identical canonical digest), bound to the same Contract revision and run, while `observed` and `effective` are **absent — not `null`, not empty**. A request field is never reported as an effective-family claim. | **Yes** | V1 |
-| X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | **Optional**, with X1 | V3 |
-| X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | **Yes** — this is release criterion 5's negative arm | V1 |
-| X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | **Yes** | V1 |
+All five must run before release.
 
-X1, X3, and X4 are unambiguous. X2 is the one that needed splitting, and an
-earlier draft of this table got it wrong by claiming the whole property was
-provable against an unavailable provider.
+| # | Criterion | Owner |
+|---|---|---|
+| X1 | A Contract-declared cross-family review runs through `agent-proxy` and returns a `Review` in the same shape as a same-family seat. | V3 |
+| X2a | The `requested` identity **the Contract states** appears in AE's dispatch-attempt and unavailable records with an identical **canonical-JSON encoding** (equivalently, an identical canonical digest), bound to the same Contract revision and run, while `observed` and `effective` are **absent — not `null`, not empty**. A request field is never reported as an effective-family claim. | V1 |
+| X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | V3 |
+| X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | V1 |
+| X4 | There is exactly one Gate and one workflow. Cross-family adds a seat, not a pipeline. | V1 |
 
-It is not. An unavailable run proves that AE does not *invent* an effective
-identity out of nothing — that is X2a, it is the half that matters most, and V1
-owns it. It cannot exercise the correlation logic that runs when the archive
-actually reports what a backend did, because nothing answered. That is X2b, and
-it needs a provider that answers.
+The split between X2a and X2b is about *when each is exercisable*, not about
+whether either is required. An unavailable run proves AE does not invent an
+effective identity out of nothing — X2a, bounded deliberately at AE's own
+records, because a run that stops before the backend handoff cannot show what a
+provider received. Only a backend that answers exercises the correlation from a
+populated `observed` to `effective` — X2b. V1 owns the first, V3 the second, and
+the release needs both.
 
-X2a's boundary is deliberately drawn at AE's own records, not at the provider.
-An unavailable run may stop before the backend handoff, so it cannot show what a
-provider received — that is *exact input handoff*, and V3 owns it. What V1 can
-and must show is that AE preserved the request it was given and claimed nothing
-about an observation it never made.
+### Why there is no N/A exemption here
 
-**X2b may be N/A only when the release's dispatch graph contains no edge that
-can deliver a cross-family request to a backend that answers.** The evidence is
-an enumeration of the release manifest's closed member set and its activation
-entry points — the same shape of argument as the foundation corpus's
-semantic-blindness scan, which enumerates modules from disk rather than trusting
-a hand-kept list. It is not an observation of any provider's state.
+Six attempts were made to write one, and each named a condition that can change
+without a release. They are recorded so none grows back:
 
-The distinction that matters: **`agent-proxy` existing in the repository is not
-that edge.** The bridge is already on the mainline and v1 does not rebuild it
-([`design.md` §5](design.md#5-agent-proxy)). What would make the path reachable
-is a released dispatch path that reaches it. V1 needs Contracts to be able to
-declare `cross_family_required` at all — X3 depends on that — so the honest
-position is a clean fork:
-
-- V1's dispatch reaches only a result that cannot answer, and the member/entry-
-  point enumeration shows there is no edge to a live backend → X2b is an
-  evidenced N/A; or
-- the release wires that edge → X1 and X2b **must run**, whatever any provider
-  happens to be doing at release time.
-
-Three weaker forms were considered and rejected, and are recorded so they do not
-grow back:
-
-| Rejected as N/A evidence | Why |
+| Rejected as evidence of unreachability | Why |
 |---|---|
 | Every configured provider reports `unavailable` | Credentials, quotas and networks recover; the path is then live in a release that never proved it. A temporary observation is not a structural fact — the exact substitution this document exists to refuse. |
 | A release-bound selector disables it | AE's selector is editable project configuration; a user flips it and the unproved path is live. Making it sound needs an immutable release capability manifest treating each activation as a separately qualified release — [deferred to V5](mechanism-disposition.md#3-defer). A v1 criterion may not rest on a deferred mechanism. |
-| "The V3 integration code is not published" | Undefined boundary. The bridge it would integrate is already published, so omitting something labelled V3 proves nothing about whether generic dispatch can still reach a live backend. |
+| "The V3 integration code is not published" | Undefined boundary, and the bridge it would integrate is already published. |
+| Enumerating the release manifest's members and activation entry points | The manifest closes file membership and integrity, not reachability. Its members carry only role, ref, digest and length; there are no dispatch nodes, no host entry points, no capability declarations, and the launcher is outside the member set by design. "Activation entry point" was an undefined boundary replacing an undefined boundary. |
 
-As with any AE N/A, the unreachability itself needs evidence; an unevidenced
-blank is not an N/A.
+The foundation corpus's semantic-blindness scan was cited as precedent for the
+last of these. That analogy overreached: the scan enumerates `.mjs` files under
+one explicitly closed directory and supports a *lexical* claim about forbidden
+vocabulary. Runtime reachability spans host manifests, skills, agents,
+configuration, and dynamic tool selection, and no equivalent closed universe is
+defined in v1.
 
 ## 6. Knowledge non-authority criteria
 
@@ -180,7 +180,8 @@ These need a decision and are not resolvable from the code or the handoff.
 
 | # | Item | Why it needs a person |
 |---|---|---|
-| 1 | ~~Re-confirm the minimum v1 scope.~~ **Re-confirmed 2026-08-25**, superseding 2026-08-24. The widened scope is accepted in full: formation provenance inside the Contract, the cross-family unavailable arm, and the `.ae/graph` isolation tests including N6's delete-differential. V1 is larger than first confirmed, and the first real dogfood run arrives correspondingly later. | Resolved. |
+| 1 | ~~Re-confirm the minimum v1 scope.~~ **Re-confirmed 2026-08-25**, superseding 2026-08-24: formation provenance inside the Contract, the cross-family unavailable arm, and the `.ae/graph` isolation tests including N6's delete-differential. | Resolved. |
+| 1b | ~~Decide what to do about the unwritable X2b exemption.~~ **Decided 2026-08-25:** delete it. X1 and X2b are required and **V3 becomes a release prerequisite**. The alternatives were to define a closed dispatch universe — which is the deferred active-release qualification pulled back into v1 — or to drop cross-family from the v1 Kernel while the skills keep using it, which is the two-truths problem v1 exists to remove. | Resolved. v1 is larger again, and the release is correspondingly later. |
 | 2 | **F-084/F-085 were untracked to restore the gitignore guard** (`80cff4b`); the files stay on disk and on their source branch. Confirm that is the disposition you want, rather than keeping them tracked and relaxing the guard. | The consolidation chose the policy-conformant option to keep the suite green; reversing it is the user's call. |
 | 3 | **F-082 duplicate identity across the live/done inventory.** Carried forward, still unresolved, from the earlier plan's open blockers. | It is a data-disposition decision. It no longer blocks anything in v1, because rollout is deferred. |
 | 4 | **Whether the archived `finalized/**` specification should stay in `docs/`** now that it is a design input rather than the plan. | It is 3,159 lines of archived normative prose. Keeping it is defensible; so is moving it beside the other design history. |

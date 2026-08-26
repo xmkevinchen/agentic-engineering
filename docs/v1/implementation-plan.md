@@ -34,7 +34,7 @@ the slice was the wrong idea, stated before it is built.
 | **V0** | Consolidation and product boundary | This document set; no production behavior change |
 | **V1** | Minimal Kernel + solo workflow | One real feature accepted end to end by one implementer |
 | **V2** | Claude Code Agent Teams workflow | One real feature through Lead → Implementer → QA → Reviewer → Fixer |
-| **V3** | Optional cross-family seat | One Contract-declared high-risk review run through agent-proxy |
+| **V3** | Cross-family seat (**release prerequisite**) | One Contract-declared high-risk review run through agent-proxy |
 | **V4** | Knowledge Feedback | Real suggestions produced from V1–V3 records |
 | **V5** | Earned hardening | Only fixes for failures that actually occurred |
 
@@ -122,7 +122,7 @@ human intent
   not `passed`, so the run has no terminal state and needs none: what it proves
   is that a missing capability does not become a pass. It therefore needs no
   reviewer seat and no `Review` object, which is why it belongs in V1 rather than
-  in the optional V3.
+  waiting for V3 — it is provable before any provider answers.
 
   What must be durable is the human's decision. The Harness appends one record —
   the choice (`wait` | `stop` | `amend`), bound to the exact Contract revision and
@@ -130,8 +130,8 @@ human intent
   seventh durable object; it is an event, and without it "a human decided" is a
   claim with nothing behind it.
 
-  Owner of [`acceptance.md` criterion 5](acceptance.md#1-release-criteria) and of
-  [X2a, X3, X4](acceptance.md#5-cross-family-criteria). X2a is bounded at **AE's
+  Owner of [X2a, X3, X4](acceptance.md#5-cross-family-criteria); V3 owns X1 and
+  X2b, and [criterion 5](acceptance.md#1-release-criteria) requires all five. X2a is bounded at **AE's
   own records**, not at the provider: the `requested` identity the Contract
   states — the sole authoritative source ([`design.md` §9](design.md#9-minimal-durable-objects))
   — appearing in the dispatch-attempt and unavailable records with an identical
@@ -198,7 +198,7 @@ least one finding that required rework and re-review.
 path for the tasks this repository actually has, keep V1 as the default and make
 Team an explicitly selected topology rather than a promoted one.
 
-### V3 — Optional cross-family seat
+### V3 — Cross-family seat
 
 Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
 
@@ -214,28 +214,21 @@ Uses the existing `agent-proxy` bridge. No new workflow, no second Gate.
   same-family reviewer;
 - the same `Review` shape as a same-family seat.
 
-**Exit (of the slice, not of the release):** one Contract that declares a
-high-risk cross-family review runs through the bridge with a provider that
-actually answers, and is accepted — [`acceptance.md` X1 and X2b](acceptance.md#5-cross-family-criteria).
-V1 already proved the unavailable branch, so V3 does not re-demonstrate it; what
-V3 must additionally show is that adding a real provider introduced no second
-workflow and no second Gate (X4).
+**Exit:** one Contract that declares a high-risk cross-family review runs through
+the bridge with a provider that actually answers, and is accepted —
+[`acceptance.md` X1 and X2b](acceptance.md#5-cross-family-criteria). V1 already
+proved the unavailable branch, so V3 does not re-demonstrate it; what V3 must
+additionally show is that adding a real provider introduced no second workflow
+and no second Gate (X4).
 
-**V3 is not a release prerequisite — but only the successful path is optional.**
-The negative arm is mandatory and belongs to V1, not here: release criterion 5
-requires it to have actually run ([`acceptance.md` §1](acceptance.md#1-release-criteria),
-[§5](acceptance.md#5-cross-family-criteria)). What V3 adds on top is X1 **and
-X2b** — a real provider answering, and the correlation that only then becomes
-exercisable — and that is the part a release may ship without.
-
-Shipping without it means the release's dispatch graph has **no edge to a backend
-that answers**, evidenced by enumerating the release manifest's closed member set
-and activation entry points — not by observing any provider's state, and not by
-omitting something labelled V3. `agent-proxy` is already on the mainline, so its
-presence in the repository proves nothing either way; what counts is whether a
-released dispatch path reaches it. Wire that edge and X1/X2b must run. See
-[`acceptance.md` §5](acceptance.md#5-cross-family-criteria) for the rejected
-alternatives and why.
+**V3 is a release prerequisite** — reversed on 2026-08-25. It was scoped as
+optional on the assumption that a release could decline to ship the successful
+path and evidence it unreachable. Six formulations of that exemption failed, each
+naming a condition that changes without a release; the manifest closes file
+membership, not reachability, and `plugin.json` already registers three MCP
+servers. AE ships a live cross-family capability, so AE must prove it does not
+misreport what answered. What stays optional is a *user* declaring
+`cross_family_required` in their own Contract.
 
 A provider being silently swapped for a same-family reviewer blocks the release,
 and always did.
@@ -318,8 +311,8 @@ and carried forward.
 ## 4. Dependencies between slices
 
 ```text
-V0 ──▶ V1 ──▶ V2 ──▶ V3
-             └──▶ V4 (needs V1–V3 records; V3 optional)
+V0 ──▶ V1 ──▶ V2 ──▶ V3   ── all three are release prerequisites
+             └──▶ V4 (needs V1–V3 records)
                    └──▶ V5 (needs observed failures from any of V1–V4)
 ```
 

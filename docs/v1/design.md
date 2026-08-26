@@ -289,6 +289,12 @@ Cross-family review is a cost. The Contract selects it by risk:
 A cross-family seat and a same-family seat return the **same** Review shape. AE
 does not maintain a second workflow or a second Gate for cross-family work.
 
+The table above is about *a user choosing* a seat, and that choice stays optional
+and risk-driven. It is not about whether AE must **prove** the seat behaves. AE
+ships a live cross-family capability, so proving it never passes off a request as
+an observation is mandatory regardless of whether any Contract ever selects it —
+see [`acceptance.md` §5](acceptance.md#5-cross-family-criteria).
+
 ## 6. Knowledge Feedback
 
 Knowledge is how AE gets better with use. It learns from completed work:
