@@ -74,6 +74,26 @@ export function concurrentTests() {
     }
   });
 
+  group('AC-3 · a forked approval history has no current revision', () => {
+    // Each writer's own check passed: the genesis really was the prior approval
+    // it saw. What they produced together is a fan, and counting genesis records
+    // caught none of it — the reader took the last sibling as current, which is a
+    // fork read as a history.
+    const { dir, logPath, k } = prepared();
+    const genesis = k.records().find((r) => r.kind === 'contract_approved_genesis');
+    race(dir, logPath, 'revision', {
+      CONTRACT_BYTES: JSON.stringify(contractDoc()),
+      GENESIS: genesis.identity.byte_sha256,
+    });
+    const approvals = k.records().filter((r) => r.kind.startsWith('contract_approved'));
+    if (approvals.length > 2) {
+      refuses('the lineage refuses to name one', 'lineage_predecessor_wrong',
+        () => k.currentRevision('L'));
+    } else {
+      ok('or the writers serialised and it is a chain', k.currentRevision('L') !== null);
+    }
+  });
+
   group('AC-4 · two attempts are never the same attempt', () => {
     // The one that was actually wrong: the id was the Assignment id joined to the
     // position the log was about to reach, and four writers all predicted the same
@@ -94,12 +114,14 @@ export function concurrentTests() {
     eq('every open produced a record', opened.length, results.length);
     eq('and no two share a position', new Set(opened.map((r) => r.seq)).size, opened.length);
 
-    // And every opener was told the same latest attempt, which is the one the
-    // Gate selects. An older one would never be selected, so telling an opener it
-    // held one would be telling it something untrue about its own submissions.
-    eq('each opener learned the attempt the Gate will select',
-      new Set(results.map((r) => r.attempt)).size, 1);
-    eq('which is the last one opened',
-      results[0].attempt, opened[opened.length - 1].seq);
+    // And each opener learned its own position, not somebody else's. Returning
+    // "the latest attempt in the run" merged executions that never happened
+    // together: three of four openers would have submitted against a fourth's
+    // attempt, and complementary observations could then all pass at once.
+    eq('each opener learned its own attempt',
+      new Set(results.map((r) => r.attempt)).size, results.length);
+    eq('and those are exactly the positions opened',
+      results.map((r) => r.attempt).sort((a, b) => a - b).join(','),
+      opened.map((r) => r.seq).join(','));
   });
 }

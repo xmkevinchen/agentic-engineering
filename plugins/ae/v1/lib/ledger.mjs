@@ -8,7 +8,7 @@
 // no timestamp a party supplied decides anything, which is why activation
 // ordering (AC-2) compares sequence numbers the recorder assigned.
 
-import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, openSync, closeSync, readFileSync, unlinkSync } from 'node:fs';
 import { encodeNdjson, parseNdjson } from './canonical-json.mjs';
 import { validate } from './schema.mjs';
 import { RECORDS } from '../schema/records.mjs';
@@ -48,6 +48,43 @@ class Ledger {
     this.path = path;
   }
 
+  // Appends are serialized by an exclusive-create lock, so a writer knows exactly
+  // where its record landed.
+  //
+  // Without it a writer had to *find* its own line afterwards, and two appends of
+  // byte-identical content are indistinguishable — which is how four concurrent
+  // openers all ended up holding one attempt while four had been opened. The
+  // choice is between a differentiator nobody can check and serialising the
+  // append; this serialises it.
+  //
+  // `O_EXCL` is the same primitive the completion write uses: the kernel decides,
+  // atomically, who created the file. A holder that dies leaves the lock behind,
+  // and the next writer fails with a named code rather than waiting forever or
+  // silently breaking in.
+  #withLock(fn) {
+    const lockPath = `${this.path}.lock`;
+    let fd = null;
+    const deadline = 5000;
+    const started = process.hrtime.bigint();
+    for (;;) {
+      try {
+        fd = openSync(lockPath, 'wx');
+        break;
+      } catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        if (Number(process.hrtime.bigint() - started) / 1e6 > deadline) {
+          fail('record_not_appended', 'the log is locked by another writer', { path: lockPath });
+        }
+      }
+    }
+    try {
+      return fn();
+    } finally {
+      closeSync(fd);
+      unlinkSync(lockPath);
+    }
+  }
+
   // Read at append time, never cached. Two Ledgers on one log each held their own
   // count, so both handed out the same sequence number — and since an attempt id
   // is built from one, two runs could mint the same attempt and each other's
@@ -75,6 +112,16 @@ class Ledger {
   // `pending` for an obligation nothing was validly submitted for is correct,
   // because nothing admissible exists.
   append(record) {
+    return this.#withLock(() => this.#appendLocked(record));
+  }
+
+  // Everything a guarded operation checks and then writes belongs inside one
+  // lock, or the check and the write are two operations again.
+  transaction(fn) {
+    return this.#withLock(fn);
+  }
+
+  #appendLocked(record) {
     if (!Object.prototype.hasOwnProperty.call(KINDS, record.kind)) {
       fail('kind_without_consumer', `record kind outside the closed set: ${record.kind}`, {
         kind: record.kind, known: Object.keys(KINDS),
@@ -97,24 +144,10 @@ class Ledger {
     }
     // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
     // canonical spelling and `parseNdjson` will refuse anything else later.
-    const line = encodeNdjson([record]);
-    appendFileSync(this.path, line);
-    // Re-read, because between the length above and this append another process
-    // may have written. The returned record carries the position it actually got
-    // — found by its own bytes, not by being last: under a concurrent writer the
-    // last line is not necessarily mine.
-    // Searched forward from the length seen before the append: my line is at or
-    // after that position. Two byte-identical records are indistinguishable in a
-    // log — that is what byte-identical means — so the first match from there is
-    // mine or something no reader could tell from mine.
-    const wanted = line.toString('utf8').trimEnd();
-    const all = this.read();
-    for (let i = seq; i < all.length; i += 1) {
-      const { seq: _at, ...stored } = all[i];
-      if (encodeNdjson([stored]).toString('utf8').trimEnd() === wanted) return all[i];
-    }
-    fail('record_not_appended', 'the record did not land in the log', { kind: record.kind });
-    return null;
+    appendFileSync(this.path, encodeNdjson([record]));
+    // Nobody else can have appended: the lock is held. The position read before
+    // the write is the position the record has.
+    return { ...record, seq };
   }
 
   // Replay is a check, not a re-enactment: the same records must reconstruct the

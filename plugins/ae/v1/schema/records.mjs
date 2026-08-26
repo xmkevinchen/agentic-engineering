@@ -83,7 +83,7 @@ export const RECORDS = Object.freeze({
     type: 'object', additional: false,
     required: [
       'kind', 'id', 'lineage', 'run', 'attempt', 'command', 'artifact',
-      'exit', 'raw', 'subjects', 'inputs_used', 'origin', 'seq',
+      'exit', 'raw', 'inputs_used', 'origin', 'seq',
     ],
     properties: {
       kind: text, id, lineage: id, run: id, attempt, command: text,
@@ -97,6 +97,9 @@ export const RECORDS = Object.freeze({
       // consulted, because that would be its self-report.
       exit: { type: 'integer' },
       raw: { type: 'string', minLength: 0 },
+      // Absent when the command printed no count. That is different from zero:
+      // one says nothing could be established, the other says nothing was
+      // exercised, and admissibility refuses both for different reasons.
       subjects: count,
       inputs_used: { type: 'array', minItems: 0, items: id },
       origin: { type: 'const', value: 'harness' }, seq,

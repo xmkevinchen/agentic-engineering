@@ -94,21 +94,22 @@ thing: **a submission cannot author its own provenance.** The observation is a
 separate append from the runner's record, the Assignment from the attempt that
 uses it, the approval from the evidence judged under it.
 
-What it does not buy, said plainly because a reviewer kept finding it and was
-right to: **a caller that drives every surface in turn is not stopped, and §4 does
-not concede that.** §4 concedes editing the repository, the records and the
-machinery directly. Calling `recordCommandResult` for a command that never ran
-uses the supported API and needs no such edit, and §4's positive claim — that raw
-content is externally produced — is weaker here than it reads.
+The three facts that decide a run are **produced, not accepted**. The Kernel runs
+the command and reads its exit status; it digests the artifact file; it digests
+each material input to see whether it has changed. Each of those used to be an
+argument stamped `origin: harness`, which meant the party being judged wrote the
+fact that decided whether it had passed — and §4 concedes editing the records
+directly, not an API that writes them on request.
 
-What V1 does instead is separate the surfaces **by record**: the raw result, the
-artifact, the approval, the Assignment and the observation are five appends with
-three different origins, and no one of them can be inferred from another. A
-submission still cannot author its own provenance — the observation carries no
-result and no origin — but nothing prevents the same process from making all five
-appends. Separating them by *process* needs a Harness that owns the mutation path,
-which is N7 and not this slice. Until then the honest reading of `workflow_attested`
-is: the records are separable and auditable, not independently sourced.
+The subject count comes from the command's own output, on a line it prints
+(`AE-SUBJECTS: <n>`). A command that prints none leaves the count absent, which is
+read as unestablishable rather than as zero.
+
+What remains open, said plainly because a reviewer kept finding it: the *command
+string* still comes from the Contract and the *paths* from the caller, so a caller
+that drives every surface in turn can point the Harness at whatever it likes. What
+it can no longer do is skip the running and the digesting. Closing the rest needs a
+Harness that owns the repository mutation path — N7, and not this slice.
 
 ## What is not built yet
 

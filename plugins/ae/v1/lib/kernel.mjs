@@ -13,6 +13,8 @@
 // exposed. Forging one means writing the log file directly, which is the OS-level
 // access §4 already concedes and does not pretend to resist.
 
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { InternalLedger as Ledger } from './ledger.mjs';
 import { reduceAll, STATUS } from './gate.mjs';
@@ -101,7 +103,32 @@ export class Kernel {
   // caller. An earlier draft took it as a parameter, which let the party being
   // judged choose the yardstick.
   currentRevision(lineage) {
-    return deriveCurrent(this.approvals(), lineage);
+    return deriveCurrent(this.approvalsFor(lineage), lineage);
+  }
+
+  // A lineage's approvals, checked to be a chain. Two writers can each see a
+  // coherent history and together produce a fan: eight revisions all naming the
+  // genesis as predecessor were siblings, and whichever landed last was read as
+  // current. Counting genesis records caught two roots and nothing else.
+  //
+  // Checked here rather than at approval, for the reason uniqueness is: the check
+  // and the append are two operations, and only the reader sees what they left.
+  approvalsFor(lineage) {
+    const prior = this.approvals().filter((a) => a.lineage === lineage);
+    const genesis = prior.filter((a) => a.kind === 'contract_approved_genesis');
+    if (genesis.length > 1) {
+      fail('lineage_second_genesis', 'a lineage may open only one genesis', {
+        lineage, count: genesis.length,
+      });
+    }
+    for (let i = 1; i < prior.length; i += 1) {
+      if (prior[i].predecessor !== prior[i - 1].identity.byte_sha256) {
+        fail('lineage_predecessor_wrong', 'the approval history forks', {
+          lineage, revision: prior[i].revision,
+        });
+      }
+    }
+    return prior;
   }
 
   // --- host-collected inputs ---------------------------------------------
@@ -133,19 +160,38 @@ export class Kernel {
     });
   }
 
-  recordCommandResult({
-    id, lineage, run, attempt, command, artifact, exit, raw, subjects, inputsUsed,
-  }) {
-    // `inputsUsed` is not defaulted. An omitted argument became `[]`, which reads
-    // as "used nothing" and made the later completeness check unreachable — the
-    // vacuity the check exists to refuse, introduced by the channel that was
-    // supposed to close it.
+  // The Harness runs the command. It does not accept an account of one.
+  //
+  // This took `exit`, `raw` and `subjects` as arguments and stamped them
+  // `origin: harness`, so the party being judged wrote the fact that decided
+  // whether it had passed. §4 concedes editing the records directly; it does not
+  // concede an API that writes them on request, and AC-2 asks for raw content the
+  // submission can neither author nor alter.
+  //
+  // The subject count comes from the command's own output, on a line it prints:
+  // `AE-SUBJECTS: <n>`. A command that prints none leaves the count absent, which
+  // admissibility reads as unestablishable — not as zero, and not as "assume it
+  // exercised something".
+  runObservation({ id, lineage, run, attempt, command, artifact, inputsUsed, cwd }) {
     if (!Array.isArray(inputsUsed)) {
-      fail('material_input_incomplete', 'the runner must report which inputs it used', { id });
+      fail('material_input_incomplete', 'the runner must be told which inputs it uses', { id });
     }
+    let raw = '';
+    let exit = 0;
+    try {
+      raw = execFileSync('/bin/sh', ['-c', command], {
+        encoding: 'utf8', cwd: cwd || process.cwd(), stdio: ['ignore', 'pipe', 'pipe'],
+        maxBuffer: 64 * 1024 * 1024,
+      });
+    } catch (error) {
+      exit = typeof error.status === 'number' ? error.status : 1;
+      raw = `${error.stdout || ''}${error.stderr || ''}`;
+    }
+    const marker = /^AE-SUBJECTS:\s*(\d+)\s*$/m.exec(raw);
     return this.#ledger.append({
       kind: 'command_result', id, lineage, run, attempt, command, artifact, exit,
-      raw, subjects, inputs_used: inputsUsed, origin: HARNESS,
+      raw, ...(marker ? { subjects: Number(marker[1]) } : {}),
+      inputs_used: inputsUsed, origin: HARNESS,
     });
   }
 
@@ -185,14 +231,19 @@ export class Kernel {
   // this against what the package recorded. It used to be a callback the caller
   // passed to the Gate, so the party being judged decided whether its own
   // evidence was still current.
-  observeInput({ lineage, id, identity }) {
+  // The Harness looks, and records what it found. It took the identity as an
+  // argument, so the party whose evidence would be judged stale decided whether
+  // it was.
+  observeInput({ lineage, id, path }) {
+    let identity;
+    try {
+      identity = digestBytes(readFileSync(path));
+    } catch {
+      return this.#ledger.append({ kind: 'input_gone', lineage, id, origin: HARNESS });
+    }
     return this.#ledger.append({
       kind: 'input_observed', lineage, id, identity, origin: HARNESS,
     });
-  }
-
-  inputGone({ lineage, id }) {
-    return this.#ledger.append({ kind: 'input_gone', lineage, id, origin: HARNESS });
   }
 
   // The latest observation wins. `null` means the Harness looked and it was gone,
@@ -214,7 +265,16 @@ export class Kernel {
   // On the Harness surface, like the command result. It was the only evidential
   // record with no origin at all, which left the party being judged writing what
   // it had produced — and the Acceptance names that identity as the deliverable.
-  recordArtifact({ id, lineage, run, artifactKind, identity }) {
+  // Digested here, not declared. The identity recorded is the deliverable the
+  // Acceptance names, so accepting one as an argument let the producer name what
+  // its own evidence would be taken to have exercised.
+  recordArtifact({ id, lineage, run, artifactKind, path }) {
+    let identity;
+    try {
+      identity = digestBytes(readFileSync(path));
+    } catch {
+      fail('binding_unresolved', 'the artifact does not resolve', { id, path });
+    }
     return this.#ledger.append({
       kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind, identity,
       origin: HARNESS,
@@ -341,17 +401,8 @@ export class Kernel {
   // argument, so the party being judged chose the obligations it would be judged
   // against — fewer of them, or `independence.required: none`.
   contractFor(lineage) {
-    const prior = this.approvals().filter((a) => a.lineage === lineage);
+    const prior = this.approvalsFor(lineage);
     if (prior.length === 0) return null;
-    // Same reason as the Assignment: "no genesis yet" was checked and then written,
-    // so two approvers could both open one. A lineage with two genesis records has
-    // no single history to be current in.
-    const genesis = prior.filter((a) => a.kind === 'contract_approved_genesis');
-    if (genesis.length > 1) {
-      fail('lineage_second_genesis', 'a lineage may open only one genesis', {
-        lineage, count: genesis.length,
-      });
-    }
     const latest = prior[prior.length - 1];
     return {
       contract: openObject(latest.bytes, latest.identity, CONTRACT, 'Contract'),
@@ -473,18 +524,11 @@ export class Kernel {
     const opened = this.#ledger.append({
       kind: 'attempt_opened', lineage, run, assignment: assignment.id, producer, obligations,
     });
-    // The latest attempt for this run, which is the one the Gate will select —
-    // not "the record I just wrote".
-    //
-    // Two attempts opened at once by the same producer for the same obligations
-    // are byte-identical records, so no writer can tell which line is its own.
-    // That is not a gap to paper over: they are indistinguishable because there
-    // is nothing to distinguish. What each opener needs is the attempt its
-    // submissions must name, and an older one would simply never be selected.
-    const mine = this.records().filter(
-      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
-    );
-    return { ...opened, attempt: mine[mine.length - 1].seq };
+    // Its own position, which appends being serialized makes knowable. Returning
+    // "the latest attempt in the run" instead was wrong in the way that matters:
+    // four concurrent openers each opened a distinct attempt, and telling three
+    // of them they held a fourth's merged executions that never happened together.
+    return { ...opened, attempt: opened.seq };
   }
 
   // The dispatch carries what the Contract states, resolved here. `dispatchRecord`
@@ -912,18 +956,6 @@ export class Kernel {
     // inside `complete` to schedule against, and adding one for a test would be
     // test-only machinery. `verdictsRecorded` is exercised directly instead, on a
     // log two Kernels advanced. Said plainly rather than left to look covered.
-    const latest = this.verdictsNow({ lineage: acceptance.lineage, run });
-    for (const obligation of obligations) {
-      const status = latest.get(obligation);
-      if (status === undefined) {
-        fail('record_not_appended', 'no recorded verdict for an obligation', { obligation, run });
-      }
-      if (status !== 'passed') {
-        fail('not_all_passed', 'the run stopped passing before the Acceptance landed', {
-          obligation, status,
-        });
-      }
-    }
 
     // The shape, checked against the schema rather than against truthiness — an
     // earlier version tested `if (!acceptance)` and wrote `{}`. This is the one
@@ -935,8 +967,6 @@ export class Kernel {
       fail('format_open', 'the Acceptance does not match its closed shape', { problems });
     }
     const bytes = Buffer.from(JSON.stringify(acceptance), 'utf8');
-
-    // The destination was checked when it was derived; this is where it lands.
     const target = resolve(path);
 
     // What the preflight does not close: it walks the parents, then `O_EXCL` opens
@@ -949,7 +979,22 @@ export class Kernel {
     // the same OS access that could edit the log directly. It is stated because the
     // preflight otherwise reads as a guarantee it is not.
 
-    const result = atomicFileNoReplace({ path: target, bytes });
+    // The reduction and the write happen under one lock, so nothing can open a
+    // newer attempt between them. Re-deriving and then writing were two
+    // operations, which narrowed the window rather than closing it — and "the
+    // latest attempt decides at the moment the bytes land" is either an invariant
+    // or a hope.
+    const result = this.#ledger.transaction(() => {
+      const latest = this.verdictsNow({ lineage: acceptance.lineage, run });
+      for (const obligation of obligations) {
+        if (latest.get(obligation) !== 'passed') {
+          fail('not_all_passed', 'the run stopped passing before the Acceptance landed', {
+            obligation, status: latest.get(obligation),
+          });
+        }
+      }
+      return atomicFileNoReplace({ path: target, bytes });
+    });
     if (result.outcome === 'exists') {
       fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });
     }

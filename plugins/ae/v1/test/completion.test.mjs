@@ -7,7 +7,7 @@
 // codified the defect. There is no standalone entry point any more, so a test
 // cannot take one by accident.
 
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -15,8 +15,9 @@ import { Kernel } from '../lib/kernel.mjs';
 import { checkCitations, statementsFrom } from '../lib/formation.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import { validate } from '../lib/schema.mjs';
+import { digestBytes } from '../lib/canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, SOURCE_ROOT, DESIGN_SHA } from './fixtures.mjs';
+import { asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, COMMAND, FAILING, VACUOUS, UNCOUNTABLE, SOURCE_ROOT, DESIGN_SHA } from './fixtures.mjs';
 
 const CONTRACT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -49,7 +50,13 @@ export function completionTests() {
     // The deliverable is the artifact the evidence exercised, resolved from the
     // record. It used to be an argument, so an Acceptance could name one thing
     // while the evidence had exercised another.
-    eq('the deliverable is the recorded artifact', acceptance.deliverable.identity, sha('artifact'));
+    // And that identity is the file's, digested by the Harness. It was an
+    // argument, so the producer named what its own evidence would be taken to
+    // have exercised.
+    eq('the deliverable is the recorded artifact',
+      acceptance.deliverable.identity, w.artifact.identity);
+    eq('and the artifact is what is on disk',
+      w.artifact.identity, digestBytes(readFileSync(w.artifactPath)));
 
     const verdicts = w.k.records().filter((r) => r.kind === 'gate_result');
     eq('with a recorded verdict beside it',
@@ -66,9 +73,13 @@ export function completionTests() {
     // The defect this closes: `satisfied` used to be a field the submitter wrote
     // and the Gate copied, which left "done" asserted rather than computed.
     refuses('a non-zero exit does not complete', 'not_all_passed',
-      () => complete(run({ exit: 1 })));
+      () => complete(run({ command: FAILING })));
     refuses('zero subjects does not complete', 'not_all_passed',
-      () => complete(run({ subjects: 0 })));
+      () => complete(run({ command: VACUOUS })));
+    // And a command that printed no count at all: the runner could not establish
+    // one, which is not the same as establishing zero.
+    refuses('an uncountable run does not complete', 'not_all_passed',
+      () => complete(run({ command: UNCOUNTABLE })));
 
     // And there is no field to claim otherwise: the observation schema refuses
     // one, so no path — Kernel or tampered log — can put an outcome in a
@@ -84,7 +95,7 @@ export function completionTests() {
 
   group('AC-2 · a changed material input goes stale', () => {
     refuses('completion stops', 'not_all_passed',
-      () => complete(run({ inputNow: sha('moved') })));
+      () => complete(run({ inputNow: 'the input moved\n' })));
   });
 
   group('AC-2 · evidence from one run does not complete another', () => {
@@ -198,12 +209,14 @@ export function completionTests() {
     });
     // `walk` answered both obligations against `art1`. Replace the second with a
     // complete, admissible chain of its own naming a different artifact.
+    const second = join(w.world, 'artifact2.txt');
+    writeFileSync(second, 'another artifact\n');
     k.recordArtifact({
-      id: 'art2', lineage: 'L', run: w.run, artifactKind: 'commit', identity: sha('other'),
+      id: 'art2', lineage: 'L', run: w.run, artifactKind: 'file', path: second,
     });
-    k.recordCommandResult({
+    k.runObservation({
       id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt, command: COMMAND,
-      artifact: 'art2', exit: 0, raw: 'GREEN', subjects: 12, inputsUsed: ['in1'],
+      artifact: 'art2', inputsUsed: ['in1'],
     });
     const pkg2 = asObject({
       ...w.pkg.value, id: 'pkg2', artifact: 'art2', command_result: 'cr2',

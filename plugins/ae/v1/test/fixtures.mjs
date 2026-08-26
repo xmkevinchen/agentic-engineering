@@ -6,7 +6,7 @@
 // fixture neither would accept. Everything here is validated against its own
 // schema at import time, so that cannot happen quietly again.
 
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { identify } from '../lib/identity.mjs';
@@ -17,7 +17,12 @@ import { digestBytes } from '../lib/canonical-json.mjs';
 
 export const sha = (s) => digestBytes(Buffer.from(s, 'utf8'));
 
-export const COMMAND = 'sh plugins/ae/scripts/ae-run-tests.sh';
+// A real command, run for real. The subject count is a line the command prints,
+// so nothing about the outcome is supplied by the party being judged.
+export const COMMAND = "echo GREEN; echo 'AE-SUBJECTS: 69'";
+export const FAILING = "echo 'AE-SUBJECTS: 69'; exit 1";
+export const VACUOUS = "echo 'AE-SUBJECTS: 0'";
+export const UNCOUNTABLE = 'echo GREEN';
 
 // A real cited file, because approval checks the recorded digest against the
 // file. A fixture citing a digest nothing produces would be refused — which is
@@ -122,11 +127,28 @@ export function walk(k, over = {}) {
   const {
     lineage = 'L', run = 'run1', actor = 'Human Owner', producer = 'P',
     contract: contractOver = {}, assignment: assignmentOver = {},
-    package: pkgOver = {}, exit = 0, subjects = 69, inputNow,
+    package: pkgOver = {}, command = COMMAND, inputNow,
     obligations = ['O'],
   } = over;
 
-  const contract = asObject(contractDoc(contractOver));
+  // Real files, because the Harness digests what is there rather than being told
+  // what to record. A run whose artifact and inputs are strings the caller chose
+  // is a run whose deliverable and staleness the caller chose.
+  const world = mkdtempSync(join(tmpdir(), 'v1w-'));
+  const artifactPath = join(world, 'artifact.txt');
+  const inputPath = join(world, 'in1.txt');
+  writeFileSync(artifactPath, 'the artifact\n');
+  writeFileSync(inputPath, 'in1\n');
+
+  // The Contract names the command that will actually be run. Leaving it at the
+  // default made the failing, vacuous and uncountable cases pass for the wrong
+  // reason — the observation answered a command the Contract had not named, so
+  // the outcome was never consulted at all.
+  const contract = asObject(contractDoc({
+    observations: obligations.map((o) => ({ obligation: o, observation: command })),
+    obligations,
+    ...contractOver,
+  }));
   k.approve({
     lineage, revision: 'r1', bytes: contract.bytes, identity: contract.identity,
     actor, rendered: RENDERED(contract.bytes),
@@ -139,27 +161,35 @@ export function walk(k, over = {}) {
 
   const attempt = k.openAttempt({ lineage, run, producer, obligations, submitter: producer });
 
-  k.recordArtifact({
-    id: 'art1', lineage, run, artifactKind: 'commit', identity: sha('artifact'),
+  const artifact = k.recordArtifact({
+    id: 'art1', lineage, run, artifactKind: 'file', path: artifactPath,
   });
-  k.recordCommandResult({
-    id: 'cr1', lineage, run, attempt: attempt.attempt, command: COMMAND,
-    artifact: 'art1', exit, raw: 'GREEN', subjects, inputsUsed: ['in1'],
+  k.runObservation({
+    id: 'cr1', lineage, run, attempt: attempt.attempt, command,
+    artifact: 'art1', inputsUsed: ['in1'],
   });
 
-  const pkg = asObject(packageDoc({ attempt: attempt.attempt, ...pkgOver }));
+  const pkg = asObject(packageDoc({
+    attempt: attempt.attempt,
+    material_inputs: [{ id: 'in1', identity: digestBytes(readFileSync(inputPath)) }],
+    ...pkgOver,
+  }));
   k.recordPackage({
     lineage, run, bytes: pkg.bytes, identity: pkg.identity, submitter: producer,
   });
 
-  k.observeInput({ lineage, id: 'in1', identity: inputNow || sha('in1') });
+  if (inputNow) writeFileSync(inputPath, inputNow);
+  k.observeInput({ lineage, id: 'in1', path: inputPath });
 
   for (const obligation of obligations) {
     k.submitObservation({
-      lineage, run, obligation, observation: COMMAND, attempt: attempt.attempt,
+      lineage, run, obligation, observation: command, attempt: attempt.attempt,
       producer, artifact: 'art1', pkg: pkg.value.id, commandResult: 'cr1',
       submitter: producer,
     });
   }
-  return { k, lineage, run, actor, producer, attempt, contract, assignment, pkg };
+  return {
+    k, lineage, run, actor, producer, attempt, contract, assignment, pkg,
+    world, artifactPath, inputPath, artifact,
+  };
 }

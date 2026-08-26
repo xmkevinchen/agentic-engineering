@@ -163,7 +163,7 @@ export function reduce({
     return {
       status: STATUS.PENDING,
       code: null,
-      attempt: attempt ? attempt.attempt : null,
+      attempt: attempt ? attempt.seq : null,
       selected: null,
     };
   }

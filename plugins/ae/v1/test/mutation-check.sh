@@ -176,6 +176,23 @@ plant ledger.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }))
   "    return parseNdjson(bytes).map((r) => ({ ...r, seq: 0 }));"
 printf "every record claims the same position   %s\n" "$(run)"; revert ledger.mjs
 
+# Round 7's findings: facts the Harness must produce rather than accept.
+plant kernel.mjs "      exit = typeof error.status === 'number' ? error.status : 1;" "      exit = 0;"
+printf "a failing command reports success       %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "  recordArtifact({ id, lineage, run, artifactKind, path }) {
+    let identity;
+    try {
+      identity = digestBytes(readFileSync(path));" \
+  "  recordArtifact({ id, lineage, run, artifactKind, path }) {
+    let identity;
+    try {
+      identity = digestBytes(Buffer.from('a constant'));"
+printf "the artifact is not actually digested   %s\n" "$(run)"; revert kernel.mjs
+
+plant kernel.mjs "    for (let i = 1; i < prior.length; i += 1) {" "    for (let i = 1; i < 0; i += 1) {"
+printf "a forked approval history reads clean   %s\n" "$(run)"; revert kernel.mjs
+
 # Round 6's findings.
 plant kernel.mjs "    if (!reported) {" "    if (false) {"
 printf "a sign-off before the Gate reported     %s\n" "$(run)"; revert kernel.mjs
@@ -205,8 +222,8 @@ printf "replay cannot say which Contract ran    %s\n" "$(run)"; revert ledger.mj
 
 # Not a defect in a branch — a staging call introduced onto the write path, which
 # is what AC-11's no-staging property is actually about.
-plant kernel.mjs "const result = atomicFileNoReplace({ path: target, bytes });" \
-  "renameSync(target + '.staged', target); const result = atomicFileNoReplace({ path: target, bytes });"
+plant kernel.mjs "      return atomicFileNoReplace({ path: target, bytes });" \
+  "      renameSync(target + '.staged', target); return atomicFileNoReplace({ path: target, bytes });"
 printf "completion staged then moved            %s\n" "$(run)"; revert kernel.mjs
 
 echo "after revert                            $(run)"

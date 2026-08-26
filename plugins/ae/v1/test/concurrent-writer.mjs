@@ -25,6 +25,17 @@ try {
     k.issueAssignment({
       lineage: 'L', run: 'run1', bytes, identity: identify(bytes), actor: 'Human Owner',
     });
+  } else if (what === 'revision') {
+    // Every writer names the genesis as its predecessor. Each one's own check
+    // passes — the genesis really is the prior approval it saw — and the result
+    // is a fan rather than a chain.
+    const doc = JSON.parse(process.env.CONTRACT_BYTES);
+    const bytes = JSON.stringify({ ...doc, revision: `r${index}`, predecessor: process.env.GENESIS });
+    const { identify } = await import('../lib/identity.mjs');
+    k.approve({
+      lineage: 'L', revision: `r${index}`, bytes, identity: identify(bytes),
+      predecessor: process.env.GENESIS, actor: 'Human Owner', rendered: RENDERED(bytes),
+    });
   } else if (what === 'attempt') {
     const opened = k.openAttempt({
       lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
