@@ -62,6 +62,17 @@ parameter through which the party being judged supplied the standard it would be
 judged against. There is no longer such a parameter, and that is the property to
 check first when reading `lib/kernel.mjs`.
 
+**A relation is named, never searched for.** Where one record refers to another,
+it carries that record's position, and the reader resolves it there. Where a name
+could answer to two records, the reader refuses rather than taking the first.
+
+Fifteen rounds of review found the same defect in six different places before
+anyone named the shape: a semantic relation reconstructed with a scan over an
+incomplete key, with nothing forbidding a second match. A Gate verdict rested on
+a digest of a record already in the log, so a consumer wanting *that event* had to
+go looking, and found one like it. The rule now is that the log's own positions
+are the identifiers.
+
 **Nothing is named by a number that was predicted.** An attempt is identified by
 the position of the record that opened it, and a record's position is assigned
 when the log is read, never stored. Both of those replaced a prediction: a
