@@ -58,7 +58,7 @@ export function knowledgeTests() {
       commandResult: () => null,
     };
     const admit = admissibility({
-      contract: { observations: { O: 'x' } },
+      contract: { observations: [{ obligation: 'O', observation: 'x' }] },
       assignment: { id: 'A1', contract_revision: 'r1', boundary: [] },
       approvals: [{ lineage: 'L', revision: 'r1', seq: 0 }],
       index, inputsNow: () => 'sha256:aa',

@@ -3,15 +3,30 @@
 import { admissibility, withinBoundary, inputsChangedAgainst } from '../lib/admissibility.mjs';
 import { group, ok, eq } from './harness.mjs';
 
-const contract = { observations: { O: 'sh plugins/ae/scripts/ae-run-tests.sh' } };
+// A list, as the schema requires. An earlier version of this fixture was an
+// obligation-keyed object — schema-invalid, and it hid a real mismatch: the
+// implementation read it as an object while the schema required a list, so a
+// schema-valid Contract would have had every observation rejected. A fixture the
+// schema would refuse cannot demonstrate anything about schema-valid input.
+const contract = {
+  observations: [{ obligation: 'O', observation: 'sh plugins/ae/scripts/ae-run-tests.sh' }],
+};
 const assignment = { id: 'A1', contract_revision: 'r1', boundary: ['docs/v1'] };
 const approvals = [{ lineage: 'L', revision: 'r1', seq: 5 }];
 
+// The package carries the same five identities as the observation. Resolving it
+// is not binding: a package explicitly bound to another execution resolved fine
+// until this was compared.
 const pkg = {
-  id: 'pkg1', changed_paths: ['docs/v1/a.md'],
+  id: 'pkg1', contract_revision: 'r1', assignment: 'A1', attempt: 'at1', producer: 'P',
+  command_result: 'cr1', artifact: { identity: 'art1' },
+  changed_paths: ['docs/v1/a.md'],
   material_inputs: [{ id: 'in1', identity: 'sha256:aa' }],
 };
-const result = { origin: 'harness', seq: 9, subjects: 69, inputs_used: ['in1'] };
+const result = {
+  origin: 'harness', seq: 9, subjects: 69, inputs_used: ['in1'],
+  attempt: 'at1', command: 'sh plugins/ae/scripts/ae-run-tests.sh',
+};
 const attempt = { attempt: 'at1', assignment: 'A1', producer: 'P' };
 
 function build(over = {}) {
@@ -47,6 +62,10 @@ export function evidenceTests() {
   group('AC-2 · it must answer the observation the Contract named', () => {
     const { admit, record } = build({ observation: 'echo ok' });
     eq('a different command', admit(record), 'observation_not_named');
+    // And the runner's own record must name the same command, or a result for
+    // something else could be pointed at this obligation.
+    const swapped = build({ resultOver: { command: 'echo ok' } });
+    eq('a result for another command', swapped.admit(swapped.record), 'observation_not_named');
     const other = build({ obligation: 'UNKNOWN' });
     eq('an obligation with no named observation', other.admit(other.record), 'observation_not_named');
   });
@@ -74,6 +93,14 @@ export function evidenceTests() {
     const otherProducer = build({ attemptOver: { producer: 'Q' } });
     eq('an attempt opened by someone else',
       otherProducer.admit(otherProducer.record), 'binding_cross_execution');
+    // The decisive case the earlier draft missed: a package that resolves, and is
+    // explicitly bound to a different execution.
+    const foreignPkg = build({ pkgOver: { assignment: 'OTHER', attempt: 'OTHER' } });
+    eq('a package from another execution',
+      foreignPkg.admit(foreignPkg.record), 'binding_cross_execution');
+    const foreignResult = build({ resultOver: { attempt: 'OTHER' } });
+    eq('a command result from another attempt',
+      foreignResult.admit(foreignResult.record), 'binding_cross_execution');
   });
 
   group('AC-2 · the observation postdates activation', () => {
@@ -110,6 +137,12 @@ export function evidenceTests() {
     eq('an input used but not recorded', omitted.admit(omitted.record), 'material_input_incomplete');
     const gone = build({ inputsNow: () => null });
     eq('a recorded input that no longer resolves', gone.admit(gone.record), 'binding_unresolved');
+    // Silence is not "used nothing". A runner that did not report leaves the
+    // completeness question unanswered, and assuming completeness from an absent
+    // field is the vacuity this refuses.
+    const silent = build({ resultOver: { inputs_used: undefined } });
+    eq('a runner that did not report its inputs',
+      silent.admit(silent.record), 'material_input_incomplete');
   });
 
   group('AC-4 · the second staleness — a recorded input changed', () => {

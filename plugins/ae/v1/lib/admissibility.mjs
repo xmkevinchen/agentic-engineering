@@ -18,9 +18,13 @@ export function admissibility({
 }) {
   return function admit(record) {
     // --- the observation the Contract named -------------------------------
-    const named = contract.observations && contract.observations[record.obligation];
-    if (!named) return 'observation_not_named';
-    if (record.observation !== named) return 'observation_not_named';
+    // A list, matching the schema. An earlier draft read this as an
+    // obligation-keyed object while the schema required a list, so a
+    // schema-valid Contract had every observation rejected — and the tests hid
+    // it by using an object-shaped fixture the schema would have refused.
+    const entry = (contract.observations || []).find((o) => o.obligation === record.obligation);
+    if (!entry) return 'observation_not_named';
+    if (record.observation !== entry.observation) return 'observation_not_named';
 
     // --- externally produced ----------------------------------------------
     // The raw result is a record the Harness wrote. A submission carrying its own
@@ -33,24 +37,42 @@ export function admissibility({
     const result = index.commandResult(record.command_result);
     if (!result) return 'binding_unresolved';
     if (result.origin !== 'harness') return 'result_self_authored';
+    // The runner's record must name the same command the Contract did, or a
+    // result for something else could be pointed at this obligation. This is a
+    // naming check, not a binding one, so it belongs here; the result's execution
+    // binding is checked below with the rest.
+    if (result.command !== entry.observation) return 'observation_not_named';
 
     // --- bound to one execution -------------------------------------------
+    // Resolution first, comparison second. A missing field and a field pointing
+    // at another execution are different verdicts, and checking them out of order
+    // reports the second when the first is true.
     for (const field of ['contract_revision', 'assignment', 'attempt', 'producer', 'artifact']) {
       if (record[field] == null) return 'binding_missing';
     }
-    const pkg = record.package ? index.package(record.package) : null;
     if (!record.package) return 'binding_missing';
-    if (!pkg) return 'binding_unresolved';
 
+    const pkg = index.package(record.package);
+    if (!pkg) return 'binding_unresolved';
     const attempt = index.attempt(record.attempt);
     if (!attempt) return 'binding_unresolved';
     if (!index.artifact(record.artifact)) return 'binding_unresolved';
 
-    // Each resolves. Do they belong together?
+    // Everything resolves. Do they belong together? Resolving is not binding: a
+    // package explicitly bound to another execution resolved fine in an earlier
+    // draft, because nothing compared the two.
     if (record.assignment !== assignment.id) return 'binding_cross_execution';
     if (assignment.contract_revision !== record.contract_revision) return 'binding_cross_execution';
     if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
     if (attempt.producer !== record.producer) return 'binding_cross_execution';
+    for (const field of ['contract_revision', 'assignment', 'attempt', 'producer']) {
+      if (pkg[field] !== record[field]) return 'binding_cross_execution';
+    }
+    if (pkg.command_result !== record.command_result) return 'binding_cross_execution';
+    if (result.attempt !== record.attempt) return 'binding_cross_execution';
+    if (pkg.artifact && pkg.artifact.identity !== record.artifact) {
+      return 'binding_cross_execution';
+    }
 
     // --- captured after activation ----------------------------------------
     // Ordered by the record, not by a time the submission supplied. Results
@@ -79,8 +101,11 @@ export function admissibility({
     // A recorded set that omits an input the observation used is not a smaller
     // true statement; it is a false one, because staleness is then computed over
     // the wrong set.
+    // An absent `inputs_used` is not "used nothing" — it is a runner that did not
+    // report, and assuming completeness from silence is the vacuity this refuses.
+    if (!Array.isArray(result.inputs_used)) return 'material_input_incomplete';
     const recorded = new Set((pkg.material_inputs || []).map((i) => i.id));
-    for (const used of result.inputs_used || []) {
+    for (const used of result.inputs_used) {
       if (!recorded.has(used)) return 'material_input_incomplete';
     }
     for (const input of pkg.material_inputs || []) {

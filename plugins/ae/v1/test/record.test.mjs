@@ -117,13 +117,46 @@ export function recordTests() {
     const path = join(dir, 'log.ndjson');
     const ledger = new Ledger(path);
 
-    ledger.append({ kind: 'attempt_opened', lineage: 'L', attempt: 'a1' });
-    ledger.append({ kind: 'observation', lineage: 'L', obligation: 'O', attempt: 'a1' });
+    // Full records, because `append` now validates the payload and not only the
+    // kind. A shorthand fixture would have been refused — which is the point:
+    // closure over names is not closure.
+    ledger.append({
+      kind: 'attempt_opened', lineage: 'L', assignment: 'A1', attempt: 'a1',
+      producer: 'P', obligations: ['O'],
+    });
+    ledger.append({
+      kind: 'observation', lineage: 'L', obligation: 'O',
+      observation: 'sh run-tests.sh', attempt: 'a1', contract_revision: 'r1',
+      assignment: 'A1', producer: 'P', artifact: 'art1', package: 'pkg1',
+      command_result: 'cr1', satisfied: true,
+    });
 
     // Rejection happens at the append boundary, so the Gate never sees it — and
     // `pending` for an obligation nothing was validly submitted for is correct.
     refuses('a kind outside the closed set', 'kind_without_consumer',
       () => ledger.append({ kind: 'invented_kind', lineage: 'L' }));
+
+    // The payload too. An earlier draft checked the name and accepted anything
+    // beside it: missing fields, nulls, and additional properties all appended.
+    refuses('a known kind with a field missing', 'format_open',
+      () => ledger.append({ kind: 'attempt_opened', lineage: 'L', attempt: 'a1' }));
+    refuses('a known kind with a null field', 'format_open',
+      () => ledger.append({
+        kind: 'attempt_opened', lineage: 'L', assignment: null, attempt: 'a1',
+        producer: 'P', obligations: ['O'],
+      }));
+    refuses('a known kind with an additional field', 'format_open',
+      () => ledger.append({
+        kind: 'attempt_opened', lineage: 'L', assignment: 'A1', attempt: 'a1',
+        producer: 'P', obligations: ['O'], smuggled: 'value',
+      }));
+    // And the origin markers are constants in the shape, so a record claiming
+    // host origin cannot be appended with anything else there.
+    refuses('a decision claiming a different origin', 'format_open',
+      () => ledger.append({
+        kind: 'human_decision', operation: 'signoff', actor: 'H', lineage: 'L',
+        origin: 'model',
+      }));
 
     const first = ledger.replay();
     eq('both records replay', first.records.length, 2);

@@ -10,6 +10,8 @@
 
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { encodeNdjson, parseNdjson } from './canonical-json.mjs';
+import { validate } from './schema.mjs';
+import { RECORDS } from '../schema/records.mjs';
 import { fail } from './codes.mjs';
 
 // Kinds this slice writes and reads. Each must have a real V1 producer and a real
@@ -53,6 +55,17 @@ export class Ledger {
       fail('kind_without_consumer', `record kind outside the closed set: ${record.kind}`, {
         kind: record.kind, known: Object.keys(KINDS),
       });
+    }
+    // The payload, not only the name. An earlier draft validated that `kind` was
+    // known and accepted arbitrary, missing, null and additional fields beside
+    // it — closure over names is not closure.
+    const schema = RECORDS[record.kind];
+    if (!schema) {
+      fail('kind_without_consumer', `no record schema for ${record.kind}`, { kind: record.kind });
+    }
+    const problems = validate(schema, { ...record, seq: this.seq });
+    if (problems.length > 0) {
+      fail('format_open', `record does not match its closed shape: ${record.kind}`, { problems });
     }
     // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
     // canonical spelling and `parseNdjson` will refuse anything else later.

@@ -31,7 +31,10 @@ export function dispatchRecord({ contract, lineage, run, attempt, obligation }) 
   return {
     kind: 'dispatch_attempt',
     lineage, run, attempt, obligation,
-    requested,
+    // A copy, frozen. Storing the Contract's own array by reference meant that
+    // mutating the dispatch mutated the Contract, and the survival check then
+    // compared a value with itself.
+    requested: Object.freeze([...requested]),
     // `observed` and `effective` are absent, and stay absent until a backend
     // answers. V1 has no successful path (that is V3), so in V1 they never
     // appear — and their absence is exactly what AC-8 checks.

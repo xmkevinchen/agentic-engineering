@@ -10,6 +10,7 @@ import { knowledgeTests } from './knowledge.test.mjs';
 import { completionTests } from './completion.test.mjs';
 import { structureTests } from './structure.test.mjs';
 import { coverageTests } from './coverage.test.mjs';
+import { kernelTests } from './kernel.test.mjs';
 import { report } from './harness.mjs';
 
 gateTests();
@@ -22,5 +23,6 @@ knowledgeTests();
 completionTests();
 structureTests();
 coverageTests();
+kernelTests();
 
 process.exit(report() ? 0 : 1);
