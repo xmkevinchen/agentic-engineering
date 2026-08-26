@@ -589,6 +589,52 @@ export function completionTests() {
       () => k.status({ lineage: 'L', run: w.run }));
   });
 
+  group('AC-5 · an attempt opened for one obligation cannot answer another', () => {
+    // The whole path, because this reached an Acceptance: the Contract and the
+    // Assignment grant two obligations, the attempt opens for one, and evidence
+    // for both used to pass. The attempt's narrowing is authority and was being
+    // dropped by everything downstream of it.
+    const second = 'work/artifact2.txt';
+    writeFileSync(join(SOURCE_ROOT, second), 'another artifact\n');
+    const k = fresh();
+    const w = walk(k, {
+      obligations: ['O'],
+      contract: {
+        obligations: ['O', 'O2'],
+        observations: [
+          { obligation: 'O', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT] },
+          { obligation: 'O2', observation: COMMAND, artifact: second, material_inputs: [INPUT] },
+        ],
+      },
+      assignment: {
+        grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O', 'O2'] },
+      },
+    });
+    k.runObservation({
+      id: 'cr2', lineage: 'L', run: w.run, attempt: w.attempt.attempt,
+      obligation: 'O2', artifact: 'art2',
+    });
+    const pkg2 = asObject({ ...w.pkg.value, id: 'pkg2', artifact: 'art2', command_result: 'cr2' });
+    k.recordPackage({
+      lineage: 'L', run: w.run, bytes: pkg2.bytes, identity: pkg2.identity, submitter: 'P',
+    });
+    k.observeInput({ lineage: 'L', path: INPUT });
+    // The submission is recorded — the Gate decides what counts as evidence, and
+    // "this record does not count" is a verdict rather than a refusal to write.
+    k.submitObservation({
+      lineage: 'L', run: w.run, obligation: 'O2', observation: COMMAND,
+      attempt: w.attempt.attempt, producer: 'P', artifact: 'art2', pkg: 'pkg2',
+      commandResult: 'cr2', submitter: 'P',
+    });
+    const status = k.status({ lineage: 'L', run: w.run }).byObligation;
+    eq('the obligation the attempt did not open for is invalid',
+      status.O2.status, 'invalid');
+    eq('for want of authority', status.O2.code, 'authority_not_granted');
+    eq('while the one it did open for passes', status.O.status, 'passed');
+    refuses('and completion does not land', 'not_all_passed',
+      () => k.complete({ lineage: 'L', run: w.run, actor: OWNER }));
+  });
+
   group('AC-2 · a decoy cannot stand in for the input', () => {
     // A material input is identified by the path the Contract states, so there is
     // no label for a producer to reuse. `observeInput` took an id and a path, and

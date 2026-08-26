@@ -99,21 +99,36 @@ export function recordTests() {
     // Every raisable code is raised somewhere, and every by-construction one is
     // not. A code nothing can raise, sitting in the raisable set, is a claim of
     // protection no test could ever assert on — and there were ten.
+    //
+    // Call sites, not occurrences: this looked for the string, so a mention in a
+    // comment counted as a use and a code could stop being raised while the
+    // assertion stayed green.
     const source = readdirSync(libDir).filter((f) => f.endsWith('.mjs'))
       .filter((f) => f !== 'codes.mjs')
       .map((f) => readFileSync(join(libDir, f), 'utf8')).join('\n');
-    const missing = RAISABLE.filter((c) => !source.includes(`'${c}'`));
-    eq('every raisable code is raised', missing.join(','), '');
-    const raised = Object.keys(BY_CONSTRUCTION).filter((c) => source.includes(`'${c}'`));
-    eq('and nothing raises one the design rules out', raised.join(','), '');
-
-    // The two sets partition the taxonomy: a code is raisable, ruled out by the
-    // design, or reserved for work this slice does not do — never unaccounted.
-    const accounted = new Set([
-      ...RAISABLE, ...Object.keys(BY_CONSTRUCTION), ...Object.keys(RESERVED),
+    // Two shapes reach a caller: a refusal raised by name, and a code carried on
+    // a problem the caller then raises. Both count; a mention in prose does not.
+    const called = new Set([
+      ...[...source.matchAll(/(?:fail|return)\s*\(?\s*'([a-z_]+)'/g)].map((m) => m[1]),
+      ...[...source.matchAll(/code:\s*'([a-z_]+)'/g)].map((m) => m[1]),
     ]);
-    eq('and every code is accounted for',
-      ALL_KERNEL_CODES.filter((c) => !accounted.has(c)).join(','), '');
+    eq('every raisable code is raised', RAISABLE.filter((c) => !called.has(c)).join(','), '');
+    eq('and nothing raises one the design rules out',
+      Object.keys(BY_CONSTRUCTION).filter((c) => called.has(c)).join(','), '');
+
+    // The three sets partition the taxonomy. Comparing against `RAISABLE` alone
+    // could not fail: it is *defined* as what the other two leave over, so the
+    // assertion restated its definition. Disjointness and containment are what
+    // it was meant to say.
+    const ruledOut = Object.keys(BY_CONSTRUCTION);
+    const reserved = Object.keys(RESERVED);
+    eq('nothing is both ruled out and reserved',
+      ruledOut.filter((c) => RESERVED[c]).join(','), '');
+    const known = new Set(ALL_KERNEL_CODES);
+    eq('and every named code is in the taxonomy',
+      [...ruledOut, ...reserved].filter((c) => !known.has(c)).join(','), '');
+    eq('which the three sets cover exactly',
+      RAISABLE.length + ruledOut.length + reserved.length, ALL_KERNEL_CODES.length);
     refuses('a code the design rules out', 'kind_without_consumer',
       () => fail('write_staged', 'this cannot happen', {}));
   });

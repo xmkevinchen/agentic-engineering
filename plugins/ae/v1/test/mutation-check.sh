@@ -207,6 +207,15 @@ probe RED "a Contract naming another revision"; revert kernel.mjs
 plant codes.mjs "  (c) => !BY_CONSTRUCTION[c] && !RESERVED[c]," "  () => true,"
 probe RED "a code nothing can raise, raisable"; revert codes.mjs
 
+# Round 19's finding: authority a child record narrowed, regained downstream.
+plant admissibility.mjs "  if (!(attempt.obligations || []).includes(record.obligation)) {" \
+  "  if (false) {"
+probe RED "an attempt answering beyond its scope"; revert admissibility.mjs
+
+plant admissibility.mjs "  if (!(assignment.grants.obligations || []).includes(record.obligation)) {" \
+  "  if (false) {"
+probe RED "an obligation the Assignment never granted"; revert admissibility.mjs
+
 # Round 18's findings: facts sampled before the event that makes them final.
 plant kernel.mjs "        && r.seq > lastAttempt.seq," ""
 probe RED "the change ends before a retry"; revert kernel.mjs

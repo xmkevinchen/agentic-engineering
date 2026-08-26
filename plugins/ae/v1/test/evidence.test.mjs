@@ -16,7 +16,10 @@ const contract = {
     material_inputs: ['in1'],
   }],
 };
-const assignment = { id: 'A1', contract_revision: 'r1', boundary: ['docs/v1'] };
+const assignment = {
+  id: 'A1', contract_revision: 'r1', boundary: ['docs/v1'],
+  grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O'] },
+};
 const approvals = [{ lineage: 'L', revision: 'r1', seq: 5 }];
 
 // The package carries the same five identities as the observation. Resolving it
@@ -33,11 +36,11 @@ const result = {
   origin: 'harness', seq: 9, subjects: 69, inputs_used: ['in1'],
   attempt: 1, artifact: 'art1', command: 'sh plugins/ae/scripts/ae-run-tests.sh',
 };
-const attempt = { seq: 1, assignment: 'A1', producer: 'P' };
+const attempt = { seq: 1, assignment: 'A1', producer: 'P', obligations: ['O'] };
 
 function build(over = {}) {
   const {
-    pkgOver = {}, resultOver = {}, attemptOver = {},
+    pkgOver = {}, resultOver = {}, attemptOver = {}, assignmentOver = {},
     inputsNow = () => ({ identity: 'sha256:aa', seq: 9, path: 'in1' }), ...recOver
   } = over;
   const P = { ...pkg, ...pkgOver };
@@ -49,7 +52,10 @@ function build(over = {}) {
     artifact: (id) => (id === 'art1' ? {} : null),
     commandResult: (id) => (id === 'cr1' ? R : null),
   };
-  const admit = admissibility({ contract, assignment, approvals, index, inputsNow, run: 'run1' });
+  const admit = admissibility({
+    contract, assignment: { ...assignment, ...assignmentOver },
+    approvals, index, inputsNow, run: 'run1',
+  });
   const record = {
     kind: 'observation', lineage: 'L', obligation: 'O',
     observation: 'sh plugins/ae/scripts/ae-run-tests.sh',
@@ -125,6 +131,31 @@ export function evidenceTests() {
     const foreignRun = build({ run: 'run2' });
     eq('a submission belonging to another run',
       foreignRun.admit(foreignRun.record), 'binding_cross_execution');
+  });
+
+  group('AC-5 · an attempt opened for less carries less', () => {
+    // An attempt may open for fewer obligations than it was granted, and that
+    // narrowing is authority: it says what this execution is for. Ordinary
+    // evidence re-checked only the Assignment, so an attempt opened for one
+    // obligation could carry evidence for another — all the way to an Acceptance.
+    const wider = build({
+      obligation: 'O2',
+      observation: 'sh plugins/ae/scripts/ae-run-tests.sh',
+    });
+    eq('an obligation the Assignment never granted',
+      wider.admit(wider.record), 'observation_not_named');
+
+    // Granted by the Assignment, and outside what this attempt opened for.
+    const narrowed = build({ attemptOver: { obligations: ['SOMETHING-ELSE'] } });
+    eq('an obligation this attempt did not open for',
+      narrowed.admit(narrowed.record), 'authority_not_granted');
+    const ungranted = build({
+      assignmentOver: {
+        grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['ELSEWHERE'] },
+      },
+    });
+    eq('an obligation the Assignment did not grant',
+      ungranted.admit(ungranted.record), 'authority_not_granted');
   });
 
   group('AC-2 · the observation postdates activation', () => {

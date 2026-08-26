@@ -27,16 +27,8 @@ function admitUnavailable(record, { contract, assignment, index }) {
   const attempt = index.attempt(record.attempt);
   if (!attempt) return 'binding_unresolved';
   if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
-  // The same authority the ordinary arm answers to. Only the Assignment id was
-  // compared, so an attempt granted one obligation could carry an unavailable
-  // record for another and the Gate reported `unavailable` for something nobody
-  // had been granted.
-  if (!(assignment.grants.obligations || []).includes(record.obligation)) {
-    return 'authority_not_granted';
-  }
-  if (!(attempt.obligations || []).includes(record.obligation)) {
-    return 'authority_not_granted';
-  }
+  const scoped = withinGrant(record, assignment, attempt);
+  if (scoped) return scoped;
 
   // No comparison of either record's `requested` against the Contract's: both are
   // copied from it by the Kernel, so that compared a value with itself. What a
@@ -51,6 +43,24 @@ function admitUnavailable(record, { contract, assignment, index }) {
   // happened — one stood in, the other replied.
   if (dispatch.substituted_family) return 'same_family_substituted';
   if (dispatch.answered_family) return 'same_family_substituted';
+  return null;
+}
+
+// The obligation must be granted by the Assignment *and* named by the attempt.
+//
+// An attempt may open for fewer obligations than it was granted, and that
+// narrowing is authority: it says what this execution is for. Ordinary evidence
+// re-checked only the Assignment, so the attempt's scope was silently regained —
+// an attempt opened for one obligation could carry evidence for another all the
+// way to an Acceptance. The unavailable arm checked both; this is the check they
+// now share.
+function withinGrant(record, assignment, attempt) {
+  if (!(assignment.grants.obligations || []).includes(record.obligation)) {
+    return 'authority_not_granted';
+  }
+  if (!(attempt.obligations || []).includes(record.obligation)) {
+    return 'authority_not_granted';
+  }
   return null;
 }
 
@@ -124,6 +134,8 @@ export function admissibility({
     if (assignment.contract_revision !== record.contract_revision) return 'binding_cross_execution';
     if (attempt.assignment !== assignment.id) return 'binding_cross_execution';
     if (attempt.producer !== record.producer) return 'binding_cross_execution';
+    const scoped = withinGrant(record, assignment, attempt);
+    if (scoped) return scoped;
     for (const field of ['contract_revision', 'assignment', 'attempt', 'producer', 'artifact']) {
       if (pkg[field] !== record[field]) return 'binding_cross_execution';
     }

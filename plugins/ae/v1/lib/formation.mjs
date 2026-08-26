@@ -102,17 +102,26 @@ export function checkCitations(statements, provenance) {
     provenance.transcribed.filter((t) => t.broad === true).map((t) => t.id),
   );
 
+  // Each problem carries its code. It carried a prose `why` that the caller
+  // mapped to a code by matching the sentence, so rewording one silently changed
+  // which refusal it produced.
   const problems = [];
   for (const s of statements) {
     if (!s.cites || s.cites.length === 0) {
-      problems.push({ statement: s.id, why: 'cites nothing' });
+      problems.push({ statement: s.id, code: 'statement_uncited', why: 'cites nothing' });
       continue;
     }
     for (const id of s.cites) {
-      if (!known.has(id)) problems.push({ statement: s.id, why: `cites unknown source ${id}` });
+      if (!known.has(id)) {
+        problems.push({
+          statement: s.id, code: 'citation_unknown', why: `cites unknown source ${id}`,
+        });
+      }
     }
     if (s.cites.every((id) => broad.has(id))) {
-      problems.push({ statement: s.id, why: 'cites only a broad entry' });
+      problems.push({
+        statement: s.id, code: 'citation_broad_only', why: 'cites only a broad entry',
+      });
     }
   }
   return problems;
@@ -143,13 +152,8 @@ export function formationProblems(contract) {
   // statements the Contract makes in its own fields, and over the statements read
   // out of a Contract document. Restating it made the enforced copy and the
   // checked-in-a-test copy free to drift.
-  const problems = checkCitations(statements, provenance).map((p) => ({
-    code: {
-      'cites nothing': 'statement_uncited',
-      'cites only a broad entry': 'citation_broad_only',
-    }[p.why] || 'citation_unknown',
-    statement: p.statement,
-  }));
+  const problems = checkCitations(statements, provenance)
+    .map(({ code, statement }) => ({ code, statement }));
   const cited = new Set(statements.flatMap((s) => s.cites));
 
   // Inbound coverage, and the landing. A transcribed entry says what became of an
