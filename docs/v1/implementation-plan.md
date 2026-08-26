@@ -134,7 +134,9 @@ human intent
   claim with nothing behind it.
 
   Owner of [X2a, X3 and X4a](acceptance.md#5-cross-family-criteria) — the halves
-  observable before any provider answers. V3 owns X1, X2b and X4b, which need one;
+  observable before any provider answers. X4a is observable here precisely because
+  this arm is the second path: its `unavailable` must come from the same reduction
+  the ordinary arm's `passed` does. V3 owns X1, X2b and X4b, which need one;
   [criterion 5](acceptance.md#1-release-criteria) requires all six. X2a is bounded at **AE's
   own records**, not at the provider: the `requested` identity the Contract
   states — the sole authoritative source ([`design.md` §9](design.md#9-minimal-durable-objects))

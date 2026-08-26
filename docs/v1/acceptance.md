@@ -169,16 +169,21 @@ they cannot be.
 | X2a | The `requested` identity **the Contract states** appears in AE's dispatch-attempt and unavailable records with an identical **canonical-JSON encoding** (equivalently, an identical canonical digest), bound to the same Contract revision and run, while `observed` and `effective` are **absent — not `null`, not empty**. A request field is never reported as an effective-family claim. | V1 |
 | X2b | A **populated** `observed` identity correlates correctly to `effective` — the archive's account of what the backend did is what gets claimed. | V3 |
 | X3 | With the provider unavailable, the proof reports `unavailable`, records the human's decision, and performs no silent same-family substitution. | V1 |
-| X4a | Both arms reach their status through the same reducer and commit through the same writer. | V1 |
+| X4a | Every path that reaches a status reaches it through the same reduction — the unavailable arm and the ordinary arm alike. | V1 |
 | X4b | There is no second pipeline: cross-family adds a seat, not a path of its own. | V3 |
 
 **X2 and X4 are each split for the same reason:** one half is provable before any
 provider answers and the other is not. Both halves of both are required; the split
 says *when* each becomes exercisable, not whether it matters.
 
-For X4 the line is sharper than it looks. *One reducer, one writer* is observable
-in V1 — there is one of each, and both arms can be traced through them. *No second
-pipeline* is not: establishing that nothing else can reach a status needs a closed
+For X4 the line is sharper than it looks. *One reduction for every path* is
+observable in V1: both arms produce a Gate status, so both can be traced through
+the reduction that produced it. Note what X4a does **not** say. It does not
+require both arms through one *writer*, because in V1 only one arm reaches a
+writer at all — the unavailable arm produces no completion by construction, and
+the successful arm is V3's. Writer uniqueness is carried separately and
+unconditionally by K7, which needs no second arm to be true. *No second pipeline*
+is a third thing, and it is not observable here: establishing that nothing else can reach a status needs a closed
 universe of callable entry points, and v1 has none. The release manifest closes
 file membership, not reachability — which is exactly why the X2b exemption was
 deleted. A release shipping X4a alone and calling it X4 would assert the property
