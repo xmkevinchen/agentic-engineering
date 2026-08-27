@@ -205,12 +205,22 @@ Self-closing: yes | no
 
 ### Rules for the stack (F-086)
 
-- **The falsifier is run before the work starts, and it must be red.** An observation
-  that passes before anything is built establishes nothing — it is a check pointing at
-  something else. Run it, record that it failed, then build. Both Kernel dogfood runs
-  demonstrated their falsifier *after* writing the code by re-running against the
-  previous artifact; that works, and doing it first is strictly better because a green
-  first run tells you immediately that the check is aimed wrong.
+- **The falsifier must be seen red, and where that happens depends on whether it
+  already exists.**
+
+  - **It does not exist yet** — the common case. Plan **names** it; it cannot be run,
+    because writing it is `/ae:work`'s first step. The red run belongs to the harness
+    loop there: write the check → red → implement → green, with the red recorded as
+    `FALSIFIED_AC <AC-id>:`. Plan's job is to name an observation precise enough that
+    work can write it without inventing the criterion.
+  - **It already exists** — an existing suite, a query, a grep over the tree. Then plan
+    **runs it now**, and a green result stops the plan: either the property already
+    holds and there is no work to do, or the check is aimed at something other than the
+    criterion. Both are cheaper to learn here than after a step is built.
+
+  What is not acceptable in either case is a check whose first observed state is green.
+  It establishes nothing: passing before the change and passing after it are the same
+  observation, and neither says the check would notice the change's absence.
 - **A step that cannot close on itself is declared, not hidden.** `Self-closing: no`
   needs a reason and a statement of what covers it instead. Plan review either accepts
   that or sends the step back to be split. **What it must not do is pass silently** —

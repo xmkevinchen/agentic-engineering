@@ -624,9 +624,35 @@ entities: []
 turns the pair into an acceptance criterion and an observation; without the second half
 it has to invent one, which is where vacuous ACs come from.
 
+- **A falsifier is not a test. It is the search that would find the counterexample.**
+  In code that search happens to be a test; in other work it is something else, and the
+  question is the same — *what would I look at, and what would I see there, if this were
+  not so?*
+
+  | the claim | the counterexample search |
+  |---|---|
+  | code behaves this way | a check that fails against the code as it stands today |
+  | a document describes the thing | read the document against **the thing**, never against another document |
+  | data holds an invariant | the query that returns the violating rows — an empty result is the evidence |
+  | a path is wired end to end | ask the far end what it received |
+  | a model follows a rule | **no such search exists** — see below |
+  | we chose A over B | none. It is a judgement. |
+
+- **Observe the far end, not the near end.** The three Kernel runs each turned on this:
+  assert the header the *endpoint received*, not the arguments the caller passed; ask the
+  *built bundle* what it accepts, not a third document; *run* the validator, do not compare
+  two pieces of prose. Two documents agreeing with each other establish nothing.
+
 - **Name the observation, not the method.** *"a request to an endpoint that named its own
   key variable carries a different key than one that named none"* is a falsifier. *"write
   a unit test"* is not — it names a technique and settles nothing.
+- **When no search exists, say which kind of nothing it is.** Two cases, handled
+  differently. *Checkable only afterwards* — whether a model followed a written rule, and
+  anything else about behaviour rather than state: the strongest instrument is a
+  **presence** check (the rule cannot be silently deleted) plus a **retrospective sample**
+  once runs exist. Write the falsifier cell as `presence + audit` and say what the audit
+  would read. *Not checkable at all* — a design preference: write `judgement`.
+
 - **A decision whose falsifier cannot be named does not go to plan.** It is not ready:
   either what it claims is not yet decidable, or it is a judgement rather than a
   criterion. Route it to a **Spawned Discussion** with the reason `no falsifier — <what
