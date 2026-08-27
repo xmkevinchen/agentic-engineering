@@ -66,15 +66,18 @@ export function auditReductionIgnoresTime({ readFileSync, dir, files = ['gate.mj
   return found;
 }
 
-// AC-12 — the closed set of record kinds, checked where it can actually be wrong.
+// AC-12 — the closed set of record kinds, read off the source.
 //
-// The runtime version of this sat at the append boundary: an unknown kind, or a
-// kind with no schema, was refused there. Both were unreachable — every kind the
-// Kernel writes is a literal in its own source, so the only defect they could
-// catch is a typo in that source, and only if a test happened to run that line.
-// Read off the source instead, it holds for every append whether or not a test
-// reaches it, and it also catches the two sets drifting apart, which no runtime
-// check on a correct log ever would.
+// This is an early warning, not the enforcement. What enforces the set is the
+// read boundary in `kernel.mjs`, which checks every line of the log against it and
+// which the suite can reach. This one runs over the program instead of over a log,
+// so it catches a kind that is written but never read back by any test, and it
+// catches the set and the schemas drifting apart — neither of which a correct log
+// would ever show.
+//
+// Being a reader of source, it sees only kinds spelled as a literal. A record
+// assembled some other way — a shorthand property, a computed key, a name held in
+// a variable — is invisible here and refused at the read boundary instead.
 // Membership, not lookup. `kinds.constructor` is a function on every object, so a
 // record kind spelled `constructor`, `__proto__` or `toString` would be found in
 // a set that does not contain it.
@@ -89,7 +92,7 @@ export function auditRecordKinds({ readdirSync, readFileSync, dir, kinds, schema
     const text = readFileSync(`${dir}/${name}`, 'utf8');
     // The property form, which is how a record states its kind. Comparisons read
     // `.kind === '...'` and case labels read `case '...'`, so neither is caught.
-    for (const m of text.matchAll(/\bkind: ['"]([a-z_]+)['"]/g)) {
+    for (const m of text.matchAll(/\bkind\s*:\s*['"`]([a-z_]+)['"`]/g)) {
       if (!own(kinds, m[1])) {
         found.push({ kind: m[1], file: name, why: 'written but outside the closed set' });
       }

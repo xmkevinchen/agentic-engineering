@@ -47,9 +47,11 @@ in one file that ninety-four hand-written defects had missed.
 Some refusals the sweep reports are not gaps but dead code — a check the caller
 cannot reach, because an earlier one already refuses or the value is built inside
 the Kernel. Those are deleted rather than tested, and where the property still
-matters it moves to where it can be held: a source-level audit (`source-audit.mjs`)
-or an assertion on what was written, rather than a runtime check on a path no
-caller takes.
+matters it moves to a boundary where it can be held. The closed set of record kinds
+is the example worth reading: checking a kind on the way *in* refuses nothing, since
+every kind the program writes is a literal in its own source. Checking every line on
+the way *out* refuses a line that is actually there — and the log is a file, so lines
+can arrive from a second Kernel or from anything else that can write to it.
 
 ## Why it lives here and not in `runtime/`
 

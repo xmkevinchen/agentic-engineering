@@ -83,7 +83,10 @@ export function authorityTests() {
     appendFileSync(logPath, encodeNdjson([{
       kind: 'assignment_issued', lineage: 'L', run: 'run1', id: 'A2',
       contract_revision: 'r1', actor: 'Human Owner', bytes: b.bytes,
-      identity: b.identity, origin: 'host',
+      // `at` is the writer's observation of when the line landed, and a record
+      // without one is not a record — the reader checks every line against its
+      // shape, so a hand-written one has to be a real one.
+      identity: b.identity, origin: 'host', at: 0,
     }]));
     refuses('a run holding two holds none', 'assignment_not_unique',
       () => k1.assignmentFor('L', 'run1'));

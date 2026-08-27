@@ -10,7 +10,7 @@
 // completion; the Kernel calls them, and so does nothing else.
 
 import { lstatSync, realpathSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { fail } from './codes.mjs';
 
 // `O_EXCL` refuses a symlink at the final component and nowhere else, so the
@@ -73,8 +73,11 @@ export function assertInsideLocation(root, target) {
       }
     }
   })();
+  // `..` as a whole component, not as a prefix: a directory legitimately named
+  // `..inside` is inside the root, and reading the two dots as an escape refused a
+  // destination that never left.
   const rel = relative(resolvedRoot, resolvedParent);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
+  if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
     fail('write_escapes_location', 'the resolved target escapes the allowed location', {
       root: resolvedRoot, resolved: resolvedParent,
     });

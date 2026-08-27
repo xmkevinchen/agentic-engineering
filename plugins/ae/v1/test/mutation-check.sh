@@ -166,9 +166,17 @@ probe RED "a citation to a passage nobody wrote"; revert formation.mjs
 plant kernel.mjs "    if (!this.#render) {" "    if (false) { this.__r = 1;"
 probe RED "an unrenderable Contract approved"; revert kernel.mjs
 
-plant kernel.mjs "    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));" \
-  "    return parseNdjson(bytes).map((r) => ({ ...r, seq: 0 }));"
+plant kernel.mjs "    return parseNdjson(bytes).map((r, seq) => {" \
+  "    return parseNdjson(bytes).map((r) => { const seq = 0;"
 probe RED "every record claims the same position"; revert kernel.mjs
+
+# The read boundary is where the closed set is a set. Both halves: the kind, and
+# the shape that kind names.
+plant kernel.mjs "      if (!schema) {" "      if (false) {"
+probe RED "a line whose kind the set does not name"; revert kernel.mjs
+plant kernel.mjs "      const problems = validate(schema, record);" \
+  "      const problems = [];"
+probe RED "a line that does not match its shape"; revert kernel.mjs
 
 plant kernel.mjs "    const deliverable = this.deliverableFor({ lineage, run, contract: approved.contract });" \
   "    const deliverable = { identity: 'sha256:' + '0'.repeat(64) };"

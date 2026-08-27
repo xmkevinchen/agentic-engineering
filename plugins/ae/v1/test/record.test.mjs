@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 import { auditWritePath, auditReductionIgnoresTime } from '../lib/source-audit.mjs';
 import { KINDS, auditKinds } from '../lib/ledger.mjs';
+import { encodeNdjson } from '../lib/canonical-json.mjs';
 import { auditRecordKinds } from '../lib/source-audit.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
@@ -90,6 +91,17 @@ export function recordTests() {
       () => k4.completionPathFor({ lineage: 'L', run: 'run1' }));
     refuses('and the same for one that climbs out of it', 'writer_not_sole',
       () => k4.completionPathFor({ lineage: '../escape', run: 'run1' }));
+
+    // Two dots as a component, not as a prefix: a directory named `..inside` is
+    // inside the root, and reading the prefix as an escape refused a destination
+    // that never left.
+    const dots = tmp('v1d-');
+    mkdirSync(join(dots, '..inside'));
+    const k5 = new Kernel(join(dots, 'log.ndjson'), {
+      completionRoot: dots, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    ok('a lineage naming a directory that starts with two dots',
+      typeof k5.completionPathFor({ lineage: '..inside/L', run: 'run1' }) === 'string');
 
     // A symlink *between* the root and the file, rather than the root itself, and
     // one pointing back inside the root — so the resolved-path check has nothing to
@@ -257,6 +269,35 @@ export function recordTests() {
       checkContractRelations({
         ...c, independence: { required: 'cross_family_required', assurance: 'workflow_attested' },
       }).length > 0);
+  });
+
+  group('AC-12 · a line in the log is checked against the closed set', () => {
+    // The log is a file. Two Kernels write to it, and so can anything else — the
+    // suite itself writes lines by hand to reach states one process cannot. A
+    // reader that trusts whatever it parses acts on a record nothing agreed to,
+    // and this is the boundary where the closed set is a set rather than a claim.
+    const dir = mkdtempSync(join(tmpdir(), 'v1k-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    walk(k);
+    const good = k.records().map(({ seq, ...r }) => r);
+
+    const withLine = (line) => {
+      writeFileSync(logPath, encodeNdjson([...good, line]));
+      return new Kernel(logPath, {
+        completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+      });
+    };
+    refuses('a kind the set does not name', 'kind_without_consumer',
+      () => withLine({ kind: 'invented', lineage: 'L', at: 0 }).records());
+    // A name every object carries, which a membership test that is really a
+    // lookup would find in a set that does not contain it.
+    refuses('a kind every object appears to have', 'kind_without_consumer',
+      () => withLine({ kind: 'constructor', lineage: 'L', at: 0 }).records());
+    refuses('a known kind missing a field its shape requires', 'format_open',
+      () => withLine({ kind: 'formation_opened', lineage: 'L', at: 0 }).records());
   });
 
   group('AC-12 · every persisted kind has a producer and a consumer', () => {

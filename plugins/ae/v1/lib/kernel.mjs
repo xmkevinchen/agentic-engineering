@@ -148,11 +148,37 @@ class Ledger {
   // writing — is two operations, and two processes can read the same length and
   // both write it. Position cannot collide: `appendFileSync` opens with `O_APPEND`,
   // so each line lands whole and in some order, and that order is the numbering.
+  // Every line is checked on the way out, against the closed set and against the
+  // shape that set names. The append boundary is not enough on its own: a log is a
+  // file, other things can write to it — the suite does, to reach states two
+  // Kernels can produce — and a reader that trusts whatever it parses is a reader
+  // that acts on a record nothing agreed to.
+  //
+  // It is also the only place the closed set can be enforced where the suite can
+  // see it enforced. Checking a kind at the append boundary refuses nothing a
+  // caller can ask for, because every kind this program writes is a literal in its
+  // own source; checking it here refuses a line that is actually there.
   read() {
     if (!existsSync(this.path)) return [];
     const bytes = readFileSync(this.path);
     if (bytes.length === 0) return [];
-    return parseNdjson(bytes).map((r, seq) => ({ ...r, seq }));
+    return parseNdjson(bytes).map((r, seq) => {
+      const record = { ...r, seq };
+      const schema = Object.prototype.hasOwnProperty.call(RECORDS, record.kind)
+        ? RECORDS[record.kind] : null;
+      if (!schema) {
+        fail('kind_without_consumer', `record kind outside the closed set: ${record.kind}`, {
+          kind: record.kind, seq,
+        });
+      }
+      const problems = validate(schema, record);
+      if (problems.length > 0) {
+        fail('format_open', `a recorded line does not match its shape: ${record.kind}`, {
+          seq, problems,
+        });
+      }
+      return record;
+    });
   }
 
   // Rejection happens here, at the append boundary. A record outside the closed
