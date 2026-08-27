@@ -132,26 +132,28 @@ export function concurrentTests() {
   });
 
   group('AC-9 · formation opens once, however many writers try', () => {
-    // The check and the append are separate operations, so several writers all saw
-    // none and all appended. Uniqueness is decided where it is read: a lineage
+    // The check and the append are separate operations, so several writers can all
+    // see none and all append. Uniqueness is decided where it is read: a lineage
     // that ended up with two openings has no formation to measure from.
+    //
+    // Asserted on the reader directly rather than on a run built over it. An
+    // earlier version approved the Contract first and then raced, so formation
+    // opened *after* the approval and the interval ran backwards — `recordRun`
+    // then refused for that reason instead, and the case only passed on the
+    // schedules where more than one writer happened to land. A test that holds
+    // for one interleaving and not another tests the schedule.
     const { dir, logPath, k } = prepared();
     race(dir, logPath, 'formation');
     const opened = k.records().filter((r) => r.kind === 'formation_opened');
     ok('at least one landed', opened.length >= 1);
-    const a = asObject(assignmentDoc());
-    k.issueAssignment({
-      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
-    });
-    k.openAttempt({ lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P' });
-    k.status({ lineage: 'L', run: 'run1' });
+
     let outcome;
     try {
-      k.recordRun({ lineage: 'L', run: 'run1', traceOutcome: 'caught_nothing', wentWrong: '' });
-      outcome = 'measured';
+      k.formationFor('L');
+      outcome = 'one';
     } catch (e) { outcome = e.code; }
-    ok('either one opening, or nothing to measure from — never a quiet choice',
-      (opened.length === 1 && outcome === 'measured')
+    ok('either one opening, or none to measure from — never a quiet choice',
+      (opened.length === 1 && outcome === 'one')
         || (opened.length > 1 && outcome === 'run_facts_incomplete'));
   });
 

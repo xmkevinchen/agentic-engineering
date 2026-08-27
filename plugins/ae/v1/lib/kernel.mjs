@@ -1107,6 +1107,23 @@ export class Kernel {
   // caller passed, which made "formation cost more than the change" an opinion
   // wearing a number: nothing said what was measured, or that the two figures
   // were of the same kind.
+  // Where forming this lineage began, if it began once.
+  //
+  // Uniqueness is decided here rather than only before the append, as it is for an
+  // Assignment: `openFormation` checks and then appends, which is two operations,
+  // and eight concurrent writers all saw none.
+  formationFor(lineage) {
+    const opened = this.records().filter(
+      (r) => r.kind === 'formation_opened' && r.lineage === lineage,
+    );
+    if (opened.length > 1) {
+      fail('run_facts_incomplete', 'formation opens once for a lineage', {
+        lineage, count: opened.length,
+      });
+    }
+    return opened[0] || null;
+  }
+
   // The first act of forming a Contract. Recorded because AC-9 measures formation
   // from it and nothing else marks it: the earliest record of a lineage was the
   // activation decision, written inside `approve`, so formation measured one
@@ -1147,17 +1164,12 @@ export class Kernel {
     // Each end is the *first* record of its kind, so repeating an operation
     // cannot move it. Taking the last let a second `status()` call extend the
     // change interval without anything about the run having changed.
-    const opened = only(
-      'record of formation opening', (r) => r.kind === 'formation_opened' && r.lineage === lineage,
-    );
-    // Uniqueness decided here, as it is for an Assignment: `openFormation` checks
-    // and then appends, which is two operations, and eight writers all saw none.
-    if (opened.length > 1) {
-      fail('run_facts_incomplete', 'formation opens once for a lineage', {
-        lineage, count: opened.length,
+    const formationFrom = this.formationFor(lineage);
+    if (!formationFrom) {
+      fail('run_facts_incomplete', 'there is no record of formation opening to measure from', {
+        lineage,
       });
     }
-    const [formationFrom] = opened;
     const bound = this.contractForRun(lineage, run);
     if (!bound) {
       fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });

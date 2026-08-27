@@ -244,7 +244,10 @@ probe RED "an obligation the Assignment never granted"; revert admissibility.mjs
 plant kernel.mjs "        && r.seq > lastAttempt.seq," ""
 probe RED "the change ends before a retry"; revert kernel.mjs
 
-plant kernel.mjs "    if (opened.length > 1) {" "    if (false) {"
+plant kernel.mjs "    if (opened.length > 1) {
+      fail('run_facts_incomplete', 'formation opens once for a lineage', {" \
+  "    if (false) {
+      fail('run_facts_incomplete', 'x', {"
 probe RED "a lineage with two formations"; revert kernel.mjs
 
 plant kernel.mjs "      if (!stat.isSymbolicLink()) break;" "      break;"
