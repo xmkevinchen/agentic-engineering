@@ -23,6 +23,13 @@ export function identityTests() {
 
     const spaced = '{"a": 1, "b": 2}';
     refuses('whitespace caught', 'identity_mismatch', () => verify(spaced, ia));
+
+    // And the other half of the pair, which nothing reached: for a lexical
+    // mutation the byte check fires first, so the canonical comparison was only
+    // ever run on values that had already passed. A recorded identity whose two
+    // halves disagree with each other is where it does the work.
+    refuses('a recorded identity whose halves disagree', 'identity_mismatch',
+      () => verify(a, { ...ia, canonical_sha256: `sha256:${'0'.repeat(64)}` }));
   });
 
   group('AC-3 · keeping only one identity fails', () => {

@@ -119,6 +119,23 @@ export function evidenceTests() {
     const foreignResult = build({ resultOver: { attempt: 9 } });
     eq('a command result from another attempt',
       foreignResult.admit(foreignResult.record), 'binding_cross_execution');
+
+    // Each of these compares a different pair, and each was covered only by
+    // cases that happened to fail an earlier comparison first.
+    // The package agrees with the record here, so the package comparison passes
+    // and only the Assignment's own revision catches it. With the package left
+    // correct, that comparison fired first and this one was never reached.
+    const otherRevision = build({
+      contract_revision: 'r9', pkgOver: { contract_revision: 'r9' },
+    });
+    eq('a revision the Assignment did not bind',
+      otherRevision.admit(otherRevision.record), 'binding_cross_execution');
+    const otherAttempt = build({ attemptOver: { assignment: 'OTHER' } });
+    eq('an attempt opened under another Assignment',
+      otherAttempt.admit(otherAttempt.record), 'binding_cross_execution');
+    const otherResult = build({ pkgOver: { command_result: 'cr9' } });
+    eq('a package naming another command result',
+      otherResult.admit(otherResult.record), 'binding_cross_execution');
     // The decisive one: a real green run, paired with an artifact it never
     // touched. Everything resolved, and that artifact became the deliverable.
     const untested = build({ resultOver: { artifact: 'art2' } });
@@ -203,6 +220,12 @@ export function evidenceTests() {
     eq('an input used but not recorded', omitted.admit(omitted.record), 'material_input_incomplete');
     const gone = build({ inputsNow: () => null });
     eq('a recorded input that no longer resolves', gone.admit(gone.record), 'binding_unresolved');
+    // Never looked at is not "unchanged". The Harness having no record of an
+    // input is different from having looked and found it gone, and only the
+    // second is a resolution failure.
+    const unlooked = build({ inputsNow: () => undefined });
+    eq('an input the Harness never observed',
+      unlooked.admit(unlooked.record), 'material_input_incomplete');
     // Silence is not "used nothing". A runner that did not report leaves the
     // completeness question unanswered, and assuming completeness from an absent
     // field is the vacuity this refuses.

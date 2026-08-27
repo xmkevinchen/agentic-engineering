@@ -133,6 +133,39 @@ export function recordTests() {
       () => fail('write_staged', 'this cannot happen', {}));
   });
 
+  group('AC-12 · relations a schema cannot state', () => {
+    // Each of these is data-level: schema-valid, and incoherent. None was
+    // exercised, so deleting any of them left the suite green.
+    const ok3 = (why, over) => {
+      const problems = checkContractRelations({ ...contractDoc(), ...over });
+      ok(why, problems.length > 0);
+    };
+    ok3('an obligation named twice', {
+      obligations: ['O'],
+      observations: [
+        { obligation: 'O', observation: 'a', artifact: 'x', material_inputs: [] },
+        { obligation: 'O', observation: 'b', artifact: 'x', material_inputs: [] },
+      ],
+    });
+    ok3('an observation for an obligation the Contract does not list', {
+      obligations: ['O'],
+      observations: [
+        { obligation: 'O', observation: 'a', artifact: 'x', material_inputs: [] },
+        { obligation: 'ELSEWHERE', observation: 'b', artifact: 'x', material_inputs: [] },
+      ],
+    });
+    ok3('an obligation no observation answers', { obligations: ['O', 'UNANSWERED'] });
+    ok3('cross-family required with no family named', {
+      independence: { required: 'cross_family_required', assurance: 'workflow_attested' },
+    });
+    ok3('a requested family where none was required', {
+      independence: {
+        required: 'none', requested_family: ['openai'], assurance: 'workflow_attested',
+      },
+    });
+    eq('and a coherent Contract has none', checkContractRelations(contractDoc()).length, 0);
+  });
+
   group('AC-12 · every schema is closed, recursively', () => {
     for (const [name, schema] of Object.entries(OBJECTS)) {
       eq(`${name} is closed`, lintSchema(schema, name).length, 0);

@@ -210,6 +210,50 @@ probe RED "a code nothing can raise, raisable"; revert codes.mjs
 plant kernel.mjs "    if (opened && !opened.obligations.includes(obligation)) {" "    if (false) {"
 probe RED "a surface writing out of scope"; revert kernel.mjs
 
+# The exit pass: nine guards nothing was holding to account.
+plant identity.mjs "  if (actual.canonical_sha256 !== recorded.canonical_sha256) {" "  if (false) {"
+probe RED "a recorded identity whose halves disagree"; revert identity.mjs
+
+plant ../schema/objects.mjs "    if (seen.has(o)) problems.push({ code: 'format_open', why: \`obligation named twice: \${o}\` });" ""
+probe RED "an obligation named twice"; revert ../schema/objects.mjs
+
+plant ../schema/objects.mjs "  if (ind.required === 'none' && ind.requested_family) {" "  if (false) {"
+probe RED "a requested family nobody required"; revert ../schema/objects.mjs
+
+plant kernel.mjs "    if (assignment.lineage !== lineage) {" "    if (false) {"
+probe RED "an Assignment naming another lineage"; revert kernel.mjs
+
+plant kernel.mjs "    if (submitter !== producer) {
+      fail('identity_self_asserted', 'the submitter is not the producer it names', {
+        submitter, producer,
+      });
+    }
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (assignment.grants.attempt_producer !== producer) {
+      fail('authority_not_granted', 'only the granted producer may submit evidence', { producer });" \
+  "    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (assignment.grants.attempt_producer !== producer) {
+      fail('authority_not_granted', 'only the granted producer may submit evidence', { producer });"
+probe RED "a submitter naming another producer"; revert kernel.mjs
+
+plant admissibility.mjs "    if (assignment.contract_revision !== record.contract_revision) return 'binding_cross_execution';" ""
+probe RED "a revision the Assignment did not bind"; revert admissibility.mjs
+
+plant admissibility.mjs "    if (attempt.assignment !== assignment.id) return 'binding_cross_execution';" ""
+probe RED "an attempt under another Assignment"; revert admissibility.mjs
+
+plant admissibility.mjs "    if (pkg.command_result !== record.command_result) return 'binding_cross_execution';" ""
+probe RED "a package naming another result"; revert admissibility.mjs
+
+plant admissibility.mjs "      if (now === undefined) return 'material_input_incomplete';" ""
+probe RED "an input never observed"; revert admissibility.mjs
+
 # Round 21's findings: two checks nothing pinned.
 plant kernel.mjs "  const problems = validate(schema, value);
   if (problems.length > 0) {" "  const problems = validate(schema, value);

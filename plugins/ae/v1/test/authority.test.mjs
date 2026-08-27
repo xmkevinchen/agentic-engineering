@@ -45,6 +45,10 @@ export function authorityTests() {
       () => issue(k, {}, 'Mallory'));
     refuses('the party it grants may not issue it', 'assignment_self_issued',
       () => issue(k, { grants: { attempt_producer: 'Human Owner', mutation_producer: 'Human Owner', obligations: ['O'] } }));
+    // The Assignment's own bytes must name the lineage it is issued under. Only
+    // the envelope was compared, so bytes naming somewhere else were filed here.
+    refuses('an Assignment whose bytes name another lineage', 'identity_mismatch',
+      () => issue(k, { lineage: 'ELSEWHERE' }));
     refuses('it must bind the current approved revision', 'assignment_not_issued',
       () => issue(k, { contract_revision: 'r9' }));
     refuses('it may not grant an obligation the Contract does not state', 'authority_not_granted',
@@ -147,6 +151,14 @@ export function authorityTests() {
     // producer check left the suite green: the obligation check happened to fire
     // for the case being tested, and admissibility invalidated the record later —
     // but the authority operation itself had been accepted.
+    // The submitter and the producer it names must be the same party. Nothing
+    // exercised it: every other case names one party for both.
+    refuses('a submitter naming another producer', 'identity_self_asserted',
+      () => k.submitObservation({
+        lineage: 'L', run: 'run1', obligation: 'O', observation: COMMAND,
+        attempt: at.attempt, producer: 'P', artifact: 'art1', pkg: 'pkg1',
+        commandResult: 'cr1', submitter: 'Q',
+      }));
     refuses('evidence from an ungranted producer', 'authority_not_granted',
       () => k.submitObservation({
         lineage: 'L', run: 'run1', obligation: 'O', observation: COMMAND,
