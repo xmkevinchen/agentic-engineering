@@ -271,7 +271,11 @@ After all teammates have SendMessage'd findings to TL, before synthesis — the 
 
 TL collects findings, resolves disagreements, writes to `.ae/features/active/F-NNN-<slug>/analysis.md`:
 
-**Exit gate (analyze DoD — F-063)**: do NOT finish `analysis.md` until its `### Verification considerations` table (see below) is present with one row per likely acceptance dimension. This is `/ae:analyze`'s definition-of-done — the front-load that `/ae:plan` consumes. **Honest scope**: it is a presence gate and the *weak, self-graded half* of the harness (it raises the floor by forcing the verification means to be discovered, but cannot catch a specific-looking-but-vacuous row); review Check 7 remains the correctness check.
+**Exit gate, part 1 — the premise (F-086)**: do NOT finish `analysis.md` until its `## Premise` section (see below) answers all three questions with citations, and do NOT continue past a `no`. A `no` **ends the item here** — record it, close or re-aim the BL, and stop. This is the cheapest step in the pipeline and the only one that can save a whole cycle: across the first two Kernel runs it ended three candidates before any work started, one of which had already been written, tested and passed a Gate under an earlier attempt whose premise nobody had checked. The Gate cannot catch it — it checks whether evidence stands, not whether the premise does.
+
+**Exit gate, part 2 (analyze DoD — F-063)**: do NOT finish `analysis.md` until its `### Verification considerations` table (see below) is present with one row per likely acceptance dimension. This is `/ae:analyze`'s definition-of-done — the front-load that `/ae:plan` consumes. **Honest scope**: it is a presence gate and the *weak, self-graded half* of the harness (it raises the floor by forcing the verification means to be discovered, but cannot catch a specific-looking-but-vacuous row); review Check 7 remains the correctness check.
+
+**Before handing anything to a person (F-086)**: run every check the next stage will run. A handover contract is not what this stage produces, it is **what the next stage will refuse it for** — and a person should be waiting for a signature, never for a repair. Every repair-interruption is a defect in this stage, not a slow reply. (Observed: a Contract was shown for approval after three of its four admission checks were run; the Human Owner approved, the fourth refused, and the bytes that landed were not the bytes that were approved.)
 
 **Per CLAUDE.md `Output Standards`** — pyramid tip ≤ 5 lines (required), supporting detail below (on-demand, omit empty sections). TL must first understand and distill — do not just splice raw agent findings together.
 
@@ -284,6 +288,19 @@ created: YYYY-MM-DD
 ---
 
 # Analysis: <feature title>
+
+## Premise (REQUIRED — a verdict, and a `no` ends the item)
+
+| question | verdict | evidence |
+|---|---|---|
+| Does this problem exist **today**? | yes / no | file:line, or the command that shows it |
+| Has this already been decided **the other way**? | no / yes | the doc, comment or assertion that decided it — or "searched `<what>`, nothing found" |
+| Can it be answered by a **command**? | yes / no / partly | the command, or why no command can settle it |
+
+Rules:
+- **Cite, do not assert.** "I checked" is not evidence; a path, a line or a command is.
+- **A `no` in row 1, or a `yes` in row 2, ends the item.** Write what was found and stop. That outcome is a result, not a failure — it is the cheapest one available.
+- **Row 3 routes the work, it does not block it.** A `no` means no Gate can accept this item: it is a prose-rule or judgement change, and it must not be planned as if an executable observation will appear later. Say so here so the next three stages do not spend effort discovering it.
 
 ## TL;DR
 

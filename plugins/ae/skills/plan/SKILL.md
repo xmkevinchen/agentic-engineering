@@ -195,6 +195,8 @@ Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:wo
 ```
 
 ### Rules
+- **Criteria, not methods (F-086).** An AC says what must be shown; it does not say how to build the thing that shows it. The test: **delete the clause — if the criterion is unchanged, it was a method.** *"the assertion is on what the endpoint received, not on what the caller passed"* is a criterion; *"start it over stdio against a local HTTP server"* is a method, and pinning it there rejects a better way of establishing the same thing. This is the same failure as writing the implementation in prose, one stage earlier, where it costs an approval round instead of a review round.
+- **The check should be seen failing before the work starts.** An observation that runs and passes before anything is built establishes nothing. Where a step can be ordered that way, write the check first and record that it was red; where it cannot, say which step is the falsifier and when it is expected to turn.
 - ACs must be **specific and verifiable** (no "results should be reasonable")
 - Numbers must have ranges ("10-15%"), not point values ("12%")
 - Each step references AC numbers (step-AC mapping)

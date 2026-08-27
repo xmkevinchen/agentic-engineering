@@ -163,6 +163,14 @@ probe RED "a green run vouches for any artifact"; revert admissibility.mjs
 plant formation.mjs "    if (!text.includes(entry.quote)) {" "    if (false) {"
 probe RED "a citation to a passage nobody wrote"; revert formation.mjs
 
+# Which ids a statement may rest on. The provenance decides; a letter list written
+# into the extractor is how the two came apart.
+plant formation.mjs "  const cites = [...known].filter((id) => new RegExp(\`\\\\b\${id}\\\\b\`).test(line));" \
+  "  const cites = [...known];"
+probe RED "every statement counts as citing everything"; revert formation.mjs
+plant formation.mjs "    if (prefixes.has(m[1]) && !known.has(m[0])) bad.push(m[0]);" ""
+probe RED "a mistyped citation passes as prose"; revert formation.mjs
+
 plant kernel.mjs "    if (!this.#render) {" "    if (false) { this.__r = 1;"
 probe RED "an unrenderable Contract approved"; revert kernel.mjs
 

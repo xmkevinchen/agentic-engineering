@@ -826,6 +826,31 @@ export function completionTests() {
       () => approve({ scope: ['S1 the completion path'] }));
     refuses('a statement citing an unknown source', 'citation_unknown',
       () => approve({ scope: ['S1 the completion path (D-99)'] }));
+    // What the letter list used to get wrong, in both directions. A source the
+    // provenance carries is citable whatever letter it uses — the extractor
+    // recognised four and the known set was built from the provenance, so the two
+    // disagreed and a statement resting on a real source read as resting on none.
+    // And prose is prose: a statement mentioning a backlog item or a criterion is
+    // not citing it, so those must not be read as citations at all.
+    const withTranscribed = (over) => contractDoc({
+      provenance: {
+        ...contractDoc().provenance,
+        transcribed: [
+          ...contractDoc().provenance.transcribed,
+          { id: 'T-01', statement: 'a source under another letter', disposition: 'carried' },
+        ],
+      },
+      ...over,
+    });
+    const doc = asObject(withTranscribed({ scope: ['S1 the completion path (T-01)'] }));
+    eq('a source under any letter the provenance uses is citable',
+      k.approve({
+        lineage: 'L', revision: 'r1', bytes: doc.bytes, identity: doc.identity,
+        actor: 'Human Owner', rendered: RENDERED(doc.bytes),
+      }).kind, 'contract_approved_genesis');
+    refuses('and prose naming a criterion or a backlog item is not a citation',
+      'statement_uncited',
+      () => approve({ scope: ['S1 the completion path, which AC-9 and BL-214 both touch'] }));
     // D-02 is transcribed as `carried`, and nothing in this Contract cites it —
     // so the Contract claims to have taken on an obligation that landed nowhere.
     refuses('a carried obligation nothing cites', 'disposition_lands_nowhere',

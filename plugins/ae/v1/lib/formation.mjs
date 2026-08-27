@@ -74,30 +74,64 @@ export function statementsFrom(contractBytes) {
     // sections 2 and 3 and carry their own citation column.
     const row = line.match(/^\| (S\d+|N\d+) \|/);
     if (row && (section === '2' || section === '3')) {
-      out.push({ id: row[1], text: line, cites: citesIn(line) });
+      out.push({ id: row[1], text: line, cites: citesInDocument(line) });
       continue;
     }
 
     // Anything inside a criterion's body contributes citations to it.
-    if (criterion) criterion.cites.push(...citesIn(line));
+    if (criterion) criterion.cites.push(...citesInDocument(line));
   }
   return out;
 }
 
-function citesIn(line) {
+// The same question asked of a Contract *document*, which has no provenance object
+// to look names up in — its provenance is a markdown table. `D`/`U`/`P`/`Q` is that
+// document's own writing convention, so here the letters are the right instrument;
+// they are the wrong one where a real provenance exists.
+function citesInDocument(line) {
   const ids = [];
   for (const m of line.matchAll(/\b([DUPQ]-\d+)\b/g)) ids.push(m[1]);
   return ids;
 }
 
+// Which sources a statement rests on. The provenance decides what is citable; this
+// only finds them.
+//
+// It matched `[DUPQ]-\d+` — a letter list written here — while the known set was
+// built from the provenance. The two disagreed: an entry the provenance carried
+// under any other letter was invisible, so its statement read as citing nothing.
+// That refusal caught no defect and cost three rounds across the first two runs.
+//
+// Widening the letter list is not the fix: a statement mentioning `AC-9` or
+// `BL-214` in prose would then be read as citing them. So the known ids are looked
+// for by name, and a token is only reported as a *bad* citation when it uses a
+// prefix this Contract's own provenance uses — `D-99` beside a provenance of
+// `D-01…D-05` is a typo; `BL-214` in the same sentence is prose.
+function citesIn(line, known) {
+  const cites = [...known].filter((id) => new RegExp(`\\b${id}\\b`).test(line));
+  const prefixes = new Set([...known].map((id) => id.split('-')[0]));
+  const bad = [];
+  for (const m of line.matchAll(/\b([A-Za-z]{1,4})-\d+\b/g)) {
+    if (prefixes.has(m[1]) && !known.has(m[0])) bad.push(m[0]);
+  }
+  return { cites, bad };
+}
+
 // Outbound. A statement citing a broad entry that could support anything cites
 // nothing: the check is that the cited id is specific, not merely present.
-export function checkCitations(statements, provenance) {
-  const known = new Set([
+// The sources a statement may rest on. Unknowns are deliberately not among them:
+// an open question is what a Contract has not settled, so resting a scope statement
+// on one states nothing.
+export function knownIds(provenance) {
+  return new Set([
     ...provenance.verifiable.map((v) => v.id),
     ...provenance.transcribed.map((t) => t.id),
     ...provenance.proposals.map((p) => p.id),
   ]);
+}
+
+export function checkCitations(statements, provenance) {
+  const known = knownIds(provenance);
   const broad = new Set(
     provenance.transcribed.filter((t) => t.broad === true).map((t) => t.id),
   );
@@ -107,16 +141,20 @@ export function checkCitations(statements, provenance) {
   // which refusal it produced.
   const problems = [];
   for (const s of statements) {
-    if (!s.cites || s.cites.length === 0) {
-      problems.push({ statement: s.id, code: 'statement_uncited', why: 'cites nothing' });
-      continue;
+    // A mistyped citation before an absent one. Both leave the statement resting on
+    // nothing, but "cites D-99, which is not a source" says where to look and
+    // "cites nothing" does not — and a statement whose only citation is a typo used
+    // to report the second.
+    for (const id of s.bad || []) {
+      problems.push({
+        statement: s.id, code: 'citation_unknown', why: `cites unknown source ${id}`,
+      });
     }
-    for (const id of s.cites) {
-      if (!known.has(id)) {
-        problems.push({
-          statement: s.id, code: 'citation_unknown', why: `cites unknown source ${id}`,
-        });
+    if (!s.cites || s.cites.length === 0) {
+      if (!(s.bad || []).length) {
+        problems.push({ statement: s.id, code: 'statement_uncited', why: 'cites nothing' });
       }
+      continue;
     }
     if (s.cites.every((id) => broad.has(id))) {
       problems.push({
@@ -140,12 +178,12 @@ export function checkCitations(statements, provenance) {
 export function formationProblems(contract) {
   const { provenance } = contract;
 
+  const known = knownIds(provenance);
+  const read = (text, id) => ({ id, ...citesIn(text, known) });
   const statements = [
-    ...contract.scope.map((text, i) => ({ id: `scope[${i}]`, cites: citesIn(text) })),
-    ...contract.non_goals.map((text, i) => ({ id: `non_goals[${i}]`, cites: citesIn(text) })),
-    ...contract.required_evidence.map((text, i) => ({
-      id: `required_evidence[${i}]`, cites: citesIn(text),
-    })),
+    ...contract.scope.map((text, i) => read(text, `scope[${i}]`)),
+    ...contract.non_goals.map((text, i) => read(text, `non_goals[${i}]`)),
+    ...contract.required_evidence.map((text, i) => read(text, `required_evidence[${i}]`)),
   ];
 
   // One citation rule, called from both places that need it: here, over the

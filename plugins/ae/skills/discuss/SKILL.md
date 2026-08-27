@@ -520,6 +520,15 @@ Keep the readout in plain language — no internal bookkeeping terms (Round 0 / 
 
 For escalated topics: use `AskUserQuestion` with team findings + genuine dilemma + YOUR leaning.
 
+**Before escalating anything, quote it (F-086).** Two checks, in order:
+
+1. **Is it already answered?** If a Contract, a decision record or an assertion file settles it, it is not a question — it is a lookup, and putting it to a person turns a recorded fact into an opinion.
+2. **Is it answerable by evidence?** If verifying something in the tree would settle it, verify it. A clear defect with an unknown blast radius is a thing to investigate, not a thing to escalate.
+
+If it survives both, **paste the wording that reserves the decision, then ask.** Paraphrasing from memory changes the question: observed three times in one session — a recorded fact asked as a judgement, a menu offering an option the machinery would refuse, and *"was this worth it?"* in place of *"worth doing even if AE did not exist"*, which the reader reasonably heard as "should we stop the project". Two of the three inflated a small question into a large one.
+
+Also name what is being judged in **plain language**, not by identifier. A person who must first translate `BL-214` back into "the bridge sends one API key to every endpoint" is doing the skill's work before they can do their own.
+
 **Record** for each topic decided:
 1. **Quality check** — rationale must cite team evidence, not "hand-wavy reasoning". Weak rationale → force revisit.
 2. **Write round file**: `topic-NN-slug/round-NN.md` with team discussion content + outcome
