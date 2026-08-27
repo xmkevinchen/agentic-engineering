@@ -119,6 +119,16 @@ export function kernelTests() {
       () => approve(k, { lineage: 'ELSEWHERE' }));
     refuses('a Contract naming another revision', 'identity_mismatch',
       () => approve(k, { revision: 'r9' }));
+    // Bytes whose identity checks out and whose shape does not. Identity is
+    // verified first, so a valid digest over an invalid Contract used to reach
+    // everything downstream: nothing else re-checks the shape.
+    const smuggled = asObject({ ...contractDoc(), smuggled: 'a field no schema names' });
+    refuses('a Contract carrying a field its schema does not name', 'format_open',
+      () => approve(k, {
+        bytes: smuggled.bytes, identity: smuggled.identity,
+        rendered: RENDERED(smuggled.bytes),
+      }));
+
     // Schema-valid and incoherent: an obligation with no named observation. It
     // used to be approved and fail later, somewhere else, as something else.
     const broken = asObject(contractDoc({ obligations: ['O', 'UNNAMED'] }));

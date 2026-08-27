@@ -210,6 +210,15 @@ probe RED "a code nothing can raise, raisable"; revert codes.mjs
 plant kernel.mjs "    if (opened && !opened.obligations.includes(obligation)) {" "    if (false) {"
 probe RED "a surface writing out of scope"; revert kernel.mjs
 
+# Round 21's findings: two checks nothing pinned.
+plant kernel.mjs "  const problems = validate(schema, value);
+  if (problems.length > 0) {" "  const problems = validate(schema, value);
+  if (false) {"
+probe RED "a durable object of any shape"; revert kernel.mjs
+
+plant kernel.mjs "      if (predecessor !== last.identity.byte_sha256) {" "      if (false) {"
+probe RED "an approval with any predecessor"; revert kernel.mjs
+
 # Round 20's findings: cause 1 in replay, cause 3 in two guards.
 plant kernel.mjs "      boundRevision: assigned ? assigned.contract_revision : null," \
   "      boundRevision: null,"

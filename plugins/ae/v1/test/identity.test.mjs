@@ -71,6 +71,16 @@ export function identityTests() {
         { predecessor: genesis.identity.byte_sha256 },
       ));
 
+    // And the inverse. The two checks read different places — one the approval
+    // was given with, one the Contract's own bytes — so a case where both are
+    // wrong together isolates neither.
+    refuses('an approval given with a predecessor the Contract does not name',
+      'lineage_predecessor_wrong',
+      () => approve(
+        k, { revision: 'r2', predecessor: genesis.identity.byte_sha256 },
+        { predecessor: ZERO },
+      ));
+
     const prior = genesis.identity.byte_sha256;
     approve(k, { revision: 'r2', predecessor: prior }, { predecessor: prior });
     eq('a correct predecessor supersedes it', k.currentRevision('L'), 'r2');
