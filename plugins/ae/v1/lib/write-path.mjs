@@ -27,10 +27,11 @@ export function assertNoSymlinkComponents(root, target) {
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
+  // No lexical "is it outside" refusal here. `assertInsideLocation` asks the same
+  // question of the resolved path, which is strictly the stronger form and runs on
+  // every path this one does; a target this would have caught is caught there, with
+  // the same code. What is left here is the part that check cannot do — see below.
   const rel = relative(root, target);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
-    fail('write_escapes_location', 'the target lies outside the allowed location', { root, target });
-  }
   let current = root;
   for (const part of rel.split('/').slice(0, -1)) {
     current = join(current, part);

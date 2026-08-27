@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 import { auditWritePath, auditReductionIgnoresTime } from '../lib/source-audit.mjs';
 import { KINDS, auditKinds } from '../lib/ledger.mjs';
+import { auditRecordKinds } from '../lib/source-audit.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
 import { RECORDS } from '../schema/records.mjs';
@@ -76,6 +77,20 @@ export function recordTests() {
     mkdirSync(join(linked, 'inside'));
     symlinkSync(elsewhere, join(linked, 'outlink'));
     symlinkSync(join(linked, 'inside'), join(linked, 'inlink'));
+    // A symlink *between* the root and the file, rather than the root itself, and
+    // one pointing back inside the root — so the resolved-path check has nothing to
+    // object to and this is the only thing standing between the write and a
+    // component someone can swap. The destination has an intermediate component
+    // whenever the lineage does.
+    const mid = tmp('v1m-');
+    mkdirSync(join(mid, 'real'));
+    symlinkSync(join(mid, 'real'), join(mid, 'via'));
+    const k3 = new Kernel(join(mid, 'log.ndjson'), {
+      completionRoot: mid, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    refuses('a symlinked component under a real root', 'write_through_symlink',
+      () => k3.completionPathFor({ lineage: 'via/L', run: 'run1' }));
+
     for (const [name, root] of [
       ['a parent symlink pointing outside', join(linked, 'outlink')],
       ['a parent symlink pointing inside', join(linked, 'inlink')],
@@ -238,6 +253,16 @@ export function recordTests() {
     const problems = auditKinds({ readdirSync, readFileSync, dir: libDir });
     eq('no kind is orphaned', problems.map((p) => `${p.kind}:${p.code}`).join(','), '');
     ok('the set is non-empty', Object.keys(KINDS).length > 0);
+
+    // The other direction, and the one a run cannot show: a kind written anywhere
+    // in the program that the closed set does not name, and the set drifting apart
+    // from the schemas. Both used to be refused at the append boundary, where they
+    // were unreachable — a typo is caught there only if a test runs that line.
+    const drift = auditRecordKinds({
+      readdirSync, readFileSync, dir: libDir, kinds: KINDS, schemas: RECORDS,
+    });
+    eq('no kind is written outside the set, and the set and the schemas agree',
+      drift.map((p) => `${p.kind}:${p.why}`).join(','), '');
   });
 
   // AC-13's actual wording: the same records reconstruct the same state in a

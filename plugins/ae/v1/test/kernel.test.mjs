@@ -21,7 +21,10 @@ const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 import { validate } from '../lib/schema.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
-import { asObject, assignmentDoc, contractDoc, RENDERED, COMMAND, SOURCE_ROOT, OWNER } from './fixtures.mjs';
+import {
+  asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, INPUT,
+  SOURCE_ROOT, OWNER,
+} from './fixtures.mjs';
 
 const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'k-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
 
@@ -32,6 +35,152 @@ const approve = (k, over = {}) => k.approve({
 });
 
 export function kernelTests() {
+  group('AC-5 · every operation refuses before its preconditions exist', () => {
+    // One guard repeated at each entry point, and nothing reached any of them:
+    // every case in the suite sets a run up first. Sweeping the refusals found
+    // nine copies of "this run has no Assignment" that no test could tell were
+    // gone.
+    //
+    // Each asserts its own code. A first attempt only checked that something was
+    // thrown, which the very next line does anyway — reading `.grants` of nothing
+    // throws too, so the guard could be deleted and the case stayed green.
+    const bare = fresh();
+    approve(bare);
+    const noRun = { lineage: 'L', run: 'run1' };
+    const pkg = asObject({
+      id: 'pkg1', lineage: 'L', contract_revision: 'r1', assignment: 'A1', attempt: 0,
+      producer: 'P', artifact: 'art1', command_result: 'cr1', changed_paths: [],
+      material_inputs: [], deviations: [], known_risks: [],
+    });
+
+    for (const [what, call] of [
+      ['running an observation', () => bare.runObservation({
+        id: 'cr1', ...noRun, attempt: 0, obligation: 'O', artifact: 'art1',
+      })],
+      ['recording a package', () => bare.recordPackage({
+        ...noRun, bytes: pkg.bytes, identity: pkg.identity, submitter: 'P',
+      })],
+      ['dispatching', () => bare.recordDispatch({ ...noRun, attempt: 0, obligation: 'O' })],
+      ['recording a capability as unavailable', () => bare.recordUnavailable({
+        ...noRun, obligation: 'O', attempt: 0,
+      })],
+      ['submitting an observation', () => bare.submitObservation({
+        ...noRun, obligation: 'O', observation: COMMAND, attempt: 0,
+        producer: 'P', artifact: 'art1', pkg: 'pkg1', commandResult: 'cr1', submitter: 'P',
+      })],
+      ['opening an attempt', () => bare.openAttempt({
+        ...noRun, producer: 'P', obligations: ['O'], submitter: 'P',
+      })],
+      ['asking the Gate', () => bare.status(noRun)],
+      ['signing off', () => bare.signOff({ ...noRun, actor: OWNER })],
+      ['completing', () => bare.complete({ ...noRun, actor: OWNER })],
+    ]) {
+      refuses(`${what} without an Assignment`, 'assignment_not_issued', call);
+    }
+  });
+
+  group('AC-2 · an observation answers an obligation the Contract named', () => {
+    // The obligation reaching the Harness is the caller's word. The attempt's
+    // scope is compared when evidence is submitted, which is later — so this is
+    // the first place a name the Contract never used can be refused, and without
+    // it the command runs before anything notices.
+    const k = fresh();
+    const w = walk(k);
+    refuses('an obligation the Contract does not name', 'observation_not_named',
+      () => k.runObservation({
+        id: 'crX', lineage: w.lineage, run: w.run, attempt: w.attempt.attempt,
+        obligation: 'not-in-the-Contract', artifact: 'artX',
+      }));
+  });
+
+  group('AC-3 · the deliverable a Contract names has to be there', () => {
+    // Nothing before this reads the path: approval checks the Contract's shape and
+    // its citations, not that the artifact it names exists. So a Contract can name
+    // a path the tree does not have, and the observation is where that shows up.
+    refuses('an artifact the Contract names but the tree does not hold', 'binding_unresolved',
+      () => walk(fresh(), {
+        contract: {
+          observations: [{
+            obligation: 'O', observation: COMMAND, artifact: 'work/absent',
+            material_inputs: [INPUT],
+          }],
+        },
+      }));
+  });
+
+  group('AC-5 · a Kernel refuses what it was not given the means to do', () => {
+    // Three things a Kernel is configured with, and each operation that needs one
+    // refuses without it. Deleting any of these left the suite green, because the
+    // cases that got there failed for a neighbouring reason instead.
+    const doc2 = asObject(contractDoc());
+    const bare = (opts) => new Kernel(join(mkdtempSync(join(tmpdir(), 'bare-')), 'log.ndjson'), opts);
+
+    refuses('no Human Owner, so it cannot approve', 'human_input_absent',
+      () => bare({ sourceRoot: SOURCE_ROOT, render: RENDERED }).approve({
+        lineage: 'L', revision: 'r1', bytes: doc2.bytes, identity: doc2.identity,
+        actor: OWNER, rendered: RENDERED(doc2.bytes),
+      }));
+    refuses('no renderer, so it cannot approve', 'human_input_absent',
+      () => bare({ sourceRoot: SOURCE_ROOT, owner: OWNER }).approve({
+        lineage: 'L', revision: 'r1', bytes: doc2.bytes, identity: doc2.identity,
+        actor: OWNER, rendered: RENDERED(doc2.bytes),
+      }));
+    refuses('no root, so it cannot resolve what the Contract cites', 'citation_unknown',
+      () => bare({ render: RENDERED, owner: OWNER }).approve({
+        lineage: 'L', revision: 'r1', bytes: doc2.bytes, identity: doc2.identity,
+        actor: OWNER, rendered: RENDERED(doc2.bytes),
+      }));
+    // The code alone does not pin this one: without the root, resolution would
+    // fail anyway — against a path built from `undefined` — and refuse with the
+    // same code for an accidental reason. The refusal has to be the stated one.
+    try {
+      bare({ render: RENDERED, owner: OWNER }).approve({
+        lineage: 'L', revision: 'r1', bytes: doc2.bytes, identity: doc2.identity,
+        actor: OWNER, rendered: RENDERED(doc2.bytes),
+      });
+      ok('a rootless Kernel refuses to approve', false);
+    } catch (error) {
+      eq('and refuses for the missing root, not a path that happened not to resolve',
+        error.message, 'this Kernel cannot resolve cited sources, so it cannot approve');
+    }
+    // A root is per-Kernel, not per-log: a second Kernel reading the same log
+    // without one would otherwise run the Contract's command wherever it happened
+    // to be started, against whatever it found there.
+    const shared = join(mkdtempSync(join(tmpdir(), 'rootless-')), 'log.ndjson');
+    const walked = walk(new Kernel(shared, {
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    }));
+    const rootless = new Kernel(shared, { render: RENDERED, owner: OWNER });
+    // By its reason, not only its code: without the root the command would run in
+    // whatever directory the process started in and the artifact would fail to
+    // resolve afterwards — refusing with the same code, having already run it.
+    try {
+      rootless.runObservation({
+        id: 'cr2', lineage: walked.lineage, run: walked.run,
+        attempt: walked.attempt.attempt, obligation: 'O', artifact: 'art2',
+      });
+      ok('a rootless Kernel refuses to run the observation', false);
+    } catch (error) {
+      eq('and refuses before running it, for the missing root',
+        error.message, 'this Kernel has no root, so it cannot run anything');
+    }
+
+    // The half a bare comparison misses. An absent owner is held as `null`, so an
+    // actor of `null` equals it — and every operation reserved to the Human Owner
+    // would be open to a caller that names nobody.
+    const ownerless = bare({ sourceRoot: SOURCE_ROOT, render: RENDERED });
+    refuses('an actor equal to the owner it does not have', 'human_input_absent',
+      () => ownerless.openFormation({ lineage: 'L', actor: null }));
+    refuses('and at the unavailable decision', 'human_input_absent',
+      () => ownerless.decideUnavailable({
+        lineage: 'L', run: 'run1', actor: null, choice: 'wait',
+      }));
+
+    refuses('no completion root, so it cannot say where completion goes', 'writer_not_sole',
+      () => bare({ sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER })
+        .completionPathFor({ lineage: 'L', run: 'run1' }));
+  });
+
   group('AC-5 · a caller cannot manufacture a host-collected input', () => {
     const k = fresh();
     // There is no way to reach the stamper. It was a public method, so the

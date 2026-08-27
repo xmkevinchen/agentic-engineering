@@ -17,6 +17,7 @@ import { group, ok, eq, refuses } from './harness.mjs';
 import { validate } from '../lib/schema.mjs';
 import { digestBytes } from '../lib/canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
+import { ACCEPTANCE } from '../schema/objects.mjs';
 import {
   asObject, assignmentDoc, contractDoc, walk, sha, RENDERED, OWNER,
   COMMAND, FAILING, VACUOUS, UNCOUNTABLE, ARTIFACT, INPUT,
@@ -54,6 +55,11 @@ export function completionTests() {
     eq('the file was created', written.outcome, 'created');
     const onDisk = JSON.parse(readFileSync(written.path, 'utf8'));
     eq('what was written is the Acceptance', onDisk.decision.run, w.run);
+    // Against the schema, not against a field of it. The Kernel builds the
+    // Acceptance from parts it has already checked, so the claim worth holding is
+    // that what reached the disk is the closed shape — read back, not asserted at
+    // the point of writing where nothing could contradict it.
+    eq('and it is the closed shape', validate(ACCEPTANCE, onDisk).join(','), '');
 
     // The deliverable is the artifact the evidence exercised, resolved from the
     // record. It used to be an argument, so an Acceptance could name one thing
@@ -330,6 +336,113 @@ export function completionTests() {
     k.status({ lineage: 'L', run: w.run });
     refuses('a sign-off for a failing run', 'not_all_passed',
       () => k.signOff({ lineage: 'L', run: w.run, actor: OWNER }));
+  });
+
+  group('AC-9 · facts recorded twice are facts recorded by nobody', () => {
+    // Uniqueness is decided where the facts are read. The writer refuses a second
+    // set, so the state can only be reached from outside — which is the case the
+    // reader exists for.
+    const dir = mkdtempSync(join(tmpdir(), 'twice-'));
+    const logPath = join(dir, 'log.ndjson');
+    const src = fresh();
+    const w = walk(src);
+    src.status({ lineage: 'L', run: w.run });
+    src.recordRun({ lineage: 'L', run: w.run, traceOutcome: 'caught_nothing', wentWrong: '' });
+    const lines = src.records().map(({ seq, ...r }) => r);
+    const facts = lines.find((r) => r.kind === 'run_record_clean');
+    writeFileSync(logPath, [...lines, facts].map((r) => JSON.stringify(r)).join('\n') + '\n');
+    const doubled = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    refuses('two sets of run facts', 'run_facts_incomplete',
+      () => doubled.retreatCondition('L', w.run));
+    refuses('and no judgement can answer them', 'run_facts_incomplete',
+      () => doubled.decideWorth({ lineage: 'L', run: w.run, actor: OWNER, choice: 'yes' }));
+  });
+
+  group('AC-3 · a deliverable nothing recorded is no deliverable', () => {
+    // Submitting an observation does not require its artifact to have been
+    // recorded, so the id in the record is the producer's word. The reader that
+    // turns it into the Acceptance's deliverable is where that word is checked.
+    const dir = mkdtempSync(join(tmpdir(), 'ghost-'));
+    const logPath = join(dir, 'log.ndjson');
+    const src = fresh();
+    const w = walk(src);
+    const lines = src.records().map(({ seq, ...r }) => (
+      r.kind === 'observation' ? { ...r, artifact: 'ghost' } : r
+    ));
+    writeFileSync(logPath, lines.map((r) => JSON.stringify(r)).join('\n') + '\n');
+    const ghosted = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const { contract } = ghosted.contractForRun('L', w.run);
+    refuses('an artifact the log never recorded', 'binding_unresolved',
+      () => ghosted.deliverableFor({ lineage: 'L', run: w.run, contract }));
+  });
+
+  group('AC-1 · a lineage with two genesis approvals has no history', () => {
+    // Two writers can each see a coherent history and together leave two roots.
+    // The writer cannot see it — its check and its append are two operations — so
+    // the reader is where a second genesis has to be refused.
+    const dir = mkdtempSync(join(tmpdir(), 'twogen-'));
+    const logPath = join(dir, 'log.ndjson');
+    const src = fresh();
+    walk(src);
+    const lines = src.records().map(({ seq, ...r }) => r);
+    const genesis = lines.find((r) => r.kind === 'contract_approved_genesis');
+    writeFileSync(logPath, [...lines, genesis].map((r) => JSON.stringify(r)).join('\n') + '\n');
+    const forked = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    refuses('two genesis approvals', 'lineage_second_genesis', () => forked.approvalsFor('L'));
+    refuses('and no current revision to bind', 'lineage_second_genesis',
+      () => forked.currentRevision('L'));
+  });
+
+  group('AC-9 · formation opened twice is formation opened by nobody', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'twoform-'));
+    const logPath = join(dir, 'log.ndjson');
+    const src = fresh();
+    const w = walk(src);
+    const lines = src.records().map(({ seq, ...r }) => r);
+    const opened = lines.find((r) => r.kind === 'formation_opened');
+    writeFileSync(logPath, [opened, ...lines].map((r) => JSON.stringify(r)).join('\n') + '\n');
+    const doubled = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    refuses('two openings', 'run_facts_incomplete', () => doubled.formationFor('L'));
+    refuses('and nothing to measure formation from', 'run_facts_incomplete',
+      () => doubled.recordRun({
+        lineage: 'L', run: w.run, traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
+  });
+
+  group('AC-12 · a record whose fields a caller supplied is still checked', () => {
+    // The append boundary validates the payload, not just the name. These fields
+    // arrive from the caller and reach the record, so this is the shape check
+    // doing the only work a shape check can do — refusing what a caller can ask.
+    const k = fresh();
+    const w = walk(k);
+    k.status({ lineage: 'L', run: w.run });
+    refuses('a run fact of the wrong type', 'format_open', () => k.recordRun({
+      lineage: 'L', run: w.run, traceOutcome: 'caught_nothing', wentWrong: 123,
+    }));
+    refuses('a trace outcome outside the two', 'format_open', () => k.recordRun({
+      lineage: 'L', run: w.run, traceOutcome: 'caught_maybe', wentWrong: '',
+    }));
+  });
+
+  group('AC-9 · run facts need the run', () => {
+    const k = fresh();
+    k.openFormation({ lineage: 'L', actor: OWNER });
+    refuses('formation opened a second time', 'run_facts_incomplete',
+      () => k.openFormation({ lineage: 'L', actor: OWNER }));
+    refuses('formation opened by someone else', 'authority_not_granted',
+      () => k.openFormation({ lineage: 'L2', actor: 'P' }));
+    refuses('facts for a run with no Assignment', 'assignment_not_issued',
+      () => k.recordRun({
+        lineage: 'L', run: 'run1', traceOutcome: 'caught_nothing', wentWrong: '',
+      }));
   });
 
   group('AC-9 · the two judgements have somewhere to be recorded', () => {

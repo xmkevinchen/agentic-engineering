@@ -65,3 +65,34 @@ export function auditReductionIgnoresTime({ readFileSync, dir, files = ['gate.mj
   }
   return found;
 }
+
+// AC-12 — the closed set of record kinds, checked where it can actually be wrong.
+//
+// The runtime version of this sat at the append boundary: an unknown kind, or a
+// kind with no schema, was refused there. Both were unreachable — every kind the
+// Kernel writes is a literal in its own source, so the only defect they could
+// catch is a typo in that source, and only if a test happened to run that line.
+// Read off the source instead, it holds for every append whether or not a test
+// reaches it, and it also catches the two sets drifting apart, which no runtime
+// check on a correct log ever would.
+export function auditRecordKinds({ readdirSync, readFileSync, dir, kinds, schemas }) {
+  const found = [];
+  // Every source that writes records, which is every source but the one holding
+  // the set itself. Naming the writers here instead would be a second list to keep
+  // in step with the first.
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.mjs') && f !== 'ledger.mjs')) {
+    const text = readFileSync(`${dir}/${name}`, 'utf8');
+    // The property form, which is how a record states its kind. Comparisons read
+    // `.kind === '...'` and case labels read `case '...'`, so neither is caught.
+    for (const m of text.matchAll(/\bkind: '([a-z_]+)'/g)) {
+      if (!kinds[m[1]]) found.push({ kind: m[1], file: name, why: 'written but outside the closed set' });
+    }
+  }
+  for (const kind of Object.keys(kinds)) {
+    if (!schemas[kind]) found.push({ kind, why: 'in the closed set with no schema' });
+  }
+  for (const kind of Object.keys(schemas)) {
+    if (!kinds[kind]) found.push({ kind, why: 'has a schema but is not in the closed set' });
+  }
+  return found;
+}

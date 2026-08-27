@@ -31,11 +31,25 @@ they export has no V1 consumer, and pruning it would fork the copy.
 
 Run: `sh plugins/ae/tests/scripts/test-v1-kernel.sh`
 
-The mutation check is the other half and is not part of that suite:
-`sh plugins/ae/v1/test/mutation-check.sh` copies the slice into a scratch tree,
-plants one deliberate defect at a time, and **fails when one survives**. A guard
-the suite cannot notice the absence of is not a guard, and twenty rounds of review
-found one on almost every pass until this existed.
+Two checks are the other half, and neither is part of that suite — both copy the
+slice into a scratch tree and never write to the repository:
+
+- `sh plugins/ae/v1/test/mutation-check.sh` plants one deliberate defect at a time
+  and **fails when one survives**. The defects are ones someone thought of.
+- `sh plugins/ae/v1/test/deletion-sweep.sh` deletes **every** refusal in turn — each
+  `fail(...)` and each returned refusal code — and reports the ones the suite does
+  not notice. Nobody has to think of them.
+
+A guard the suite cannot notice the absence of is not a guard. Twenty rounds of
+review found one on almost every pass by hand; the sweep's first run found twelve
+in one file that ninety-four hand-written defects had missed.
+
+Some refusals the sweep reports are not gaps but dead code — a check the caller
+cannot reach, because an earlier one already refuses or the value is built inside
+the Kernel. Those are deleted rather than tested, and where the property still
+matters it moves to where it can be held: a source-level audit (`source-audit.mjs`)
+or an assertion on what was written, rather than a runtime check on a path no
+caller takes.
 
 ## Why it lives here and not in `runtime/`
 

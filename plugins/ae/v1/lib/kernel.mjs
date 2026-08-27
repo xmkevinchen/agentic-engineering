@@ -21,7 +21,6 @@ import {
 import { basename, dirname, join, resolve } from 'node:path';
 import { encodeNdjson, parseNdjson, parseStrict, digestBytes } from './canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
-import { KINDS } from './ledger.mjs';
 import { reduceAll } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
 import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
@@ -31,7 +30,7 @@ import { atomicFileNoReplace } from './fs-noreplace.mjs';
 import { checkVerifiableSources, formationProblems } from './formation.mjs';
 import { validate } from './schema.mjs';
 import {
-  ACCEPTANCE, ASSIGNMENT, CONTRACT, EVIDENCE_PACKAGE, checkContractRelations,
+  ASSIGNMENT, CONTRACT, EVIDENCE_PACKAGE, checkContractRelations,
 } from '../schema/objects.mjs';
 import { fail } from './codes.mjs';
 
@@ -171,18 +170,13 @@ class Ledger {
   }
 
   #appendLocked(record) {
-    if (!Object.prototype.hasOwnProperty.call(KINDS, record.kind)) {
-      fail('kind_without_consumer', `record kind outside the closed set: ${record.kind}`, {
-        kind: record.kind, known: Object.keys(KINDS),
-      });
-    }
-    // The payload, not only the name. An earlier draft validated that `kind` was
-    // known and accepted arbitrary, missing, null and additional fields beside
-    // it — closure over names is not closure.
+    // The kind is not checked here. Every kind this program writes is a literal in
+    // its own source, so the only defect a runtime check could catch is a typo in
+    // that source — and only on the lines a test happens to run. `auditRecordKinds`
+    // reads every one of them, and the two sets against each other, which holds for
+    // appends no test reaches. The payload is a different matter: its fields come
+    // from callers, so the schema check below refuses what a caller can actually do.
     const schema = RECORDS[record.kind];
-    if (!schema) {
-      fail('kind_without_consumer', `no record schema for ${record.kind}`, { kind: record.kind });
-    }
     // Validated with the position it will occupy if nothing else appends first.
     // The stored line carries no `seq`: it would be a second source for a fact the
     // line's position already states, and the two could disagree.
@@ -352,6 +346,7 @@ export class Kernel {
   // Contract grants. The root has to sit outside what it authorises.
   #owner;
 
+
   constructor(logPath, { completionRoot, sourceRoot, render, owner } = {}) {
     this.#ledger = new Ledger(logPath);
     this.#completionRoot = completionRoot || null;
@@ -495,6 +490,10 @@ export class Kernel {
     if (!contract) {
       fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
     }
+    // The obligation is the caller's word, and nothing before this compares it
+    // with the Contract: the attempt's own scope is checked when evidence is
+    // submitted, which is after this runs. Without this the command still runs and
+    // the failure arrives as a crash reading a field of nothing.
     const entry = contract.observations.find((o) => o.obligation === obligation);
     if (!entry) {
       fail('observation_not_named', 'the Contract names no observation for this obligation', {
@@ -616,8 +615,9 @@ export class Kernel {
   // Digested here, not declared. The identity recorded is the deliverable the
   // Acceptance names, so accepting one as an argument let the producer name what
   // its own evidence would be taken to have exercised.
-  // The path comes from the run's Contract, not from the caller. Its existence
-  // checks live at the one call site, immediately above.
+  // The path comes from the run's Contract, not from the caller, and this is where
+  // its existence is decided: nothing earlier reads it, so a Contract may name a
+  // path the tree does not have, and the refusal has to be here.
   #recordArtifact({ id, lineage, run, entry, artifactKind }) {
     const path = `${this.#sourceRoot}/${entry.artifact}`;
     let identity;
@@ -732,14 +732,7 @@ export class Kernel {
     // row: the Human Owner, and no model. The Contract names who that is, so
     // approval is the first place it can be checked — and a Contract approved by
     // someone it does not name is approved by nobody in particular.
-    if (!this.#owner) {
-      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot approve', {});
-    }
-    if (actor !== this.#owner) {
-      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
-        actor,
-      });
-    }
+    this.#requireOwner(actor);
     // Approval is where the two are bound: the Kernel serves one Human Owner,
     // configured outside any Contract, and a Contract names who signs it. They
     // must be the same party, or the document under review would be nominating
@@ -784,14 +777,12 @@ export class Kernel {
     // rule, and a planted defect could not tell the copies apart.
     const assignment = this.assignmentFor(lineage, run);
     if (!assignment) return null;
+    // No "this revision was never approved" check: issuing requires the
+    // Assignment to bind the current revision, and the log only grows — so the
+    // revision it names is in this lineage's history by construction.
     const bound = this.approvalsFor(lineage).find(
       (a) => a.revision === assignment.contract_revision,
     );
-    if (!bound) {
-      fail('binding_unresolved', 'the run names a revision this lineage never approved', {
-        lineage, run, revision: assignment.contract_revision,
-      });
-    }
     return {
       contract: openObject(bound.bytes, bound.identity, CONTRACT, 'Contract'),
       identity: bound.identity,
@@ -831,18 +822,11 @@ export class Kernel {
     // AC-5: issuing an Assignment at all is the Human Owner's, bound to an
     // approved revision. Any actor but the beneficiary was accepted, so a second
     // producer could hand the first its authority.
+    // No separate "nothing is approved" refusal: with nothing approved there is no
+    // current revision, so the revision check below refuses first, with the same
+    // code and a reason that says more.
     const approvedContract = this.contractFor(lineage);
-    if (approvedContract === null) {
-      fail('assignment_not_issued', 'nothing is approved for this lineage', { lineage });
-    }
-    if (!this.#owner) {
-      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot issue an Assignment', {});
-    }
-    if (actor !== this.#owner) {
-      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
-        actor,
-      });
-    }
+    this.#requireOwner(actor);
     const current = this.currentRevision(lineage);
     if (current !== assignment.contract_revision) {
       fail('assignment_not_issued', 'an Assignment must bind the current approved revision', {
@@ -992,15 +976,12 @@ export class Kernel {
     if (assignment.grants.attempt_producer !== producer) {
       fail('authority_not_granted', 'only the granted producer may submit evidence', { producer });
     }
-    if (!assignment.grants.obligations.includes(obligation)) {
-      fail('authority_not_granted', 'the Assignment does not grant this obligation', {
-        producer, obligation,
-      });
-    }
-    // And what this attempt opened for. Checking only the Assignment was half the
-    // authority: the attempt's narrowing says what this execution is for, and a
-    // surface that re-checks the broader grant hands back what the narrower one
-    // removed. The Gate refuses such a record too — it decides what counts as
+    // What this attempt opened for, and only that. Checking the Assignment's own
+    // grant was half the authority: the attempt's narrowing says what this
+    // execution is for, and a surface that re-checks the broader grant hands back
+    // what the narrower one removed. The broader check is not merely redundant
+    // now — an attempt exists only for obligations the Assignment granted, so it
+    // could not have failed. The Gate refuses such a record too — it decides what counts as
     // evidence — but a surface should not write what it knows is out of scope.
     const opened = this.records().find(
       (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run
@@ -1037,11 +1018,7 @@ export class Kernel {
     if (!approved) {
       fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
     }
-    if (actor !== this.#owner) {
-      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
-        actor,
-      });
-    }
+    this.#requireOwner(actor);
     // A verdict has to have been *recorded*, not merely computable: reducing on
     // demand always produces a status, so asking the reduction whether the Gate
     // had reported was asking it to answer for itself.
@@ -1129,11 +1106,7 @@ export class Kernel {
   // activation decision, written inside `approve`, so formation measured one
   // append rather than the work.
   openFormation({ lineage, actor }) {
-    if (actor !== this.#owner) {
-      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
-        actor,
-      });
-    }
+    this.#requireOwner(actor);
     const already = this.records().some(
       (r) => r.kind === 'formation_opened' && r.lineage === lineage,
     );
@@ -1200,11 +1173,7 @@ export class Kernel {
     // One set of facts per run, refused here and at every reader. Two sets meant
     // the live judgement read the first and replay read the last, so the Human
     // Owner's decision and the reconstruction of it disagreed.
-    const existing = all.filter(
-      (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
-        && r.lineage === lineage && r.run === run,
-    );
-    if (existing.length > 0) {
+    if (this.runFactsFor(lineage, run)) {
       fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
     }
     // Elapsed time between the boundaries, observed when each record landed.
@@ -1365,21 +1334,11 @@ export class Kernel {
   // No `yes`/`no` check here: the record shape states it, and a copy beside it is
   // a claim no planted defect can turn red.
   #humanJudgement({ lineage, run, actor, choice, operation }) {
-    if (actor !== this.#owner) {
-      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
-        actor,
-      });
-    }
+    this.#requireOwner(actor);
     // Against recorded facts, so the judgement answers something. AC-9's two
     // questions are asked *of* a run's arithmetic, and one asked of nothing is
     // not the judgement the criterion reserves.
-    const [facts, ...more] = this.records().filter(
-      (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
-        && r.lineage === lineage && r.run === run,
-    );
-    if (more.length > 0) {
-      fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
-    }
+    const facts = this.runFactsFor(lineage, run);
     if (!facts) {
       fail('run_facts_incomplete', 'there are no run facts to judge', { lineage, run });
     }
@@ -1388,15 +1347,40 @@ export class Kernel {
     });
   }
 
-  retreatCondition(lineage, run) {
-    const [record, ...rest] = this.records().filter(
+  // A run's facts, if it recorded them once. Uniqueness lived in three places —
+  // the writer and two readers — and no planted defect could tell the copies
+  // apart, so it lives here and the others ask.
+  // The Human Owner acted, or nobody did. Both halves in one place, because they
+  // are one question and the second alone answers it wrongly: an absent owner is
+  // held as `null`, and `null !== null` is false, so an actor of `null` would pass
+  // a bare comparison and act for a Kernel that serves no one. Six copies of the
+  // comparison stood before this, and the missing half was restored to two of them
+  // and not the other four.
+  #requireOwner(actor) {
+    if (!this.#owner) {
+      fail('human_input_absent', 'this Kernel has no Human Owner, so nobody may act for it', {});
+    }
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
+      });
+    }
+  }
+
+  runFactsFor(lineage, run) {
+    const found = this.records().filter(
       (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
         && r.lineage === lineage && r.run === run,
     );
-    if (!record) return null;
-    if (rest.length > 0) {
+    if (found.length > 1) {
       fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
     }
+    return found[0] || null;
+  }
+
+  retreatCondition(lineage, run) {
+    const record = this.runFactsFor(lineage, run);
+    if (!record) return null;
     return {
       fired: record.formation_elapsed > record.change_elapsed
         && record.trace_outcome === 'caught_nothing',
@@ -1590,6 +1574,10 @@ export class Kernel {
         run, artifacts: [...named],
       });
     }
+    // The name is taken from the observation records, which carry whatever id was
+    // submitted — submitting one does not require the artifact to be recorded, and
+    // this is a public reader. Without this the deliverable would be read off
+    // nothing and the Acceptance would name a kind and an identity of undefined.
     const record = index.artifact([...named][0]);
     if (!record) {
       fail('binding_unresolved', 'the artifact the evidence names is not recorded', { run });
@@ -1603,14 +1591,7 @@ export class Kernel {
   // never arrives: completion stops at `not_all_passed` first, which left the
   // ordering check sitting in a branch nothing could reach.
   decideUnavailable({ lineage, run, actor, choice }) {
-    if (!this.#owner) {
-      fail('human_input_absent', 'this Kernel has no Human Owner, so it cannot decide', {});
-    }
-    if (actor !== this.#owner) {
-      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
-        actor,
-      });
-    }
+    this.#requireOwner(actor);
     if (!['wait', 'stop', 'amend'].includes(choice)) {
       fail('human_input_absent', 'the decision must be wait, stop, or amend', { choice });
     }
@@ -1643,17 +1624,10 @@ export class Kernel {
   #commitCompletion({ acceptance, run }) {
     const path = this.completionPathFor({ lineage: acceptance.lineage, run });
 
-    // The shape, checked against the schema rather than against truthiness — an
-    // earlier version tested `if (!acceptance)` and wrote `{}`.
-    //
-    // This is the only check left here. A verdict re-derivation used to sit
-    // beside it, for the case where a second Kernel advanced the log between the
-    // reduction and the write — but the whole of completion holds one lock now,
-    // so re-reading under it reaches the same answer by construction.
-    const problems = validate(ACCEPTANCE, acceptance);
-    if (problems.length > 0) {
-      fail('format_open', 'the Acceptance does not match its closed shape', { problems });
-    }
+    // No shape check here. The Acceptance is a literal built four lines above from
+    // parts already checked, so a check at this point refuses nothing a caller can
+    // ask for — it could only catch a change to this file, which is what reading
+    // the written file back against the schema does, where the suite can see it.
     const bytes = Buffer.from(JSON.stringify(acceptance), 'utf8');
     const target = resolve(path);
 
