@@ -158,6 +158,19 @@ class Ledger {
   // see it enforced. Checking a kind at the append boundary refuses nothing a
   // caller can ask for, because every kind this program writes is a literal in its
   // own source; checking it here refuses a line that is actually there.
+  //
+  // Not quite every record a consumer sees comes through here: `append` hands its
+  // caller the record it just wrote, and two operations read a `seq` off that
+  // rather than off a re-read. Those go through the schema check on the way in,
+  // and their kind is a literal a few lines above the call. Everything that comes
+  // back *from the log* comes through here.
+  //
+  // Validation is not what this costs. Parsing is: `records()` re-reads and
+  // re-parses the whole file on every call, and a single Gate reduction calls it
+  // about eight times. Measured over 8,000 lines, checking every line against its
+  // schema adds around five per cent to a read that was already the expensive
+  // part. Making reads cheap is a change to how the log is read, not to whether
+  // it is checked.
   read() {
     if (!existsSync(this.path)) return [];
     const bytes = readFileSync(this.path);
