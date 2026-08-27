@@ -75,6 +75,11 @@ export function auditReductionIgnoresTime({ readFileSync, dir, files = ['gate.mj
 // Read off the source instead, it holds for every append whether or not a test
 // reaches it, and it also catches the two sets drifting apart, which no runtime
 // check on a correct log ever would.
+// Membership, not lookup. `kinds.constructor` is a function on every object, so a
+// record kind spelled `constructor`, `__proto__` or `toString` would be found in
+// a set that does not contain it.
+const own = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
 export function auditRecordKinds({ readdirSync, readFileSync, dir, kinds, schemas }) {
   const found = [];
   // Every source that writes records, which is every source but the one holding
@@ -84,15 +89,17 @@ export function auditRecordKinds({ readdirSync, readFileSync, dir, kinds, schema
     const text = readFileSync(`${dir}/${name}`, 'utf8');
     // The property form, which is how a record states its kind. Comparisons read
     // `.kind === '...'` and case labels read `case '...'`, so neither is caught.
-    for (const m of text.matchAll(/\bkind: '([a-z_]+)'/g)) {
-      if (!kinds[m[1]]) found.push({ kind: m[1], file: name, why: 'written but outside the closed set' });
+    for (const m of text.matchAll(/\bkind: ['"]([a-z_]+)['"]/g)) {
+      if (!own(kinds, m[1])) {
+        found.push({ kind: m[1], file: name, why: 'written but outside the closed set' });
+      }
     }
   }
   for (const kind of Object.keys(kinds)) {
-    if (!schemas[kind]) found.push({ kind, why: 'in the closed set with no schema' });
+    if (!own(schemas, kind)) found.push({ kind, why: 'in the closed set with no schema' });
   }
   for (const kind of Object.keys(schemas)) {
-    if (!kinds[kind]) found.push({ kind, why: 'has a schema but is not in the closed set' });
+    if (!own(kinds, kind)) found.push({ kind, why: 'has a schema but is not in the closed set' });
   }
   return found;
 }

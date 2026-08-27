@@ -23,7 +23,7 @@ import { RECORDS } from '../schema/records.mjs';
 import { group, ok, eq, refuses } from './harness.mjs';
 import {
   asObject, assignmentDoc, contractDoc, walk, RENDERED, COMMAND, INPUT,
-  SOURCE_ROOT, OWNER,
+  ARTIFACT, SOURCE_ROOT, OWNER,
 } from './fixtures.mjs';
 
 const fresh = () => new Kernel(join(mkdtempSync(join(tmpdir(), 'k-')), 'log.ndjson'), { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
@@ -77,6 +77,35 @@ export function kernelTests() {
     ]) {
       refuses(`${what} without an Assignment`, 'assignment_not_issued', call);
     }
+  });
+
+  group('AC-5 · evidence for an execution nobody opened', () => {
+    // The attempt is a position in the log, and it was taken on the submitter's
+    // word. The scope check that follows ran only when the attempt existed, so
+    // naming one that does not skipped it — and an obligation the Assignment
+    // never granted was written by pointing at a number nobody had opened.
+    const k = fresh();
+    const w = walk(k, {
+      obligations: ['O'],
+      contract: {
+        obligations: ['O', 'O2'],
+        observations: [
+          { obligation: 'O', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT] },
+          { obligation: 'O2', observation: COMMAND, artifact: ARTIFACT, material_inputs: [INPUT] },
+        ],
+      },
+    });
+    const submit = (over) => k.submitObservation({
+      lineage: w.lineage, run: w.run, obligation: 'O', observation: COMMAND,
+      attempt: w.attempt.attempt, producer: 'P', artifact: 'art1',
+      pkg: w.pkg.value.id, commandResult: 'cr1', submitter: 'P', ...over,
+    });
+    refuses('an attempt at a position nobody opened', 'attempt_not_granted',
+      () => submit({ attempt: 9999 }));
+    refuses('and the obligation it never granted, by the same route',
+      'attempt_not_granted', () => submit({ obligation: 'O2', attempt: 9999 }));
+    refuses('the granted obligation is still the attempt\'s, not the Assignment\'s',
+      'authority_not_granted', () => submit({ obligation: 'O2' }));
   });
 
   group('AC-2 · an observation answers an obligation the Contract named', () => {

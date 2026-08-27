@@ -51,7 +51,17 @@ export function assertNoSymlinkComponents(root, target) {
 // Traversal, not only symlinks: `a/../../b` resolves outside without any link
 // being involved. Both are checked because both redirect the write.
 export function assertInsideLocation(root, target) {
-  const resolvedRoot = realpathSync(root);
+  // A root that is not there is refused, not thrown at. Resolving it is how
+  // containment is decided, so when it does not resolve there is no location to be
+  // inside of — and the caller got a raw ENOENT out of a path check, for an
+  // escaping lineage and an ordinary one alike.
+  let resolvedRoot;
+  try {
+    resolvedRoot = realpathSync(root);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    fail('writer_not_sole', 'the allowed location does not exist', { root });
+  }
   const resolvedParent = (() => {
     let dir = dirname(target);
     for (;;) {

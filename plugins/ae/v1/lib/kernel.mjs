@@ -976,18 +976,27 @@ export class Kernel {
     if (assignment.grants.attempt_producer !== producer) {
       fail('authority_not_granted', 'only the granted producer may submit evidence', { producer });
     }
-    // What this attempt opened for, and only that. Checking the Assignment's own
-    // grant was half the authority: the attempt's narrowing says what this
-    // execution is for, and a surface that re-checks the broader grant hands back
-    // what the narrower one removed. The broader check is not merely redundant
-    // now — an attempt exists only for obligations the Assignment granted, so it
-    // could not have failed. The Gate refuses such a record too — it decides what counts as
-    // evidence — but a surface should not write what it knows is out of scope.
+    // The attempt has to exist before it can narrow anything. It was allowed not
+    // to: the scope check ran only `if (opened)`, so naming an attempt nobody
+    // opened skipped it, and an obligation the Assignment never granted was
+    // written by pointing at a number. An attempt is the record that says what an
+    // execution is for, and evidence for no execution is evidence for nothing.
     const opened = this.records().find(
       (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run
         && r.seq === attempt,
     );
-    if (opened && !opened.obligations.includes(obligation)) {
+    if (!opened) {
+      fail('attempt_not_granted', 'no attempt was opened at that position', { run, attempt });
+    }
+    // And what it opened for, and only that. Checking the Assignment's own grant
+    // instead was half the authority: the attempt's narrowing says what this
+    // execution is for, and a surface that re-checks the broader grant hands back
+    // what the narrower one removed. With the attempt now required to exist, the
+    // broader check could not fail — an attempt opens only for obligations the
+    // Assignment granted. The Gate refuses such a record too — it decides what
+    // counts as evidence — but a surface should not write what it knows is out of
+    // scope.
+    if (!opened.obligations.includes(obligation)) {
       fail('authority_not_granted', 'this attempt did not open for that obligation', {
         producer, obligation,
       });

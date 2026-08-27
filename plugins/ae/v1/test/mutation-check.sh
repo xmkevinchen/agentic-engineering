@@ -211,8 +211,13 @@ probe RED "a Contract naming another revision"; revert kernel.mjs
 plant codes.mjs "  (c) => !BY_CONSTRUCTION[c] && !RESERVED[c]," "  () => true,"
 probe RED "a code nothing can raise, raisable"; revert codes.mjs
 
-plant kernel.mjs "    if (opened && !opened.obligations.includes(obligation)) {" "    if (false) {"
+plant kernel.mjs "    if (!opened.obligations.includes(obligation)) {" "    if (false) {"
 probe RED "a surface writing out of scope"; revert kernel.mjs
+
+# The attempt taken on the submitter's word. The scope check above narrows by what
+# the attempt opened for, so an attempt that does not exist narrows nothing.
+plant kernel.mjs "    if (!opened) {" "    if (false) {"
+probe RED "evidence for an attempt nobody opened"; revert kernel.mjs
 
 # The exit pass: nine guards nothing was holding to account.
 plant identity.mjs "  if (actual.canonical_sha256 !== recorded.canonical_sha256) {" "  if (false) {"

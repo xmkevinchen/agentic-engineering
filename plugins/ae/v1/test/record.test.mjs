@@ -77,6 +77,20 @@ export function recordTests() {
     mkdirSync(join(linked, 'inside'));
     symlinkSync(elsewhere, join(linked, 'outlink'));
     symlinkSync(join(linked, 'inside'), join(linked, 'inlink'));
+    // A configured root that is not on disk. Containment is decided by resolving
+    // it, so there is nothing to be inside of — and this used to leave a raw
+    // ENOENT coming out of a path check rather than a refusal, for an escaping
+    // lineage and an ordinary one alike.
+    const hasNoRoot = tmp('v1n-');
+    const k4 = new Kernel(join(hasNoRoot, 'log.ndjson'), {
+      completionRoot: join(hasNoRoot, 'absent'),
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    refuses('a completion root that does not exist', 'writer_not_sole',
+      () => k4.completionPathFor({ lineage: 'L', run: 'run1' }));
+    refuses('and the same for one that climbs out of it', 'writer_not_sole',
+      () => k4.completionPathFor({ lineage: '../escape', run: 'run1' }));
+
     // A symlink *between* the root and the file, rather than the root itself, and
     // one pointing back inside the root — so the resolved-path check has nothing to
     // object to and this is the only thing standing between the write and a
