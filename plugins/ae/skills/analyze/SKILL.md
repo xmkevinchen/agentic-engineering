@@ -275,6 +275,12 @@ TL collects findings, resolves disagreements, writes to `.ae/features/active/F-N
 
 **Exit gate, part 2 (analyze DoD — F-063)**: do NOT finish `analysis.md` until its `### Verification considerations` table (see below) is present with one row per likely acceptance dimension. This is `/ae:analyze`'s definition-of-done — the front-load that `/ae:plan` consumes. **Honest scope**: it is a presence gate and the *weak, self-graded half* of the harness (it raises the floor by forcing the verification means to be discovered, but cannot catch a specific-looking-but-vacuous row); review Check 7 remains the correctness check.
 
+**Handovers are bidirectional — see [Stage handovers](../../handover.md) (F-086).** This
+stage may also **be refused**: the premise verdict's citations are re-runnable, and a
+downstream stage that re-runs one and finds it does not hold sends the item back here. A
+verdict is provisionally true, never settled — which is why each row cites a `file:line`
+or a command rather than saying "checked".
+
 **Before handing anything to a person (F-086)**: run every check the next stage will run. A handover contract is not what this stage produces, it is **what the next stage will refuse it for** — and a person should be waiting for a signature, never for a repair. Every repair-interruption is a defect in this stage, not a slow reply. (Observed: a Contract was shown for approval after three of its four admission checks were run; the Human Owner approved, the fourth refused, and the bytes that landed were not the bytes that were approved.)
 
 **Per CLAUDE.md `Output Standards`** — pyramid tip ≤ 5 lines (required), supporting detail below (on-demand, omit empty sections). TL must first understand and distill — do not just splice raw agent findings together.

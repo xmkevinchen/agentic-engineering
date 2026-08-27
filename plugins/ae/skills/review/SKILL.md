@@ -228,6 +228,26 @@ For each AC in the plan:
 
 If the plan has NO `verify_by` fields → **distinguish by PATH, not date**: a **feature-dir plan** (`.ae/features/.../F-NNN/plan.md`, post-F-041 by construction) with zero `verify_by` → **block verdict pass** (forgotten harness, not legacy); only a **legacy-path plan** (`output.plans/`) → skip with `Harness satisfaction: skipped (pre-F-041 legacy plan)`. Never infer legacy from a date.
 
+### Check 8: Re-divide or escalate — which one is this? (F-086)
+
+Per [Stage handovers](../../handover.md). Findings are not all the same kind, and
+treating them as one kind is what made F-086's review cost twenty rounds instead of six.
+
+- **The fix changes code** → back to work. Ordinary; the inner loop.
+- **Findings keep arriving and the work is not shrinking** → **re-divide**, do not
+  escalate. The partition is wrong, not the criterion. Ask *what is generating these* and
+  report the answer as one finding, not the instances as many. In F-086 the first
+  fourteen rounds each found and fixed something real while the set never shrank; the
+  fifteenth asked that question and the next five rounds closed five families.
+- **The fix would change what a criterion means** → escalate to analyze. Not a code
+  defect; the standard is wrong.
+- **A deterministic AC has no `FALSIFIED_AC` record** → back to work to produce one, or
+  report the AC `unfalsified` where the plan predates the record.
+
+Report which of these each finding is. A review that returns twelve findings without
+saying whether they are twelve problems or one is the instance-chasing this check exists
+to interrupt.
+
 ### Prior Context (project knowledge graph)
 
 Run this step after Pre-checks pass and before creating the review team. Query = the feature name from $ARGUMENTS or the plan title. (Compact locate-step; canonical long form incl. grep-fallback: analyze/SKILL.md § Prior context.)

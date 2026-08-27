@@ -253,6 +253,19 @@ Before each step's TDD Cycle (or direct Lead execution in single-platform mode),
 
 The ~30KB-and-5-steps threshold is carried forward from Plan 046 Known Limits — documented approximation, not a measured protocol invariant. If this becomes painful, re-file as targeted BL.
 
+## Refusing the plan (F-086)
+
+Per [Stage handovers](../../handover.md). Before executing a step, **refuse and send it
+back to plan** when:
+
+- the step names no falsifier — there is nothing that would turn red, so "done" would be
+  the executor's opinion; or
+- the step is marked `Self-closing: no` and nothing is named as covering it — an
+  undeclared non-closing step is how a stack looks disciplined and is not.
+
+Name which of the two failed. A refusal goes back **one stage**, not to the start: it is
+a loop iteration, and it is meant to be cheap enough to use.
+
 ## TDD Cycle
 
 The agent begins each step's TDD cycle with the Primary Context already loaded (see "Per-step Primary Context Load" above).

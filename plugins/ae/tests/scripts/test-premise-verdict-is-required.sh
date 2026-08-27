@@ -62,6 +62,24 @@ want "work records the red run rather than doing it" "$S/work/SKILL.md" 'FALSIFI
 want "review reads that record"                      "$S/review/SKILL.md" 'FALSIFIED_AC'
 want "and reports an AC never seen red"              "$S/review/SKILL.md" 'unfalsified'
 
+# The handover rule — both halves, and the re-divide/escalate split
+H="$REPO/plugins/ae/handover.md"
+want "the handover rule has a single home"           "$H" 'what the next stage will'
+want "and it carries the pull half, not only push"   "$H" 'may refuse what it is given'
+want "and a refusal names the check that failed"     "$H" 'names the admission check that failed'
+want "and a refusal goes back one stage"             "$H" 'back one stage, never to the start'
+want "and an upstream verdict stays refutable"       "$H" 'provisionally true'
+want "and re-dividing is distinguished from escalating" "$H" 'Re-dividing is not escalating'
+want "and only a principled error leaves the loop"   "$H" 'Only a principled error leaves the loop'
+want "and the trigger is the rate, not the failures" "$H" 'the trigger is the rate'
+
+want "analyze says it can be refused too"            "$S/analyze/SKILL.md" 'Handovers are bidirectional'
+want "plan refuses a criterion with no falsifier"    "$S/plan/SKILL.md" 'no falsifier and no'
+want "plan re-runs the premise citation"             "$S/plan/SKILL.md" 'Re-run the premise citation'
+want "work can refuse a step back to plan"           "$S/work/SKILL.md" 'Refusing the plan'
+want "review sorts a finding into re-divide or escalate" "$S/review/SKILL.md" 'Re-divide or escalate'
+want "and asks whether twelve findings are one problem" "$S/review/SKILL.md" 'twelve problems or one'
+
 echo "AE-SUBJECTS: $checked"
 echo "$((checked - failed))/$checked rules present"
 [ "$failed" -eq 0 ] || exit 1

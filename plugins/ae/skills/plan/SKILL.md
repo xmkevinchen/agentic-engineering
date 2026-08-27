@@ -203,6 +203,22 @@ Self-closing: yes | no
 <Human-verifiable output — with the rubric question the reviewer answers>
 ```
 
+### What this stage refuses, and may be refused for (F-086)
+
+Per [Stage handovers](../../handover.md).
+
+**Refuse and send back to analyze** when a criterion arrives with no falsifier and no
+`judgement` mark. Without one, plan has to invent the standard it is planning against,
+and an invented standard drifts toward whatever gets built. Name the criterion in the
+refusal.
+
+**Re-run the premise citation** before planning against it. A verdict is provisionally
+true: if the cited `file:line` or command does not say what the verdict claims, the
+verdict is refuted and the item goes back, not forward.
+
+**This stage may be refused by work** for a step with no falsifier, or one marked
+`Self-closing: no` with nothing named as covering it.
+
 ### Rules for the stack (F-086)
 
 - **The falsifier must be seen red, and where that happens depends on whether it
