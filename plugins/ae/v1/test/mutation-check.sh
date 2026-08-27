@@ -30,6 +30,10 @@ RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/ae-mutation.XXXXXX")
 trap 'rm -rf "$RUNDIR"' EXIT INT TERM PIPE
 cp -R "$V1" "$RUNDIR/v1"
 WORK="$RUNDIR/v1"
+# What `revert` puts back. Reading the repository each time instead means an edit
+# made while this runs becomes the baseline for every probe after it, and the run
+# reports on a mixture of two versions.
+cp -R "$V1" "$RUNDIR/orig"
 # The copy sits in a temporary directory, so the one test that reads the
 # repository's own Contract is told where the repository is.
 AE_REPO_ROOT=$(cd "$V1/../../.." && pwd)
@@ -45,7 +49,7 @@ assert a in s, f"pattern not found: {a[:50]}"
 io.open(p,'w',encoding='utf-8').write(s.replace(a,b,1))
 PY
 }
-revert() { cp "$V1/lib/$1" "$WORK/lib/$1"; }
+revert() { cp "$RUNDIR/orig/lib/$1" "$WORK/lib/$1"; }
 
 # `run` reports; `probe` judges and tallies. Counting inside a command
 # substitution loses the count — the increment happens in a subshell — so the
