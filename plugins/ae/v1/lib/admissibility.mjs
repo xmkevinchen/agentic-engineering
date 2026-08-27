@@ -170,7 +170,9 @@ export function admissibility({
     // Zero subjects is not a pass. Output whose subject count cannot be
     // established is inadmissible rather than assumed non-vacuous — the runner
     // could not count, so nobody may assume it counted.
-    if (result.subjects == null) return 'vacuous_observation';
+    // One refusal, not two. "Could not count" and "counted zero" are different
+    // facts, but they were given the same code — so nothing could tell them
+    // apart, and `!(null > 0)` catches the first anyway.
     if (!(result.subjects > 0)) return 'vacuous_observation';
 
     // --- material inputs complete -----------------------------------------

@@ -15,6 +15,9 @@ const contract = {
     artifact: 'work/artifact.txt',
     material_inputs: ['in1'],
   }],
+  // Solo, so the unavailable arm has nothing to have been missing. The cases
+  // that need a request state one.
+  independence: { required: 'none', assurance: 'workflow_attested' },
 };
 const assignment = {
   id: 'A1', contract_revision: 'r1', boundary: ['docs/v1'],
@@ -99,32 +102,56 @@ export function evidenceTests() {
     }
     const dangling = build({ artifact: 'gone' });
     eq('a reference that does not resolve', dangling.admit(dangling.record), 'binding_unresolved');
+
     // Each resolves, but they do not belong together — the case an earlier draft
     // missed by checking existence and calling it binding.
-    const cross = build({ assignment: 'A2' });
+    // The package agrees with the record, so its own comparison passes and only
+    // "is this the run's Assignment" catches it. Left disagreeing, the package
+    // comparison fired first and this one was never reached.
+    const cross = build({ assignment: 'A2', pkgOver: { assignment: 'A2' } });
     eq('an assignment from another execution', cross.admit(cross.record), 'binding_cross_execution');
     const otherProducer = build({ attemptOver: { producer: 'Q' } });
     eq('an attempt opened by someone else',
       otherProducer.admit(otherProducer.record), 'binding_cross_execution');
-    // The decisive case the earlier draft missed: a package that resolves, and is
-    // explicitly bound to a different execution.
     const foreignPkg = build({ pkgOver: { assignment: 'OTHER', attempt: 9 } });
     eq('a package from another execution',
       foreignPkg.admit(foreignPkg.record), 'binding_cross_execution');
-    // The artifact is one of those identities. A package attesting to a different
-    // artifact than the observation names is evidence for another product.
     const foreignArtifact = build({ pkgOver: { artifact: 'art2' } });
     eq('a package attesting to another artifact',
       foreignArtifact.admit(foreignArtifact.record), 'binding_cross_execution');
     const foreignResult = build({ resultOver: { attempt: 9 } });
     eq('a command result from another attempt',
       foreignResult.admit(foreignResult.record), 'binding_cross_execution');
+    const untested = build({ resultOver: { artifact: 'art2' } });
+    eq('a command result for another artifact',
+      untested.admit(untested.record), 'binding_cross_execution');
+    const foreignRun = build({ run: 'run2' });
+    eq('a submission belonging to another run',
+      foreignRun.admit(foreignRun.record), 'binding_cross_execution');
 
-    // Each of these compares a different pair, and each was covered only by
-    // cases that happened to fail an earlier comparison first.
-    // The package agrees with the record here, so the package comparison passes
-    // and only the Assignment's own revision catches it. With the package left
-    // correct, that comparison fired first and this one was never reached.
+    // Each reference on its own. `artifact` was the only one anything reached, so
+    // deleting any of the others left the suite green — they resolve through
+    // different lookups and each can fail alone.
+    const noResult = build({ command_result: null });
+    eq('no command result named', noResult.admit(noResult.record), 'binding_missing');
+    const noPackage = build({ package: null });
+    eq('no package named', noPackage.admit(noPackage.record), 'binding_missing');
+    const goneResult = build({ command_result: 'gone' });
+    eq('a command result that does not resolve',
+      goneResult.admit(goneResult.record), 'binding_unresolved');
+    const gonePackage = build({ package: 'gone' });
+    eq('a package that does not resolve',
+      gonePackage.admit(gonePackage.record), 'binding_unresolved');
+    const goneAttempt = build({ attempt: 99 });
+    eq('an attempt that does not resolve',
+      goneAttempt.admit(goneAttempt.record), 'binding_unresolved');
+    const foreignAssignment = build({ assignment: 'A9' });
+    eq('an assignment the record does not belong to',
+      foreignAssignment.admit(foreignAssignment.record), 'binding_cross_execution');
+
+    // Each of these compares a different pair, and each is reachable only when
+    // everything else agrees — the package carries the same five identities, so
+    // its own comparison catches most of these first.
     const otherRevision = build({
       contract_revision: 'r9', pkgOver: { contract_revision: 'r9' },
     });
@@ -136,33 +163,27 @@ export function evidenceTests() {
     const otherResult = build({ pkgOver: { command_result: 'cr9' } });
     eq('a package naming another command result',
       otherResult.admit(otherResult.record), 'binding_cross_execution');
-    // The decisive one: a real green run, paired with an artifact it never
-    // touched. Everything resolved, and that artifact became the deliverable.
-    const untested = build({ resultOver: { artifact: 'art2' } });
-    eq('a command result for another artifact',
-      untested.admit(untested.record), 'binding_cross_execution');
-    // A submission naming another run while pointing at this run's attempt.
-    // Nothing stops a party writing that: `submitObservation` takes the attempt
-    // as an argument and does not require it to belong to the run. Selection
-    // matches it by attempt, so this comparison is what keeps the runs apart.
-    const foreignRun = build({ run: 'run2' });
-    eq('a submission belonging to another run',
-      foreignRun.admit(foreignRun.record), 'binding_cross_execution');
+
+    // And a revision this lineage never approved: the record names one, and the
+    // approval history holds no activation for it.
+    const unapproved = build({
+      contract_revision: 'r9',
+      pkgOver: { contract_revision: 'r9' },
+      assignmentOver: { contract_revision: 'r9' },
+    });
+    eq('a revision nothing approved',
+      unapproved.admit(unapproved.record), 'binding_unresolved');
   });
 
   group('AC-5 · an attempt opened for less carries less', () => {
     // An attempt may open for fewer obligations than it was granted, and that
-    // narrowing is authority: it says what this execution is for. Ordinary
-    // evidence re-checked only the Assignment, so an attempt opened for one
-    // obligation could carry evidence for another — all the way to an Acceptance.
+    // narrowing is authority. Ordinary evidence re-checked only the Assignment,
+    // so the attempt's scope was silently regained.
     const wider = build({
-      obligation: 'O2',
-      observation: 'sh plugins/ae/scripts/ae-run-tests.sh',
+      obligation: 'O2', observation: 'sh plugins/ae/scripts/ae-run-tests.sh',
     });
-    eq('an obligation the Assignment never granted',
+    eq('an obligation the Contract does not name',
       wider.admit(wider.record), 'observation_not_named');
-
-    // Granted by the Assignment, and outside what this attempt opened for.
     const narrowed = build({ attemptOver: { obligations: ['SOMETHING-ELSE'] } });
     eq('an obligation this attempt did not open for',
       narrowed.admit(narrowed.record), 'authority_not_granted');
@@ -173,6 +194,42 @@ export function evidenceTests() {
     });
     eq('an obligation the Assignment did not grant',
       ungranted.admit(ungranted.record), 'authority_not_granted');
+  });
+
+  group('AC-7 · the unavailable arm resolves its own references', () => {
+    // Four refusals in the arm, none of them reached: every case that got there
+    // failed something earlier. Each is exercised on its own now.
+    const asked = {
+      ...contract,
+      independence: {
+        required: 'cross_family_required', requested_family: ['openai'],
+        assurance: 'workflow_attested',
+      },
+    };
+    const opened = { seq: 1, assignment: 'A1', producer: 'P', obligations: ['O'] };
+    const sent = { requested: ['openai'], attempt: 1, obligation: 'O' };
+
+    const arm = ({ on = asked, attempt = opened, dispatch = sent, ...recOver } = {}) => {
+      const admit = admissibility({
+        contract: on, assignment, approvals, inputsNow: () => undefined, run: 'run1',
+        index: {
+          attempt: () => attempt, dispatch: () => dispatch,
+          package: () => null, artifact: () => null, commandResult: () => null,
+        },
+      });
+      return admit({
+        kind: 'capability_unavailable', lineage: 'L', run: 'run1', obligation: 'O',
+        attempt: 1, requested: ['openai'], ...recOver,
+      });
+    };
+
+    eq('a well-formed arm is admissible', arm(), null);
+    eq('a Contract that requested nothing', arm({ on: contract }), 'requested_from_wrong_source');
+    eq('a request that is not a list', arm({ requested: 'openai' }), 'requested_dropped');
+    eq('an attempt that does not resolve', arm({ attempt: null }), 'binding_unresolved');
+    eq('an attempt opened under another Assignment',
+      arm({ attempt: { ...opened, assignment: 'A9' } }), 'binding_cross_execution');
+    eq('no dispatch for it', arm({ dispatch: null }), 'binding_unresolved');
   });
 
   group('AC-2 · the observation postdates activation', () => {
