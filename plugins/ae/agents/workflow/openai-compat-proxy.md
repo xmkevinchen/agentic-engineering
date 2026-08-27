@@ -53,15 +53,17 @@ the pair is counted (`BL-208`). This section owns only the naming.
 ```
 mcp__plugin_ae_openai-compat__chat(
   prompt: "<assembled per the proxy contract>",
+  endpoint: "<the endpoint the TL named for this entry>",
   model: "<model id from the `models` tool>",
   family: "<lineage of that model — qwen | llama | gemma | …>",
+  api_key_env: "<the entry's api_key_env, when it has one — the variable's NAME, never the key>",
   system: "<the Role: line>",
   reasoning_effort: "<omit unless the TL asked for depth>"
 )
 → { session_id, family, endpoint, model, response_id, reasoning, content }
 
 mcp__plugin_ae_openai-compat__reply(session_id: "<id>", prompt: "<follow-up>")
-mcp__plugin_ae_openai-compat__models()   # what this endpoint currently serves
+mcp__plugin_ae_openai-compat__models(endpoint: "<same>", api_key_env: "<same, when the entry has one>")
 ```
 
 ## Asking for findings — pass `expect`, do not describe the format yourself

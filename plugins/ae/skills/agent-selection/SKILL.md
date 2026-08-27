@@ -48,8 +48,11 @@ These are calibration examples, not exhaustive: the rule is **positive evidence*
      `endpoint`, `model` and `family` per call. So the roster is the table's enabled entries,
      not the set of proxy definition files — and adding a family on the generic seat adds no
      file and touches no skill.
-   - When spawning an entry on the generic seat, pass its `endpoint`, `model` and `family`
-     through to the proxy; that seat cannot reach a backend without them.
+   - When spawning an entry on the generic seat, pass its `endpoint`, `model`, `family` and
+     `api_key_env` through to the proxy; that seat cannot reach a backend without them. A
+     keyed backend needs the last one for the same reason it needs the first: without it the
+     bridge falls back to the one process-wide key, which is the shape `api_key_env` exists
+     to replace (`BL-214`, `BL-219`).
    - **Coverage counts distinct `family`, never distinct label.** Two entries of one lineage —
      say a hosted DeepSeek and a local DeepSeek build — are one independent opinion, not two.
      Counting them separately inflates cross-family coverage with correlated failure modes
