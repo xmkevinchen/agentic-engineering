@@ -31,6 +31,12 @@ they export has no V1 consumer, and pruning it would fork the copy.
 
 Run: `sh plugins/ae/tests/scripts/test-v1-kernel.sh`
 
+The mutation check is the other half and is not part of that suite:
+`sh plugins/ae/v1/test/mutation-check.sh` copies the slice into a scratch tree,
+plants one deliberate defect at a time, and **fails when one survives**. A guard
+the suite cannot notice the absence of is not a guard, and twenty rounds of review
+found one on almost every pass until this existed.
+
 ## Why it lives here and not in `runtime/`
 
 The Contract's Q-01 leaves the location open under one constraint: the
