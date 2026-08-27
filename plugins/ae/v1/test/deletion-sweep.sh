@@ -25,6 +25,10 @@ RUNDIR=$(mktemp -d "${TMPDIR:-/tmp}/ae-sweep.XXXXXX")
 trap 'rm -rf "$RUNDIR"' EXIT INT TERM PIPE
 cp -R "$V1" "$RUNDIR/v1"
 WORK="$RUNDIR/v1"
+# The pristine copy every site is neutered from. Reading the repository each time
+# instead means an edit made while the sweep runs shifts the line numbers under
+# it, and the rest of the run reports about lines that have moved.
+cp -R "$V1" "$RUNDIR/orig"
 
 TARGETS=${*:-"lib/admissibility.mjs lib/gate.mjs lib/identity.mjs lib/family.mjs lib/kernel.mjs lib/schema.mjs lib/write-path.mjs"}
 
@@ -32,7 +36,7 @@ survivors=0
 checked=0
 
 for rel in $TARGETS; do
-  src="$V1/$rel"
+  src="$RUNDIR/orig/$rel"
   [ -f "$src" ] || continue
 
   # Line numbers of every refusal site in this file.
