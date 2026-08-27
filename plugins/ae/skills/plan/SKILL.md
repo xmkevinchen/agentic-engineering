@@ -167,14 +167,23 @@ One sentence: what problem does this feature solve.
 
 ## Steps
 
+A **dependency-ordered stack**: each step is a commit that closes on itself, and each
+depends only on steps above it. Splitting a large change this way is what makes a
+failure attributable — a stack of ten self-closing commits says which one broke; one
+commit of ten changes says only that something did.
+
 ### Step 1: <description> (AC1)
 - [ ] Subtask a
 - [ ] Subtask b
 Expected files: path/to/file1.ts, path/to/file2.ts ← REQUIRED: list all files this step will modify
+Falsifier: <the check this step makes go from red to green> ← REQUIRED
+Self-closing: yes | no — <if no, why, and what covers it instead>
 
 ### Step 2: <description> (AC2, AC3)
 - [ ] Subtask a
 Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:work
+Falsifier: <as above>
+Self-closing: yes | no
 
 ## Acceptance Criteria
 
@@ -193,6 +202,26 @@ Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:wo
 - fixture: per-feature
 <Human-verifiable output — with the rubric question the reviewer answers>
 ```
+
+### Rules for the stack (F-086)
+
+- **The falsifier is run before the work starts, and it must be red.** An observation
+  that passes before anything is built establishes nothing — it is a check pointing at
+  something else. Run it, record that it failed, then build. Both Kernel dogfood runs
+  demonstrated their falsifier *after* writing the code by re-running against the
+  previous artifact; that works, and doing it first is strictly better because a green
+  first run tells you immediately that the check is aimed wrong.
+- **A step that cannot close on itself is declared, not hidden.** `Self-closing: no`
+  needs a reason and a statement of what covers it instead. Plan review either accepts
+  that or sends the step back to be split. **What it must not do is pass silently** —
+  an undeclared non-closing step is how a stack looks disciplined and is not.
+- **Per-step closure is necessary and not sufficient.** In F-086, three of the five
+  structural causes were composition defects: every commit self-consistent, the
+  composition wrong. Relations reconstructed by search and lost authority attenuation
+  are invisible to per-step verification by construction — each step checked the
+  authority, and none checked the authority the previous step had narrowed. So the plan
+  also names **one whole-path observation** that no single step owns, and that
+  observation must not be decomposed away into the steps.
 
 ### Rules
 - **Criteria, not methods (F-086).** An AC says what must be shown; it does not say how to build the thing that shows it. The test: **delete the clause — if the criterion is unchanged, it was a method.** *"the assertion is on what the endpoint received, not on what the caller passed"* is a criterion; *"start it over stdio against a local HTTP server"* is a method, and pinning it there rejects a better way of establishing the same thing. This is the same failure as writing the implementation in prose, one stage earlier, where it costs an approval round instead of a review round.

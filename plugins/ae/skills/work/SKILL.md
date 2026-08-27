@@ -269,7 +269,13 @@ If `test.command` is empty → skip TDD, implement directly.
 
 If `test.command` is set:
 1. **Write test** — based on step's AC
-2. **Confirm red** — test fails (passes → test too loose, fix)
+2. **Confirm red** — test fails (passes → test too loose, fix), **and record it (F-086)**:
+   write `FALSIFIED_AC <AC-id>: <command> — red before the change: <one line of the failure>`
+   to `<milestone-dir>/notes.md`. A red run that happens only in the conversation cannot be
+   checked later; `ae:review` Check 7 reads this line and reports an AC that is green and
+   never seen red as **unfalsified**. The record is the cheap form of "would this check
+   notice if the change were absent"; for a load-bearing AC, the stronger form is to plant a
+   defect after green and confirm the check turns red, recorded the same way.
 3. **Cross-family testgen** — Codex suggests edge cases
 4. **Synthesize** — merge Claude + cross-family test ideas
 5. **Implement** — minimum code to pass tests

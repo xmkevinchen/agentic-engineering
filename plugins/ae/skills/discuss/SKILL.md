@@ -589,9 +589,9 @@ entities: []
 
 ## Decision Summary (Converged)
 
-| # | Topic | Decision | Rationale | Reversibility |
-|---|-------|----------|-----------|---------------|
-| 1 | [topic] | [decision] | [evidence-based reason] | high/medium/low |
+| # | Topic | Decision | Falsifier | Rationale | Reversibility |
+|---|-------|----------|-----------|-----------|---------------|
+| 1 | [topic] | [decision] | [what observation would show it is not met — or `judgement`] | [evidence-based reason] | high/medium/low |
 
 ## Spawned Discussions
 | # | Topic | New Discussion | Reason |
@@ -618,6 +618,24 @@ entities: []
 ## Doodlestein Review
 [Challenges raised, how each was resolved, any topics reopened — audit trail, kept below Next Steps]
 ```
+
+**The falsifier column is what `/ae:plan` consumes (F-086).** A decision states a
+**property**; the falsifier states **what would show the property does not hold**. Plan
+turns the pair into an acceptance criterion and an observation; without the second half
+it has to invent one, which is where vacuous ACs come from.
+
+- **Name the observation, not the method.** *"a request to an endpoint that named its own
+  key variable carries a different key than one that named none"* is a falsifier. *"write
+  a unit test"* is not — it names a technique and settles nothing.
+- **A decision whose falsifier cannot be named does not go to plan.** It is not ready:
+  either what it claims is not yet decidable, or it is a judgement rather than a
+  criterion. Route it to a **Spawned Discussion** with the reason `no falsifier — <what
+  is undecided>`, or mark the cell `judgement` when it is genuinely a preference the
+  team has settled and nothing observable turns on it. Marking it `judgement` says plan
+  must not derive an AC from it.
+- **Do not write a falsifier you have not thought through.** A cell that restates the
+  decision in the negative (*"the thing does not work"*) is the vacuous row this column
+  exists to prevent, and it costs a plan round to discover.
 
 **Conclusion prose follows [AE Output Standards](../../output-standards.md)** (same as `analyze`): lead with the single most important decision (no preamble); rationale concise and directly supporting the decision; risks explicit; rejected alternatives + round-by-round detail belong in the lower-layer audit trail, not the pyramid tip.
 

@@ -1,5 +1,6 @@
 #!/bin/sh
-# The five rules the first Kernel runs produced are present where they belong.
+# The rules the first Kernel runs produced are present where they belong — the five
+# adopt-now rules, and the stage boundaries they made concrete.
 #
 # HONEST SCOPE, stated first: this checks that the instructions exist and say the
 # load-bearing thing. It cannot check that a model followed them. That gap is the
@@ -47,6 +48,17 @@ want "discuss checks whether it is already answered" "$S/discuss/SKILL.md" 'Is i
 want "and whether evidence would settle it"          "$S/discuss/SKILL.md" 'Is it answerable by evidence'
 want "and quotes the wording that reserves it"       "$S/discuss/SKILL.md" 'paste the wording that reserves the decision'
 want "and names the subject in plain language"       "$S/discuss/SKILL.md" 'not by identifier'
+
+# BL-217 — the boundaries, and the red-first chain that spans three stages
+want "discuss carries a falsifier per decision"      "$S/discuss/SKILL.md" 'Falsifier'
+want "and routes one it cannot name away from plan"  "$S/discuss/SKILL.md" 'does not go to plan'
+want "plan lays the steps out as a stack"            "$S/plan/SKILL.md" 'dependency-ordered stack'
+want "and each step declares whether it self-closes" "$S/plan/SKILL.md" 'Self-closing:'
+want "and the falsifier is run red before the work"  "$S/plan/SKILL.md" 'it must be red'
+want "and one observation belongs to no single step" "$S/plan/SKILL.md" 'whole-path observation'
+want "work records the red run rather than doing it" "$S/work/SKILL.md" 'FALSIFIED_AC'
+want "review reads that record"                      "$S/review/SKILL.md" 'FALSIFIED_AC'
+want "and reports an AC never seen red"              "$S/review/SKILL.md" 'unfalsified'
 
 echo "AE-SUBJECTS: $checked"
 echo "$((checked - failed))/$checked rules present"
