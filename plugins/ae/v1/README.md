@@ -1,4 +1,11 @@
-# AE v1 — V1 slice
+# The Phase 1 Kernel
+
+**On the two things called v1.** This directory is `plugins/ae/v1/`, and the Contract
+that governs it calls this slice V1 with later slices V2 through V5. The AE plugin also
+has a v1 release, which is a different thing on a different clock. Everything here says
+**Phase 1…5** for the slices, and reserves **v1** for the release. The Contract itself
+still reads V1–V5: its bytes are signed and are not edited in place, so it is quoted as
+written and read with this note beside it.
 
 The minimal Kernel and solo workflow, built against the Contract activated on
 2026-08-26 (`F-086`, revision `candidate-17`).
@@ -26,7 +33,7 @@ schema/records.mjs     the closed shape of every record kind
 
 canonical-json.mjs, errors.mjs, freeze.mjs and fs-noreplace.mjs are copies of the
 frozen foundation corpus, kept byte-identical on purpose — see Q-01. Some of what
-they export has no V1 consumer, and pruning it would fork the copy.
+they export has no Phase 1 consumer, and pruning it would fork the copy.
 ```
 
 Run: `sh plugins/ae/tests/scripts/test-v1-kernel.sh`
@@ -62,7 +69,7 @@ the shape of an installed release, which is why the foundation freeze declined t
 create one.
 
 So: `v1/`, with no release manifest, no launcher, and no code that derives "which
-release is active" from its own location. V1 has no release concept and reports
+release is active" from its own location. Phase 1 has no release concept and reports
 `unavailable` where the settled design would have required a qualified one.
 
 Four modules are **copied** from `tests/foundation/lib/`, not moved:
@@ -131,11 +138,11 @@ thing: **a submission cannot author its own provenance.** The observation is a
 separate append from the runner's record, the Assignment from the attempt that
 uses it, the approval from the evidence judged under it.
 
-**A required cross-family review cannot be obtained, and V1 says so.** There was
+**A required cross-family review cannot be obtained, and Phase 1 says so.** There was
 a `recordReview` that took a digest and a family and stamped them
 `origin: harness`, so the party being judged wrote its own judge into being and
-got an Acceptance carrying a digest of nothing. V1 has no successful cross-family
-path — that is V3 — so a Contract requiring independent review now refuses to
+got an Acceptance carrying a digest of nothing. Phase 1 has no successful cross-family
+path — that is Phase 3 — so a Contract requiring independent review now refuses to
 complete, which is where AC-7 already sends it.
 
 The three facts that decide a run are **produced, not accepted**. The Kernel runs
@@ -169,7 +176,7 @@ slice.
 
 **This is a gap in a normative criterion, not a caveat.** A README cannot waive an
 acceptance criterion. The Human Owner can, and has: the decision is recorded, and
-it is that what a human decision records is enough for V1 — the Kernel asks, the
+it is that what a human decision records is enough for Phase 1 — the Kernel asks, the
 Owner agrees, and the line carries who, when, what was shown, and what was chosen.
 What it knowingly does not cover is that a record saying the Owner acted is not
 distinguishable from a process writing that the Owner acted. That distinction
@@ -184,25 +191,25 @@ declare it read nothing and thereby make staleness unreachable.
 The residue, stated once: **nothing establishes that the command actually read
 the artifact and the inputs the Contract names.** Proving that needs execution
 instrumentation — a tracing or hermetic adapter, platform-specific in practice —
-which V1 does not have. What is established is that the producer chose none of
+which Phase 1 does not have. What is established is that the producer chose none of
 them, that the artifact is digested by the run rather than before it, and that a
 material input is its Contract-stated path with no label to reuse.
 
-This is a shortfall against AC-2, not a footnote — and it is waived for V1 by the
+This is a shortfall against AC-2, not a footnote — and it is waived for Phase 1 by the
 Human Owner, with the criterion to be rewritten against real experience rather
 than in advance. What should drive that rewrite is a run where a command passes
 the Gate without touching the artifact it was pointed at. If that never happens,
 the criterion should narrow to what is observable: that the producer had no say in
 the command, the artifact, or the inputs.
 
-## Where V1 stands
+## Where Phase 1 stands
 
 | | |
 |---|---|
 | **AC-9** — the real dogfood run | Done, twice. BL-214 (the bridge's single credential) and BL-200 (a validator that misdescribed its own scope). Both reached an Acceptance with all four facts and both judgements recorded. |
 | **AC-1 end to end** | Done — those runs are it. |
 | **AC-12's freeze** | Done. `schema/frozen.mjs` records the canonical identity of every persisted format and the byte identity of the files that decide what a schema means — the validator, the definitions, and the canonical encoder. Frozen after the run, not before. |
-| **AC-2 and AC-5** | Not met in full. Both are decided by the Human Owner rather than left open — AC-2 waived for V1 with the criterion to be rewritten against experience, AC-5 accepted as stated. See above. |
+| **AC-2 and AC-5** | Not met in full. Both are decided by the Human Owner rather than left open — AC-2 waived for Phase 1 with the criterion to be rewritten against experience, AC-5 accepted as stated. See above. |
 
 The suite covers every criterion that can be exercised without a human decision.
 The ones that cannot are the ones the Contract reserves for the Human Owner, and
@@ -211,7 +218,7 @@ they are reserved on purpose.
 One thing the two runs established that no criterion asked for: **of seventeen
 backlog items, two could go through this Kernel at all.** The rest change prose
 rules meant for a model to follow, or are design judgements, and no command can
-establish that a model followed a rule. That is not a defect in V1 — a Contract
+establish that a model followed a rule. That is not a defect in Phase 1 — a Contract
 naming a command whose result is the answer is the whole design — but it bounds
-what V1 can accept, and the bound was not visible until something real was run
+what Phase 1 can accept, and the bound was not visible until something real was run
 through it.

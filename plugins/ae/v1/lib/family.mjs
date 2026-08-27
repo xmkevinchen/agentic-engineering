@@ -39,7 +39,7 @@ export function dispatchRecord({ contract, lineage, run, attempt, obligation }) 
     // level in, which is what `deepFreeze` exists for.
     requested: deepFreeze([...requested]),
     // `observed` and `effective` are absent, and stay absent until a backend
-    // answers. V1 has no successful path (that is V3), so in V1 they never
+    // answers. Phase 1 has no successful path (that is Phase 3), so here they never
     // appear — and their absence is exactly what AC-8 checks.
   };
 }

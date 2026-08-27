@@ -19,8 +19,8 @@
 // ordering (AC-2) compares sequence numbers the recorder assigned.
 
 
-// Kinds this slice writes and reads. Each must have a real V1 producer and a real
-// V1 consumer: a kind frozen for a future slice fails AC-12 as surely as a missing
+// Kinds this slice writes and reads. Each must have a real Phase 1 producer and a
+// real Phase 1 consumer: a kind frozen for a future slice fails AC-12 as surely as a missing
 // one.
 //
 // The entries were `{ producer, consumer }` labels, and nothing read them — the

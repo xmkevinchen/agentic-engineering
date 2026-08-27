@@ -1541,18 +1541,18 @@ export class Kernel {
       });
     }
 
-    // A Contract that requires independent review cannot complete in V1.
+    // A Contract that requires independent review cannot complete in Phase 1.
     //
     // There was a `recordReview` that took a digest and a family and stamped them
     // `origin: harness`, and completion checked only that such a record existed —
     // so the party being judged wrote its own judge into being, and got an
     // Acceptance carrying a digest of nothing. It is deleted rather than guarded:
-    // V1 has no successful cross-family path at all (that is V3), so the only
+    // Phase 1 has no successful cross-family path at all (that is Phase 3), so the only
     // honest outcome here is the unavailable arm, which is where AC-7 already
     // sends it. An Acceptance is not reachable either way; the difference is
     // whether the machinery pretends otherwise.
     if (contract.independence.required === 'cross_family_required') {
-      fail('review_required_absent', 'V1 cannot obtain an independent review, so it cannot complete', {
+      fail('review_required_absent', 'Phase 1 cannot obtain an independent review, so it cannot complete', {
         requested: contract.independence.requested_family,
       });
     }
@@ -1578,7 +1578,7 @@ export class Kernel {
       deliverable,
       decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq },
       // Always the stated absence: a Contract requiring a review was refused
-      // above, so this is the only shape completion can reach in V1.
+      // above, so this is the only shape completion can reach in Phase 1.
       review: { required: false, statement: 'no independent review required by this Contract' },
     };
 

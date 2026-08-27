@@ -1,4 +1,4 @@
-// V1 Kernel error codes.
+// Phase 1 Kernel error codes.
 //
 // Kept separate from the foundation taxonomy the mechanisms carry: those name
 // lexical, tree and policy failures, these name the Kernel's own admissibility
@@ -67,8 +67,8 @@ export const KERNEL_CODES = deepFreeze({
     'format_frozen_early',        // frozen before the real run exercised it
     'format_changed_in_place',    // a frozen format edited rather than superseded
     'enforcement_unpinned',       // frozen without pinning what enforces it
-    'kind_without_producer',      // a persisted kind no V1 producer writes
-    'kind_without_consumer',      // a persisted kind no V1 consumer reads
+    'kind_without_producer',      // a persisted kind no Phase 1 producer writes
+    'kind_without_consumer',      // a persisted kind no Phase 1 consumer reads
     'record_not_appended',        // a fact the Gate used was never recorded
     'replay_incomplete',          // a relied-on state replay cannot reconstruct
   ],

@@ -2,7 +2,7 @@
 //
 // Outbound: every material statement cites a specific source, and a statement
 // derivable from none is listed as an agent proposal. Inbound: every obligation
-// the verifiable sources place on V1 is carried or visibly disposed, and a
+// the verifiable sources place on Phase 1 is carried or visibly disposed, and a
 // disposition names a landing that actually carries it.
 //
 // The landing check is the one that matters. Three consecutive drafts of this
