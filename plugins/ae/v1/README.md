@@ -168,9 +168,12 @@ is the same boundary N7 draws for the repository mutation path, and it is not th
 slice.
 
 **This is a gap in a normative criterion, not a caveat.** A README cannot waive an
-acceptance criterion, and this one does not try to: V1 does not satisfy AC-5 in
-full, and whether that is answered by extending the slice or by amending the
-Contract is the Human Owner's call, not the implementer's.
+acceptance criterion. The Human Owner can, and has: the decision is recorded, and
+it is that what a human decision records is enough for V1 — the Kernel asks, the
+Owner agrees, and the line carries who, when, what was shown, and what was chosen.
+What it knowingly does not cover is that a record saying the Owner acted is not
+distinguishable from a process writing that the Owner acted. That distinction
+begins to matter when something other than the Owner can call the Kernel.
 
 What did close: the Harness runs the command and digests the files, so the
 outcome, the deliverable and staleness are no longer things a caller states. The
@@ -185,9 +188,12 @@ which V1 does not have. What is established is that the producer chose none of
 them, that the artifact is digested by the run rather than before it, and that a
 material input is its Contract-stated path with no label to reuse.
 
-This is a shortfall against AC-2, not a footnote. Like AC-5's, answering it means
-either extending the slice or amending the criterion, and that is the Human
-Owner's call.
+This is a shortfall against AC-2, not a footnote — and it is waived for V1 by the
+Human Owner, with the criterion to be rewritten against real experience rather
+than in advance. What should drive that rewrite is a run where a command passes
+the Gate without touching the artifact it was pointed at. If that never happens,
+the criterion should narrow to what is observable: that the producer had no say in
+the command, the artifact, or the inputs.
 
 ## What is not built yet
 
@@ -196,7 +202,7 @@ Owner's call.
 | **AC-9** — the real dogfood run | Needs the Human Owner to choose the change and judge it. The machinery to record both judgements exists (`decideWorth`, `decideRetreat`); the judgements do not. Q-02. |
 | **AC-1 end to end** | The pieces exist and are tested; the run that exercises them together is AC-9's. |
 | **AC-12's freeze** | Deliberate. Formats freeze *after* the real run exercises them, with the identity of what enforces them pinned. Freezing now would repeat the mistake the plan exists to avoid. |
-| **AC-2 and AC-5** | Not met in full, and not waivable here — see above. Extending the slice or amending the criteria is the Human Owner's call. |
+| **AC-2 and AC-5** | Not met in full. Both are decided by the Human Owner rather than left open — AC-2 waived for V1 with the criterion to be rewritten against experience, AC-5 accepted as stated. See above. |
 
 The suite covers every criterion that can be exercised without a human decision.
 The ones that cannot are the ones the Contract reserves for the Human Owner, and
