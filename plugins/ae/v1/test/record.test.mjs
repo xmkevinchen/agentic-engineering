@@ -1,16 +1,20 @@
 // AC-11, AC-12, AC-13 — the write, the formats, the record.
 
 import {
-  mkdtempSync, mkdirSync, symlinkSync, readdirSync, readFileSync, writeFileSync,
+  mkdtempSync, mkdirSync, symlinkSync, readdirSync, readFileSync, writeFileSync, existsSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
+// `AE_REPO_ROOT` for the mutation check and the sweep, which run this suite from a
+// copy of the slice and so cannot reach the repository by walking up from here.
+const REPO = process.env.AE_REPO_ROOT || join(libDir, '..', '..', '..', '..');
 import { auditWritePath, auditReductionIgnoresTime } from '../lib/source-audit.mjs';
 import { KINDS, auditKinds } from '../lib/ledger.mjs';
-import { encodeNdjson } from '../lib/canonical-json.mjs';
+import { encodeNdjson, canonicalDigest, digestBytes } from '../lib/canonical-json.mjs';
+import { FROZEN, freezeProblems } from '../schema/frozen.mjs';
 import { auditRecordKinds } from '../lib/source-audit.mjs';
 import { lintSchema, validate } from '../lib/schema.mjs';
 import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
@@ -269,6 +273,69 @@ export function recordTests() {
       checkContractRelations({
         ...c, independence: { required: 'cross_family_required', assurance: 'workflow_attested' },
       }).length > 0);
+  });
+
+  group('AC-12 · the freeze, and what it pins', () => {
+    // Frozen after AC-9's real run exercised the formats, not before. The entry
+    // names that run, and the run's own log is read here rather than trusted — a
+    // freeze citing a run that did not happen pins nothing.
+    const entry = FROZEN[FROZEN.length - 1];
+    const runLog = join(REPO, '.ae', 'features', 'active', 'F-086-v1-minimal-kernel',
+      'ac9-run-2', 'log.ndjson');
+    const exercised = existsSync(runLog)
+      ? readFileSync(runLog, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
+      : [];
+    ok('the freeze names the run that exercised the formats',
+      entry.exercised_by.lineage === 'BL-214' && entry.exercised_by.run === 'run1');
+    // The identity, not merely the presence of a completion: a freeze resting on
+    // "some run finished" rests on nothing in particular.
+    const committed = exercised.find((r) => r.kind === 'completion_committed'
+      && r.lineage === entry.exercised_by.lineage && r.run === entry.exercised_by.run);
+    ok('and that run reached an Acceptance', Boolean(committed));
+    eq('and it is the Acceptance the freeze names',
+      committed && committed.identity.byte_sha256, entry.exercised_by.acceptance);
+    ok('and recorded its facts, which is what closes AC-9',
+      exercised.some((r) => r.kind === 'run_record_clean' || r.kind === 'run_record_caught'));
+
+    // The enforcement half. A schema value can stay identical while the validator
+    // starts accepting more, and then the frozen thing describes a check nobody
+    // performs.
+    ok('the freeze pins what enforces the formats, not only the formats',
+      Object.keys(entry.enforcement).length > 0
+        && Object.keys(entry.enforcement).some((f) => f.endsWith('schema.mjs')));
+
+    const args = {
+      readFileSync, canonicalDigest, digestBytes,
+      objects: OBJECTS, records: RECORDS, dir: join(libDir, '..'),
+    };
+    eq('nothing has moved since the freeze',
+      freezeProblems(args).map((p) => `${p.label}:${p.why}`).join(','), '');
+  });
+
+  group('AC-12 · a frozen format cannot be changed in place', () => {
+    // The falsifier, in all four directions a freeze can be defeated: the schema
+    // value edited, a record shape edited, a persisted format added without being
+    // frozen, and the enforcing file changed while every schema stays identical.
+    const args = {
+      readFileSync, canonicalDigest, digestBytes,
+      objects: OBJECTS, records: RECORDS, dir: join(libDir, '..'),
+    };
+    const why = (over) => freezeProblems({ ...args, ...over }).map((p) => p.why).join(',');
+
+    eq('an object schema edited in place',
+      why({ objects: { ...OBJECTS, Contract: { ...OBJECTS.Contract, additional: true } } }),
+      'changed in place since it was frozen');
+    eq('a record shape edited in place',
+      why({ records: { ...RECORDS, formation_opened: { ...RECORDS.formation_opened, additional: true } } }),
+      'changed in place since it was frozen');
+    eq('a persisted format added and not frozen',
+      why({ objects: { ...OBJECTS, LATECOMER: { type: 'object' } } }),
+      'not named by the freeze');
+    // The one a value-only freeze misses: every schema identical, the validator
+    // replaced.
+    eq('the enforcing file changed while every schema stayed identical',
+      why({ readFileSync: (p) => (String(p).endsWith('lib/schema.mjs') ? Buffer.from('drifted') : readFileSync(p)) }),
+      'changed in place since it was frozen');
   });
 
   group('AC-12 · a line in the log is checked against the closed set', () => {

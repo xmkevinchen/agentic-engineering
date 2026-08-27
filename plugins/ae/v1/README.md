@@ -195,15 +195,23 @@ the Gate without touching the artifact it was pointed at. If that never happens,
 the criterion should narrow to what is observable: that the producer had no say in
 the command, the artifact, or the inputs.
 
-## What is not built yet
+## Where V1 stands
 
 | | |
 |---|---|
-| **AC-9** — the real dogfood run | Needs the Human Owner to choose the change and judge it. The machinery to record both judgements exists (`decideWorth`, `decideRetreat`); the judgements do not. Q-02. |
-| **AC-1 end to end** | The pieces exist and are tested; the run that exercises them together is AC-9's. |
-| **AC-12's freeze** | Deliberate. Formats freeze *after* the real run exercises them, with the identity of what enforces them pinned. Freezing now would repeat the mistake the plan exists to avoid. |
+| **AC-9** — the real dogfood run | Done, twice. BL-214 (the bridge's single credential) and BL-200 (a validator that misdescribed its own scope). Both reached an Acceptance with all four facts and both judgements recorded. |
+| **AC-1 end to end** | Done — those runs are it. |
+| **AC-12's freeze** | Done. `schema/frozen.mjs` records the canonical identity of every persisted format and the byte identity of the files that decide what a schema means — the validator, the definitions, and the canonical encoder. Frozen after the run, not before. |
 | **AC-2 and AC-5** | Not met in full. Both are decided by the Human Owner rather than left open — AC-2 waived for V1 with the criterion to be rewritten against experience, AC-5 accepted as stated. See above. |
 
 The suite covers every criterion that can be exercised without a human decision.
 The ones that cannot are the ones the Contract reserves for the Human Owner, and
 they are reserved on purpose.
+
+One thing the two runs established that no criterion asked for: **of seventeen
+backlog items, two could go through this Kernel at all.** The rest change prose
+rules meant for a model to follow, or are design judgements, and no command can
+establish that a model followed a rule. That is not a defect in V1 — a Contract
+naming a command whose result is the answer is the whole design — but it bounds
+what V1 can accept, and the bound was not visible until something real was run
+through it.
