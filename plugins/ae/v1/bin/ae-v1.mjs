@@ -11,9 +11,10 @@
 //   1  the Kernel refused, with a named code
 //   2  the invocation was wrong (unknown subcommand, missing argument, bad config)
 
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 
 import { Kernel } from '../lib/kernel.mjs';
+import { identify } from '../lib/identity.mjs';
 import { resolveConfig } from '../lib/config.mjs';
 
 const EXIT_OK = 0;
@@ -51,10 +52,97 @@ function require_(args, ...names) {
 
 // Every subcommand is `(kernel, args) => result`. The result is printed as one
 // JSON envelope; nothing here interprets it.
+// A document arrives as a path, and the bytes and identity are derived here. A
+// caller that supplied its own identity would be naming the identity of the very
+// thing it is submitting.
+function document(args, name = 'doc') {
+  const [path] = require_(args, name);
+  let bytes;
+  try {
+    bytes = readFileSync(path, 'utf8');
+  } catch (error) {
+    const wrapped = new Error(`--${name} is not readable: ${error.message}`);
+    wrapped.exit = EXIT_MISUSE;
+    throw wrapped;
+  }
+  return { bytes, identity: identify(bytes) };
+}
+
 const COMMANDS = {
   status(kernel, args) {
     const [lineage, run] = require_(args, 'lineage', 'run');
     return kernel.status({ lineage, run });
+  },
+
+  'issue-assignment': (kernel, args) => {
+    const [lineage, run, actor] = require_(args, 'lineage', 'run', 'actor');
+    const { bytes, identity } = document(args);
+    return kernel.issueAssignment({ lineage, run, bytes, identity, actor });
+  },
+
+  'open-attempt': (kernel, args) => {
+    const [lineage, run, producer, obligations, submitter] =
+      require_(args, 'lineage', 'run', 'producer', 'obligations', 'submitter');
+    return kernel.openAttempt({
+      lineage, run, producer, submitter, obligations: obligations.split(','),
+    });
+  },
+
+  // Named `run-observation` and not `run-command`: the command is resolved from
+  // the approved Contract, never supplied here.
+  'run-observation': (kernel, args) => {
+    const [lineage, run, attempt, obligation, id, artifact] =
+      require_(args, 'lineage', 'run', 'attempt', 'obligation', 'id', 'artifact');
+    return kernel.runObservation({
+      id, lineage, run, attempt: Number(attempt), obligation, artifact,
+    });
+  },
+
+  'observe-input': (kernel, args) => {
+    const [lineage, path] = require_(args, 'lineage', 'path');
+    return kernel.observeInput({ lineage, path });
+  },
+
+  'record-package': (kernel, args) => {
+    const [lineage, run, submitter] = require_(args, 'lineage', 'run', 'submitter');
+    const { bytes, identity } = document(args);
+    return kernel.recordPackage({ lineage, run, bytes, identity, submitter });
+  },
+
+  'submit-observation': (kernel, args) => {
+    const [lineage, run, obligation, attempt, producer, artifact, pkg, commandResult,
+      submitter, observation] =
+      require_(args, 'lineage', 'run', 'obligation', 'attempt', 'producer', 'artifact',
+        'pkg', 'command-result', 'submitter', 'observation');
+    // `--observation` names the command this answers. Nothing here runs it — the
+    // Contract's command was resolved and run by `run-observation`. It is a claim
+    // the Kernel checks against the Contract (`observation_not_named`), so
+    // auto-filling it from the Contract would make that refusal unreachable.
+    return kernel.submitObservation({
+      lineage, run, obligation, attempt: Number(attempt), producer, artifact,
+      pkg, commandResult, submitter, observation,
+    });
+  },
+
+  // The family is named; the registry resolves it. No command reaches this map.
+  'obtain-review': (kernel, args) => {
+    const [id, lineage, run, family, reviewer] =
+      require_(args, 'id', 'lineage', 'run', 'family', 'reviewer');
+    const findings = args.findings ? String(args.findings).split(',') : [];
+    return kernel.obtainReview({ id, lineage, run, family, reviewer, findings });
+  },
+
+  'dispose-finding': (kernel, args) => {
+    const [lineage, run, review, finding, disposition, actor] =
+      require_(args, 'lineage', 'run', 'review', 'finding', 'disposition', 'actor');
+    return kernel.disposeFinding({ lineage, run, review, finding, disposition, actor });
+  },
+
+  complete: (kernel, args) => {
+    const [lineage, run, actor] = require_(args, 'lineage', 'run', 'actor');
+    return kernel.complete({
+      lineage, run, actor, acceptedReview: args['accepted-review'] || undefined,
+    });
   },
 };
 
