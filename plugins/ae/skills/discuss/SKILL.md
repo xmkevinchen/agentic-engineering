@@ -568,7 +568,12 @@ Can the team obtain the missing info?
 | **Spawn as backlog** | Execution problem, not design | Write to `output.backlog/unscheduled/` — allocate the `BL-NNN` via `bash plugins/ae/scripts/next-bl-id.sh` (canonical allocator; do not hand-pick a number). New BLs land unscheduled; sprint assignment via `/ae:roadmap plan` |
 | **Explain + assume** | Delay cost > assumption risk | Record assumption + revisit trigger |
 
-**TL resolves autonomously first.** Only escalate to user when TL genuinely can't resolve.
+**TL resolves autonomously first.** "Genuinely can't resolve" has a definition, and it is
+narrow — see [Stage handovers](../../handover.md) § Who decides, inside the loop. A topic
+is the TL's whenever the frozen criteria are unchanged, **including a design that failed at
+acceptance and has to be decided differently**: the criteria held, the design did not, and
+nobody agreed to the design. Escalate only to change a criterion, or where the criteria do
+not cover the question at all and either answer would be a guess about intent.
 
 Update summary.md and index.md for each resolution.
 

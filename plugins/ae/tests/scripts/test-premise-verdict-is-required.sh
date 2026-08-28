@@ -109,6 +109,12 @@ want "and a re-cut may not move the goal"            "$S/work/SKILL.md" 'may not
 want "the discriminator is direction, not size"      "$H" 'direction relative to the frozen criteria'
 want "and work toward a standard needs no permission" "$H" 'does not need permission to move'
 
+want "the loop is autonomous inside the criteria"    "$H" 'the criteria are unchanged'
+want "and a failed design is not an escalation"      "$H" 'not an escalation'
+want "and a loop pausing on every deviation is none" "$H" 'is not a loop'
+want "discuss keeps a re-decided design in the loop" "$S/discuss/SKILL.md" 'failed at'
+want "work makes the human pause a last resort"      "$S/work/SKILL.md" 'last resort'
+
 echo "AE-SUBJECTS: $checked"
 echo "$((checked - failed))/$checked rules present"
 [ "$failed" -eq 0 ] || exit 1

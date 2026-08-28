@@ -114,6 +114,38 @@ An amended criterion is a new agreement about what "done" means. Work completed 
 prior one was not wrong — it met the standard that was in force — and a record that
 overwrites the old standard makes that impossible to see afterwards.
 
+### Who decides, inside the loop
+
+**One gate, and it is the same one.** The frozen criteria are the agreement between the
+human and the loop. Inside them, the loop is autonomous:
+
+| situation | who |
+|---|---|
+| the criteria are unchanged | **the loop** — including re-opening a discussion, re-cutting the stack, choosing a different design, discarding work and redoing it |
+| a criterion must change | **the human**, once, at the signature point |
+
+**A design that fails at acceptance is not an escalation.** It is the loop working: the
+criteria held, the design did not, so the loop goes back to discuss, decides differently,
+and comes forward again. Nobody agreed to the design. Asking permission to change it stops
+the loop to confirm something no one had a stake in.
+
+This is not a preference about ceremony. **A loop that pauses for a human on every
+deviation is not a loop** — it runs at the speed of someone's inbox, and the person becomes
+the obstacle rather than the authority. The authority is exercised once, on the criteria,
+and then the loop is trusted to reach them.
+
+**What remains genuinely the human's**, and stays that way:
+
+- changing a criterion — the property or the falsifier;
+- a decision the criteria do not cover at all, where proceeding either way would be a
+  guess about intent rather than about implementation;
+- anything outside the loop's authority to begin with — spending money, sending
+  something outward, touching what it was not granted.
+
+Everything else that feels like it needs asking is either already answered — look it up —
+or answerable by evidence — go and check. Both are cheaper than asking, and both are
+the loop doing its job.
+
 ### The plan is expected to change
 
 A loop that cannot change its plan is not a loop. Re-cutting the stack mid-work — merging

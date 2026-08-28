@@ -322,7 +322,10 @@ Track consecutive failures per test file. Same test file fails N times (default:
 Options:
 1. Retry with a different approach
 2. Skip this subtask and defer
-3. Pause for human help
+3. Pause for human help — **last resort**. Options 1 and 2 are the loop's own; this one
+   stops it. Take it only when the criteria themselves look wrong, per
+   [Stage handovers](../../handover.md) § Who decides, inside the loop. "This is hard" is
+   option 1; "this criterion cannot be met however the work is divided" is an escalation.
 ```
 
 ## Pre-commit Checks
