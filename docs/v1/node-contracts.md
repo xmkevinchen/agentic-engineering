@@ -59,13 +59,15 @@ Nothing below requires a skill to have run — see N10, and AC4 in `F-088`.
      │              8 Gate ── unavailable ──► stop / human
      │                    │
      │                    ▼ passed
-     │              9 Sign-off ◄── human (withhold → stop)
+     │            ┌───────────────────────────────┐
+     │            │  9 Completion                 │
+     │            │    └─ Sign-off ◄── human      │  one human action,
+     │            │       (withhold → stop)       │  not two: the owner
+     │            │  ──► Acceptance               │  calls complete, and
+     │            └───────────────────────────────┘  complete signs off
      │                    │
      │                    ▼
-     │             10 Completion ──► Acceptance
-     │                    │
-     │                    ▼
-     └───────────── 11 Run Record
+     └────────────── 10 Run Record
        (Contract wrong: new revision,
         every prior pass re-proven)
 ```
@@ -193,29 +195,29 @@ required capability that could not be used reaches `unavailable` — never
 `passed`. Given the same accepted facts the Gate produces the same status;
 replay diverges zero times.
 
-### 9 — Sign-off (human boundary)
+### 9 — Completion, with sign-off inside it
 
 | | |
 |---|---|
-| Produces | `human_signoff`, `human_decision_choice` / `_judgement` / `_unavailable` |
-| Operation | `signOff`, `decideWorth`, `decideRetreat` |
-| Refused for | A sign-off naming a review other than the one that answered; a sign-off on a run the Gate did not pass |
-| May not be produced by | **Any model**, and never inferred from silence |
+| Produces | `human_signoff`, `completion_committed`, the `Acceptance` object; and `human_decision_choice` / `_judgement` / `_unavailable` for the judgements the Contract reserves |
+| Operation | `complete`, which calls `signOff` itself (`kernel.mjs:1758`); plus `decideWorth`, `decideRetreat` |
+| Refused for | A sign-off predating the Gate result (`signoff_before_gate`); a sign-off naming a review other than the one that answered; verdicts that do not read `passed` |
+| May not be produced by | **Any model**, and never inferred from silence. The Acceptance may be written by **nothing but the single completion writer** — a hand-written completion marker or an edited status field is not accepted; the Gate recomputes from facts |
 
-### 10 — Completion
+**Sign-off is not a node you traverse before completion — it is the human boundary
+*inside* it.** An earlier drawing of this graph had them as two sequential nodes, which
+implied calling `signOff` and then `complete`; since `complete` calls `signOff` itself, that
+sequence would record the human twice. There is one human action here: the owner calls
+`complete`, and completion signs off as part of committing.
 
-| | |
-|---|---|
-| Produces | `completion_committed`, the `Acceptance` object |
-| Operation | `complete`, `completionPathFor` |
-| Refused for | — this is the end of the forward path |
-| May not be produced by | **Anything but the single completion writer.** A hand-written completion marker or an edited status field is not accepted; the Gate recomputes from facts |
+`signOff` stays public so its own refusal — a sign-off that predates the Gate — can be
+attempted directly and shown to fail. That is a testing surface, not a step in the walk.
 
 The Acceptance names the review it rested on, and states truthfully whether one
 was required. It is a statement that the Contract was satisfied *at acceptance
 time* — not a perpetual health claim about the repository today.
 
-### 11 — Run Record
+### 10 — Run Record
 
 | | |
 |---|---|
