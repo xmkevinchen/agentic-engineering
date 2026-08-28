@@ -12,6 +12,7 @@ import { completionTests } from './completion.test.mjs';
 import { structureTests } from './structure.test.mjs';
 import { coverageTests } from './coverage.test.mjs';
 import { kernelTests } from './kernel.test.mjs';
+import { reviewTests } from './review.test.mjs';
 import { report } from './harness.mjs';
 
 gateTests();
@@ -25,6 +26,7 @@ completionTests();
 structureTests();
 coverageTests();
 kernelTests();
+reviewTests();
 
 concurrentTests();
 

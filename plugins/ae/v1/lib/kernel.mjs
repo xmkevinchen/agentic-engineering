@@ -280,6 +280,12 @@ class Ledger {
       requested: null,
       unavailableDecision: null,
       runFacts: null,
+      // Which review answered, and what was done about what it raised. Replay has
+      // to reach the same verdict, and after Phase 2 the verdict depends on these:
+      // a run holding two reviews holds none, so "a review happened" is not enough
+      // to rebuild what completion decided.
+      reviews: [],
+      dispositions: [],
     };
     for (const r of mine) {
       switch (r.kind) {
@@ -295,6 +301,15 @@ class Ledger {
           break;
         case 'gate_result':
           state.gateVerdicts[r.obligation] = r.status;
+          break;
+        case 'review':
+          state.reviews.push({
+            id: r.id, family: r.family, reviewer: r.reviewer,
+            deliverable: r.deliverable, findings: r.findings.map((f) => f.id),
+          });
+          break;
+        case 'finding_disposed':
+          state.dispositions.push({ review: r.review, finding: r.finding });
           break;
         case 'human_decision_activation':
           state.humanDecisions[r.operation] = r.revision;
@@ -385,13 +400,26 @@ export class Kernel {
   // Contract grants. The root has to sit outside what it authorises.
   #owner;
 
+  // Which command reaches which family. Configured here, outside any Contract,
+  // for the same reason the owner is: a producer that could name the command
+  // could name a command that agrees with it.
+  //
+  // What this establishes is narrow and worth stating where it is defined. The
+  // Kernel can show that a command ran, which one, and what came back. It cannot
+  // show that a real model answered — an entry pointing a family at `echo` yields
+  // a passing review with that family stamped. That is §4's `workflow_attested`
+  // boundary, unchanged. What it removes is the producer's ability to forge a
+  // review *alone*: doing so now needs control of this registry, which is set
+  // once and is auditable on its own.
+  #families;
 
-  constructor(logPath, { completionRoot, sourceRoot, render, owner } = {}) {
+  constructor(logPath, { completionRoot, sourceRoot, render, owner, families } = {}) {
     this.#ledger = new Ledger(logPath);
     this.#completionRoot = completionRoot || null;
     this.#sourceRoot = sourceRoot || null;
     this.#render = typeof render === 'function' ? render : null;
     this.#owner = owner || null;
+    this.#families = families && typeof families === 'object' ? { ...families } : null;
   }
 
   // --- reads -------------------------------------------------------------
@@ -1061,6 +1089,157 @@ export class Kernel {
   // could mint a host record saying an unrelated party had signed for a revision
   // that did not exist. What it signs for is resolved; only *whether* to sign is
   // the caller's.
+  // A review is obtained, not handed in. The caller names a **family**; the Kernel
+  // resolves the command from its own registry, runs it, and stamps the family it
+  // resolved — so "reviewed by openai" is a fact about which command ran, not a
+  // claim the reviewed party made. A `command` parameter would give that back,
+  // which is why `runObservation` takes the command from the Contract and this
+  // takes it from the registry.
+  //
+  // The reviewer's words are recorded whole. Without them a review is a boolean,
+  // and the one thing a person can still check — whether a real judgement came
+  // back or a canned string — would be unavailable to them.
+  obtainReview({ id, lineage, run, family, reviewer, findings }) {
+    const { contract } = this.contractForRun(lineage, run) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (!this.#families) {
+      fail('review_required_absent', 'this Kernel was given no families, so it can obtain no review', { family });
+    }
+    const command = Object.prototype.hasOwnProperty.call(this.#families, family)
+      ? this.#families[family] : null;
+    if (!command) {
+      fail('review_family_unknown', 'no command reaches that family', {
+        family, known: Object.keys(this.#families),
+      });
+    }
+    // What was reviewed, resolved from the run rather than taken as an argument —
+    // a review naming its own subject reviews whatever it says it did.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
+
+    let raw = '';
+    let exit = 0;
+    try {
+      raw = execFileSync('/bin/sh', ['-c', command], {
+        encoding: 'utf8', cwd: this.#sourceRoot, stdio: ['ignore', 'pipe', 'pipe'],
+        maxBuffer: 64 * 1024 * 1024,
+      });
+    } catch (error) {
+      exit = typeof error.status === 'number' ? error.status : 1;
+      raw = `${error.stdout || ''}${error.stderr || ''}`;
+    }
+
+    // A call that failed obtained nothing. Recording it as a review would record
+    // something that did not happen — and an earlier version did worse than that:
+    // it substituted "(the reviewer returned nothing)" for empty output, so a
+    // command that exited non-zero and said nothing became a review with text in
+    // it, and completion accepted it. What is available here is the unavailable
+    // arm, which is where a capability that could not be used belongs.
+    if (exit !== 0) {
+      fail('reviewer_unreachable', 'the reviewer could not be reached', {
+        family, exit, raw: raw.slice(0, 400),
+      });
+    }
+    // Nor is silence. A reviewer that answered nothing left nothing for anyone to
+    // read, and a record of nothing still satisfies a check that only asks whether
+    // a review exists.
+    if (raw.trim().length === 0) {
+      fail('reviewer_silent', 'the reviewer answered nothing', { family });
+    }
+
+    return this.#ledger.append({
+      kind: 'review', id, lineage, run, reviewer, family, command, exit,
+      deliverable: deliverable.identity,
+      raw,
+      findings: findings || [],
+      origin: HARNESS,
+    });
+  }
+
+  // The reviews recorded for a run. One place, because "which review answers" is
+  // a cardinality question and those are decided at the reader — a name answering
+  // to two records answers to neither.
+  reviewsFor(lineage, run) {
+    return this.records().filter(
+      (r) => r.kind === 'review' && r.lineage === lineage && r.run === run,
+    );
+  }
+
+  // What was done about a finding the review raised. The Kernel does not judge the
+  // answer — it has no opinion about whether a disposition is adequate. It requires
+  // that one exists, which is what stops a finding being passed over in silence.
+  disposeFinding({ lineage, run, review, finding, disposition, actor }) {
+    const found = this.reviewsFor(lineage, run).find((r) => r.id === review);
+    if (!found) {
+      fail('binding_unresolved', 'no such review is recorded for this run', { lineage, run, review });
+    }
+    // Against the findings that review actually raised. A disposition naming
+    // something nobody found answers nothing, and would still satisfy a check
+    // that only counted dispositions.
+    if (!found.findings.some((f) => f.id === finding)) {
+      fail('binding_unresolved', 'that review raised no such finding', { review, finding });
+    }
+    return this.#ledger.append({
+      kind: 'finding_disposed', lineage, run, review, finding, disposition, actor,
+      origin: HOST,
+    });
+  }
+
+  // The findings a review raised that nothing has answered.
+  undisposedFindings(lineage, run, review) {
+    const answered = new Set(this.records()
+      .filter((r) => r.kind === 'finding_disposed' && r.lineage === lineage
+        && r.run === run && r.review === review.id)
+      .map((r) => r.finding));
+    return review.findings.filter((f) => !answered.has(f.id));
+  }
+
+  // The one review that answers this run's requirement, or a refusal saying why
+  // none does. Private: a caller that could ask for "a review" could ask again
+  // until it liked the answer, and the point is that there is nothing to choose.
+  #answeringReview({ lineage, run, contract, producer }) {
+    // No "none is recorded" refusal. The Gate reads the requirement now: with no
+    // review obtained the obligations are `unavailable`, so completion refuses
+    // `not_all_passed` and never reaches here. Verified by deleting it and asking
+    // for a completion — the code that came back was the Gate's.
+    const found = this.reviewsFor(lineage, run);
+    // Two is not "pick the later one". Ambiguity is refused for the same reason a
+    // second Assignment or a second genesis is: choosing is not resolving.
+    if (found.length > 1) {
+      fail('review_not_unique', 'a run holding two reviews holds none', {
+        lineage, run, count: found.length,
+      });
+    }
+    const review = found[0];
+    if (review.reviewer === producer) {
+      fail('review_self_authored', 'the reviewed party is the reviewer', {
+        reviewer: review.reviewer,
+      });
+    }
+    const requested = contract.independence.requested_family;
+    if (requested && !requested.includes(review.family)) {
+      fail('review_wrong_family', 'the review is not from a family the Contract requested', {
+        family: review.family, requested,
+      });
+    }
+    // Against the deliverable as it stands now. This is the check that a later
+    // attempt can invalidate, and the reason all of this runs at completion.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
+    if (review.deliverable !== deliverable.identity) {
+      fail('review_wrong_deliverable', 'the review examined something other than this run\'s deliverable', {
+        reviewed: review.deliverable, deliverable: deliverable.identity,
+      });
+    }
+    const open = this.undisposedFindings(lineage, run, review);
+    if (open.length > 0) {
+      fail('finding_undisposed', 'a finding the review raised has no disposition', {
+        review: review.id, findings: open.map((f) => f.id),
+      });
+    }
+    return review;
+  }
+
   signOff({ lineage, run, actor, acceptedReview }) {
     const approved = this.contractForRun(lineage, run);
     if (!approved) {
@@ -1507,6 +1686,11 @@ export class Kernel {
       admit,
       inputsChanged: inputsChangedAgainst(index, inputsNow),
       outcomeOf: this.#outcomeReader({ lineage, run }),
+      reviewRequired: contract.independence.required === 'cross_family_required',
+      // Whether one was obtained, not whether it is the right one. Which review
+      // answers, and whether it is admissible, is decided at completion — the Gate
+      // is asked before a review can exist and must not need the answer twice.
+      reviewObtained: this.reviewsFor(lineage, run).length > 0,
     });
 
     return result;
@@ -1541,22 +1725,27 @@ export class Kernel {
       });
     }
 
-    // A Contract that requires independent review cannot complete in Phase 1.
+    // A Contract that requires independent review is judged here, not where the
+    // review was recorded.
     //
-    // There was a `recordReview` that took a digest and a family and stamped them
-    // `origin: harness`, and completion checked only that such a record existed —
-    // so the party being judged wrote its own judge into being, and got an
-    // Acceptance carrying a digest of nothing. It is deleted rather than guarded:
-    // Phase 1 has no successful cross-family path at all (that is Phase 3), so the only
-    // honest outcome here is the unavailable arm, which is where AC-7 already
-    // sends it. An Acceptance is not reachable either way; the difference is
-    // whether the machinery pretends otherwise.
-    if (contract.independence.required === 'cross_family_required') {
-      fail('review_required_absent', 'Phase 1 cannot obtain an independent review, so it cannot complete', {
-        requested: contract.independence.requested_family,
-      });
-    }
-    if (acceptedReview) {
+    // The distinction is load-bearing. A review that was bound to the right
+    // deliverable when it arrived can be bound to a superseded one by a later
+    // attempt, and a check that fired only at ingestion would never see that. What
+    // decides is the state at completion.
+    //
+    // An earlier version accepted a `recordReview` that took a digest and a family
+    // as arguments and stamped them `origin: harness`, so the party being judged
+    // wrote its own judge into being. The producer now chooses none of it — see
+    // `obtainReview` — and these four refusals are what reads it back.
+    // The producer, from the run's Assignment — the same place every other
+    // authority question reads it, so "who was reviewed" is not a second source.
+    const granted = this.assignmentFor(lineage, run);
+    const requiredReview = contract.independence.required === 'cross_family_required'
+      ? this.#answeringReview({
+        lineage, run, contract, producer: granted.grants.attempt_producer,
+      })
+      : null;
+    if (!requiredReview && acceptedReview) {
       fail('review_required_absent', 'a review is carried where the Contract required none', {});
     }
 
@@ -1577,9 +1766,18 @@ export class Kernel {
       contract_identity: contractIdentity,
       deliverable,
       decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq },
-      // Always the stated absence: a Contract requiring a review was refused
-      // above, so this is the only shape completion can reach in Phase 1.
-      review: { required: false, statement: 'no independent review required by this Contract' },
+      // What the review requirement was, and what answered it. A stated absence
+      // when none was required — never an empty slot — and the answering review's
+      // identity when one was. Without the identity a reader has "a review
+      // happened" and no way to find which one, so the verdict cannot be
+      // reconstructed from the Acceptance alone.
+      review: requiredReview
+        ? {
+          required: true,
+          statement: `reviewed by ${requiredReview.family}`,
+          accepted_review: identify(Buffer.from(JSON.stringify(requiredReview), 'utf8')).byte_sha256,
+        }
+        : { required: false, statement: 'no independent review required by this Contract' },
     };
 
     // The write is the last step of this method, not a function a caller invokes

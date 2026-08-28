@@ -33,6 +33,8 @@ process.stdout.write(JSON.stringify({
   gateVerdicts: state.gateVerdicts,
   signoffPresent: state.signoff !== null,
   completion: state.completion,
+  reviews: state.reviews,
+  dispositions: state.dispositions,
   recomputed: Object.fromEntries(
     Object.entries(recomputed).map(([o, v]) => [o, v.status]),
   ),

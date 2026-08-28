@@ -275,11 +275,45 @@ export function recordTests() {
       }).length > 0);
   });
 
+  group('AC-12 · a second freeze entry names what the first did not', () => {
+    // Adding a record kind moves what the freeze pins. A frozen entry is never
+    // edited, so the set grows by appending: the prior entry stays byte-identical
+    // and keeps describing what was in force when work was accepted under it.
+    ok('there is more than one entry', FROZEN.length > 1);
+    const [first, current] = [FROZEN[0], FROZEN[FROZEN.length - 1]];
+    eq('the first entry still names the run it rested on',
+      first.exercised_by.acceptance,
+      'sha256:9ea38e8068401e0a59a8dbdad67d43286bb463e206fbc78f2fc1e4e40af822bc');
+    ok('and every kind it named is still named by the current entry',
+      Object.keys(first.records).every((k) => current.records[k] !== undefined));
+    // The kind this step adds, and the reason the entry exists at all. Later steps
+    // add their own kinds and their own entries — a kind and the code that writes
+    // and reads it cannot be separated without leaving a commit red, so the freeze
+    // moves once per such step rather than once per feature.
+    ok('the current entry names review', current.records.review !== undefined);
+    ok('and review is absent from the first', first.records.review === undefined);
+    // And an entry that no run has exercised says so rather than borrowing the
+    // provenance of one that could not have touched it. AC-12 asks a format to be
+    // frozen after its run; an entry ahead of that run is honest about being
+    // ahead, and a null here is what makes the gap findable.
+    ok('the first entry names the run that exercised it',
+      first.exercised_by !== null);
+    for (const entry of FROZEN.slice(1)) {
+      ok(`${entry.id} does not claim a run that predates its kinds`,
+        entry.exercised_by === null);
+    }
+  });
+
   group('AC-12 · the freeze, and what it pins', () => {
     // Frozen after AC-9's real run exercised the formats, not before. The entry
     // names that run, and the run's own log is read here rather than trusted — a
     // freeze citing a run that did not happen pins nothing.
-    const entry = FROZEN[FROZEN.length - 1];
+    //
+    // The FIRST entry, because that is the one a real run exercised. Later entries
+    // name kinds newer than that run and say `exercised_by: null` rather than
+    // borrowing its provenance — reading the last entry here would have asked the
+    // newest entry to prove something only the oldest can.
+    const entry = FROZEN[0];
     const runLog = join(REPO, '.ae', 'features', 'active', 'F-086-v1-minimal-kernel',
       'ac9-run-2', 'log.ndjson');
     const exercised = existsSync(runLog)

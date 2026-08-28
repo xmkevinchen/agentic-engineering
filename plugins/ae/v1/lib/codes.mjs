@@ -81,6 +81,14 @@ export const KERNEL_CODES = deepFreeze({
     'signoff_wrong_revision',     // sign-off belongs to another revision
     'signoff_wrong_deliverable',  // sign-off belongs to another deliverable
     'review_required_absent',     // silent about a review the Contract required
+    'review_self_authored',       // the reviewed party is the reviewer
+    'review_wrong_deliverable',   // reviewed something other than what this run produced
+    'review_wrong_family',        // from a family the Contract did not request
+    'review_not_unique',          // a run holding two reviews holds none
+    'review_family_unknown',      // asked for a family the registry does not hold
+    'reviewer_unreachable',       // the reviewer's command failed
+    'reviewer_silent',            // the reviewer ran and said nothing
+    'finding_undisposed',         // a finding the review raised was never answered
     'run_facts_incomplete',       // the run record is missing one of the four facts
     'cost_incomparable',          // the two cost figures cannot be compared
     'cost_boundary_post_hoc',     // boundaries chosen after the outcome was visible

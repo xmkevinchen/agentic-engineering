@@ -224,7 +224,7 @@ export function reduce({
 // rather than beside it.
 export function reduceAll({
   records, lineage, run, obligations, currentRevision, boundRevision,
-  admit, inputsChanged, outcomeOf,
+  admit, inputsChanged, outcomeOf, reviewRequired, reviewObtained,
 }) {
   const byObligation = {};
   for (const obligation of obligations) {
@@ -232,6 +232,20 @@ export function reduceAll({
       records, lineage, run, obligation, currentRevision, boundRevision,
       admit, inputsChanged, outcomeOf,
     });
+    // A Contract requiring an independent review requires it for the work, not
+    // beside it. Where none was obtained, the assurance the Contract asked for
+    // could not be used — which is what `unavailable` means, and what
+    // `recordUnavailable` already writes when the arm is taken deliberately.
+    //
+    // Without this the obligations read `passed`, the run read as passing, and
+    // only completion refused — so the Gate said one thing and the Kernel did
+    // another about the same run.
+    if (reviewRequired && !reviewObtained
+      && byObligation[obligation].status === STATUS.PASSED) {
+      byObligation[obligation] = {
+        status: STATUS.UNAVAILABLE, code: null, record: byObligation[obligation].record,
+      };
+    }
   }
   const allPassed = obligations.length > 0
     && obligations.every((o) => byObligation[o].status === STATUS.PASSED);

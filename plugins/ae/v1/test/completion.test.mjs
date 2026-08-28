@@ -771,13 +771,18 @@ export function completionTests() {
       k.status({ lineage: 'L', run: w.run }).byObligation.O.status, 'stale');
   });
 
-  group('AC-1 · V1 cannot obtain a review, and does not pretend to', () => {
+  group('AC-1 · a Kernel given no families cannot review, and does not pretend to', () => {
     // There was a `recordReview` that took a digest and a family and stamped them
     // `origin: harness`, and completion checked only that such a record existed —
     // so the party being judged wrote its own judge into being and got an
-    // Acceptance carrying a digest of nothing. V1 has no successful cross-family
-    // path at all, so a Contract that requires one cannot complete, and there is
-    // no method through which a review could be claimed.
+    // Acceptance carrying a digest of nothing. It is gone: a review is obtained by
+    // the Kernel running a family's command, and this Kernel was given no families.
+    //
+    // The refusal moved from completion to the Gate, and that is the fix rather
+    // than a regression. A required review that was never obtained means the
+    // assurance the Contract asked for could not be used, so the obligations read
+    // `unavailable` — where they used to read `passed` while completion refused,
+    // which had the Gate and the Kernel saying different things about one run.
     const cross = {
       contract: {
         independence: {
@@ -787,10 +792,12 @@ export function completionTests() {
       },
     };
     const w = run(cross);
-    ok('there is no way to record a review', w.k.recordReview === undefined);
-    refuses('and a Contract requiring one cannot complete', 'review_required_absent',
+    ok('there is no way to hand in a review', w.k.recordReview === undefined);
+    eq('the obligation is unavailable, not passed',
+      w.k.status({ lineage: w.lineage, run: w.run }).byObligation.O.status, 'unavailable');
+    refuses('so a Contract requiring one cannot complete', 'not_all_passed',
       () => complete(w));
-    refuses('nor by carrying a digest of its own', 'review_required_absent',
+    refuses('nor by carrying a digest of its own', 'not_all_passed',
       () => complete(w, { acceptedReview: sha('imagined') }));
 
     // And a Contract requiring none may not carry one either: the Acceptance
