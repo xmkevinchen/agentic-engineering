@@ -205,4 +205,53 @@ export function reviewTests() {
     refuses('a review of a superseded deliverable', 'review_wrong_deliverable',
       () => k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }));
   });
+
+  group('AC-4 · a finding must be answered before completion', () => {
+    // A review that raises findings and a completion that ignores them makes the
+    // findings decoration. What is required is an answer, not a particular answer:
+    // the disposition is the producer's, and recording it is what stops a finding
+    // from being passed over in silence.
+    const { families } = world();
+    const withFinding = () => {
+      const k = kernelWith(families);
+      const w = walk(k, { contract: REQUIRES });
+      k.obtainReview({
+        id: 'r', lineage: w.lineage, run: w.run, family: 'openai', reviewer: 'Reviewer',
+        findings: [{ id: 'f1', statement: 'the input is not re-observed after packaging' }],
+      });
+      return { k, w };
+    };
+
+    {
+      const { k, w } = withFinding();
+      refuses('a finding nobody answered', 'finding_undisposed',
+        () => k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }));
+    }
+    {
+      const { k, w } = withFinding();
+      k.disposeFinding({
+        lineage: w.lineage, run: w.run, review: 'r', finding: 'f1',
+        disposition: 'accepted — re-observed after packaging', actor: w.producer,
+      });
+      eq('and answering it lets completion proceed',
+        k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }).written.outcome, 'created');
+    }
+    {
+      // A disposition naming a finding the review never raised answers nothing.
+      const { k, w } = withFinding();
+      refuses('a disposition for a finding that was never raised', 'binding_unresolved',
+        () => k.disposeFinding({
+          lineage: w.lineage, run: w.run, review: 'r', finding: 'invented',
+          disposition: 'accepted', actor: w.producer,
+        }));
+      // And one naming a review that does not exist. Without this the disposition
+      // would be filed against nothing, and the count of answered findings would
+      // still go up.
+      refuses('and a disposition naming no recorded review', 'binding_unresolved',
+        () => k.disposeFinding({
+          lineage: w.lineage, run: w.run, review: 'never-obtained', finding: 'f1',
+          disposition: 'accepted', actor: w.producer,
+        }));
+    }
+  });
 }

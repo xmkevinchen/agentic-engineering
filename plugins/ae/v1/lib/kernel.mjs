@@ -1134,6 +1134,35 @@ export class Kernel {
     );
   }
 
+  // What was done about a finding the review raised. The Kernel does not judge the
+  // answer — it has no opinion about whether a disposition is adequate. It requires
+  // that one exists, which is what stops a finding being passed over in silence.
+  disposeFinding({ lineage, run, review, finding, disposition, actor }) {
+    const found = this.reviewsFor(lineage, run).find((r) => r.id === review);
+    if (!found) {
+      fail('binding_unresolved', 'no such review is recorded for this run', { lineage, run, review });
+    }
+    // Against the findings that review actually raised. A disposition naming
+    // something nobody found answers nothing, and would still satisfy a check
+    // that only counted dispositions.
+    if (!found.findings.some((f) => f.id === finding)) {
+      fail('binding_unresolved', 'that review raised no such finding', { review, finding });
+    }
+    return this.#ledger.append({
+      kind: 'finding_disposed', lineage, run, review, finding, disposition, actor,
+      origin: HOST,
+    });
+  }
+
+  // The findings a review raised that nothing has answered.
+  undisposedFindings(lineage, run, review) {
+    const answered = new Set(this.records()
+      .filter((r) => r.kind === 'finding_disposed' && r.lineage === lineage
+        && r.run === run && r.review === review.id)
+      .map((r) => r.finding));
+    return review.findings.filter((f) => !answered.has(f.id));
+  }
+
   // The one review that answers this run's requirement, or a refusal saying why
   // none does. Private: a caller that could ask for "a review" could ask again
   // until it liked the answer, and the point is that there is nothing to choose.
@@ -1169,6 +1198,12 @@ export class Kernel {
     if (review.deliverable !== deliverable.identity) {
       fail('review_wrong_deliverable', 'the review examined something other than this run\'s deliverable', {
         reviewed: review.deliverable, deliverable: deliverable.identity,
+      });
+    }
+    const open = this.undisposedFindings(lineage, run, review);
+    if (open.length > 0) {
+      fail('finding_undisposed', 'a finding the review raised has no disposition', {
+        review: review.id, findings: open.map((f) => f.id),
       });
     }
     return review;

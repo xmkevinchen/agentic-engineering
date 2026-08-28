@@ -345,6 +345,22 @@ export const RECORDS = Object.freeze({
       origin: { type: 'const', value: 'harness' }, seq, at,
     },
   },
+  // What was done about a finding. Separate from the review because the review is
+  // the reviewer's and the disposition is the producer's; one record written by
+  // two parties would be a record neither of them owns.
+  //
+  // The Kernel has no opinion about whether a disposition is adequate — that is a
+  // judgement, and it has none. What it requires is that one exists, because a
+  // finding nobody answered is a finding passed over in silence.
+  finding_disposed: {
+    type: 'object', additional: false,
+    required: ['kind', 'lineage', 'run', 'review', 'finding', 'disposition', 'actor', 'origin', 'seq', 'at'],
+    properties: {
+      kind: text, lineage: id, run: id, review: id, finding: id,
+      disposition: text, actor: id,
+      origin: { type: 'const', value: 'host' }, seq, at,
+    },
+  },
   formation_opened: {
     type: 'object', additional: false,
     required: ['kind', 'lineage', 'actor', 'origin', 'seq', 'at'],
