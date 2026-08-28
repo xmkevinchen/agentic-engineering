@@ -6,6 +6,7 @@
 // issues — which Phase 1 already refuses.
 
 import { mkdtempSync, writeFileSync, chmodSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Kernel } from '../lib/kernel.mjs';
@@ -244,6 +245,50 @@ export function reviewTests() {
     ok('so the run does not pass', st.allPassed === false);
     refuses('and completion refuses on the Gate, before any review question',
       'not_all_passed', () => k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }));
+  });
+
+  // The whole path, and it belongs to no step above. Per-step closure is necessary
+  // and not sufficient: three of the five structural causes found in Phase 1 were
+  // composition defects that every per-step check passed. Review selection is the
+  // new place where a name can answer to two records, so replaying only the
+  // ordinary Gate verdicts would miss exactly this class.
+  group('AC-13 · a run that rested on a review replays to the same verdict', () => {
+    const { families } = world();
+    const dir = mkdtempSync(join(tmpdir(), 'wp-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER, families,
+    });
+    const w = walk(k, { contract: REQUIRES });
+    k.obtainReview({
+      id: 'rev', lineage: w.lineage, run: w.run, family: 'openai', reviewer: 'Reviewer',
+      findings: [{ id: 'f1', statement: 'the boundary is wider than the change' }],
+    });
+    k.disposeFinding({
+      lineage: w.lineage, run: w.run, review: 'rev', finding: 'f1',
+      disposition: 'accepted — boundary narrowed', actor: w.producer,
+    });
+    const { acceptance } = k.complete({ lineage: w.lineage, run: w.run, actor: OWNER });
+
+    const replay = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const out = JSON.parse(execFileSync(
+      process.execPath, [replay, logPath, w.lineage, w.run], { encoding: 'utf8' },
+    ));
+
+    eq('the Gate verdict comes back', out.gateVerdicts.O, 'passed');
+    eq('one review comes back, not "a review happened"', out.reviews.length, 1);
+    eq('and it is the one that answered', out.reviews[0].id, 'rev');
+    eq('with the family the Kernel stamped', out.reviews[0].family, 'openai');
+    eq('and the reviewer that is not the producer', out.reviews[0].reviewer, 'Reviewer');
+    eq('the finding it raised comes back', out.reviews[0].findings.join(','), 'f1');
+    eq('and so does the answer to it', out.dispositions.map((d) => d.finding).join(','), 'f1');
+    // The decisive half: what the Acceptance recorded is reachable from the
+    // records alone, in a process that never saw the run.
+    eq('and the Acceptance names that review', acceptance.review.accepted_review,
+      digestBytes(Buffer.from(JSON.stringify(
+        k.reviewsFor(w.lineage, w.run)[0],
+      ), 'utf8')));
+    eq('recomputing the verdict from the records agrees', out.recomputed.O, 'passed');
   });
 
   group('AC-4 · a finding must be answered before completion', () => {

@@ -280,6 +280,12 @@ class Ledger {
       requested: null,
       unavailableDecision: null,
       runFacts: null,
+      // Which review answered, and what was done about what it raised. Replay has
+      // to reach the same verdict, and after Phase 2 the verdict depends on these:
+      // a run holding two reviews holds none, so "a review happened" is not enough
+      // to rebuild what completion decided.
+      reviews: [],
+      dispositions: [],
     };
     for (const r of mine) {
       switch (r.kind) {
@@ -295,6 +301,15 @@ class Ledger {
           break;
         case 'gate_result':
           state.gateVerdicts[r.obligation] = r.status;
+          break;
+        case 'review':
+          state.reviews.push({
+            id: r.id, family: r.family, reviewer: r.reviewer,
+            deliverable: r.deliverable, findings: r.findings.map((f) => f.id),
+          });
+          break;
+        case 'finding_disposed':
+          state.dispositions.push({ review: r.review, finding: r.finding });
           break;
         case 'human_decision_activation':
           state.humanDecisions[r.operation] = r.revision;
