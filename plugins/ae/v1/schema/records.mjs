@@ -303,6 +303,48 @@ export const RECORDS = Object.freeze({
   // formation to be measured from did not exist — the earliest record of a
   // lineage is the activation decision, written inside `approve`, which measures
   // one append rather than the work of forming the Contract.
+  // A review the Kernel obtained, not one a party handed in. `family` is the
+  // registry key the Kernel resolved before running anything, so it is a fact
+  // about which command ran rather than a claim the reviewed party made — the
+  // same reason `origin` is stamped and never passed.
+  //
+  // `raw` is required. Without the reviewer's own words a review is a boolean,
+  // and nobody reading the log afterwards can tell a judgement from a canned
+  // string. What this does NOT establish is that a real model answered: a
+  // registry entry pointing a family at `echo` produces a passing review with
+  // the family stamped. That is §4's `workflow_attested` boundary, and `raw` is
+  // what lets a person see it.
+  review: {
+    type: 'object', additional: false,
+    required: [
+      'kind', 'id', 'lineage', 'run', 'reviewer', 'family', 'deliverable',
+      'command', 'exit', 'raw', 'findings', 'origin', 'seq', 'at',
+    ],
+    properties: {
+      kind: text, id, lineage: id, run: id,
+      // Who answered, as the reviewing side names itself. Not the producer —
+      // completion refuses that, because a review the reviewed party wrote is
+      // the same defect as an Assignment its beneficiary issued.
+      reviewer: id,
+      family: id,
+      // What was reviewed, by identity. A review floating free of a deliverable
+      // reviews whatever anyone later says it did.
+      deliverable: digest,
+      command: text,
+      exit: { type: 'integer' },
+      raw: { type: 'string', minLength: 1 },
+      // Each finding carries its own id, because a disposition has to name one.
+      findings: {
+        type: 'array', minItems: 0,
+        items: {
+          type: 'object', additional: false,
+          required: ['id', 'statement'],
+          properties: { id, statement: text },
+        },
+      },
+      origin: { type: 'const', value: 'harness' }, seq, at,
+    },
+  },
   formation_opened: {
     type: 'object', additional: false,
     required: ['kind', 'lineage', 'actor', 'origin', 'seq', 'at'],

@@ -275,6 +275,25 @@ export function recordTests() {
       }).length > 0);
   });
 
+  group('AC-12 · a second freeze entry names what the first did not', () => {
+    // Adding a record kind moves what the freeze pins. A frozen entry is never
+    // edited, so the set grows by appending: the prior entry stays byte-identical
+    // and keeps describing what was in force when work was accepted under it.
+    ok('there is more than one entry', FROZEN.length > 1);
+    const [first, current] = [FROZEN[0], FROZEN[FROZEN.length - 1]];
+    eq('the first entry still names the run it rested on',
+      first.exercised_by.acceptance,
+      'sha256:9ea38e8068401e0a59a8dbdad67d43286bb463e206fbc78f2fc1e4e40af822bc');
+    ok('and every kind it named is still named by the current entry',
+      Object.keys(first.records).every((k) => current.records[k] !== undefined));
+    // The kind this step adds, and the reason the entry exists at all. Later steps
+    // add their own kinds and their own entries — a kind and the code that writes
+    // and reads it cannot be separated without leaving a commit red, so the freeze
+    // moves once per such step rather than once per feature.
+    ok('the current entry names review', current.records.review !== undefined);
+    ok('and review is absent from the first', first.records.review === undefined);
+  });
+
   group('AC-12 · the freeze, and what it pins', () => {
     // Frozen after AC-9's real run exercised the formats, not before. The entry
     // names that run, and the run's own log is read here rather than trusted — a

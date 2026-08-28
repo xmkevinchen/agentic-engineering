@@ -385,13 +385,26 @@ export class Kernel {
   // Contract grants. The root has to sit outside what it authorises.
   #owner;
 
+  // Which command reaches which family. Configured here, outside any Contract,
+  // for the same reason the owner is: a producer that could name the command
+  // could name a command that agrees with it.
+  //
+  // What this establishes is narrow and worth stating where it is defined. The
+  // Kernel can show that a command ran, which one, and what came back. It cannot
+  // show that a real model answered — an entry pointing a family at `echo` yields
+  // a passing review with that family stamped. That is §4's `workflow_attested`
+  // boundary, unchanged. What it removes is the producer's ability to forge a
+  // review *alone*: doing so now needs control of this registry, which is set
+  // once and is auditable on its own.
+  #families;
 
-  constructor(logPath, { completionRoot, sourceRoot, render, owner } = {}) {
+  constructor(logPath, { completionRoot, sourceRoot, render, owner, families } = {}) {
     this.#ledger = new Ledger(logPath);
     this.#completionRoot = completionRoot || null;
     this.#sourceRoot = sourceRoot || null;
     this.#render = typeof render === 'function' ? render : null;
     this.#owner = owner || null;
+    this.#families = families && typeof families === 'object' ? { ...families } : null;
   }
 
   // --- reads -------------------------------------------------------------
@@ -1061,6 +1074,66 @@ export class Kernel {
   // could mint a host record saying an unrelated party had signed for a revision
   // that did not exist. What it signs for is resolved; only *whether* to sign is
   // the caller's.
+  // A review is obtained, not handed in. The caller names a **family**; the Kernel
+  // resolves the command from its own registry, runs it, and stamps the family it
+  // resolved — so "reviewed by openai" is a fact about which command ran, not a
+  // claim the reviewed party made. A `command` parameter would give that back,
+  // which is why `runObservation` takes the command from the Contract and this
+  // takes it from the registry.
+  //
+  // The reviewer's words are recorded whole. Without them a review is a boolean,
+  // and the one thing a person can still check — whether a real judgement came
+  // back or a canned string — would be unavailable to them.
+  obtainReview({ id, lineage, run, family, reviewer, findings }) {
+    const { contract } = this.contractForRun(lineage, run) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (!this.#families) {
+      fail('review_required_absent', 'this Kernel was given no families, so it can obtain no review', { family });
+    }
+    const command = Object.prototype.hasOwnProperty.call(this.#families, family)
+      ? this.#families[family] : null;
+    if (!command) {
+      fail('review_required_absent', 'no command reaches that family', { family });
+    }
+    // What was reviewed, resolved from the run rather than taken as an argument —
+    // a review naming its own subject reviews whatever it says it did.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
+
+    let raw = '';
+    let exit = 0;
+    try {
+      raw = execFileSync('/bin/sh', ['-c', command], {
+        encoding: 'utf8', cwd: this.#sourceRoot, stdio: ['ignore', 'pipe', 'pipe'],
+        maxBuffer: 64 * 1024 * 1024,
+      });
+    } catch (error) {
+      exit = typeof error.status === 'number' ? error.status : 1;
+      raw = `${error.stdout || ''}${error.stderr || ''}`;
+    }
+
+    return this.#ledger.append({
+      kind: 'review', id, lineage, run, reviewer, family, command, exit,
+      deliverable: deliverable.identity,
+      // Empty output is not a review. A command that answered nothing leaves
+      // nothing for a person to read, and a record of nothing would still satisfy
+      // a check that only asked whether a review exists.
+      raw: raw.length > 0 ? raw : '(the reviewer returned nothing)',
+      findings: findings || [],
+      origin: HARNESS,
+    });
+  }
+
+  // The reviews recorded for a run. One place, because "which review answers" is
+  // a cardinality question and those are decided at the reader — a name answering
+  // to two records answers to neither.
+  reviewsFor(lineage, run) {
+    return this.records().filter(
+      (r) => r.kind === 'review' && r.lineage === lineage && r.run === run,
+    );
+  }
+
   signOff({ lineage, run, actor, acceptedReview }) {
     const approved = this.contractForRun(lineage, run);
     if (!approved) {
