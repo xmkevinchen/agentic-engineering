@@ -408,8 +408,24 @@ probe RED "a package that omits a stated input"; revert admissibility.mjs
 plant kernel.mjs "        if (r.attempt !== latest) continue;" ""
 probe RED "a superseded attempt still decides"; revert kernel.mjs
 
-plant kernel.mjs "    if (contract.independence.required === 'cross_family_required') {" "    if (false) {"
-probe RED "a cross-family Contract completes"; revert kernel.mjs
+# The review layer. Each of these is a distinct question folded into one refusal
+# before Phase 2, which is why each gets its own plant.
+plant kernel.mjs "      ? this.#answeringReview({" "      ? null && this.#answeringReview({"
+probe RED "a required review goes unasked for"; revert kernel.mjs
+plant kernel.mjs "    if (review.reviewer === producer) {" "    if (false) {"
+probe RED "the reviewed party reviews itself"; revert kernel.mjs
+plant kernel.mjs "    if (found.length > 1) {" "    if (false) {"
+probe RED "two reviews and one is picked"; revert kernel.mjs
+plant kernel.mjs "    if (requested && !requested.includes(review.family)) {" "    if (false) {"
+probe RED "a family nobody requested reviews"; revert kernel.mjs
+plant kernel.mjs "    if (review.deliverable !== deliverable.identity) {" "    if (false) {"
+probe RED "a review of a superseded deliverable counts"; revert kernel.mjs
+plant kernel.mjs "    if (open.length > 0) {" "    if (false) {"
+probe RED "a finding nobody answered is passed over"; revert kernel.mjs
+# The family is the registry key the Kernel resolved, never a caller's word.
+plant kernel.mjs "      kind: 'review', id, lineage, run, reviewer, family, command, exit," \
+  "      kind: 'review', id, lineage, run, reviewer, family: 'openai', command, exit,"
+probe RED "the stamped family is a constant"; revert kernel.mjs
 
 plant kernel.mjs "    if (actor !== this.#owner) {" "    if (false) {"
 probe RED "anyone acts as the Human Owner"; revert kernel.mjs

@@ -15,9 +15,12 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { group, ok, eq, refuses } from './harness.mjs';
 import {
-  walk, asObject, packageDoc, RENDERED, OWNER, SOURCE_ROOT, INPUT, COMMAND,
+  walk, asObject, packageDoc, contractDoc, assignmentDoc,
+  RENDERED, OWNER, SOURCE_ROOT, INPUT, COMMAND,
 } from './fixtures.mjs';
 import { digestBytes } from '../lib/canonical-json.mjs';
+import { validate } from '../lib/schema.mjs';
+import { ACCEPTANCE } from '../schema/objects.mjs';
 
 const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
 
@@ -206,6 +209,43 @@ export function reviewTests() {
       () => k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }));
   });
 
+  group('AC-6 · a review that could not be obtained is unavailable, never passed', () => {
+    // No new mechanism. AC-7's unavailable arm already carries "the capability
+    // could not be used", and a review the Kernel could not obtain is exactly
+    // that. Verified before building anything: the requirement routes *into* the
+    // existing arm rather than around it, so nothing here needed adding.
+    //
+    // What this pins is that it stays true. A later change that let a required
+    // review be missing while the obligation still read `passed` would turn this
+    // red, which is the only thing an already-satisfied criterion needs.
+    // Written out rather than driven through `walk`, which always submits an
+    // observation. A fixture flag for "skip the observation" would be machinery
+    // existing only so a test could set it.
+    const k = kernelWith(null);
+    const c = asObject(contractDoc(REQUIRES));
+    k.openFormation({ lineage: 'L', actor: OWNER });
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: c.bytes, identity: c.identity,
+      actor: OWNER, rendered: RENDERED(c.bytes),
+    });
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
+    });
+    const at = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
+    k.recordUnavailable({ lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt });
+    const w = { lineage: 'L', run: 'run1' };
+    const st = k.status({ lineage: w.lineage, run: w.run });
+    eq('the obligation is unavailable', st.byObligation.O.status, 'unavailable');
+    ok('and not passed', st.byObligation.O.status !== 'passed');
+    ok('so the run does not pass', st.allPassed === false);
+    refuses('and completion refuses on the Gate, before any review question',
+      'not_all_passed', () => k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }));
+  });
+
   group('AC-4 · a finding must be answered before completion', () => {
     // A review that raises findings and a completion that ignores them makes the
     // findings decoration. What is required is an answer, not a particular answer:
@@ -233,8 +273,19 @@ export function reviewTests() {
         lineage: w.lineage, run: w.run, review: 'r', finding: 'f1',
         disposition: 'accepted — re-observed after packaging', actor: w.producer,
       });
-      eq('and answering it lets completion proceed',
-        k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }).written.outcome, 'created');
+      const done = k.complete({ lineage: w.lineage, run: w.run, actor: OWNER });
+      eq('and answering it lets completion proceed', done.written.outcome, 'created');
+
+      // AC-7: the Acceptance names what it rested on. Read from the written file,
+      // because that is the artifact a later reader has — an in-memory object
+      // proves the Kernel built one, not that one was written.
+      const onDisk = JSON.parse(readFileSync(done.written.path, 'utf8'));
+      eq('the Acceptance records that a review was required',
+        onDisk.review.required, true);
+      const review = k.reviewsFor(w.lineage, w.run)[0];
+      eq('and names the review that answered', onDisk.review.accepted_review,
+        digestBytes(Buffer.from(JSON.stringify(review), 'utf8')));
+      eq('and it is still the closed shape', validate(ACCEPTANCE, onDisk).join(','), '');
     }
     {
       // A disposition naming a finding the review never raised answers nothing.

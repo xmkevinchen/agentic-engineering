@@ -1730,9 +1730,18 @@ export class Kernel {
       contract_identity: contractIdentity,
       deliverable,
       decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq },
-      // Always the stated absence: a Contract requiring a review was refused
-      // above, so this is the only shape completion can reach in Phase 1.
-      review: { required: false, statement: 'no independent review required by this Contract' },
+      // What the review requirement was, and what answered it. A stated absence
+      // when none was required — never an empty slot — and the answering review's
+      // identity when one was. Without the identity a reader has "a review
+      // happened" and no way to find which one, so the verdict cannot be
+      // reconstructed from the Acceptance alone.
+      review: requiredReview
+        ? {
+          required: true,
+          statement: `reviewed by ${requiredReview.family}`,
+          accepted_review: identify(Buffer.from(JSON.stringify(requiredReview), 'utf8')).byte_sha256,
+        }
+        : { required: false, statement: 'no independent review required by this Contract' },
     };
 
     // The write is the last step of this method, not a function a caller invokes
