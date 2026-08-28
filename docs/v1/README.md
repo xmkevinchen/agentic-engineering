@@ -26,6 +26,7 @@ Start with [`design.md`](design.md) §1.
 
 | Document | Question it answers |
 |---|---|
+| [`../prd/ae-v1.md`](../prd/ae-v1.md) | Who is v1 for, what job does it do for them, and which shipped capabilities are deliberately outside it? |
 | [`design.md`](design.md) | What is AE v1, what does the Kernel guarantee, and what does it explicitly not? |
 | [`implementation-plan.md`](implementation-plan.md) | How does it get built, in what order, and what can be run at each step? |
 | [`mechanism-disposition.md`](mechanism-disposition.md) | Which older mechanisms are kept, simplified, deferred, or removed — and why? |
