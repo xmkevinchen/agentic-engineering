@@ -304,7 +304,7 @@ them where those words exist.
 
 | # | Decision | Where it is reserved |
 |---|---|---|
-| 1 | The §6 fence: are these five groups' dispositions and unfreeze conditions accepted? | New in this document — no prior record |
+| ~~1~~ | ~~The §6 fence: are these five groups' dispositions and unfreeze conditions accepted?~~ **Accepted 2026-08-28 by the Human Owner.** §6 is in force: the five dispositions and their unfreeze conditions govern what may be worked on. | Recorded here; no prior record existed |
 | 2 | AC-2's shortfall — nothing establishes that a command *read* the files a Contract names. Waived for v1; the criterion is to be rewritten against experience | `F-086` shortfalls decision |
 | 3 | AC-5's shortfall — identity at the root is a string, not a principal. Accepted as stated while the Kernel runs in the Owner's own session | `F-086` shortfalls decision |
 | 4 | Whether review cost is counted by rounds or by wall-clock per round | BL-218 #2 — recommendation recorded, not decided |
