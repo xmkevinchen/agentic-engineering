@@ -36,6 +36,64 @@ Every dependency below is classified into one of four failure modes. The class d
 | 11 | Plugin agent namespace prefix (`ae:` resolution) | `hard` | All 17 built-in agents in `plugins/ae/agents/{review,research,workflow,engineering}/` rely on CC resolving plugin agent IDs with `ae:` namespace prefix (e.g., `ae:review:architecture-reviewer`) for collision avoidance with project agents | If removed: agent name collisions with user's `.claude/agents/` cannot be deterministically resolved; AE built-in agents become unaddressable via `subagent_type:`. No fallback short of bundling AE as a non-plugin (deep refactor). Hard dependency on CC plugin-agent namespace resolution. |
 | 12 | `ToolSearch` (deferred-tool schema lookup) | `silent-degrade` (fail-open) | `ae:work` Pre-check Check 3 probes `Agent` schema for `run_in_background` param to set `AGENT_TEAMS_FULL`; canonical fail-open path documented in `ae:work` SKILL.md (line ~132) | If `ToolSearch` unavailable or times out: `AGENT_TEAMS_FULL = true` (fail-open per spec). AE proceeds assuming full Agent Teams support. Misclassification cost: if Agent actually lacks `run_in_background` but ToolSearch is also down, AE attempts background spawn and fails at call time (visible error, not silent). Acceptable degradation. |
 
+## Hook enforcement semantics
+
+Dependencies #5 and #6 above establish that plugin-level hooks *register and
+fire*. This section is the separate question of **how much a firing hook can
+refuse** — the property AE must know before placing any control on one.
+
+**Measured 2026-08-28 against CC 2.1.247**, non-interactive mode, foreground
+subagents, plugin-level command hooks. Each row is one isolated scenario checked
+against what actually happened — whether the file was written, what the task read
+back, what the next model request received — not against a model's report of
+success.
+
+| Mechanism | Enforcement | What was observed |
+|---|---|---|
+| `PreToolUse` exit 2 | **refuses** | The tool call did not run; the file was not created |
+| `PreToolUse` exit 1 | **fail-open** | Same hook, error exit: the file was created anyway |
+| `PreToolUse` timeout | **fail-open** | Hook slept 10 s against a 1 s configured timeout; `PostToolUse` was reached ≈ 1,032 ms in and the file existed |
+| `PreToolUse`, internal error caught and converted to exit 2 | **refuses** | Catchable errors are recoverable this way — it does not establish safety against a killed process or an outer timeout |
+| `PostToolUse` `decision: block` | **feedback only** | The reason reached the next model request; the file remained. A follow-on step then proceeded and created a second file |
+| `TaskCompleted` exit 2 | **refuses** | `TaskUpdate` returned `success: false` and `TaskGet` read back `pending`; the control scenario read back `completed` |
+| `SubagentStop` exit 2 | **retries the same worker** | One agent ID, two `SubagentStop` firings; the calling session received only the second result |
+| `SubagentStop` structural check | **usable** | A first plain-text deliverable was refused programmatically; a second conforming to the required shape was captured before the calling session saw it |
+
+### What this means for AE
+
+- **Only `PreToolUse` exit 2 and `TaskCompleted` exit 2 refuse anything.** A
+  validator that errors or exceeds its timeout permits the call, so a hook is a
+  detector, not a gate. Anything that must fail closed belongs in the Kernel,
+  which recomputes from durable records.
+- **`PostToolUse` is not a rollback.** The side effect has already happened and
+  the following turn may ignore the reason.
+- **`SubagentStop` gives an interception point, not a router.** A refusal makes
+  the same worker try again; the choice between rework, a different reviewer, and
+  a changed approach never reaches whoever should make it. Never hold a worker at
+  its exit waiting for something only the caller can arrange.
+- **A firing hook is not a state transition.** The `TaskCompleted` scenario fired
+  `PostToolUse` on an update that returned a business failure. Parse the return
+  value and read the state back.
+- **Process exit status carries no business meaning.** All eight scenarios ended
+  with the process reporting success, including both that refused a call.
+
+### Classification and re-verification
+
+`empirical` — the same class as #5 and #6, and for the same reason: this is
+observed host behavior at one version, not a contractual commitment. The
+`PreToolUse` timeout and `PostToolUse` semantics agree with the published hooks
+reference, which states that a plugin command hook's timeout does not produce a
+refusal and that a `PostToolUse` block appends a reason for the model. Do not
+transfer Agent SDK callback timeout behavior, which the same documentation
+defines separately, onto plugin command hooks.
+
+**Re-verify on each CC major version bump**, and before any change that would
+place an AE control on a hook.
+
+**Not covered.** Interactive mode, background subagents, Agent Teams, compaction
+and resume, cross-session recovery, concurrent writers, and interaction between
+multiple plugins' hooks. None of these was exercised; no claim is made about them.
+
 ## BL-023 closure evidence
 
 BL-023 (`hooks.json / plugin.json registration gap`) was historically open because the CC plugin system's auto-discovery of `hooks.json` and `plugin.json hooks` blocks was uncertain. Empirical verification during T1 (Plan 054 NDJSON trace) ship on 2026-05-20 confirms `plugin.json hooks` block auto-registers and fires on SessionStart.

@@ -203,6 +203,33 @@ The Harness:
 8. manages rework and re-review until findings are dispositioned;
 9. requests the human's final sign-off once mechanical checks pass.
 
+**These are not all the same kind of obligation, and the host does not supply
+them at one level.** Measured against Claude Code 2.1.247 with plugin-level
+command hooks, the nine divide into three:
+
+| Responsibility | Where it can hold |
+|---|---|
+| 6 — collect raw output before it is paraphrased | **A host hook.** `SubagentStop` receives a subagent's raw output before the calling session sees it, and a deterministic structural check there can refuse a malformed deliverable. |
+| 1, 2, 3, 4, 5, 9 | **The calling session.** Nothing in the host performs them; they hold only while a session follows them. |
+| **7, 8 — finding routing and rework** | **Neither, today.** Refusing a deliverable in `SubagentStop` makes the *same* worker retry; the choice between rework, a different reviewer, and a changed approach never returns to whoever should make it. Routing is a control loop AE must own, not a hook it can register. |
+
+Two rules follow, and both are about not confusing the levels:
+
+- **A hook does only short, deterministic, local checks.** Format repair may
+  retry within the same worker under a bounded limit. Anything reaching a
+  reviewer, another approach, or an earlier stage returns to the caller — and a
+  worker must never be held at its exit waiting for a review the caller has not
+  yet had the chance to arrange.
+- **A hook is not a gate.** Of the host's refusal paths, only `PreToolUse`
+  exit 2 and `TaskCompleted` exit 2 refuse anything; a hook that errors or times
+  out permits the call, and a `PostToolUse` refusal arrives after the side effect
+  and may be ignored. The enforcement table is in
+  [`cc-plugin-contract.md`](../references/cc-plugin-contract.md); it is
+  version-specific and re-measured, not assumed.
+
+This is why §3 puts acceptance in the Kernel rather than in the Harness: the
+Harness can be wrong or skipped, and a completion decision must survive that.
+
 ### 4.2 Coordination state is not truth
 
 This is the single most important rule in the Harness:
@@ -216,6 +243,13 @@ A task marked completed, a mailbox message saying "done", a `/goal` report, or
 a teammate's summary is never completion truth. If losing the Team's message
 history would lose the meaning of the work, the handoff was not durable and the
 Harness is wrong.
+
+**Nor is the fact that a call happened.** A host task update that returned a
+business failure still fired its `PostToolUse` hook, and the process still exited
+0. So an observer must parse what the call returned and read the state back;
+that a hook ran, or that the process succeeded, establishes neither. Stated as
+the chain it breaks: *process success ≠ tool success ≠ deliverable accepted ≠
+feature complete.*
 
 ### 4.3 Topology is chosen, not defaulted
 
