@@ -330,12 +330,28 @@ Only write the sections below when the TL;DR tip is insufficient to carry the us
 ### Industry comparison (on-demand)
 <standards-expert, only when it has actionable impact on the current judgment. Otherwise omit.>
 
-### Verification considerations (REQUIRED — per acceptance dimension)
-**Mandatory, not on-demand** (the one always-present supporting section — this is HDD's front-load: discover the verification means before planning). Record it as a **table**, one row **per likely acceptance dimension**:
+### Verification considerations (REQUIRED — the acceptance criteria, settled here)
+**Mandatory, not on-demand** (the one always-present supporting section — this is HDD's front-load: discover the verification means before planning). Record it as a **table**, one row **per acceptance dimension**:
 
-| dimension | verify_by | runnable-check sketch / rubric |
-|---|---|---|
-| `<acceptance dimension>` | `unit`\|`integration`\|`e2e`\|`contract`\|`judge`\|`manual` | deterministic → the check that would run; `judge` → annotate the class in the cell — `judge (fact-claim)` or `judge (form)` — plus the candidate rubric question, the artifact it judges, and (fact-claim only) a sketch of the source set the judge would read first; `manual` → what a human confirms |
+| id | property | falsifier | verify_by | runnable-check sketch / rubric |
+|---|---|---|---|---|
+| `AC1` | `<what must hold>` | `<the search that would find the counterexample — or `judgement`>` | `unit`\|`integration`\|`e2e`\|`contract`\|`judge`\|`manual` | deterministic → the check that would run; `judge` → annotate the class in the cell — `judge (fact-claim)` or `judge (form)` — plus the candidate rubric question, the artifact it judges, and (fact-claim only) a sketch of the source set the judge would read first; `manual` → what a human confirms |
+
+**This table is the acceptance criteria, not a sketch of them (F-086).** They are settled
+here, before any solution exists — criteria written after a design drift toward whatever
+the design produced. `/ae:plan` copies the `id`, `property` and `falsifier` columns
+verbatim into the plan; it does not re-author them, and **dropping one is a refusal that
+comes back here**, not a note plan writes to itself. What plan does own is the
+**method** — which `verify_by` kind, and how the check is built. Criteria here, methods
+there, per [Stage handovers](../../handover.md).
+
+**The falsifier column is the load-bearing one**, and it is not always a test — it is the
+search that would find the counterexample. A document is read against **the thing it
+describes**, never against another document. A data invariant is the query that returns
+the violating rows, where an empty result is the evidence. A wired path is checked by
+asking the far end what it received. Where no such search exists: `presence + audit` for
+a rule a model is asked to follow (say what the audit would read), or `judgement` for a
+design preference — and a `judgement` row yields **no acceptance criterion at all**.
 
 Map each dimension to a `verify_by` kind per [`docs/references/verify-by-kinds.md`](../../../../docs/references/verify-by-kinds.md) — push each as far toward deterministic as it honestly goes; cover **non-code dimensions too** (business-data validity, domain invariants, BDD/behavioral scenarios), not just code checks. This table is the raw material `/ae:plan` consumes (its Step-1 Research reads it as the per-AC `verify_by` starting point + the runnable-check mandate), so a vague row here becomes a vacuous AC there. It must be PRESENT + per-dimension — the `### Synthesize` **Exit gate (analyze DoD)** above blocks finishing `analysis.md` without it. (Pre-F-063 this section was REQUIRED-but-ungated; F-063 gave it teeth.)
 

@@ -112,7 +112,13 @@ TaskCreate(subject: "ae:plan: Step 5 — Confirm")
 
    Standalone plans (Form 3 free text — no resolved discussion) skip this entire #5 mandatory load.
 
-6. **Consume the analyze verification table** (F-063 — the front-loaded harness's consumer half): when a feature dir is resolved, read its `analysis.md` `### Verification considerations` table and use it as the **per-AC `verify_by` starting point** when writing the plan's Acceptance Criteria. This is an EXPLICIT consumption step (not an implicit nod): **for each row in the table, either map it to an AC's `verify_by` or record `# dimension dropped: <reason>`** (a rigor-downgrade → `# verify_by override (was X): <reason>`; see the Verification Harness conventions below). It is a **strong convention, not mechanically enforced** — review Check 7 is the correctness backstop and silent partial-mapping is not auto-detected (deferred, BL-179); the convention's job is to make divergence *visible*, closing the F-067 inert-floor gap (produced-but-never-read) without overclaiming mechanical enforcement. **Brownfield**: if `analysis.md` is absent or has no Verification-considerations table (legacy feature predating F-063, or a standalone plan), emit a non-blocking warning and derive `verify_by` from scratch — never block. Plan remains the canonical decider on conflict (see the override / dropped-dimension conventions in the Verification Harness section below).
+6. **Consume the analyze verification table** (F-063 — the front-loaded harness's consumer half): when a feature dir is resolved, read its `analysis.md` `### Verification considerations` table and use it as the **per-AC `verify_by` starting point** when writing the plan's Acceptance Criteria. This is an EXPLICIT consumption step (not an implicit nod): **for each row in the table, either map it to an AC's `verify_by` or record `# dimension dropped: <reason>`** (a rigor-downgrade → `# verify_by override (was X): <reason>`; see the Verification Harness conventions below). It is a **strong convention, not mechanically enforced** — review Check 7 is the correctness backstop and silent partial-mapping is not auto-detected (deferred, BL-179); the convention's job is to make divergence *visible*, closing the F-067 inert-floor gap (produced-but-never-read) without overclaiming mechanical enforcement. **Brownfield**: if `analysis.md` is absent or has no Verification-considerations table (legacy feature predating F-063, or a standalone plan), emit a non-blocking warning and derive `verify_by` from scratch — never block.
+
+**Who decides what (F-086).** Plan is the canonical decider on the **method** and not on the **criterion**:
+
+- **Copied, not re-authored** — the `id`, `property` and `falsifier` columns go into the plan's Acceptance Criteria verbatim. They were settled in analyze, before any solution existed, which is what stops a criterion from drifting toward whatever got built.
+- **Plan's own call** — which `verify_by` kind, and how the check is built. A rigor downgrade is still `# verify_by override (was X): <reason>`, recorded here.
+- **`# dimension dropped` is now a refusal, not a note.** Dropping a criterion is not plan's decision: send it back to analyze naming the criterion, per [Stage handovers](../../handover.md). The note form remains only for a legacy plan with no analysis table to send anything back to.
 
 ### 1.5. Prior Context (project knowledge graph)
 
@@ -186,6 +192,11 @@ Falsifier: <as above>
 Self-closing: yes | no
 
 ## Acceptance Criteria
+
+**Copied from `analysis.md`'s Verification considerations table — `id`, `property` and
+`falsifier` verbatim (F-086).** What is added here is the method: `verify_by`, `fixture`,
+and the concrete input/output pairs. A criterion that cannot be planned against goes back
+to analyze rather than being rewritten here.
 
 ### AC1: Reference Case — <description>
 - verify_by: unit          # unit|integration|e2e|contract|judge|manual — see Verification Harness mapping below

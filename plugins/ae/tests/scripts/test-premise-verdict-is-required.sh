@@ -80,6 +80,15 @@ want "work can refuse a step back to plan"           "$S/work/SKILL.md" 'Refusin
 want "review sorts a finding into re-divide or escalate" "$S/review/SKILL.md" 'Re-divide or escalate'
 want "and asks whether twelve findings are one problem" "$S/review/SKILL.md" 'twelve problems or one'
 
+# The criteria are settled in analyze; plan owns the method and not the criterion
+want "analyze's table IS the criteria, not a sketch"  "$S/analyze/SKILL.md" 'settled here'
+want "and carries a falsifier per criterion"          "$S/analyze/SKILL.md" '| falsifier |'
+want "and says a falsifier is not always a test"      "$S/analyze/SKILL.md" 'not always a test'
+want "and a judgement row yields no criterion"        "$S/analyze/SKILL.md" 'no acceptance criterion at all'
+want "plan copies the criterion rather than authoring" "$S/plan/SKILL.md" 'Copied, not re-authored'
+want "and owns the method, not the criterion"         "$S/plan/SKILL.md" 'decider on the .*method'
+want "and dropping a criterion is a refusal"          "$S/plan/SKILL.md" 'now a refusal, not a note'
+
 echo "AE-SUBJECTS: $checked"
 echo "$((checked - failed))/$checked rules present"
 [ "$failed" -eq 0 ] || exit 1
