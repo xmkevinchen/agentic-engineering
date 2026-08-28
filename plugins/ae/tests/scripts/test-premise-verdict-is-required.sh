@@ -95,6 +95,20 @@ want "and rules out a preferred alternative"         "$S/review/SKILL.md" 'not a
 want "and sends a pre-existing defect to the backlog" "$S/review/SKILL.md" 'did not touch'
 want "and states the one-sentence discipline"        "$S/review/SKILL.md" 'name the criterion, or name the check'
 
+want "the signature rule is narrow and stated"       "$H" 'changes what someone already agreed to'
+want "and names the one place it applies"            "$H" 'criterion changed after it was frozen'
+want "and a superseded goal stays readable"          "$H" 'stays readable'
+want "and says a working note is not a contract"     "$H" 'treating a working note as a'
+want "plan points at the re-freeze on amendment"     "$S/plan/SKILL.md" 'Re-freezing after an amendment'
+
+want "the plan is expected to change"                "$H" 'plan is expected to change'
+want "and re-cutting needs no signature"             "$H" 'nobody agreed to the stack'
+want "work records a re-cut without gating it"       "$S/work/SKILL.md" 'RECUT \[Step N\]'
+want "and a re-cut may not move the goal"            "$S/work/SKILL.md" 'may not do is move the goal'
+
+want "the discriminator is direction, not size"      "$H" 'direction relative to the frozen criteria'
+want "and work toward a standard needs no permission" "$H" 'does not need permission to move'
+
 echo "AE-SUBJECTS: $checked"
 echo "$((checked - failed))/$checked rules present"
 [ "$failed" -eq 0 ] || exit 1

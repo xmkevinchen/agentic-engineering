@@ -253,6 +253,21 @@ Before each step's TDD Cycle (or direct Lead execution in single-platform mode),
 
 The ~30KB-and-5-steps threshold is carried forward from Plan 046 Known Limits — documented approximation, not a measured protocol invariant. If this becomes painful, re-file as targeted BL.
 
+## Re-cutting the plan (F-086)
+
+The plan is a working artifact and is expected to change while the loop runs — merging two
+steps, splitting one that will not close, reordering after learning something. **No
+approval is needed**: nobody agreed to the stack, they agreed to the goal, and the goal is
+frozen separately. See [Stage handovers](../../handover.md) § The plan is expected to
+change.
+
+Record it: one line in `<milestone-dir>/notes.md` — `RECUT [Step N]: <what changed> — <why>`.
+That is information, not a gate. A plan quietly rewritten to match its outcome hides the
+most useful thing a finished feature has to say.
+
+**What a re-cut may not do is move the goal.** A change that would alter what a criterion
+means is not a re-cut; it is an escalation to analyze, per the refusal rules below.
+
 ## Refusing the plan (F-086)
 
 Per [Stage handovers](../../handover.md). Before executing a step, **refuse and send it

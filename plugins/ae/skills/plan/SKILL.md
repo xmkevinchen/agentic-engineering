@@ -442,7 +442,7 @@ Indicate next step is `/ae:work <plan file path>`.
 
 When guard passes, write pipeline state:
 
-- [ ] **Freeze the GOAL**: for a feature-dir plan, write the verbatim `## Acceptance Criteria` section of this `plan.md` → `<feature-dir>/goal.frozen.md` — the immutable acceptance standard a fresh `/ae:review` re-examines the work against (frozen at plan-approval so the executor cannot move the goalposts during work). Only the GOAL is frozen (AC substance + `verify_by` + `verify:`); the harness/means stay editable in the live plan (goal/harness split deferred). Legacy plans (no feature dir) skip.
+- [ ] **Freeze the GOAL**: for a feature-dir plan, write the verbatim `## Acceptance Criteria` section of this `plan.md` → `<feature-dir>/goal.frozen.md` — the immutable acceptance standard a fresh `/ae:review` re-examines the work against (frozen at plan-approval so the executor cannot move the goalposts during work). Only the GOAL is frozen (AC substance + `verify_by` + `verify:`); the harness/means stay editable in the live plan (goal/harness split deferred). **Re-freezing after an amendment (F-086)**: when a criterion is changed — which reaches analyze as an escalation, never as an in-place edit here — the new goal supersedes the old one and the old one stays readable, because work already done was done against it. That is the one signature point in the loop; see [Stage handovers](../../handover.md) § What needs a signature. Legacy plans (no feature dir) skip.
 - [ ] Read plan frontmatter `discussion:` field
 - [ ] If `discussion:` is non-empty → read that discussion's `index.md`:
   - Set `plan: "<path-to-this-plan-file>"`

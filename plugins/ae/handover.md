@@ -72,3 +72,69 @@ round succeeded at fixing a different thing. From inside the loop everything loo
 **So the trigger is the rate, not the failures:** several consecutive rounds each
 producing findings, with no round changing the structure, means stop and ask what is
 generating them.
+
+## What needs a signature, and what does not
+
+Almost nothing does. The rule is narrow on purpose:
+
+> **A change needs a signature when it changes what someone already agreed to.**
+> Everything else is edited in place, inside the loop, by whoever is holding it.
+
+The discriminator is **direction relative to the frozen criteria**, not size:
+
+| the change | signature |
+|---|---|
+| **toward** the criteria — a re-cut stack, a merged step, a different order, a rewritten paragraph | **no**, however much of the plan moves |
+| **to** the criteria — the property, or the falsifier | **yes** |
+
+Work that moves toward a standard does not need permission to move; that is what having
+the standard was for.
+
+The pipeline already draws this line and it is drawn in the right place: **only the goal
+is frozen** — the acceptance criteria — and the plan around it stays editable while work
+runs (`plan/SKILL.md`, Freeze the GOAL). Steps get reordered, wording gets fixed, the
+stack gets re-cut; none of that touches what anyone agreed to. Requiring ceremony for
+those would end the loop, which is the thing the loop exists to keep cheap.
+
+### The one place it applies
+
+**A criterion changed after it was frozen.** That is the whole list.
+
+It arrives one way: review finds that a fix would change what a criterion *means*, which
+is an escalation back to analyze rather than a defect in the code. What happens next was
+not written down anywhere:
+
+1. analyze amends the criterion — the property, the falsifier, or both.
+2. **The goal is re-frozen**, and that is the signature point. The prior frozen goal is
+   not edited; a new one supersedes it and the old one stays readable, because work
+   already done was done against it.
+3. The amendment records **what changed and why**, beside the goal rather than inside it.
+
+An amended criterion is a new agreement about what "done" means. Work completed under the
+prior one was not wrong — it met the standard that was in force — and a record that
+overwrites the old standard makes that impossible to see afterwards.
+
+### The plan is expected to change
+
+A loop that cannot change its plan is not a loop. Re-cutting the stack mid-work — merging
+two steps, splitting one that would not close, reordering after learning something — is
+**the normal in-loop action**, the same re-division described above. It needs no
+signature and no approval, because nobody agreed to the stack; they agreed to the goal,
+and the goal is frozen separately for exactly this reason.
+
+What it does need is a **line saying it happened**: one entry in the milestone notes
+naming what was re-cut and why. Not a gate — information. How the stack actually went
+compared with how it was drawn is the most useful thing anyone learns from a completed
+feature, and it is invisible if the plan is quietly rewritten to match the outcome.
+
+The existing drift check is a narrower version of the same idea and stays as it is: it
+watches which **files** a step touched against the ones it declared, and an unexpected one
+is explained rather than forbidden. This is that, one level up, watching the **steps**.
+
+### Why the Contract is different, and is not the general case
+
+F-086's Contract is byte-frozen and gets an `amendments.md` beside it, because for a
+Contract the bytes **are** the agreement: change one and the thing that was accepted no
+longer exists. That is correct for a Contract and it is not a template for everything
+else. Most artifacts in a pipeline are working notes, and treating a working note as a
+contract is how a process acquires ceremony nobody can point at a reason for.
