@@ -1134,6 +1134,46 @@ export class Kernel {
     );
   }
 
+  // The one review that answers this run's requirement, or a refusal saying why
+  // none does. Private: a caller that could ask for "a review" could ask again
+  // until it liked the answer, and the point is that there is nothing to choose.
+  #answeringReview({ lineage, run, contract, producer }) {
+    const found = this.reviewsFor(lineage, run);
+    if (found.length === 0) {
+      fail('review_required_absent', 'the Contract requires a review and none is recorded', {
+        requested: contract.independence.requested_family,
+      });
+    }
+    // Two is not "pick the later one". Ambiguity is refused for the same reason a
+    // second Assignment or a second genesis is: choosing is not resolving.
+    if (found.length > 1) {
+      fail('review_not_unique', 'a run holding two reviews holds none', {
+        lineage, run, count: found.length,
+      });
+    }
+    const review = found[0];
+    if (review.reviewer === producer) {
+      fail('review_self_authored', 'the reviewed party is the reviewer', {
+        reviewer: review.reviewer,
+      });
+    }
+    const requested = contract.independence.requested_family;
+    if (requested && !requested.includes(review.family)) {
+      fail('review_wrong_family', 'the review is not from a family the Contract requested', {
+        family: review.family, requested,
+      });
+    }
+    // Against the deliverable as it stands now. This is the check that a later
+    // attempt can invalidate, and the reason all of this runs at completion.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
+    if (review.deliverable !== deliverable.identity) {
+      fail('review_wrong_deliverable', 'the review examined something other than this run\'s deliverable', {
+        reviewed: review.deliverable, deliverable: deliverable.identity,
+      });
+    }
+    return review;
+  }
+
   signOff({ lineage, run, actor, acceptedReview }) {
     const approved = this.contractForRun(lineage, run);
     if (!approved) {
@@ -1614,22 +1654,27 @@ export class Kernel {
       });
     }
 
-    // A Contract that requires independent review cannot complete in Phase 1.
+    // A Contract that requires independent review is judged here, not where the
+    // review was recorded.
     //
-    // There was a `recordReview` that took a digest and a family and stamped them
-    // `origin: harness`, and completion checked only that such a record existed —
-    // so the party being judged wrote its own judge into being, and got an
-    // Acceptance carrying a digest of nothing. It is deleted rather than guarded:
-    // Phase 1 has no successful cross-family path at all (that is Phase 3), so the only
-    // honest outcome here is the unavailable arm, which is where AC-7 already
-    // sends it. An Acceptance is not reachable either way; the difference is
-    // whether the machinery pretends otherwise.
-    if (contract.independence.required === 'cross_family_required') {
-      fail('review_required_absent', 'Phase 1 cannot obtain an independent review, so it cannot complete', {
-        requested: contract.independence.requested_family,
-      });
-    }
-    if (acceptedReview) {
+    // The distinction is load-bearing. A review that was bound to the right
+    // deliverable when it arrived can be bound to a superseded one by a later
+    // attempt, and a check that fired only at ingestion would never see that. What
+    // decides is the state at completion.
+    //
+    // An earlier version accepted a `recordReview` that took a digest and a family
+    // as arguments and stamped them `origin: harness`, so the party being judged
+    // wrote its own judge into being. The producer now chooses none of it — see
+    // `obtainReview` — and these four refusals are what reads it back.
+    // The producer, from the run's Assignment — the same place every other
+    // authority question reads it, so "who was reviewed" is not a second source.
+    const granted = this.assignmentFor(lineage, run);
+    const requiredReview = contract.independence.required === 'cross_family_required'
+      ? this.#answeringReview({
+        lineage, run, contract, producer: granted.grants.attempt_producer,
+      })
+      : null;
+    if (!requiredReview && acceptedReview) {
       fail('review_required_absent', 'a review is carried where the Contract required none', {});
     }
 
