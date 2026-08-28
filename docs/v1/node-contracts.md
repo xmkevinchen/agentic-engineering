@@ -35,47 +35,86 @@ Nothing below requires a skill to have run — see N10, and AC4 in `F-088`.
 
 ## 2. The graph
 
+Read the markers before the boxes. **This is not a picture of what runs today** — every
+node in it is implemented in the Kernel and nothing calls any of them.
+
+| marker | meaning |
+|---|---|
+| `[built]` | implemented and exercised by the suite |
+| `[built·opt]` | implemented, and legitimately **absent** from a passing run — a Contract that declares no independence requirement reaches Acceptance without it |
+| `[by hand]` | implemented, and so far performed only manually, as a recorded bootstrap |
+| `[3a]` | does not exist; `F-088` adds it |
+| `[N-n]` | deliberately absent, with the non-goal that holds it out |
+
 ```text
-                          ┌─ intent ─┐
-                          ▼          │
-     ┌──────────────► 1 Formation    │
-     │                    │          │
-     │                    ▼          │
-     │              2 Activation ◄── human (exact bytes)
-     │                    │
-     │                    ▼
-     │              3 Assignment
-     │                    │
-     │                    ▼
-     │        ┌────► 4 Attempt ◄───────────────┐
-     │        │           │                    │
-     │        │           ▼                    │
-     │        └──── 5 Observation              │  rework:
-     │                    │                    │  the deliverable
-     │                    ▼                    │  moves, and any
-     │              6 Review ─────► 7 Disposition  review bound to
-     │                    │                       the old one
-     │                    ▼                       stops answering
-     │              8 Gate ── unavailable ──► stop / human
-     │                    │
-     │                    ▼ passed
-     │            ┌───────────────────────────────┐
-     │            │  9 Completion                 │
-     │            │    └─ Sign-off ◄── human      │  one human action,
-     │            │       (withhold → stop)       │  not two: the owner
-     │            │  ──► Acceptance               │  calls complete, and
-     │            └───────────────────────────────┘  complete signs off
-     │                    │
-     │                    ▼
-     └────────────── 10 Run Record
-       (Contract wrong: new revision,
-        every prior pass re-proven)
+   ╔══════════════════════════════════════════════════════════╗
+   ║  [3a]  entry point — none exists; v1/bin/ is empty and   ║
+   ║        no skill, script or manifest reaches the Kernel   ║
+   ╚═══════════════════════════┬══════════════════════════════╝
+                               │
+                       ┌─ intent ─┐
+                       ▼          │
+  ┌──────────────► 1 Formation    │                    [built]
+  │                    │          │
+  │                    ▼          │
+  │              2 Activation ◄── human (exact bytes)   [by hand]
+  │                    │
+  │                    ▼
+  │              3 Assignment                           [built]
+  │                    │
+  │                    ▼
+  │        ┌────► 4 Attempt ◄──────────────┐            [built]
+  │        │           │                   │
+  │        │           ▼                   │
+  │        └──── 5 Observation             │  rework:   [built]
+  │                    │                   │  the deliverable moves,
+  │                    ▼                   │  and any review bound
+  │              6 Review ──► 7 Disposition│  to the old one stops
+  │                    │        [built·opt]│  answering
+  │            [built·opt]                 │
+  │                    │   ┌───────────────┘
+  │                    ▼   │  [N7] a finding reaching the seat that must act
+  │              8 Gate    │       on it would attach here. The record exists;
+  │                    │   │       the routing does not, and no host hook can
+  │        unavailable │   │       supply it: refusing a deliverable retries
+  │           ┌────────┤   │       the same worker instead of returning the
+  │           │        │   │       choice to whoever should make it.
+  │           ▼        │   │
+  │      stop / human  │ passed                         [built]
+  │                    ▼
+  │       ┌──────────────────────────────┐
+  │       │  9 Completion                │              [built]
+  │       │    └─ Sign-off ◄── human     │  one human action, not two:
+  │       │       (withhold → stop)      │  the owner calls complete,
+  │       │  ──► Acceptance              │  and complete signs off
+  │       └──────────────┬───────────────┘
+  │                      │
+  │                      ▼
+  └───────────── 10 Run Record                          [built]
+    (Contract wrong: new revision,
+     every prior pass re-proven)
+                         │
+   ╔═════════════════════▼════════════════════════════════════╗
+   ║  [3a]  reader — none exists. The surface asserts          ║
+   ║        completion from a hand-editable markdown field     ║
+   ║        instead of reading the Acceptance                  ║
+   ╚══════════════════════════════════════════════════════════╝
 ```
 
-**Every node in this graph is implemented in the Kernel today, and none of it is
-reachable.** That is the whole of what Phase 3a (`F-088`) closes: a way in at the
-top, and a surface that reads the Acceptance at the bottom. No node semantics
-change.
+**What the two `[3a]` bands mean together.** The loop is complete and sealed at both ends:
+nothing can get in, and nothing downstream reads what comes out. `F-088` opens both, and
+changes no node semantics — all twelve public Kernel operations already map onto a node
+above.
+
+**`[by hand]` is not a defect.** `F-086` activated its own Contract manually and recorded
+that it was doing so, because the machinery that would activate it mechanically is the work
+that Contract authorized. What that record says its first mechanical run must reproduce is
+still owed.
+
+**`[built·opt]` is why no criterion may demand every node.** V1's terminating Contracts
+declare no independence requirement, so a run can reach a valid Acceptance having never
+obtained a Review or disposed a finding. A check asserting all ten nodes were traversed
+would fail on a correct run.
 
 ## 3. How to read a node contract
 
