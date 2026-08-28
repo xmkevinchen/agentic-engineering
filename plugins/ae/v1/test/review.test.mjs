@@ -252,6 +252,32 @@ export function reviewTests() {
   // composition defects that every per-step check passed. Review selection is the
   // new place where a name can answer to two records, so replaying only the
   // ordinary Gate verdicts would miss exactly this class.
+  group('AC-7 · the Acceptance names the review it rested on', () => {
+    // Its own group, not an assertion inside AC-4's. A criterion covered under
+    // another one's name is covered until that other one is renamed, and then it
+    // is orphaned while the suite stays green — the aliasing the coverage check
+    // exists to refuse.
+    //
+    // Read from the written file, because that is the artifact a later reader
+    // has. An in-memory object proves the Kernel built one, not that one landed.
+    // Its own run. Reading one another group built would couple the two through
+    // execution order, and a group that only passes when another ran first is a
+    // group that passes for a reason it does not state.
+    const { families } = world();
+    const k = kernelWith(families);
+    const w = walk(k, { contract: REQUIRES });
+    k.obtainReview({
+      id: 'r', lineage: w.lineage, run: w.run, family: 'openai', reviewer: 'Reviewer',
+    });
+    const done = k.complete({ lineage: w.lineage, run: w.run, actor: OWNER });
+    const onDisk = JSON.parse(readFileSync(done.written.path, 'utf8'));
+    eq('the Acceptance records that a review was required', onDisk.review.required, true);
+    const review = k.reviewsFor(w.lineage, w.run)[0];
+    eq('and names the review that answered', onDisk.review.accepted_review,
+      digestBytes(Buffer.from(JSON.stringify(review), 'utf8')));
+    eq('and it is still the closed shape', validate(ACCEPTANCE, onDisk).join(','), '');
+  });
+
   group('AC-13 · a run that rested on a review replays to the same verdict', () => {
     const { families } = world();
     const dir = mkdtempSync(join(tmpdir(), 'wp-'));
@@ -318,19 +344,8 @@ export function reviewTests() {
         lineage: w.lineage, run: w.run, review: 'r', finding: 'f1',
         disposition: 'accepted — re-observed after packaging', actor: w.producer,
       });
-      const done = k.complete({ lineage: w.lineage, run: w.run, actor: OWNER });
-      eq('and answering it lets completion proceed', done.written.outcome, 'created');
-
-      // AC-7: the Acceptance names what it rested on. Read from the written file,
-      // because that is the artifact a later reader has — an in-memory object
-      // proves the Kernel built one, not that one was written.
-      const onDisk = JSON.parse(readFileSync(done.written.path, 'utf8'));
-      eq('the Acceptance records that a review was required',
-        onDisk.review.required, true);
-      const review = k.reviewsFor(w.lineage, w.run)[0];
-      eq('and names the review that answered', onDisk.review.accepted_review,
-        digestBytes(Buffer.from(JSON.stringify(review), 'utf8')));
-      eq('and it is still the closed shape', validate(ACCEPTANCE, onDisk).join(','), '');
+      eq('and answering it lets completion proceed',
+        k.complete({ lineage: w.lineage, run: w.run, actor: OWNER }).written.outcome, 'created');
     }
     {
       // A disposition naming a finding the review never raised answers nothing.
