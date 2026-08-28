@@ -89,6 +89,12 @@ want "plan copies the criterion rather than authoring" "$S/plan/SKILL.md" 'Copie
 want "and owns the method, not the criterion"         "$S/plan/SKILL.md" 'decider on the .*method'
 want "and dropping a criterion is a refusal"          "$S/plan/SKILL.md" 'now a refusal, not a note'
 
+want "review says what it does not report"           "$S/review/SKILL.md" 'does not report'
+want "and rules out wording no criterion turns on"   "$S/review/SKILL.md" 'wording, naming and phrasing'
+want "and rules out a preferred alternative"         "$S/review/SKILL.md" 'not a defect'
+want "and sends a pre-existing defect to the backlog" "$S/review/SKILL.md" 'did not touch'
+want "and states the one-sentence discipline"        "$S/review/SKILL.md" 'name the criterion, or name the check'
+
 echo "AE-SUBJECTS: $checked"
 echo "$((checked - failed))/$checked rules present"
 [ "$failed" -eq 0 ] || exit 1

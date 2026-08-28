@@ -248,6 +248,23 @@ Report which of these each finding is. A review that returns twelve findings wit
 saying whether they are twelve problems or one is the instance-chasing this check exists
 to interrupt.
 
+**What this review does not report.** Every finding traces to a criterion or to a
+falsifiability gap. Anything that traces to neither does not belong in the verdict:
+
+- **wording, naming and phrasing** where no criterion turns on them — the single largest
+  source of rounds that change nothing;
+- **an alternative the reviewer prefers**, where the one implemented meets the criterion.
+  "I would have done it differently" is not a defect. If the difference matters, it is a
+  criterion that is missing, and the honest move is to escalate to analyze and say so;
+- **restating what the code does** back to the author;
+- **a defect in something the change did not touch** — real, and it belongs in the
+  backlog, not in this verdict. Blocking a change on a pre-existing problem it did not
+  cause is how a correct change gets recorded as a failure. (F-086 nearly lost a feature
+  meeting both of its stated criteria to exactly this.)
+
+The discipline is one sentence: **name the criterion, or name the check that cannot turn
+red.** A finding that can do neither goes to the backlog or goes away.
+
 ### Prior Context (project knowledge graph)
 
 Run this step after Pre-checks pass and before creating the review team. Query = the feature name from $ARGUMENTS or the plan title. (Compact locate-step; canonical long form incl. grep-fallback: analyze/SKILL.md § Prior context.)
