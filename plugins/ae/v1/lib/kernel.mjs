@@ -19,7 +19,7 @@ import {
   realpathSync, unlinkSync,
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import { encodeNdjson, parseNdjson, parseStrict, digestBytes } from './canonical-json.mjs';
+import { encodeNdjson, parseNdjson, parseStrict, digestBytes, canonicalDigest } from './canonical-json.mjs';
 import { RECORDS } from '../schema/records.mjs';
 import { reduceAll } from './gate.mjs';
 import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
@@ -1293,7 +1293,31 @@ export class Kernel {
     if (!this.#completionRoot) {
       fail('writer_not_sole', 'this Kernel has no completion root, so it cannot complete', { run });
     }
-    const path = `${this.#completionRoot}/${lineage}.${run}.acceptance.json`;
+    // Escape is checked first because it is the more severe fault. What remains
+    // is that the name answer to one run.
+    //
+    // The composition joins two caller-chosen ids with `.`, and an id is any
+    // non-empty string — so lineage `L.a` with run `b` and lineage `L` with run
+    // `a.b` name one file. The write side refuses the second on `O_EXCL`, which
+    // is the wrong run refused; a reader resolving by path would answer
+    // "accepted" to a run that earned nothing. A name answering to two answers
+    // to neither.
+    //
+    // Refusing a component that contains the delimiter was tried and is wrong: a
+    // lineage naming a directory called `..inside` is legitimate and contains
+    // one, and refusing it is the false refusal the guard above already exists to
+    // avoid. Encoding the delimiter is also wrong, for the opposite reason — an
+    // escaping lineage would become a literal directory name and retire
+    // `write_escapes_location` by making it unreachable.
+    //
+    // So the pair itself is what disambiguates: a digest of both ids, which
+    // differs whenever the pair differs however the readable part collides. The
+    // readable part stays, because a directory of digests is not something a
+    // person can scan.
+    // The digest is `sha256:<64 hex>`; slicing the whole string takes seven
+    // characters of constant prefix and leaves almost no entropy. Take the hex.
+    const stamp = canonicalDigest({ lineage, run }).split(':').pop().slice(0, 16);
+    const path = `${this.#completionRoot}/${lineage}.${run}.${stamp}.acceptance.json`;
     assertNoSymlinkComponents(resolve(this.#completionRoot), resolve(path));
     assertInsideLocation(this.#completionRoot, resolve(path));
     return path;
