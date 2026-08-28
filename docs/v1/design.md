@@ -461,6 +461,12 @@ Human Intent
 Each arrow is a durable artifact, not a message. If the Team's mailbox
 disappeared, every arrow above must still be reconstructible.
 
+**This is the forward spine, not the whole graph.** The return edges — what is
+taken when, and what each one invalidates — plus a delivery contract per node,
+stated as what the next node refuses it for, are in
+[`node-contracts.md`](node-contracts.md). §10 below gives the rework conditions
+in prose; that document gives them as edges.
+
 ## 9. Minimal durable objects
 
 v1 defines only the objects the first vertical slices actually produce and
