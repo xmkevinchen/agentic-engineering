@@ -292,13 +292,28 @@ export function recordTests() {
     // moves once per such step rather than once per feature.
     ok('the current entry names review', current.records.review !== undefined);
     ok('and review is absent from the first', first.records.review === undefined);
+    // And an entry that no run has exercised says so rather than borrowing the
+    // provenance of one that could not have touched it. AC-12 asks a format to be
+    // frozen after its run; an entry ahead of that run is honest about being
+    // ahead, and a null here is what makes the gap findable.
+    ok('the first entry names the run that exercised it',
+      first.exercised_by !== null);
+    for (const entry of FROZEN.slice(1)) {
+      ok(`${entry.id} does not claim a run that predates its kinds`,
+        entry.exercised_by === null);
+    }
   });
 
   group('AC-12 · the freeze, and what it pins', () => {
     // Frozen after AC-9's real run exercised the formats, not before. The entry
     // names that run, and the run's own log is read here rather than trusted — a
     // freeze citing a run that did not happen pins nothing.
-    const entry = FROZEN[FROZEN.length - 1];
+    //
+    // The FIRST entry, because that is the one a real run exercised. Later entries
+    // name kinds newer than that run and say `exercised_by: null` rather than
+    // borrowing its provenance — reading the last entry here would have asked the
+    // newest entry to prove something only the oldest can.
+    const entry = FROZEN[0];
     const runLog = join(REPO, '.ae', 'features', 'active', 'F-086-v1-minimal-kernel',
       'ac9-run-2', 'log.ndjson');
     const exercised = existsSync(runLog)

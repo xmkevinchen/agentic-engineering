@@ -1110,7 +1110,9 @@ export class Kernel {
     const command = Object.prototype.hasOwnProperty.call(this.#families, family)
       ? this.#families[family] : null;
     if (!command) {
-      fail('review_required_absent', 'no command reaches that family', { family });
+      fail('review_family_unknown', 'no command reaches that family', {
+        family, known: Object.keys(this.#families),
+      });
     }
     // What was reviewed, resolved from the run rather than taken as an argument —
     // a review naming its own subject reviews whatever it says it did.
@@ -1128,13 +1130,28 @@ export class Kernel {
       raw = `${error.stdout || ''}${error.stderr || ''}`;
     }
 
+    // A call that failed obtained nothing. Recording it as a review would record
+    // something that did not happen — and an earlier version did worse than that:
+    // it substituted "(the reviewer returned nothing)" for empty output, so a
+    // command that exited non-zero and said nothing became a review with text in
+    // it, and completion accepted it. What is available here is the unavailable
+    // arm, which is where a capability that could not be used belongs.
+    if (exit !== 0) {
+      fail('reviewer_unreachable', 'the reviewer could not be reached', {
+        family, exit, raw: raw.slice(0, 400),
+      });
+    }
+    // Nor is silence. A reviewer that answered nothing left nothing for anyone to
+    // read, and a record of nothing still satisfies a check that only asks whether
+    // a review exists.
+    if (raw.trim().length === 0) {
+      fail('reviewer_silent', 'the reviewer answered nothing', { family });
+    }
+
     return this.#ledger.append({
       kind: 'review', id, lineage, run, reviewer, family, command, exit,
       deliverable: deliverable.identity,
-      // Empty output is not a review. A command that answered nothing leaves
-      // nothing for a person to read, and a record of nothing would still satisfy
-      // a check that only asked whether a review exists.
-      raw: raw.length > 0 ? raw : '(the reviewer returned nothing)',
+      raw,
       findings: findings || [],
       origin: HARNESS,
     });
@@ -1182,12 +1199,11 @@ export class Kernel {
   // none does. Private: a caller that could ask for "a review" could ask again
   // until it liked the answer, and the point is that there is nothing to choose.
   #answeringReview({ lineage, run, contract, producer }) {
+    // No "none is recorded" refusal. The Gate reads the requirement now: with no
+    // review obtained the obligations are `unavailable`, so completion refuses
+    // `not_all_passed` and never reaches here. Verified by deleting it and asking
+    // for a completion — the code that came back was the Gate's.
     const found = this.reviewsFor(lineage, run);
-    if (found.length === 0) {
-      fail('review_required_absent', 'the Contract requires a review and none is recorded', {
-        requested: contract.independence.requested_family,
-      });
-    }
     // Two is not "pick the later one". Ambiguity is refused for the same reason a
     // second Assignment or a second genesis is: choosing is not resolving.
     if (found.length > 1) {
@@ -1670,6 +1686,11 @@ export class Kernel {
       admit,
       inputsChanged: inputsChangedAgainst(index, inputsNow),
       outcomeOf: this.#outcomeReader({ lineage, run }),
+      reviewRequired: contract.independence.required === 'cross_family_required',
+      // Whether one was obtained, not whether it is the right one. Which review
+      // answers, and whether it is admissible, is decided at completion — the Gate
+      // is asked before a review can exist and must not need the answer twice.
+      reviewObtained: this.reviewsFor(lineage, run).length > 0,
     });
 
     return result;

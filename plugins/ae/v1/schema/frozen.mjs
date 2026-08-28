@@ -86,11 +86,17 @@ export const FROZEN = [
     // has exercised yet — which is why the slice that adds them also adds the
     // whole-path run that does.
     supersedes: 'v1',
-    exercised_by: {
-      lineage: 'BL-214',
-      run: 'run1',
-      acceptance: 'sha256:9ea38e8068401e0a59a8dbdad67d43286bb463e206fbc78f2fc1e4e40af822bc',
-    },
+    // NOT exercised by a real run. The `v1` entry names the Acceptance AC-9's
+    // dogfood produced, because that run exercised the formats `v1` names. These
+    // kinds are newer than that run and it could not have touched them, so naming
+    // it here would be a provenance claim about something that did not happen.
+    //
+    // AC-12 says a format is frozen after the run that exercised it. This entry is
+    // ahead of that run and says so rather than borrowing one: what exercises these
+    // kinds today is the suite's whole-path case, which leaves no durable
+    // Acceptance. Phase 2's own dogfood is what closes this, and until it runs the
+    // gap is visible here instead of hidden behind a digest that proves nothing.
+    exercised_by: null,
     formats: {
       Contract: 'sha256:94b87449e1a1c99b14ebc438bb2ecc69fd2d4135d770fb34f9f0d8f55c1ce141',
       Assignment: 'sha256:c15dc9da38b37a9803640a120b133b1e1015c9806103b5fc085ec77bc696e2d3',
@@ -137,11 +143,17 @@ export const FROZEN = [
     // AC-12 refuses a kind with no producer — so the freeze moves whenever such a
     // step does. Neither `v1` nor `v2` is edited.
     supersedes: 'v2',
-    exercised_by: {
-      lineage: 'BL-214',
-      run: 'run1',
-      acceptance: 'sha256:9ea38e8068401e0a59a8dbdad67d43286bb463e206fbc78f2fc1e4e40af822bc',
-    },
+    // NOT exercised by a real run. The `v1` entry names the Acceptance AC-9's
+    // dogfood produced, because that run exercised the formats `v1` names. These
+    // kinds are newer than that run and it could not have touched them, so naming
+    // it here would be a provenance claim about something that did not happen.
+    //
+    // AC-12 says a format is frozen after the run that exercised it. This entry is
+    // ahead of that run and says so rather than borrowing one: what exercises these
+    // kinds today is the suite's whole-path case, which leaves no durable
+    // Acceptance. Phase 2's own dogfood is what closes this, and until it runs the
+    // gap is visible here instead of hidden behind a digest that proves nothing.
+    exercised_by: null,
     formats: {
       Contract: 'sha256:94b87449e1a1c99b14ebc438bb2ecc69fd2d4135d770fb34f9f0d8f55c1ce141',
       Assignment: 'sha256:c15dc9da38b37a9803640a120b133b1e1015c9806103b5fc085ec77bc696e2d3',

@@ -72,7 +72,7 @@ export function reviewTests() {
     const { families } = world();
     const k = kernelWith(families);
     const w = walk(k);
-    refuses('a family the registry does not hold', 'review_required_absent',
+    refuses('a family the registry does not hold', 'review_family_unknown',
       () => k.obtainReview({
         id: 'rev3', lineage: w.lineage, run: w.run, family: 'invented', reviewer: 'R',
       }));
@@ -92,8 +92,52 @@ export function reviewTests() {
     const takesCommand = [...text.matchAll(/^ {2}([A-Za-z][\w]*)\(\{([^}]*)\}/gm)]
       .filter((m) => /\bcommand\b/.test(m[2])).map((m) => m[1]);
     eq('no public operation takes a command', takesCommand.join(','), '');
+    // AC5's discriminating case, after the criterion was corrected: naming one
+    // family must not get the other family's reviewer. An implementation that
+    // copied the caller's family through while running some other command would
+    // pass every other assertion here and fail this one.
+    const k2 = kernelWith(families);
+    const w2 = walk(k2);
+    const got = k2.obtainReview({
+      id: 'x', lineage: w2.lineage, run: w2.run, family: 'google', reviewer: 'R',
+    });
+    ok('naming google reaches google, not whoever is first in the registry',
+      /reviewed by google/.test(got.raw) && !/reviewed by openai/.test(got.raw));
     eq('and none takes an origin either, unchanged',
       auditOriginSurface({ readFileSync, dir: libDir }).join(','), '');
+  });
+
+  group('AC-5 · a call that obtained nothing is not a review', () => {
+    // Three distinct ways to obtain nothing, and each has its own code. They shared
+    // `review_required_absent` at first, and the sweep found all three deletable:
+    // one code across four sites meant a test could not tell which site refused.
+    const dir = mkdtempSync(join(tmpdir(), 'bad-'));
+    const script = (name, body) => {
+      const p = join(dir, `${name}.sh`);
+      writeFileSync(p, `#!/bin/sh\n${body}\n`);
+      chmodSync(p, 0o755);
+      return `sh ${p}`;
+    };
+    const k = kernelWith({
+      failing: script('failing', 'exit 7'),
+      silent: script('silent', 'exit 0'),
+    });
+    const w = walk(k);
+
+    // A failed call obtained nothing. An earlier version recorded it as a review
+    // with substituted text — so a command that exited non-zero and said nothing
+    // became a review with words in it, and completion accepted it.
+    refuses('a reviewer whose command failed', 'reviewer_unreachable',
+      () => k.obtainReview({
+        id: 'b1', lineage: w.lineage, run: w.run, family: 'failing', reviewer: 'R',
+      }));
+    // Nor is silence. A record of nothing still satisfies a check that only asks
+    // whether a review exists.
+    refuses('a reviewer that answered nothing', 'reviewer_silent',
+      () => k.obtainReview({
+        id: 'b2', lineage: w.lineage, run: w.run, family: 'silent', reviewer: 'R',
+      }));
+    eq('and neither left a record behind', k.reviewsFor(w.lineage, w.run).length, 0);
   });
 
   group('AC-5 · a review is bound to the run it reviewed', () => {
@@ -139,8 +183,14 @@ export function reviewTests() {
     const complete = (k, w) => k.complete({ lineage: w.lineage, run: w.run, actor: OWNER });
 
     {
+      // Caught at the Gate now, not at completion: a required review that was
+      // never obtained means the assurance the Contract asked for could not be
+      // used, so the obligation is `unavailable` and the run does not pass. The
+      // refusals below are about a review that *exists* and is wrong.
       const { k, w } = setup();
-      refuses('no review recorded at all', 'review_required_absent', () => complete(k, w));
+      eq('no review at all leaves the obligation unavailable',
+        k.status({ lineage: w.lineage, run: w.run }).byObligation.O.status, 'unavailable');
+      refuses('and the run cannot complete', 'not_all_passed', () => complete(k, w));
     }
     {
       // The reviewed party as its own reviewer. The same defect as an Assignment
