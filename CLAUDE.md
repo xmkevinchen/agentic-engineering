@@ -26,7 +26,6 @@ plugins/ae/             # The actual plugin
 │   ├── go/SKILL.md     #   the entry: runs a work item through the stages
 │   ├── analyze|discuss|plan|work|review/SKILL.md
 │   └── ...
-├── handover.md         # What one stage owes the next and may refuse it for
 ├── agents/             # Subagents (ae:workflow:architect, etc.)
 │   ├── review/ research/ workflow/ engineering/
 ├── scripts/            # The session-start probe, its reader, and the test runner

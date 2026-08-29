@@ -55,8 +55,8 @@ discarding work and redoing it. Only a change to what a criterion *means* comes 
 
 A stage may send its input back, and a refusal names the admission check that failed —
 a criterion with no falsifier, a premise verdict whose citation does not hold when re-run,
-a deterministic criterion whose check was never seen red. See
-[`handover.md`](../plugins/ae/handover.md) for the full table.
+a deterministic criterion whose check was never seen red. Each stage's `SKILL.md` states its
+own.
 
 ## Step 3 (optional): configure the project
 

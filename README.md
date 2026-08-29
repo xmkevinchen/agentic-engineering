@@ -67,8 +67,8 @@ See the [Quickstart Guide](docs/quickstart.md) for a full walkthrough.
 Everything a run produces lives in one feature directory under
 `.ae/features/active/F-NNN-<slug>/`. A stage reads the previous stage's deliverable off disk
 before it starts, and may **refuse** it — naming the admission check that failed, and sending
-it back one stage rather than to the start. What each stage may refuse, and what needs a
-human signature, is in [`plugins/ae/handover.md`](plugins/ae/handover.md).
+it back one stage rather than to the start. Each stage states its own admission checks in its
+own `SKILL.md`.
 
 Open [`docs/workflow-graph.html`](docs/workflow-graph.html) in a browser for the same graph
 with the return edges and refusal conditions drawn in.
@@ -195,7 +195,6 @@ fixed, not configured.
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest, MCP servers, SessionStart hook
   skills/                         # 6 skills — the entry plus five stages
-  handover.md                     # What one stage may refuse the next for
   agents/                         # 18 agents
     review/                       #   4 review agents
     research/                     #   3 research agents

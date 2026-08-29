@@ -37,9 +37,9 @@ written below as `<feature-dir>`; `/ae:analyze` creates it.
 
 ## Running it
 
-Invoke each stage's skill. After it returns, read its deliverable off disk and check the
-handover before going on — a stage that would be refused is sent back now, not discovered
-three stages later.
+Invoke each stage's skill. After it returns, read its deliverable off disk and check it
+against what the next stage would refuse it for, below, before going on — a stage that would
+be refused is sent back now, not discovered three stages later.
 
 **1 · Invoke `/ae:analyze` with the work item.**
 Then read `<feature-dir>/analysis.md`. Send it back when a criterion has no falsifier and no
@@ -96,6 +96,10 @@ what a criterion *means* needs the human.
   not ask the human about mechanical refusals.
 - **Same failure three times** — stop repeating. Either re-cut the step, or conclude the
   criterion is unmeetable and take it back to ANALYZE.
+- **Several rounds each fixing something real, and the work does not shrink** — the trigger
+  is the rate, not the failures, and every round looks fine from inside. Stop and ask what is
+  *generating* these, then cut along that axis. That is a re-division, still inside the loop —
+  not an escalation. Only a criterion that cannot be met however the work is divided leaves it.
 - **Blocked on a missing capability** — record it as blocked with what exactly would unblock
   it; finish everything else; report at the end. Do not invent a substitute check and call it
   passed.
