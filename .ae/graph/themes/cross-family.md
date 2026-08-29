@@ -11,6 +11,8 @@ server that runs `npm install` at every startup, and it is the only reason
 Node.js is a dependency of this project at all. On a fresh machine with no Node,
 it is the one component that does not come up.
 
+Inbound: relates_to F-082
+
 ### F-081 — Cross-family provenance enforcement (paused)
 
 F-080 shipped a provenance rule: a cross-family verdict without a
@@ -19,7 +21,9 @@ statement says consumers MUST partition verdicts before running their own rules.
 Four open items say the same thing from four angles — the mechanism is documented
 in more places than it is enforced:
 
-### F-082 — How agent orchestration is written — extend cheaply, never regress (active)
+Inbound: relates_to F-082
+
+### F-082 — How agent orchestration is written — extend cheaply, never regress (done)
 
 **Reframed 2026-08-16 by the user.** The feature began as "make cross-family invocation
 pluggable". It is now a review of how cross-family and multi-agent orchestration is

@@ -35,3 +35,4 @@ CLAUDE.local.md
 
 # Scratch dir reviewers point TMPDIR at when their sandbox forbids the system one.
 .tmp-review/
+.x/
