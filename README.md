@@ -239,7 +239,7 @@ The preset bundles 5 stages: `work.agent_teams`, `work.review_mode`, `work.accum
 ```
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest
-  skills/                         # 24 slash commands (the shell)
+  skills/                         # 25 slash commands (the shell)
   agents/                         # 18 specialized agents (the processes)
     review/                       #   4 review agents
     research/                     #   3 research agents
