@@ -131,6 +131,30 @@ yet probed — verify before making one load-bearing.
 | **`TeammateIdle` deny** | Prevents a teammate going idle | The only documented control over team-member lifecycle |
 | **`CLAUDE_PLUGIN_DATA`** | Per-plugin persistent data directory, exported to hooks | A sanctioned home for plugin state that is neither repo nor `~/.claude` hand-wiring |
 
+### Codex convergence (`documented` 2026-08-28, learn.chatgpt.com/docs/hooks)
+
+Codex CLI ships a hooks system (enabled by default; `[features] hooks = false`
+to disable) that has **converged on the same contract**: JSON on stdin, exit 2
++ stderr blocks, the same `hookSpecificOutput.permissionDecision` JSON, the
+same matcher-group config shape, fail-open on timeout/error, `updatedInput` on
+`PreToolUse`, and `mcp_tool` handlers. Shared events: `SessionStart/End`,
+`PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`,
+`Pre/PostCompact`, `SubagentStart/Stop`, `Stop`.
+
+| Capability | Claude Code | Codex | Portability consequence |
+|---|---|---|---|
+| Stop blocking | `Stop` deny / exit 2 | `Stop` with `continue: false` / exit 2 | **The done-leash ports almost verbatim** — one small output shim |
+| PreToolUse deny + rewrite | yes | yes (`updatedInput` too) | identical scripts |
+| Skill-scoped registration | frontmatter, `once` | **absent** (user/project/managed scopes only) | on Codex: project `.codex/hooks.json` + a marker-file guard in the script (instant no-op exit when no run is active) reproduces the zero-cost-when-idle property |
+| `FileChanged` watch | yes | **absent** | freeze-watch is CC-only; the fallback is the pull model the workflow prefers anyway — review re-verifies digests at consumption |
+| `prompt` / `agent` handler types | yes | **absent** (command + mcp_tool) | semantic checks stay in the workflow's own review stage, not in hooks |
+| Trust model | settings/frontmatter trust rules | explicit `/hooks` review-and-trust for non-managed hooks | a ported hook set must plan for the trust prompt |
+
+The convergence upgrades design rule 3: a Codex port loses **less** than
+"all hooks" — it keeps the portable core (Stop-leash, PreToolUse guards) and
+loses only the CC-specific accelerators (freeze-watch, skill-scoped
+registration, prompt/agent handlers).
+
 ### Design rules the two sources jointly force
 
 1. **A hook is an accelerator, never the sole carrier of a rule.** Timeout and
