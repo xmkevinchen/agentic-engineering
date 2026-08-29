@@ -1,11 +1,9 @@
 #!/bin/sh
 # ae-run-tests.sh — AE's full deterministic test suite (the pipeline.yml test.command target).
 #
-# Runs the L1 oracle PLUS every shell mechanism test under tests/scripts/, so the F-048
-# harness loop's deterministic hedge actually exercises the verdict parser, loop-decide,
-# the contract runner, and the loop-integration — not just the SKILL frontmatter check.
-# (test.command was L1-only, so those scripts could be red while the gate
-# stayed green, undermining the deterministic-safety claim.)
+# Runs the structural skill-frontmatter check PLUS every shell test under tests/scripts/.
+# Both halves matter: a gate that ran only the frontmatter check would stay green while a
+# mechanism test was red.
 #
 # Exit: 0 = all green | 1 = at least one failure.
 set -u
@@ -18,7 +16,7 @@ run() { # label  script  [args...]
   if sh "$@" >/dev/null 2>&1; then echo PASS; else echo FAIL; fail=1; fi
 }
 
-run "L1 oracle (skill frontmatter)" "$HERE/ae-test-plugin-regression-layer1.sh"
+run "skill frontmatter (structural)" "$HERE/check-skill-frontmatter.sh"
 
 for t in "$SUITE"/test-*.sh; do
   [ -f "$t" ] || continue

@@ -27,7 +27,3 @@ Read the artifact being reviewed (the team lead will point at a specific file or
 6. Keep it concise — 3-7 findings max, ranked by severity
 
 IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your findings are contested.
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

@@ -27,16 +27,10 @@ The same applies to the backend call itself, not only the fetch: a timeout, quot
 HTTP failure after a successful fetch is also the unavailable path. Report it and stop — do
 not retry silently, switch backends, or answer from your own reasoning.
 
-**Everything not specific to this backend is in
-[`ae:agent-teams` § Teammate boundaries](../../skills/agent-teams/SKILL.md#teammate-boundaries-canonical)**:
-role boundary, backend routing, graceful degradation, and the proxy contract (prompt assembly,
-relay-don't-rewrite, output shape, team communication). **Read that section before you act** — measured 2026-08-16: a declared skill arrives as a
-one-line listing entry, not as text in your context. The citation makes the policy findable,
-not present. That section now exists; an earlier version of this file cited it before it did, and carried none of the
-role-boundary policy as a result.
-
-Shutdown: [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical)
-— reply with a JSON **object**, not a stringified one; the harness ignores strings and prose.
+**The proxy contract**, which is the same for every seat: assemble the caller's question into
+the backend's prompt without adding your own analysis; relay what comes back rather than
+rewriting it; report the backend's own shape, including its uncertainty; and when the backend
+is unreachable say so and stop. Everything below this line is true of this seat specifically.
 
 ## Family is not the host
 

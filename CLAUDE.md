@@ -22,16 +22,17 @@ When releasing:
 plugins/ae/             # The actual plugin
 ├── .claude-plugin/
 │   └── plugin.json     # Plugin manifest (name: "ae")
-├── skills/             # Slash commands (/ae:plan, /ae:work, etc.)
-│   ├── plan/SKILL.md
-│   ├── work/SKILL.md
+├── skills/             # The entry and the five stages
+│   ├── go/SKILL.md     #   the entry: runs a work item through the stages
+│   ├── analyze|discuss|plan|work|review/SKILL.md
 │   └── ...
+├── handover.md         # What one stage owes the next and may refuse it for
 ├── agents/             # Subagents (ae:workflow:architect, etc.)
-│   ├── review/
-│   ├── research/
-│   └── workflow/
-├── mcp-servers/        # Bundled MCP servers (Gemini)
-└── templates/          # pipeline.yml template for /ae:setup
+│   ├── review/ research/ workflow/ engineering/
+├── scripts/            # The session-start probe, its reader, and the test runner
+├── mcp-servers/        # Bundled MCP servers (Gemini, OpenAI-compatible)
+├── v1/                 # The Phase 1 Kernel, built against its own frozen Contract
+└── templates/          # pipeline.yml template
 ```
 
 ## Naming Convention

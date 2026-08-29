@@ -53,9 +53,9 @@ See the full [Agent Contract Specification (local-only `docs/decisions/037-agent
 
 | Role | When to use | Team slot |
 |------|------------|-----------|
-| **reviewer** | Your agent checks code quality, security, performance, or compliance | ae:review, ae:code-review |
+| **reviewer** | Your agent checks code quality, security, performance, or compliance | ae:review |
 | **developer** | Your agent writes or modifies code | ae:work |
-| **domain-expert** | Your agent has specialized knowledge (API design, ML, etc.) | ae:analyze, ae:discuss, ae:team |
+| **domain-expert** | Your agent has specialized knowledge (API design, ML, etc.) | ae:analyze, ae:discuss |
 
 An agent can match multiple roles. When ambiguous, ae prefers: reviewer → developer → domain-expert.
 
@@ -101,34 +101,22 @@ Both examples are available as templates in `plugins/ae/templates/examples/`.
 
 ## Testing Your Agent
 
-Verify your agent is discovered:
+Claude Code discovers agents itself. Ask for yours by name in any session and see whether it
+is spawnable:
 
 ```
-/ae:team review the authentication module
+Use the security-auditor agent to review the authentication module
 ```
 
-ae should show your agent in the team selection. If it doesn't appear:
+If it doesn't appear:
 
-1. Check the filename matches the `name` field
+1. Check the filename matches the `name` field — the host resolves by filename stem
 2. Check the `description` contains role keywords
 3. Ensure the file is in `.claude/agents/` (not a subdirectory)
-
-## Advanced: pipeline.yml Override
-
-If your agent is outside `.claude/agents/` or role inference is wrong, declare it explicitly:
-
-```yaml
-# In .claude/pipeline.yml
-project_agents:
-  - name: security-auditor
-    role: reviewer
-```
-
-This overrides description-based inference. All agents must still be in `.claude/agents/` to be spawnable. See the [Agent Contract Specification (local-only `docs/decisions/037-agent-contract.md`, untracked by convention) for precedence rules.
 
 ## Tips
 
 - **Keep descriptions specific** — "Reviews Python code for type safety and mypy compliance" is better than "Checks code"
 - **One role per agent** — an agent that reviews AND implements is confusing. Make two agents.
-- **Test with `/ae:team`** — verify discovery before relying on it in `/ae:review` or `/ae:work`
+- **Spawn it once by name** — verify discovery before relying on it in `/ae:review` or `/ae:work`
 - **Start minimal** — add `model`, `effort`, `tools` later as you tune performance

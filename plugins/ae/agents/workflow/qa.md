@@ -6,7 +6,6 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 40
-skills: ae:code-review
 vibe: Verify by running, not by reading. Real artifacts beat assumptions.
 ---
 
@@ -113,7 +112,3 @@ Review code after each step completion, call cross-family for external opinions.
 > **Diff scope**: 2 files (`src/auth/handler.ts`, `tests/auth/handler.test.ts`), within plan's Expected files.
 >
 > **Cross-family**: Codex no findings; Gemini flagged `auth/handler.ts:42` consider rate-limit (P3, deferred per nit cap)."
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

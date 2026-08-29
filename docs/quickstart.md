@@ -1,22 +1,14 @@
 # Quickstart Guide
 
-Get from zero to a working ae pipeline in 10 minutes.
-
 ## Prerequisites
 
-1. **Agent Teams** enabled — add to `~/.claude/settings.json`:
-   ```json
-   {
-     "env": {
-       "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-     }
-   }
-   ```
-   Then restart Claude Code. (Most ae commands require this.)
-2. **Claude Code** v1.0.33+ ([install](https://docs.anthropic.com/en/docs/claude-code))
-3. **Node.js** ([install](https://nodejs.org)) — optional, only needed for the Gemini MCP server
+1. **Claude Code** ([install](https://docs.anthropic.com/en/docs/claude-code))
+2. **Node.js** ([install](https://nodejs.org)) — optional, only needed for the bundled Gemini
+   and OpenAI-compatible MCP servers
 
-## Step 1: Install the Plugin
+Agent Teams is no longer required. The stage skills run in the ordinary session.
+
+## Step 1: Install the plugin
 
 In Claude Code:
 
@@ -27,160 +19,86 @@ In Claude Code:
 
 You should see: `Plugin "ae" installed successfully.`
 
-## Step 2: Set Up Your Project
-
-Navigate to your project and run:
+## Step 2: Run a work item
 
 ```
-/ae:setup
+/ae:go add rate limiting middleware to the Express API with per-IP limits
 ```
 
-ae auto-detects your test and lint commands. It creates `.claude/pipeline.yml` — the config file that all ae commands read.
-
-**Expected output:**
-```
-Detected: Node.js project
-  test.command: "npm test"
-  lint.command: "npm run lint"
-
-Output directories configured:
-  discussions: docs/discussions/
-  plans: docs/plans/
-  ...
-
-Cross-family status:
-  Codex: available ✓
-  Gemini: available ✓
-
-Pipeline config written to .claude/pipeline.yml
-```
-
-If Codex and Gemini aren't set up yet, you'll see:
-```
-Cross-family status:
-  Codex: unavailable (codex CLI not found)
-  Gemini: unavailable (no API key)
-```
-That's fine — ae works with Claude alone. Codex and Gemini add cross-family review coverage but are not required.
-
-If your project doesn't have a test command, ae will ask. You can skip — but `/ae:work` will pause at every step for manual confirmation instead of auto-passing.
-
-**You can now run `/ae:plan` with Claude alone.** Codex and Gemini are optional — see the Cross-Family Setup section in the README if you want to add them later.
-
-## Step 3: Create a Plan
-
-Let's say you want to add rate limiting to an Express API:
+That is the whole interface. `/ae:go` invokes each stage in turn and reads its deliverable
+off disk before going on:
 
 ```
-/ae:plan add rate limiting middleware to the Express API with per-IP limits
+ANALYZE → [DISCUSS] → PLAN → ← you confirm the criteria
+                       WORK ⇄ REVIEW → ← you sign completion
 ```
 
-ae researches your codebase, writes a step-by-step plan with acceptance criteria, then runs a multi-agent review (architect + dependency analyst + cross-family proxies).
+Everything the run produces lives in one feature directory under
+`.ae/features/active/F-NNN-<slug>/` — `analysis.md`, the plan, the log, the review.
+If the conversation were lost, the next stage could proceed from those files alone.
 
-**Expected output:**
-```
-## Feature: Rate Limiting Middleware
+You can also invoke a single stage directly — `/ae:plan <feature-dir>`,
+`/ae:review <plan-path>` — when you are resuming or redoing one part.
 
-### Step 1: Add rate-limiter-flexible dependency (AC1)
-- [ ] Install rate-limiter-flexible
-- [ ] Configure per-IP limits in config
-Expected files: package.json, package-lock.json, src/config/rate-limit.ts
+### The two places it stops
 
-### Step 2: Implement middleware (AC1, AC2)
-- [ ] Create rate limiting middleware
-- [ ] Wire into Express app
-Expected files: src/middleware/rate-limiter.ts, src/app.ts
+**After PLAN**, you confirm the acceptance criteria. This is the thing being agreed; the step
+cut is advisory and the loop may re-cut it freely afterwards.
 
-### Step 3: Add tests (AC3)
-- [ ] Unit tests for rate limiter
-- [ ] Integration test for rate-limited endpoint
-Expected files: tests/middleware/rate-limiter.test.ts
+**After REVIEW**, you sign completion. Tests green and a pass verdict are not completion —
+a gate the executed party can open is not a gate.
 
-## Acceptance Criteria
-### AC1: Rate Limit Enforced
-Requests exceeding 100/min per IP receive 429 status...
-```
+Everything between those two points is the loop's own: re-planning, re-cutting steps,
+discarding work and redoing it. Only a change to what a criterion *means* comes back to you.
 
-## Step 4: Execute the Plan
+### What a stage refuses
 
-```
-/ae:work
-```
+A stage may send its input back, and a refusal names the admission check that failed —
+a criterion with no falsifier, a premise verdict whose citation does not hold when re-run,
+a deterministic criterion whose check was never seen red. See
+[`handover.md`](../plugins/ae/handover.md) for the full table.
 
-ae picks up the most recent reviewed plan and executes it step by step:
+## Step 3 (optional): configure the project
 
-1. **Write test** — based on the step's acceptance criteria
-2. **Confirm red** — test fails (it should — nothing's implemented yet)
-3. **Implement** — minimum code to make the test pass
-4. **Confirm green** — all tests pass
-5. **Code review** — Claude + Codex + Gemini review the diff
-6. **Commit** — one step = one commit
+Copy [`plugins/ae/templates/pipeline.template.yml`](../plugins/ae/templates/pipeline.template.yml)
+to `.claude/pipeline.yml` and fill in two things:
 
-Each step auto-continues if tests pass and no P1 issues are found.
+- `test.command` — what a stage runs to turn a check red;
+- `cross_family` — which second-opinion seats are available.
 
-**Severity glossary** (you'll see these in review output):
-- **P1**: blocker — fix before continuing
-- **P2 logic/security**: review required — ae asks you to decide
-- **P2 style**: auto-skipped
-- **P3**: minor — auto-skipped
+Both are optional. Without the file, a stage asks you for the test command, and the
+session-start probe reports that it found no `cross_family` table.
 
-**Expected output per step:**
-```
-Pre-checks:
-✅ Plan exists: docs/plans/001-rate-limiting.md
-✅ Current step: Step 1 (0 done)
-✅ Agent Teams: enabled
+## Cross-family review
 
-[Step 1: Add rate-limiter-flexible dependency]
-  📝 Writing test...
-  🔴 Test fails (expected)
-  🔨 Implementing...
-  🟢 Tests pass
-  📋 Code review: no P1, no drift
-  ✅ Committed: a1b2c3d
+Three model families are reachable through MCP: Claude (the session itself), Codex via the
+`codex` CLI, and Gemini or any OpenAI-compatible backend via the bundled servers. Proxy
+agents (`codex-proxy`, `gemini-proxy`, `openai-compat-proxy`) front them.
 
-✅ Auto-pass: continuing to Step 2...
-```
+| Family | How to set up |
+|--------|--------------|
+| Codex (OpenAI) | `npm install -g @openai/codex` |
+| Gemini (Google) | Set `GEMINI_API_KEY` ([get a key](https://aistudio.google.com/apikey)) |
+| Anything OpenAI-compatible | Set the endpoint and model in plugin settings, or per call |
 
-## Step 5: Review the Feature
-
-After all steps complete:
-
-```
-/ae:review
-```
-
-ae assembles a full review panel — code reviewer, architecture reviewer, security reviewer, performance reviewer, plus cross-family agents. They evaluate the entire feature against the plan's acceptance criteria.
-
-**Expected output:**
-```
-Review: Rate Limiting Middleware
-  Verdict: pass ✅
-
-Findings:
-  P2 (style): consider extracting config to env vars [auto-skipped]
-  P3 (minor): typo in error message [auto-skipped]
-
-Feature complete. Ready for merge.
-```
-
-## What's Next?
-
-- **`/ae:next`** — run this anytime to see what the pipeline suggests as the next step
-- **`/ae:dashboard`** — see all your features and where they stand
-- **`/ae:discuss`** — for complex features, start here before `/ae:plan` to work through design decisions first
-- **`/ae:team`** — spin up an ad-hoc agent team for any task
+A SessionStart hook probes every configured seat and warns about the ones that are
+configured but unreachable. Nothing fails because a family is missing — you lose that
+family's coverage, and the run says so.
 
 ## Troubleshooting
 
-### "Agent Teams is required"
-You haven't enabled Agent Teams. Add the env var to `~/.claude/settings.json` and restart Claude Code. See [Prerequisites](#prerequisites).
+### "cross_family table not found"
+
+The session-start probe looked for `.claude/pipeline.yml` relative to your working
+directory and did not find one. Harmless if you are not using cross-family review;
+otherwise copy the template as in Step 3.
 
 ### "Gemini MCP server unavailable"
-Set your `GEMINI_API_KEY` environment variable. Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). Gemini is optional — ae works without it, you just lose cross-family Gemini coverage.
 
-### "No test command configured"
-ae's auto-pass gate treats empty `test.command` as UNVERIFIED, which pauses every step. Run `/ae:setup update` to add your test command, or edit `.claude/pipeline.yml` directly.
+Set `GEMINI_API_KEY`. Gemini is optional — you lose Gemini coverage, nothing else.
 
-### Steps keep pausing for confirmation
-Check `pipeline.yml → work.auto_pass`. If set to `false`, every step pauses. Set to `true` for automatic continuation when tests pass and no P1 issues found.
+### A stage keeps refusing the same input
+
+Read what the check expected against what it saw, and fix that. The same failure three
+times means stop repeating: either re-cut the step, or take the criterion back to ANALYZE
+as unmeetable.

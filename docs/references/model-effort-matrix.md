@@ -6,27 +6,17 @@ Current model and effort assignments for all AE skills and agents.
 
 ## Skills (TL model + effort)
 
+Read from each `SKILL.md` frontmatter. A blank cell means the field is not declared, so the
+session's own model or effort is used.
+
 | Skill | Model | Effort | Role |
 |-------|-------|--------|------|
-| ae:discuss | opus | high | Multi-round team orchestration + synthesis |
-| ae:plan | opus | high | Plan generation + team review |
-| ae:review | opus | xhigh | Deep multi-agent review + fixup (verdict gate — the hardest verify/judge stage) |
-| ae:work | inherit | high | Plan execution loop (TDD + commit + review) |
-| ae:think | inherit | high | Deep multi-step reasoning |
-| ae:analyze | inherit | medium | Research + team analysis |
-| ae:consensus | inherit | medium | Structured debate |
-| ae:plan-review | inherit | medium | Standalone plan review |
-| ae:test-plugin | inherit | medium | Adversarial behavioral testing |
-| ae:team | inherit | medium | Ad-hoc agent team |
-| ae:code-review | inherit | medium | Pre-commit quick review |
-| ae:testgen | inherit | medium | Test suite generation |
-| ae:dashboard | inherit | inherit | Read-only pipeline status |
-| ae:next | inherit | inherit | Next step inference |
-| ae:trace | inherit | inherit | Execution flow tracing |
-| ae:agent-selection | inherit | inherit | Agent selection reference |
-| ae:agent-teams | inherit | inherit | Agent Teams protocol reference |
-| ae:setup | inherit | inherit | Project config initialization |
-| ae:retrospect | inherit | inherit | Execution trend analysis |
+| ae:go | — | — | The entry: runs the work item through the five stages |
+| ae:analyze | — | medium | Premise check + acceptance criteria |
+| ae:discuss | opus | high | Structured decision record for a contested call |
+| ae:plan | opus | high | Step cut against the frozen criteria |
+| ae:work | — | high | Plan execution (check red first, then commit) |
+| ae:review | opus | xhigh | Completion gate — the hardest verify/judge stage |
 
 ## Agents (subagent model + effort)
 
@@ -35,7 +25,6 @@ Current model and effort assignments for all AE skills and agents.
 | architect | sonnet | high | Plan decomposition, solution design |
 | challenger | sonnet | high | Pure opposition, blind spot detection |
 | qa | sonnet | high | Code review + cross-family |
-| test-lead | sonnet | high | Test orchestration + LLM-as-judge |
 | archaeologist | sonnet | medium | Deep code investigation |
 | dependency-analyst | sonnet | medium | Dependency mapping |
 | standards-expert | sonnet | medium | Industry best practices research |
@@ -45,9 +34,12 @@ Current model and effort assignments for all AE skills and agents.
 | doodlestein-strategic | sonnet | medium | Strategic improvement (single question) |
 | doodlestein-adversarial | sonnet | medium | Blind spot detection (single question) |
 | doodlestein-regret | sonnet | medium | Regret prediction (single question) |
+| doodlestein-scope-reducer | sonnet | medium | Scope reduction (single question) |
+| minimal-change-engineer | — | — | Minimum-viable diffs; refuses scope creep |
 | code-reviewer | haiku | low | General code review (lightweight) |
-| codex-proxy | sonnet | low | Codex MCP relay (haiku→sonnet in v0.10.6 — F-043 smoke measured 1/3 haiku adherence to parameter-level MUSTs) |
-| gemini-proxy | haiku | low | Gemini MCP relay (stays haiku: no parameter-level per-call MUSTs on the Gemini MCP surface — lower compliance risk than codex-proxy; revisit on observed protocol non-compliance, tracked BL-137) |
+| codex-proxy | sonnet | low | Codex MCP relay (haiku→sonnet: haiku held parameter-level MUSTs 1 run in 3) |
+| gemini-proxy | haiku | low | Gemini MCP relay (stays haiku: no parameter-level per-call MUSTs on that surface) |
+| openai-compat-proxy | sonnet | low | Any OpenAI-compatible backend, endpoint and family supplied per call |
 
 ## Override Hierarchy
 

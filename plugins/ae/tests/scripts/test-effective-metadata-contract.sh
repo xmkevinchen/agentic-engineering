@@ -52,7 +52,7 @@ DEFINITIONS = [
     ("plugins/ae/skills/discuss/SKILL.md", "ae:discuss", "skill"),
     ("plugins/ae/skills/plan/SKILL.md", "ae:plan", "skill"),
     ("plugins/ae/skills/review/SKILL.md", "ae:review", "skill"),
-    ("plugins/ae/skills/think/SKILL.md", "ae:think", "skill"),
+    ("plugins/ae/skills/analyze/SKILL.md", "ae:analyze", "skill"),
     ("plugins/ae/skills/work/SKILL.md", "ae:work", "skill"),
 ]
 SESSION = "00000000-0000-4000-8000-00000000f083"

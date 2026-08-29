@@ -98,7 +98,3 @@ When `architect` sends back a modified proposal:
 1. Re-check whether modifications resolve the issues
 2. Confirm no new hidden dependencies introduced
 3. **SendMessage reply**: pass / still has issues (specify where)
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

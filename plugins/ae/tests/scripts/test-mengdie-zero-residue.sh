@@ -1,10 +1,8 @@
 #!/bin/sh
 # AC1 (F-070 Step 3): zero mengdie residue in the live skill surface.
 # sh-tap output (parser: sh-tap.v1).
-# Allowlist is FULLY ENUMERATED per AC1 (isolated judge: a *.deprecated class
-# pattern could silently grow) — exactly these two files carry historical
-# dogfood-project-name mentions. A NEW file (including a new .deprecated one)
-# fails this test until a human adds it here.
+# The two files that carried historical dogfood-project-name mentions are gone with the
+# skills that held them, so the allowlist is now empty: ANY mention under skills/ fails.
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -25,20 +23,16 @@ fi
 
 # (b) no live Mengdie mention in any SKILL.md outside the enumerated allowlist
 viol=""
-# scan *.md* so .md.deprecated files are ITERATED (with a bare *.md
-# glob the *.deprecated allowlist arm was dead code — false confidence)
+# scan *.md* so a *.deprecated file is iterated too, not skipped by a bare *.md glob
 for f in $(find "$SKILLS" -name '*.md*' -type f); do
-  case "$f" in
-    */setup/agent-selection-rubric.md|*/setup/agent-selection-scorer.md.deprecated) continue ;;  # fully enumerated historical allowlist
-  esac
   if grep -qi 'mengdie' "$f"; then
     viol="$viol $f"
   fi
 done
 if [ -z "$viol" ]; then
-  ok "no live Mengdie mention outside the enumerated allowlist"
+  ok "no Mengdie mention under plugins/ae/skills/"
 else
-  notok "no live Mengdie mention outside the enumerated allowlist (violations:$viol)"
+  notok "no Mengdie mention under plugins/ae/skills/ (violations:$viol)"
 fi
 
 # (c) shared protocol doc deleted

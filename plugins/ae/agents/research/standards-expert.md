@@ -90,7 +90,3 @@ When `challenger` questions your recommendations:
 1. Provide specific references (links, doc sections, mature project examples)
 2. If challenger's challenge is valid (e.g., "this practice doesn't apply to our scenario"), honestly acknowledge and adjust recommendation
 3. Distinguish "universally accepted practice" from "context-specific best practice"
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

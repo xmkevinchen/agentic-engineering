@@ -2,16 +2,21 @@
 
 **Stop prompting one model and hoping for the best.**
 
-ae is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that runs structured, multi-agent workflows on your codebase. It plans features with acceptance criteria, executes them step by step with TDD, reviews with cross-family agents (Claude + Codex + Gemini), and persists every decision to disk.
+ae is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that runs one piece
+of work through a fixed workflow: establish the problem is real, settle what *done* means, cut
+the work, execute it against checks that were seen failing first, then judge it against the
+criteria that were frozen before any of it started. Two points wait for a human. Everything
+else the loop decides for itself.
 
-Think of it as a disciplined senior engineer running a small team inside your repo.
+Think of it as a disciplined senior engineer who will not let you skip the boring part.
 
 ## Who is this for?
 
 Solo developers and small teams who want:
-- **Repeatable workflows** — not ad-hoc prompting, but a pipeline: analyze → discuss → plan → work → review
-- **Multi-agent review** — 3 model families catch different things; one model alone misses too much
-- **Persistent artifacts** — plans, decisions, and reviews survive context window compaction
+- **A repeatable loop** — not ad-hoc prompting: analyze → plan → work → review, with named refusals between stages
+- **Criteria settled before work starts** — and never edited silently once they are
+- **Persistent artifacts** — the analysis, plan, log and review survive context compaction, because they are files
+- **Cross-family review** — Codex and Gemini catch what a Claude-only panel shares a blind spot on
 - **Agent extensibility** — add your own domain-expert agents alongside the built-in ones
 
 ## When NOT to use ae
@@ -22,104 +27,70 @@ Solo developers and small teams who want:
 
 ## Quick Start
 
-**Prerequisites**: [Agent Teams](https://code.claude.com/docs/en/agent-teams) enabled · [Claude Code](https://docs.anthropic.com/en/docs/claude-code) v1.0.33+ · [Node.js](https://nodejs.org) (optional — only for Gemini)
+**Prerequisites**: [Claude Code](https://docs.anthropic.com/en/docs/claude-code) · [Node.js](https://nodejs.org) (optional — only for the bundled MCP servers)
 
 ```bash
-# 1. Enable Agent Teams (required for /ae:discuss and /ae:review;
-#    /ae:plan and /ae:work fall back to solo mode without it)
-# Add to ~/.claude/settings.json:
-#   { "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
-
-# 2. Install the plugin
+# 1. Install the plugin
 /plugin marketplace add xmkevinchen/agentic-engineering
 /plugin install ae@agentic-engineering
 
-# 3. In your project
-/ae:setup          # creates .claude/pipeline.yml
-/ae:plan add rate limiting middleware   # generate a plan with acceptance criteria
-/ae:work           # execute it (TDD + commit + review loop)
+# 2. In your project — this is the whole interface
+/ae:go add rate limiting middleware with per-IP limits
 ```
 
-See [Quickstart Guide](docs/quickstart.md) for a full walkthrough.
+See the [Quickstart Guide](docs/quickstart.md) for a full walkthrough.
 
-## Cross-machine setup
-
-If you use `/ae:setup agents --library <path>` to wire an external agent library (e.g. `agency-agents`), the library path is captured as a relative path in your project's `pipeline.yml` `agent_libraries[].source`. On a fresh checkout to a different machine, the library directory may not exist at the same relative location.
-
-**What you'll see**: actionable error messages from `/ae:setup agents --list`, `--add`, and `--sync` pointing back to this section. (Note: `/ae:setup agents --remove` is unaffected — it operates on local `.claude/agents/` and `pipeline.yml` only and does NOT read library source.)
-
-**2-step recovery**:
-1. `cd <parent-dir> && git clone <library-url>` — clone the library at the relative path your `pipeline.yml` `agent_libraries[].source` references. Example: if `source: "../agency-agents"`, then `<parent-dir>` is the parent of your project root and `<library-url>` is whatever URL the library was originally cloned from.
-2. Re-run the AE command that failed; the library is now resolvable.
-
-**Why not auto-clone?** AE keeps a local-files-only architecture for solo-dev simplicity (no network at runtime). A future enhancement to capture the library's URL at `--library` time (so error messages can include actionable git-clone hints) is on AE's internal roadmap, trigger-gated on library count growing past a threshold OR multi-user onboarding scenario OR concrete user-friction incident.
-
-## The Pipeline
-
-ae's project model maps to [Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done) phases:
+## The workflow
 
 ```
-                          GTD phase                Skill
-─────────────────────────────────────────────────────────────────
-Capture an idea         → Capture          →  /ae:backlog
-Decide what's next      → Clarify          →  /ae:roadmap
-Promote to a feature    → Organize         →  /ae:analyze
-Where do I stand?       → Reflect (short)  →  /ae:dashboard, /ae:next
-Execute                 → Engage           →  /ae:discuss  →  /ae:plan
-                                              /ae:work     →  /ae:review
-Look back on shipped    → Reflect (long)   →  /ae:retrospect
+        intent (human)
+           │
+           ▼
+       1 ANALYZE ──── premise fails → stop, report why
+           │
+           ▼
+      [2 DISCUSS] ─── only if a decision is genuinely contested
+           │
+           ▼
+       3 PLAN
+           │
+           ▼  ← HUMAN CONFIRMS the acceptance criteria
+       4 WORK ◄──────────┐
+           │             │ findings needing rework
+           ▼             │
+       5 REVIEW ─────────┘
+           │             ╌╌╌► a criterion changes — back to ANALYZE, via the human
+           ▼  ← HUMAN SIGNS completion
+         done
 ```
 
-Each Engage stage produces artifacts that feed the next. Plans reference analysis docs. Work follows plan steps. Reviews validate against acceptance criteria. Everything persists to disk under `.ae/features/F-NNN-<slug>/`.
+Everything a run produces lives in one feature directory under
+`.ae/features/active/F-NNN-<slug>/`. A stage reads the previous stage's deliverable off disk
+before it starts, and may **refuse** it — naming the admission check that failed, and sending
+it back one stage rather than to the start. What each stage may refuse, and what needs a
+human signature, is in [`plugins/ae/handover.md`](plugins/ae/handover.md).
+
+Open [`docs/workflow-graph.html`](docs/workflow-graph.html) in a browser for the same graph
+with the return edges and refusal conditions drawn in.
 
 ## Commands
 
-### First Run
-
 | Command | What it does |
 |---------|-------------|
-| `/ae:setup` | Initialize pipeline config — auto-detects test/lint commands, discovers agents |
-| `/ae:plan` | Generate an execution plan with acceptance criteria, reviewed by agent teams |
-| `/ae:work` | Execute the plan: write test → red → implement → green → review → commit |
-| `/ae:review` | Deep multi-agent review — the feature completion gate |
+| `/ae:go` | **The entry.** Runs a work item through every stage in turn. |
+| `/ae:analyze` | Stage 1 — is the problem real, and what does *done* mean? Creates the feature directory. |
+| `/ae:discuss` | Stage 2 (conditional) — settle one contested decision into a record the plan can consume. |
+| `/ae:plan` | Stage 3 — copy the criteria, cut dependency-ordered steps, freeze the goal. |
+| `/ae:work` | Stage 4 — check red, implement, check green, commit. One step, one commit. |
+| `/ae:review` | Stage 5 — judge the work against the frozen criteria. The completion gate. |
 
-### Daily Use
-
-| Command | What it does |
-|---------|-------------|
-| `/ae:backlog` | Capture an idea — one-line description lands in the inbox as `BL-NNN` |
-| `/ae:dashboard` | See where your features stand — pipeline progress at a glance |
-| `/ae:next` | "What should I do next?" — suggests the next pipeline step |
-| `/ae:status` | Session readout — git context, active features, in-flight teams, recent verdicts |
-| `/ae:code-review` | Quick pre-commit review (Claude + Codex + Gemini + Doodlestein) |
-| `/ae:team` | Spin up an ad-hoc agent team — auto-selects agents for your task |
-| `/ae:testgen` | Generate test suites with edge case coverage |
-
-### Analysis & Design
-
-| Command | What it does |
-|---------|-------------|
-| `/ae:analyze` | GTD Organize — promote a backlog item to a feature directory (or analyze a free-text topic) |
-| `/ae:roadmap` | GTD Clarify — promote candidates from the backlog, surface feature dependencies, archive done roadmaps |
-| `/ae:discuss` | Structured design discussion with decision persistence |
-| `/ae:think` | Deep reasoning for hard architecture decisions or complex bugs |
-| `/ae:consensus` | Multi-round debate (for/against/neutral) with cross-examination |
-| `/ae:trace` | Trace execution flow or map dependency chains |
-
-### Ops & Meta
-
-| Command | What it does |
-|---------|-------------|
-| `/ae:plan-review` | Re-review an existing plan (standalone, without regenerating) |
-| `/ae:test-plugin` | Adversarial behavioral testing — blind execution, LLM-as-judge |
-| `/ae:retrospect` | Project-level long-cycle Reflect — review what shipped, what worked, what to change |
-| `/ae:plugin-stats` | AE plugin self-development stats — rework rates, P1 escape rate, drift events (separate from project retrospect) |
-| `/ae:agent-teams` | Protocol reference: Agent Teams base layer + modes |
-| `/ae:agent-selection` | Protocol reference: team composition and cross-family roles |
+Invoke a single stage directly when you are resuming or redoing one part; otherwise use
+`/ae:go`.
 
 ## Agents
 
-18 specialized agents in four groups:
+18 specialized agents in four groups. `/ae:go` and the stage skills spawn them; you can also
+ask for one by name in any session.
 
 ### Review Agents — the quality gate
 | Agent | Focus |
@@ -142,9 +113,14 @@ Each Engage stage produces artifacts that feed the next. Plans reference analysi
 | `architect` | Step decomposition, parallel execution strategy |
 | `challenger` | Pure adversarial opposition, blind spot detection |
 | `qa` | Post-step code review + cross-family validation |
-| `test-lead` | Adversarial test generation + LLM-as-judge evaluation |
 | `codex-proxy` | Routes requests to Codex (OpenAI) via MCP |
 | `gemini-proxy` | Routes requests to Gemini (Google) via MCP |
+| `openai-compat-proxy` | Any OpenAI-compatible backend — endpoint, model and family per call |
+
+### Engineering Agents — the implementer
+| Agent | Focus |
+|-------|-------|
+| `minimal-change-engineer` | Minimum-viable diffs; refuses scope creep |
 
 ### Doodlestein Agents — the challenge layer
 | Agent | Focus |
@@ -154,32 +130,35 @@ Each Engage stage produces artifacts that feed the next. Plans reference analysi
 | `doodlestein-regret` | "Which decision will be reversed within 2 weeks?" |
 | `doodlestein-scope-reducer` | "Of everything this adds, what could be deleted such that the original problem is still solved?" |
 
-Agent teams form dynamically — `/ae:team` picks the right combination for your task. TL (Session Lead) always synthesizes: agents research, challenge, and report; TL merges findings into final output.
-
 ## Cross-Family Architecture
 
-No single model catches everything. ae abstracts three families behind a uniform MCP interface:
+No single model catches everything. ae reaches other families through MCP:
 
 | Family | Channel | Role |
 |--------|---------|------|
 | Claude | Built-in | Primary development and orchestration |
-| Codex (OpenAI) | `codex` MCP server | Cross-family baseline |
+| Codex (OpenAI) | `codex` MCP server (external CLI) | Cross-family baseline |
 | Gemini (Google) | Bundled MCP server | Targeted review and analysis |
+| Anything OpenAI-compatible | Bundled MCP server | A local or hosted backend on the generic seat |
 
-The proxy agents act as device drivers — translating between ae's protocols and each family's interface. Without them, the system still runs; you just lose cross-family coverage.
+The proxy agents act as device drivers — translating between ae's protocols and each family's
+interface. Without them the system still runs; you just lose cross-family coverage.
+
+A SessionStart hook probes every seat you configured and warns about the ones that are
+configured but unreachable, so a missing family is visible rather than silent.
 
 ### Cross-Family Setup (optional but recommended)
 
 | Family | How to set up |
 |--------|--------------|
 | Codex (OpenAI) | `npm install -g @openai/codex` |
-| Gemini (Google) | Set `GEMINI_API_KEY` env var ([get a key](https://aistudio.google.com/apikey)) |
-
-`/ae:setup` guides you through cross-family configuration.
+| Gemini (Google) | Set `GEMINI_API_KEY` ([get a key](https://aistudio.google.com/apikey)) |
+| OpenAI-compatible | Set the endpoint, model and family in plugin settings |
 
 ## Extending ae
 
-ae auto-discovers agents from `.claude/agents/` in your project. Add a 3-line file and ae includes it in the right teams:
+Claude Code auto-discovers agents from `.claude/agents/` in your project. Add a 3-line file
+and it becomes spawnable:
 
 ```markdown
 # .claude/agents/security-auditor.md
@@ -190,64 +169,43 @@ description: "Reviews code for security vulnerabilities and auth bypass"
 You are a security specialist. Focus on OWASP Top 10 and injection vectors.
 ```
 
-Project agents are preferred over built-in agents when roles match. See the [Agent Authoring Guide](docs/agent-authoring.md) for the full contract, role taxonomy, and examples.
+See the [Agent Authoring Guide](docs/agent-authoring.md) for the full contract, role
+taxonomy, and examples.
 
 ## Project Configuration
 
-Running `/ae:setup` creates `.claude/pipeline.yml`:
+`.claude/pipeline.yml` is optional. Two things read it:
 
 ```yaml
 test:
-  command: "npm test"              # auto-detected
-lint:
-  command: "npm run lint"          # auto-detected
+  command: "npm test"        # what a stage runs to turn a check red
 
-ceremony: full                     # full (default) | light | minimal — see "Ceremony level" below
-
-# Feature artifacts live at .ae/features/F-NNN-<slug>/ by default (no config needed).
-# Add an `output:` block only to override legacy / free-text artifact paths
-# (defaults: .ae/discussions/, .ae/plans/, .ae/reviews/, .ae/milestones/,
-# .ae/backlog/, .ae/analyses/). See plugins/ae/templates/pipeline.template.yml
-# for the canonical reference.
-
-cross_family:
-  codex: true
-  gemini: true
+cross_family:                # which second-opinion seats exist
+  codex:  { seat: codex,  family: openai }
+  gemini: { seat: gemini, family: google }
 ```
 
-### Ceremony level
-
-Reduce ceremony per-project for lighter iteration:
-
-```yaml
-# pipeline.yml
-ceremony: light  # full (default) | light | minimal
-```
-
-- `full` (default) — all 5 stages enabled (current behavior)
-- `light` — skips accumulated Doodlestein + plan Doodlestein + sets `work.review_mode: light`
-- `minimal` — `light` plus skips plan review
-
-**Per-stage asymmetry note**: `light` reduces only background-execution stages (Doodlestein checkpoints + code-review tracks) — it does NOT skip the upfront plan review. Use `minimal` if you also want to bypass plan review. The `discuss` and `review` skills are not currently controlled by the ceremony preset.
-
-The preset bundles 5 stages: `work.agent_teams`, `work.review_mode`, `work.accumulated_doodlestein`, `plan.plan_review`, `plan.doodlestein`. See [`plugins/ae/templates/pipeline.template.yml`](plugins/ae/templates/pipeline.template.yml) for the canonical bundling rules.
-
-**Precedence**: env var `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=0` (global solo mode, see [Cross-machine setup](#cross-machine-setup)) overrides the ceremony preset. Use the env var for CI/CD or per-machine override; use `ceremony:` for per-project default.
+Copy [`plugins/ae/templates/pipeline.template.yml`](plugins/ae/templates/pipeline.template.yml)
+as a starting point. Feature artifacts live under `.ae/features/` regardless; that layout is
+fixed, not configured.
 
 ## Architecture
 
 ```
 plugins/ae/
-  .claude-plugin/plugin.json      # Plugin manifest
-  skills/                         # 25 slash commands (the shell)
-  agents/                         # 18 specialized agents (the processes)
+  .claude-plugin/plugin.json      # Plugin manifest, MCP servers, SessionStart hook
+  skills/                         # 6 skills — the entry plus five stages
+  handover.md                     # What one stage may refuse the next for
+  agents/                         # 18 agents
     review/                       #   4 review agents
     research/                     #   3 research agents
-    workflow/                     #   7 workflow agents (incl. test-lead, minimal-change-engineer)
-    workflow/doodlestein-*        #   4 Doodlestein challenge agents
-  tests/                          # Persistent test cases (manual + generated)
-  mcp-servers/gemini/             # Bundled Gemini MCP server (device driver)
-  templates/pipeline.template.yml # Template for /ae:setup
+    workflow/                     #   10 workflow agents (incl. proxies + Doodlestein)
+    engineering/                  #   1 implementer
+  scripts/                        # Session-start probe, its reader, the test runner
+  mcp-servers/                    # Bundled Gemini + OpenAI-compatible servers
+  v1/                             # The Phase 1 Kernel, against its own frozen Contract
+  tests/                          # The deterministic suite
+  templates/pipeline.template.yml
 ```
 
 The research, cross-review, and decisions that produced the v1.0 design are

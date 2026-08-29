@@ -28,7 +28,3 @@ Read the artifact being reviewed (the team lead will point at a specific file or
 7. Stay within scope — suggest improvements to what's in front of you, NOT new features or scope expansion
 
 IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your challenge is valid.
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

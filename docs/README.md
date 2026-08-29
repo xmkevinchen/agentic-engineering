@@ -1,8 +1,7 @@
 # docs/
 
 > The shape of this directory is the claim: what is at the top level is
-> current; what documents a thing that dies with the big delete says so; and
-> everything historical lives under [`history/`](history/README.md).
+> current, and everything historical lives under [`history/`](history/README.md).
 > **A document claiming currency that this index contradicts is wrong, not
 > this index.**
 
@@ -19,24 +18,17 @@
 | [`references/claude-code-plugin-api.md`](references/claude-code-plugin-api.md) | Host API facts. |
 | [`references/cross-family-rationale.md`](references/cross-family-rationale.md) | Why cross-family review exists; the capability is kept. |
 | [`references/model-effort-matrix.md`](references/model-effort-matrix.md) | Model and effort guidance. |
+| [`references/prompt-patterns.md`](references/prompt-patterns.md) | Patterns the kept agents are written against; re-judged when those agents are slimmed. |
 | [`agent-authoring.md`](agent-authoring.md) | Authoring roles; roles survive the delete. |
-| [`quickstart.md`](quickstart.md) | The shipped plugin's quickstart; rewritten when the unified entry lands. |
+| [`quickstart.md`](quickstart.md) | Getting started with the shipped plugin. |
 
-## Generated
+## Removed with what they documented
 
-| Document | Producer |
-|---|---|
-| [`architecture-graph.md`](architecture-graph.md) | `graph-render-docs.py` (knowledge tooling; leaves with that plugin when factored out). |
-
-## Dies with what it documents (still live; historical at the delete)
-
-| Document | Tied to |
-|---|---|
-| [`agent-teams-policy.md`](agent-teams-policy.md) | The coordination protocol. |
-| [`references/trace-schema.md`](references/trace-schema.md) | The telemetry layer (consumers never arrived). |
-| [`references/verify-by-kinds.md`](references/verify-by-kinds.md) | The old harness vocabulary. |
-| [`references/pre-merge-integration-review.md`](references/pre-merge-integration-review.md) | The old review process. |
-| [`references/prompt-patterns.md`](references/prompt-patterns.md) | Re-judged when the kept agents are slimmed. |
+The delete took the coordination protocol, the telemetry layer, the knowledge
+graph and the old harness vocabulary, and their documents went with them —
+`agent-teams-policy.md`, `architecture-graph.md`, `references/trace-schema.md`,
+`references/verify-by-kinds.md`, `references/pre-merge-integration-review.md`.
+They are in the branch history; nothing in the current tree refers to them.
 
 ## History
 

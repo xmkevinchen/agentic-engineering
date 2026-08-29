@@ -88,7 +88,3 @@ Strictly_needed_count: <int>
 5. Report findings via SendMessage to team-lead.
 
 IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your challenge is valid.
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

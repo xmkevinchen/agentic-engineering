@@ -1,1 +1,0 @@
-../scripts/check-agent-teams.sh

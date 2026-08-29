@@ -1,8 +1,7 @@
 # Stage handovers — refusing, re-dividing, escalating
 
-> Source: F-086 (2026-08-27). Two Kernel dogfood runs and twenty review rounds.
-> Single source of truth for what one pipeline stage owes the next and may refuse
-> from it. Path from any `plugins/ae/skills/<x>/SKILL.md` = `../../handover.md`.
+> What one stage owes the next and may refuse it for. Path from any
+> `plugins/ae/skills/<x>/SKILL.md` = `../../handover.md`.
 
 ## The rule
 
@@ -29,19 +28,17 @@ enough to use. One refusal is a loop iteration, not a restart.
 | receiving | may refuse for |
 |---|---|
 | discuss / plan, from analyze | the premise verdict's citation does not hold when re-run — the file, the line or the command does not say what the verdict claims |
-| plan, from analyze or discuss | a criterion with no falsifier and no `judgement` mark, so plan would have to invent the standard it is planning against |
-| work, from plan | a step with no falsifier, or one marked `Self-closing: no` with nothing named as covering it |
-| review, from work | a deterministic AC with no `FALSIFIED_AC` record — the check has only ever been green |
+| plan, from analyze or discuss | a criterion with no falsifier and nothing marking it a judgement call, so plan would have to invent the standard it is planning against |
+| plan, from discuss | a question the discussion opened is still open, or its reason cites nothing a reader can open |
+| work, from plan | a step that names no check to turn red, or a criterion whose text differs from the analysis |
+| review, from work | a criterion's check that was never seen red, or files changed that no step accounts for |
 | analyze, from anywhere | a criterion that cannot be met however the work is divided |
 
 An upstream verdict is **provisionally true**: proceed on it, and it stays refutable.
 That is why it is recorded as a citation — `file:line` or a command — and not as "I
 checked". Anyone downstream can re-run the citation, and a citation that does not hold
-refutes the verdict.
-
-This is the model the V1 Kernel already uses on itself: a Contract cites its sources by
-digest and quote, and **approval verifies the quoted passage is actually in the file**
-before accepting. The pipeline had the citing half and not the verifying half.
+refutes the verdict. The pipeline had the citing half long before it had the verifying
+half; a citation nobody re-runs is decoration.
 
 ## Re-dividing is not escalating
 
@@ -59,19 +56,20 @@ none of these is a reason to escalate. They are all reasons to cut differently.
 
 ### The evidence for that distinction
 
-Twenty review rounds on the V1 Kernel. **The first fourteen each found something real
+Twenty review rounds on one component. **The first fourteen each found something real
 and fixed one thing, and the set never shrank** — the partition was by instance. Round
 fifteen asked *"is this the tail, or is something generating these?"* and the next five
 rounds closed five families.
 
 Round fifteen was not an escalation. It was a **re-division**, inside the same loop.
-Nothing triggered it; someone happened to ask. The existing fix-loop circuit breaker
-cannot catch it either — it counts consecutive failures of one test file, and here every
-round succeeded at fixing a different thing. From inside the loop everything looked fine.
+Nothing triggered it; someone happened to ask. A counter of consecutive failures cannot
+catch it either — every round succeeded at fixing a different thing. From inside the
+loop everything looked fine.
 
 **So the trigger is the rate, not the failures:** several consecutive rounds each
 producing findings, with no round changing the structure, means stop and ask what is
-generating them.
+generating them. The related rule — *same failure three times, stop repeating* — catches
+the opposite shape, where nothing is being fixed at all.
 
 ## What needs a signature, and what does not
 
@@ -90,9 +88,9 @@ The discriminator is **direction relative to the frozen criteria**, not size:
 Work that moves toward a standard does not need permission to move; that is what having
 the standard was for.
 
-The pipeline already draws this line and it is drawn in the right place: **only the goal
-is frozen** — the acceptance criteria — and the plan around it stays editable while work
-runs (`plan/SKILL.md`, Freeze the GOAL). Steps get reordered, wording gets fixed, the
+The pipeline draws this line in the right place: **only the goal is frozen** — the
+acceptance criteria, confirmed by the human at the end of `/ae:plan` — and the plan
+around it stays editable while work runs. Steps get reordered, wording gets fixed, the
 stack gets re-cut; none of that touches what anyone agreed to. Requiring ceremony for
 those would end the loop, which is the thing the loop exists to keep cheap.
 
@@ -101,8 +99,7 @@ those would end the loop, which is the thing the loop exists to keep cheap.
 **A criterion changed after it was frozen.** That is the whole list.
 
 It arrives one way: review finds that a fix would change what a criterion *means*, which
-is an escalation back to analyze rather than a defect in the code. What happens next was
-not written down anywhere:
+is an escalation back to analyze rather than a defect in the code.
 
 1. analyze amends the criterion — the property, the falsifier, or both.
 2. **The goal is re-frozen**, and that is the signature point. The prior frozen goal is
@@ -131,12 +128,13 @@ the loop to confirm something no one had a stake in.
 
 This is not a preference about ceremony. **A loop that pauses for a human on every
 deviation is not a loop** — it runs at the speed of someone's inbox, and the person becomes
-the obstacle rather than the authority. The authority is exercised once, on the criteria,
-and then the loop is trusted to reach them.
+the obstacle rather than the authority. The authority is exercised twice: once on the
+criteria, once on the signature that closes the work.
 
 **What remains genuinely the human's**, and stays that way:
 
 - changing a criterion — the property or the falsifier;
+- signing completion;
 - a decision the criteria do not cover at all, where proceeding either way would be a
   guess about intent rather than about implementation;
 - anything outside the loop's authority to begin with — spending money, sending
@@ -154,19 +152,11 @@ two steps, splitting one that would not close, reordering after learning somethi
 signature and no approval, because nobody agreed to the stack; they agreed to the goal,
 and the goal is frozen separately for exactly this reason.
 
-What it does need is a **line saying it happened**: one entry in the milestone notes
-naming what was re-cut and why. Not a gate — information. How the stack actually went
-compared with how it was drawn is the most useful thing anyone learns from a completed
-feature, and it is invisible if the plan is quietly rewritten to match the outcome.
+What it does need is a **line saying it happened**, in the work log: what was re-cut and
+why. Not a gate — information. How the stack actually went compared with how it was drawn
+is the most useful thing anyone learns from a completed feature, and it is invisible if
+the plan is quietly rewritten to match the outcome.
 
-The existing drift check is a narrower version of the same idea and stays as it is: it
-watches which **files** a step touched against the ones it declared, and an unexpected one
-is explained rather than forbidden. This is that, one level up, watching the **steps**.
-
-### Why the Contract is different, and is not the general case
-
-F-086's Contract is byte-frozen and gets an `amendments.md` beside it, because for a
-Contract the bytes **are** the agreement: change one and the thing that was accepted no
-longer exists. That is correct for a Contract and it is not a template for everything
-else. Most artifacts in a pipeline are working notes, and treating a working note as a
-contract is how a process acquires ceremony nobody can point at a reason for.
+`/ae:work` already applies the narrower version of this one level down: it watches which
+**files** a step touched against the ones it declared, and an unexpected one is explained
+rather than forbidden. This is that, watching the **steps**.

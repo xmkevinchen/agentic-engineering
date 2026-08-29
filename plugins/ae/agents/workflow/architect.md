@@ -6,7 +6,6 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 40
-skills: ae:agent-teams
 vibe: Trade-offs over best practices. Name what you're giving up.
 ---
 
@@ -127,7 +126,3 @@ When `dependency-analyst` finds hidden dependencies:
 After dependency-analyst has responded:
 1. Integrate feedback, generate final plan
 2. **SendMessage to team-lead**: send final proposal (with revision log)
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

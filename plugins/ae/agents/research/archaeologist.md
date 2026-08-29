@@ -81,7 +81,3 @@ When `challenger` or `standards-expert` asks about specific code:
 When `standards-expert` shares industry practices:
 - If it involves existing implementation in the project → reply with specific details of current code
 - Help the team understand "where the gap is"
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

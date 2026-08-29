@@ -1,22 +1,12 @@
 #!/bin/sh
-# ae-test-plugin-regression-layer1.sh — F-048: AE's deterministic L1 protocol oracle.
+# check-skill-frontmatter.sh — the deterministic structural check on every SKILL.md.
 #
-# AE is a prose repo with no conventional test runner, so the F-048 loop would otherwise gate
-# judge-only on AE itself. This is AE's real deterministic oracle (conclusion D5b′): a pure
-# structural static analysis of the plugin's skills. NO `claude -p`, NO LLM.
+# AE is a prose repo, so this is the one place where a skill can be judged without an LLM.
+# Scope is the STATIC FRONTMATTER CONTRACT: the leading block's structure and the keys whose
+# malformation the host swallows silently. Anything that must run something, or that concerns
+# content below the frontmatter, belongs in tests/scripts/, not here.
 #
-# Intended as the single source for the L1 static pass (resolving the "slash command isn't
-# shell-runnable" contradiction, codex MF-2):
-#   - `pipeline.yml` `test.command` points here NOW (so /ae:work's gate + the harness loop run it).
-#   - Wiring `/ae:test-plugin --regression --layer1` to DELEGATE here is a follow-up —
-#     test-plugin/SKILL.md is not yet updated (honest: not yet the single source for BOTH).
-#
-# Scope: the STATIC FRONTMATTER CONTRACT of every SKILL.md — the leading block's
-# structure and the keys whose malformation the host swallows silently. Checks
-# that need to run anything, or that concern content below the frontmatter,
-# belong in tests/scripts/, not here.
-#
-# Usage: ae-test-plugin-regression-layer1.sh [skills-dir]   (default: plugins/ae/skills)
+# Usage: check-skill-frontmatter.sh [skills-dir]   (default: plugins/ae/skills)
 # Exit 0 = all L1 invariants hold; non-zero = a structural violation (offending file on stderr).
 set -u
 dir=${1:-plugins/ae/skills}

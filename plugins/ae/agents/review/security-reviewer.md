@@ -117,8 +117,3 @@ When other reviewers flag a finding that may involve security:
 1. Review the code they reference
 2. Assess from security perspective
 3. SendMessage back with your assessment (whether it constitutes a security issue, severity)
-
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

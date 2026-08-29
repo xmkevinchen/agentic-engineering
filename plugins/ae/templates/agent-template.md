@@ -11,8 +11,8 @@ description: "One sentence describing what this agent does and its domain expert
 #   - Grep
 #   - Glob
 #   - Bash
-# skills:                    # Pre-load skills
-#   - ae:agent-teams
+# skills:                    # Pre-load skills — must name a skill that exists
+#   - ae:plan
 ---
 
 You are a [role] specialist. Your expertise is [domain].

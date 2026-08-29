@@ -111,8 +111,3 @@ When other reviewers flag a finding that may involve performance:
 1. Review the code they reference
 2. Assess from performance perspective (quantify impact: N queries, M MB memory, X ms latency)
 3. SendMessage back with your assessment
-
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

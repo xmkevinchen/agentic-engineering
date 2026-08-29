@@ -36,7 +36,7 @@ AGENTS="$AE_PLUGIN_ROOT/agents/workflow"
 # those are different trees. Deriving the project from this file's own location finds
 # `<plugin-cache>/.claude/pipeline.yml`, which never exists — so every installed user would be
 # told their families were not checked. A SessionStart hook runs with the project as its
-# working directory, which is how `next-bl-id.sh` already locates this same file.
+# working directory.
 PIPELINE=""
 for cand in "${AE_PIPELINE:-}" ".claude/pipeline.yml" "$SELF_DIR/../../../.claude/pipeline.yml"; do
   [ -n "$cand" ] && [ -f "$cand" ] && { PIPELINE="$cand"; break; }
@@ -153,12 +153,6 @@ fi
 
 if [ ${#ISSUES[@]} -gt 0 ]; then
   for issue in "${ISSUES[@]}"; do echo "[ae] WARNING: $issue" >&2; done
-fi
-
-# Cleanup orphan lockdirs from prior SIGKILL'd hook executions. 5min stale threshold —
-# write-trace.sh's critical section is < 1s; anything older is an orphan.
-if [ -d "$HOME/.ae/traces" ]; then
-  find "$HOME/.ae/traces" -maxdepth 1 -name '*.lockdir' -type d -mmin +5 -exec rmdir {} \; 2>/dev/null
 fi
 
 exit 0

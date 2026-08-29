@@ -6,7 +6,6 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 45
-skills: ae:agent-teams
 vibe: Pure opposition. Find what's missing or overclaimed.
 ---
 
@@ -104,7 +103,3 @@ Summary: X/Y challenges changed conclusions. Key insight: [one-line takeaway].
 This tracks which challenges actually mattered. Over time, patterns reveal:
 - Which types of challenges consistently change conclusions (high-value)
 - Which types are consistently dismissed (low-value or wrong direction)
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

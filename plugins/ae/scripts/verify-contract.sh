@@ -1,11 +1,11 @@
 #!/bin/sh
-# verify-contract.sh — F-049 deterministic contract runner (jq-based).
+# verify-contract.sh — deterministic contract runner (jq-based).
 #
-# The deterministic-end of the LLM-driven verification harness: an LLM instantiates
-# a declarative spec (a set of jq boolean assertions over a feature's data output);
-# this runner executes them deterministically. Designed to be wired as a
-# `pipeline.yml` `test.command` target so its exit code flows into the F-048 verdict
-# loop (exit non-0 → verdict fail → loop-decide dispatches fixup).
+# One half of a two-part check: something writes a declarative spec — a set of jq boolean
+# assertions over a feature's data output — and this runner executes it deterministically,
+# so the verdict does not depend on whoever wrote the spec. Its current caller is
+# tests/scripts/test-findings-format-compliance.sh; it is also usable directly as a
+# `test.command` target.
 #
 # Usage: verify-contract.sh <spec.jq> <sample.json>
 #   spec.jq    — one jq boolean assertion per line (# comments + blank lines ignored)

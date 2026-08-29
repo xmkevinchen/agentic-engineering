@@ -27,7 +27,3 @@ Read the artifact being reviewed (the team lead will point at a specific file or
 6. ONE prediction only — the most likely regret, not a list
 
 IMPORTANT: STAY IN THE TEAM. Do NOT exit after reporting. You may be needed for follow-up rounds if your prediction is contested.
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

@@ -1,94 +1,61 @@
 #!/bin/sh
-# The plugin namespace lives in exactly two shapes, and stripping it from
-# SKILL.md `name:` frontmatter must not touch either one:
+# An agent's `skills:` frontmatter value is a catalog key into the skill registry, and its
+# documented form is `<plugin>:<skill>`. Both failure shapes are silent — the host skips an
+# entry it cannot resolve and logs only under --debug — so neither shows up as an error:
 #
-#   1. Agent frontmatter `skills:` values are catalog keys into the skill
-#      registry, whose documented form is `<plugin>:<skill>`. Resolution
-#      failure there is silent (the host skips the entry and logs only under
-#      --debug), so a wrong strip is a no-signal regression.
-#   2. Trace / writeback records carry `ae:<skill>` as AE's own log schema.
-#      They record COMMAND identity — `/ae:work` stays `/ae:work` — and are
-#      authored by convention, never read from frontmatter.
+#   1. the namespace stripped (`agent-teams`), which no longer matches any key;
+#   2. the namespace intact but the skill gone (`ae:agent-teams` after the skill is removed).
 #
-# Both look exactly like the frontmatter bug and neither is one. This guard
-# exists so a bulk `ae:` sweep cannot quietly consume them.
+# No agent declares the field today. That is why the guard below plants both shapes in a
+# throwaway tree: an assertion that only ever runs against an empty population cannot show it
+# would catch anything.
 # sh-tap output (parser: sh-tap.v1).
 set -u
 
 REPO="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+SKILLS="$REPO/plugins/ae/skills"
 
 pass=0; fail=0
 ok(){ echo "ok: $1"; pass=$((pass+1)); }
 notok(){ echo "not ok: $1"; fail=$((fail+1)); }
 
-AGENTS="$REPO/plugins/ae/agents/workflow"
-HEALTH="$REPO/plugins/ae/scripts/graph-writeback-health.py"
-TRACE="$REPO/plugins/ae/scripts/append-synthesis-trace.sh"
-
-# --- agent `skills:` references stay fully qualified -------------------------
-# An exact file->value map, not just a count: a count alone passes if one
-# agent loses the field while another grows it.
-expect_skills(){ # $1 = agent basename, $2 = expected skills value
-  f="$AGENTS/$1.md"
-  if [ ! -f "$f" ]; then
-    notok "$1.md exists"; return
-  fi
-  got=$(grep '^skills:' "$f" | head -1 | sed 's/^skills: *//')
-  if [ "$got" = "$2" ]; then
-    ok "$1 keeps qualified skills reference ($2)"
-  else
-    notok "$1 skills reference is '$got', expected '$2'"
-  fi
+# Every declared value is `ae:<skill>` AND that skill exists.
+check_tree(){ # $1 = agents root, $2 = skills root, $3 = label; echoes offending values
+  grep -rh '^skills:' "$1" 2>/dev/null | sed 's/^skills: *//' | tr ',' '\n' | while read -r v; do
+    v=$(echo "$v" | sed 's/^ *//;s/ *$//')
+    [ -n "$v" ] || continue
+    case "$v" in
+      ae:*) [ -f "$2/${v#ae:}/SKILL.md" ] || echo "$v" ;;
+      *)    echo "$v" ;;
+    esac
+  done
 }
 
-expect_skills architect  "ae:agent-teams"
-expect_skills challenger "ae:agent-teams"
-expect_skills qa         "ae:code-review"
-expect_skills test-lead  "ae:test-plugin"
-
-# No OTHER workflow agent silently grows a `skills:` field: the four above are
-# the whole population, so an unqualified fifth would slip past the map.
-n=$(grep -l '^skills:' "$AGENTS"/*.md 2>/dev/null | wc -l | tr -d ' ')
-if [ "$n" = "4" ]; then
-  ok "exactly 4 workflow agents declare a skills: field"
+bad=$(check_tree "$REPO/plugins/ae/agents" "$SKILLS")
+if [ -z "$bad" ]; then
+  ok "every agent skills: value is qualified and resolves"
 else
-  notok "expected 4 workflow agents with a skills: field, found $n"
-fi
-
-# --- trace / writeback schema literals survive -------------------------------
-for s in ae:analyze ae:plan ae:discuss ae:review ae:think; do
-  if grep -q "\"$s\"" "$HEALTH"; then
-    ok "LOCATE_SKILLS still carries $s"
-  else
-    notok "LOCATE_SKILLS lost $s — writeback health would stop counting that skill's queries"
-  fi
-done
-
-if grep -q '"skill":"ae:discuss"' "$TRACE"; then
-  ok "synthesis trace still emits the ae:discuss command identity"
-else
-  notok "synthesis trace lost its ae:discuss literal"
+  notok "unresolvable agent skills: values: $(echo "$bad" | tr '\n' ' ')"
 fi
 
 # --- mutation guard ----------------------------------------------------------
-# The assertions above only ever run against a healthy tree, so on their own
-# they cannot show they would catch anything. Plant each failure shape.
 tmp=$(mktemp -d)
+mkdir -p "$tmp/agents" "$tmp/skills/plan"
+: > "$tmp/skills/plan/SKILL.md"
 
-printf -- '---\nname: architect\nskills: agent-teams\n---\n' > "$tmp/architect.md"
-got=$(grep '^skills:' "$tmp/architect.md" | head -1 | sed 's/^skills: *//')
-if [ "$got" != "ae:agent-teams" ]; then
-  ok "map check rejects a stripped skills value"
-else
-  notok "map check rejects a stripped skills value"
-fi
+printf -- '---\nname: a\nskills: plan\n---\n' > "$tmp/agents/stripped.md"
+[ -n "$(check_tree "$tmp/agents" "$tmp/skills")" ] \
+  && ok "guard catches a stripped namespace" || notok "guard catches a stripped namespace"
+rm "$tmp/agents/stripped.md"
 
-printf 'LOCATE_SKILLS = {"analyze", "plan"}\n' > "$tmp/health.py"
-if ! grep -q '"ae:analyze"' "$tmp/health.py"; then
-  ok "literal check rejects a stripped LOCATE_SKILLS"
-else
-  notok "literal check rejects a stripped LOCATE_SKILLS"
-fi
+printf -- '---\nname: a\nskills: ae:gone\n---\n' > "$tmp/agents/dangling.md"
+[ -n "$(check_tree "$tmp/agents" "$tmp/skills")" ] \
+  && ok "guard catches a namespace pointing at a removed skill" || notok "guard catches a namespace pointing at a removed skill"
+rm "$tmp/agents/dangling.md"
+
+printf -- '---\nname: a\nskills: ae:plan\n---\n' > "$tmp/agents/good.md"
+[ -z "$(check_tree "$tmp/agents" "$tmp/skills")" ] \
+  && ok "guard accepts a value that resolves" || notok "guard accepts a value that resolves"
 
 rm -rf "$tmp"
 

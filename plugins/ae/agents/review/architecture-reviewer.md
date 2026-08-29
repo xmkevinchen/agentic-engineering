@@ -119,8 +119,3 @@ When other reviewers flag a finding that may involve architecture:
 1. Review the code they reference
 2. Assess from architecture perspective (module boundary, dependency direction, responsibility)
 3. SendMessage back with your assessment
-
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).

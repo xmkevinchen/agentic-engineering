@@ -52,7 +52,7 @@ DEFINITIONS = [
     "plugins/ae/skills/discuss/SKILL.md",
     "plugins/ae/skills/plan/SKILL.md",
     "plugins/ae/skills/review/SKILL.md",
-    "plugins/ae/skills/think/SKILL.md",
+    "plugins/ae/skills/analyze/SKILL.md",
     "plugins/ae/skills/work/SKILL.md",
 ]
 PROMPT = "a" * 64

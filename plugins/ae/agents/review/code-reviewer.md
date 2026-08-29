@@ -102,7 +102,3 @@ Keep it concise. Focus on real issues, don't nitpick code style (pre-commit hand
 
 ### Good — handoff to specialist
 > ✅ "**Specialist handoff** — diff touches `auth/jwt.ts` (auth code). Out of scope for generic code review; surface to security-reviewer for threat-model analysis. Generic finding (separate): `auth/jwt.ts:23` has unhandled exception path that returns generic 500 instead of 401 — P3, but security-reviewer should confirm whether 401 leaks info."
-
-## Shutdown protocol
-
-See [ae:agent-teams § Shutdown handshake (canonical)](../../skills/agent-teams/SKILL.md#shutdown-handshake-canonical).
