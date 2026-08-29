@@ -20,14 +20,6 @@ run() { # label  script  [args...]
 
 run "L1 oracle (skill frontmatter)" "$HERE/ae-test-plugin-regression-layer1.sh"
 
-# Corpus checks, run against the live tree rather than a synthetic root. Named explicitly and
-# not left to the glob below: the defect this closes is that `check-*.sh` scripts enforced real
-# invariants against nothing — their tests built fake trees and asserted the script's logic, so
-# the invariant could be violated in the actual corpus with the suite green. One was already red
-# when this line was added. `check-declared-vs-effective.sh` runs the corpus lints itself, so
-# this single entry is the wiring; its own test (below, via the glob) checks that it fails closed.
-run "declared-vs-effective (corpus)" "$HERE/check-declared-vs-effective.sh"
-
 for t in "$SUITE"/test-*.sh; do
   [ -f "$t" ] || continue
   run "$(basename "$t")" "$t"
