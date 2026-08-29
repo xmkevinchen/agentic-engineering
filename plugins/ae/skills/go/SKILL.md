@@ -1,17 +1,17 @@
 ---
 name: go
-description: Run a work item through the staged workflow — analyze, plan (the human confirms the acceptance criteria), work, review (the human signs completion). The argument is the work item itself, or a path to a file describing it.
+description: Run a work item through the whole workflow — analyze, plan (the human confirms the acceptance criteria), work, review (the human signs completion). Invokes each stage's skill in turn. The argument is the work item itself, or a path to a file describing it.
 user-invocable: true
 ---
 
-# /ae:go — the workflow
+# /ae:go — run the work item through the workflow
 
-Run a piece of work through five stages. Each stage has one responsibility, consumes the
-stage before it, and produces one deliverable of its own. A stage may refuse what it is
-given and send it back. The human sets the goal and signs twice; everything else is yours.
+You are running one piece of work end to end. This document is the whole programme: the
+order of the stages, what every stage obeys, and where the work stops for a human. **What a
+stage does is in that stage's own skill — invoke it, do not re-derive it here.**
 
-Every deliverable lives in this work item's feature directory,
-`.ae/features/active/F-NNN-<slug>/`, written below as `<feature-dir>`.
+The work item is **$ARGUMENTS**. Everything it produces lives in one feature directory,
+written below as `<feature-dir>`; `/ae:analyze` creates it.
 
 ```
         intent (human)
@@ -35,42 +35,43 @@ Every deliverable lives in this work item's feature directory,
          done
 ```
 
-## The stages
+## Running it
 
-Each stage is executed by its own skill. This document is the graph; what a stage owes is
-in that skill, and is not repeated here.
+Invoke each stage's skill. After it returns, read its deliverable off disk and check the
+handover before going on — a stage that would be refused is sent back now, not discovered
+three stages later.
 
-| | stage | skill | deliverable | the next stage may refuse it for |
-|---|---|---|---|---|
-| 1 | ANALYZE | `/ae:analyze` | `<feature-dir>/analysis.md` | a criterion with no falsifier and no judgement mark; a premise answer with no evidence |
-| 2 | DISCUSS | `/ae:discuss` | a decision record in `<feature-dir>/` | a question it opened still open; a reason citing nothing a reader can open; a record that exists only in the conversation |
-| 3 | PLAN | `/ae:plan` | `<feature-dir>/plan.md` | a step that names no check to turn red; a criterion whose text differs from the analysis |
-| 4 | WORK | `/ae:work` | commits, plus `<feature-dir>/log.md` | a criterion's check never seen red; files changed that no step accounts for |
-| 5 | REVIEW | `/ae:review` | `<feature-dir>/review.md` | — |
+**1 · Invoke `/ae:analyze` with the work item.**
+Then read `<feature-dir>/analysis.md`. Send it back when a criterion has no falsifier and no
+judgement mark, or a premise answer rests on no evidence.
+*A `no` premise ends the item here.* Report what was found and stop; that is a result.
 
-DISCUSS runs only when a decision is genuinely contested — two defensible options leading to
-materially different work. Nothing contested → skip it, and say so in the plan.
+**2 · Invoke `/ae:discuss` only if a decision is genuinely contested** — two defensible
+options leading to materially different work. Nothing contested → skip it and say so in the
+plan. Then read the decision record. Send it back when a question it opened is still open,
+when its reason cites nothing a reader can open, or when it exists only in the conversation.
 
-## The two gates
+**3 · Invoke `/ae:plan` with the feature directory.**
+Then read `<feature-dir>/plan.md`. Send it back when a step names no check to turn red, or a
+criterion's text differs from the analysis.
 
-**→ HUMAN CONFIRMS**, at the end of PLAN. The criteria are presented first; that is the thing
-being confirmed. The step cut is advisory. Work does not start without it.
+**→ HUMAN CONFIRMS.** Present the criteria first — that is the thing being confirmed; the
+step cut is advisory. **Wait.** Work does not start without it.
 
-**→ HUMAN SIGNS**, at the end of REVIEW. Done means the human signed — not tests green, not a
+**4 · Invoke `/ae:work` with the plan path.**
+Then read the commits and `<feature-dir>/log.md`. Send it back when a criterion's check was
+never seen red, or when files changed that no step accounts for.
+
+**5 · Invoke `/ae:review` with the plan path.**
+Then read `<feature-dir>/review.md`. Implementation defects go back to step 4 — the ordinary
+loop, needing nobody's permission. A finding that would change what a criterion *means* goes
+back to step 1, and only through the human.
+
+**→ HUMAN SIGNS.** Show what changed, what was verified and how, every finding's
+disposition, and what was not checked. Done means the human signed — not tests green, not a
 pass verdict. A gate the executed party can open is not a gate.
 
-## Return edges
-
-Review sends implementation defects back to WORK. That is the ordinary loop and needs
-nobody's permission.
-
-If a criterion itself turns out wrong or unmeetable, that goes back to ANALYZE — and
-**changing a criterion always requires the human**, because the criteria are what was
-confirmed. Work already done was done against the criteria as confirmed.
-
-Everything else — re-planning, re-cutting steps, redoing work — is yours to do without asking.
-
-## Ground rules (every stage)
+## What every stage obeys
 
 - **Criteria are settled before work starts, then never edited silently.** Work drifts toward
   whatever got built; settled criteria are what stop that.
@@ -85,6 +86,9 @@ Everything else — re-planning, re-cutting steps, redoing work — is yours to 
   stage must be able to proceed from the files alone.
 - **Done means the human signed.** Tests green, review passed, agent confident — none of these
   is completion. Only the signature is.
+
+Re-planning, re-cutting steps, redoing work — all yours, without asking. Only a change to
+what a criterion *means* needs the human.
 
 ## When things go wrong
 
