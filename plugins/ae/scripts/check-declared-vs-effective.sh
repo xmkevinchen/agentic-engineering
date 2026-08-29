@@ -195,7 +195,10 @@ import sys, pathlib, yaml
 repo = pathlib.Path(sys.argv[1])
 roots = [
     sorted((repo / "plugins/ae/skills").glob("*/SKILL.md")),
-    sorted((repo / "plugins/ae/agents").rglob("*.md")),
+    # CLAUDE.md is a directory guide the host loads as plain memory — it projects
+    # no agent metadata, so holding it to name/description would demand a false
+    # declaration, the exact disease this pair exists to catch.
+    sorted(p for p in (repo / "plugins/ae/agents").rglob("*.md") if p.name != "CLAUDE.md"),
 ]
 defs = [p for group in roots for p in group]
 if not defs:
