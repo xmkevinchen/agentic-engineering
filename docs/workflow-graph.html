@@ -1,0 +1,268 @@
+<meta charset="utf-8">
+<title>Two Gates, Five Stages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#EDF0F1; --panel:#F7F9F9; --ink:#12181B; --muted:#59666A;
+    --rule:#C0C9CC; --rule-soft:#DBE2E4; --gate:#A85D14; --refuse:#8E352C;
+    --gate-wash:#F3E4D2; --refuse-wash:#F2DEDA;
+    --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    --display:"Archivo",var(--sans); --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0F1518; --panel:#161E22; --ink:#DFE6E8; --muted:#8C999D;
+      --rule:#2C383D; --rule-soft:#212C31; --gate:#E5A055; --refuse:#DC7A6C;
+      --gate-wash:#2A1F12; --refuse-wash:#2A1714;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F1518; --panel:#161E22; --ink:#DFE6E8; --muted:#8C999D;
+    --rule:#2C383D; --rule-soft:#212C31; --gate:#E5A055; --refuse:#DC7A6C;
+    --gate-wash:#2A1F12; --refuse-wash:#2A1714;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;
+       -webkit-font-smoothing:antialiased;margin:0;padding:clamp(20px,4vw,56px) clamp(16px,4vw,40px) 72px}
+  .wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+
+  header{display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--rule);padding-bottom:26px}
+  .eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1{font-family:var(--display);font-weight:700;letter-spacing:-.022em;font-size:clamp(34px,5.4vw,52px);
+     line-height:1.06;margin:0;text-wrap:balance}
+  .lede{max-width:64ch;color:var(--muted);font-size:17.5px;margin:0}
+  .lede b{color:var(--ink);font-weight:600}
+
+  .counts{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--rule);background:var(--panel);border-radius:2px}
+  .counts div{flex:1 1 150px;padding:13px 16px;border-right:1px solid var(--rule-soft)}
+  .counts div:last-child{border-right:0}
+  .counts dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+  .counts dd{margin:0;font-family:var(--display);font-weight:600;font-size:24px;font-variant-numeric:tabular-nums}
+  .counts dd s{color:var(--muted);font-weight:500;text-decoration-thickness:1px;font-size:18px}
+
+  .board{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:40px;align-items:start}
+  @media (max-width:860px){.board{grid-template-columns:1fr}}
+
+  figure{margin:0;display:flex;flex-direction:column;gap:12px;position:sticky;top:24px}
+  @media (max-width:860px){figure{position:static}}
+  svg{max-width:100%;height:auto;display:block;color:var(--ink)}
+  figcaption{font-size:15px;color:var(--muted);max-width:46ch}
+
+  .stations{display:flex;flex-direction:column;gap:0}
+  .st{border-top:1px solid var(--rule);padding:20px 0 22px;display:grid;grid-template-columns:26px 1fr;gap:0 14px}
+  .st:last-child{border-bottom:1px solid var(--rule)}
+  .num{font-family:var(--mono);font-size:13.5px;color:var(--muted);padding-top:4px;font-variant-numeric:tabular-nums}
+  .st h2{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:-.01em;margin:0 0 2px;
+         display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+  .skill{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--gate)}
+  .lines{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .opt{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+       border:1px solid var(--rule);border-radius:2px;padding:1px 6px}
+  .st p{margin:6px 0 0;font-size:16.5px;color:var(--muted);max-width:62ch}
+  .st p b{color:var(--ink);font-weight:600}
+  .rows{margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:7px 15px;font-size:15.5px;align-items:baseline}
+  .k{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;padding-top:2px}
+  .v{margin:0}
+  .v code{font-family:var(--mono);font-size:14px;background:var(--panel);border:1px solid var(--rule-soft);
+          border-radius:2px;padding:1px 5px;white-space:nowrap}
+  .v ul{margin:0;padding-left:17px}
+  .v li{margin:0 0 3px}
+  .v li::marker{color:var(--refuse)}
+  .gate-row .k{color:var(--gate)}
+  .gate-row .v{border-left:2px solid var(--gate);padding-left:11px;background:var(--gate-wash)}
+  .refuse .v li::marker{color:var(--refuse)}
+
+  footer{border-top:1px solid var(--rule);padding-top:22px;font-size:15.5px;color:var(--muted);max-width:70ch}
+  footer b{color:var(--ink);font-weight:600}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">/ae:go · stage contracts</div>
+    <h1>Two Gates, Five Stages</h1>
+    <p class="lede">Each stage has one responsibility, consumes the stage before it, and produces one deliverable of its own. A stage <b>may refuse what it is given and send it back</b>. The human sets the goal and signs twice; everything else belongs to the loop.</p>
+    <dl class="counts">
+      <div><dt>stage skills</dt><dd>5</dd></div>
+      <div><dt>human gates</dt><dd>2</dd></div>
+      <div><dt>stage refusals</dt><dd>4</dd></div>
+      <div><dt>prose</dt><dd><s>3,245</s> &rarr; 241</dd></div>
+    </dl>
+  </header>
+
+  <div class="board">
+    <figure>
+      <svg viewBox="0 0 620 782" role="img" aria-label="Vertical flow: intent enters ANALYZE, which may exit if the premise fails; then optional DISCUSS, then PLAN, then a human-confirms gate, then WORK, then REVIEW, then a human-signs gate, then done. Review returns findings to WORK, and a criterion change returns to ANALYZE through the human.">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--refuse)"/>
+          </marker>
+        </defs>
+
+        <text x="230" y="24" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12.5" fill="currentColor" opacity=".62">intent (human)</text>
+        <line x1="230" y1="34" x2="230" y2="70" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+
+        <rect x="110" y="78" width="240" height="60" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" rx="2"/>
+        <text x="126" y="103" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">1 · ANALYZE</text>
+        <text x="126" y="122" font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--gate)">/ae:analyze</text>
+
+        <line x1="110" y1="108" x2="52" y2="108" stroke="var(--refuse)" stroke-width="1.4" marker-end="url(#ar)"/>
+        <text x="48" y="104" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--refuse)">premise</text>
+        <text x="48" y="117" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--refuse)">fails · stop</text>
+
+        <line x1="230" y1="138" x2="230" y2="174" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+
+        <rect x="110" y="182" width="240" height="56" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4" rx="2"/>
+        <text x="126" y="206" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">2 · DISCUSS</text>
+        <text x="126" y="224" font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--gate)">/ae:discuss</text>
+        <text x="334" y="206" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".55">only if</text>
+        <text x="334" y="219" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".55">contested</text>
+
+        <line x1="230" y1="238" x2="230" y2="274" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+
+        <rect x="110" y="282" width="240" height="60" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" rx="2"/>
+        <text x="126" y="307" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">3 · PLAN</text>
+        <text x="126" y="326" font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--gate)">/ae:plan</text>
+
+        <line x1="230" y1="342" x2="230" y2="366" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+
+        <rect x="88" y="374" width="284" height="34" fill="var(--gate-wash)" stroke="var(--gate)" stroke-width="1.8" rx="2"/>
+        <text x="230" y="396" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13.5" font-weight="700" letter-spacing=".06em" fill="var(--gate)">HUMAN CONFIRMS THE CRITERIA</text>
+
+        <line x1="230" y1="408" x2="230" y2="440" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+
+        <rect x="110" y="448" width="240" height="60" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" rx="2"/>
+        <text x="126" y="473" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">4 · WORK</text>
+        <text x="126" y="492" font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--gate)">/ae:work</text>
+
+        <line x1="230" y1="508" x2="230" y2="544" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+
+        <rect x="110" y="552" width="240" height="60" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" rx="2"/>
+        <text x="126" y="577" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">5 · REVIEW</text>
+        <text x="126" y="596" font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--gate)">/ae:review</text>
+
+        <polyline points="350,572 400,572 400,478 356,478" fill="none" stroke="var(--refuse)" stroke-width="1.4" marker-end="url(#ar)"/>
+        <text x="408" y="521" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--refuse)">findings</text>
+        <text x="408" y="534" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--refuse)">&rarr; rework</text>
+
+        <polyline points="350,596 500,596 500,94 356,94" fill="none" stroke="var(--refuse)" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <text x="510" y="330" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--refuse)">a criterion</text>
+        <text x="510" y="343" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--refuse)">changes &mdash;</text>
+        <text x="510" y="356" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--refuse)">via the human</text>
+
+        <line x1="230" y1="612" x2="230" y2="636" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+
+        <rect x="88" y="644" width="284" height="34" fill="var(--gate-wash)" stroke="var(--gate)" stroke-width="1.8" rx="2"/>
+        <text x="230" y="666" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13.5" font-weight="700" letter-spacing=".06em" fill="var(--gate)">HUMAN SIGNS COMPLETION</text>
+
+        <line x1="230" y1="678" x2="230" y2="708" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+        <text x="230" y="730" text-anchor="middle" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">done</text>
+        <text x="230" y="750" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="currentColor" opacity=".6">not tests green &middot; not a pass verdict</text>
+      </svg>
+      <figcaption>Solid returns are the ordinary loop and need nobody's permission. The dashed return is the only edge that must pass through a person, because the criteria are what they confirmed.</figcaption>
+    </figure>
+
+    <div class="stations">
+
+      <section class="st">
+        <div class="num">01</div>
+        <div>
+          <h2>Analyze <span class="skill">/ae:analyze</span> <span class="lines">38 lines</span></h2>
+          <p>Establish that the problem is real and settle what <b>done</b> means, before any solution exists.</p>
+          <div class="rows">
+            <div class="k">delivers</div>
+            <div class="v"><code>&lt;feature-dir&gt;/analysis.md</code></div>
+            <div class="k">must hold</div>
+            <div class="v">The premise is answered and every answer carries evidence — a path, a line, or a command someone else can run. The criteria are settled here, each with an id, the property, and the falsifier.</div>
+            <div class="k refuse">refused for</div>
+            <div class="v refuse"><ul><li>a criterion with no falsifier and no judgement mark</li><li>a premise answer with no evidence behind it</li></ul></div>
+            <div class="k">exit</div>
+            <div class="v">A <code>no</code> on the first premise question ends the item. That is a result, not a failure.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="st">
+        <div class="num">02</div>
+        <div>
+          <h2>Discuss <span class="skill">/ae:discuss</span> <span class="lines">52 lines</span> <span class="opt">optional</span></h2>
+          <p>Settle one decision where two defensible options lead to <b>materially different work</b>. Nothing contested → skip it; a discussion held as ceremony costs a cycle and decides nothing.</p>
+          <div class="rows">
+            <div class="k">delivers</div>
+            <div class="v">one decision record in <code>&lt;feature-dir&gt;/</code></div>
+            <div class="k">must hold</div>
+            <div class="v">The losing option is argued, not merely listed. The reason is evidence a reader can open. It names what would reopen it — an observation someone could actually make.</div>
+            <div class="k refuse">refused for</div>
+            <div class="v refuse"><ul><li>a question it opened is still open</li><li>the reason cites nothing a reader can open</li><li>the record exists only in the conversation</li></ul></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="st">
+        <div class="num">03</div>
+        <div>
+          <h2>Plan <span class="skill">/ae:plan</span> <span class="lines">45 lines</span></h2>
+          <p>Decide the method. <b>The criteria themselves are not yours to change</b> — they arrive word for word from the analysis.</p>
+          <div class="rows">
+            <div class="k">delivers</div>
+            <div class="v"><code>&lt;feature-dir&gt;/plan.md</code></div>
+            <div class="k">must hold</div>
+            <div class="v">A dependency-ordered stack where each step is one commit that closes on itself. Coverage runs both ways: every criterion served, no step building what no criterion asks for. No criterion rests on a check nobody has seen fail.</div>
+            <div class="k gate-row">gate</div>
+            <div class="v" style="border-left:2px solid var(--gate);padding-left:11px;background:var(--gate-wash)">Present the criteria first — that is the thing being confirmed. The step cut is advisory context. <b>Work does not start without it.</b></div>
+            <div class="k refuse">refused for</div>
+            <div class="v refuse"><ul><li>a step that names no check to turn red</li><li>a criterion whose text differs from the analysis</li></ul></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="st">
+        <div class="num">04</div>
+        <div>
+          <h2>Work <span class="skill">/ae:work</span> <span class="lines">58 lines</span></h2>
+          <p>Turn an approved plan into commits, leaving behind <b>the evidence that each criterion's check can actually fail</b>.</p>
+          <div class="rows">
+            <div class="k">delivers</div>
+            <div class="v">commits, plus <code>&lt;feature-dir&gt;/log.md</code></div>
+            <div class="k">must hold</div>
+            <div class="v">One step, one commit. Every check was seen failing before the work that made it pass — watch it go red, or plant a defect once it is green. A criterion nothing can check is recorded as unchecked, never reported satisfied.</div>
+            <div class="k">gate</div>
+            <div class="v">None. Stop only when a criterion must change; everything else is yours to decide, note, and continue.</div>
+            <div class="k refuse">refused for</div>
+            <div class="v refuse"><ul><li>a criterion's check was never seen red</li><li>files changed that no step accounts for</li></ul></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="st">
+        <div class="num">05</div>
+        <div>
+          <h2>Review <span class="skill">/ae:review</span> <span class="lines">48 lines</span></h2>
+          <p>Judge the delivered work against the criteria the human confirmed. <b>Nothing else.</b></p>
+          <div class="rows">
+            <div class="k">delivers</div>
+            <div class="v"><code>&lt;feature-dir&gt;/review.md</code></div>
+            <div class="k">fresh eyes</div>
+            <div class="v">A reader who did not write the work. How many and who is your call; that they did not write it is not. <b>Nobody signs off their own work.</b></div>
+            <div class="k">must hold</div>
+            <div class="v">Every verdict rests on evidence this review produced — the executor's green run is a claim, not evidence. The checks bite: break what the most load-bearing criterion protects and confirm it catches you. What was not checked is listed plainly.</div>
+            <div class="k gate-row">gate</div>
+            <div class="v" style="border-left:2px solid var(--gate);padding-left:11px;background:var(--gate-wash)">Done means the human signed — not tests green, not your own pass verdict. <b>A gate the executed party can open is not a gate.</b></div>
+            <div class="k">returns</div>
+            <div class="v">Implementation defects go back to WORK — the ordinary loop. A finding that would change what a criterion <i>means</i> goes back to ANALYZE via the human.</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer>
+    <p style="margin:0 0 14px"><b>Where the instruments went.</b> None of these stages carries a mechanical check. The flow was compressed first and deliberately over-subtracted; instruments come back one at a time, each admitted only when the harm from its absence has been observed rather than argued. The preserved originals and the add-back list live beside the run record.</p>
+    <p style="margin:0;border-left:2px solid var(--gate);padding-left:12px;background:var(--gate-wash)"><b>One home per rule.</b> The entry document is this graph and nothing else &mdash; 100 lines naming which skill executes each stage, the two gates, the return edges, and the ground rules that hold across all five. What a stage owes lives in that stage&rsquo;s own skill, 241 lines across the five, and is not restated at the entry. Together 341, from 3,438 before the cut.</p>
+  </footer>
+</div>

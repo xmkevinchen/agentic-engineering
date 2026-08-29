@@ -1,19 +1,17 @@
 ---
 name: go
+description: Run a work item through the staged workflow — analyze, plan (the human confirms the acceptance criteria), work, review (the human signs completion). The argument is the work item itself, or a path to a file describing it.
 user-invocable: true
-description: Run a work item through a staged workflow — analyze, plan (human confirms the acceptance criteria), work, review (human signs completion). Argument is the task itself, or a path to a file describing it.
 ---
 
 # /ae:go — the workflow
 
-You are running a piece of engineering work through a staged workflow. Each stage
-has one responsibility, consumes the previous stage's deliverable, and produces
-one deliverable of its own. A stage may refuse what it is given and send it back.
-The human sets the goal and signs twice; everything else is yours.
+Run a piece of work through five stages. Each stage has one responsibility, consumes the
+stage before it, and produces one deliverable of its own. A stage may refuse what it is
+given and send it back. The human sets the goal and signs twice; everything else is yours.
 
-The work item is the argument — free text, or a path to a file describing it.
-Every deliverable below lives in this work item's feature directory,
-`.ae/features/active/F-NNN-<slug>/`, referred to below as `<feature-dir>`.
+Every deliverable lives in this work item's feature directory,
+`.ae/features/active/F-NNN-<slug>/`, written below as `<feature-dir>`.
 
 ```
         intent (human)
@@ -24,170 +22,79 @@ Every deliverable below lives in this work item's feature directory,
            ▼
       [2 DISCUSS] ─── only if a decision is genuinely contested
            │
-           ▼  ← HUMAN CONFIRMS the acceptance criteria
+           ▼
        3 PLAN
            │
-           ▼
+           ▼  ← HUMAN CONFIRMS the acceptance criteria
        4 WORK ◄──────────┐
            │             │ findings needing rework
            ▼             │
        5 REVIEW ─────────┘
-           │
+           │             ╌╌╌► a criterion changes — back to ANALYZE, via the human
            ▼  ← HUMAN SIGNS completion
          done
 ```
 
-Return edges: review sends implementation defects back to WORK. If a criterion
-itself turns out wrong or unmeetable, that goes back to ANALYZE — and changing a
-criterion always requires the human, because the criteria are what was confirmed.
-Everything else — re-planning, re-cutting steps, redoing work — is yours to do
-without asking.
+## The stages
 
-## Ground rules (apply to every stage)
+Each stage is executed by its own skill. This document is the graph; what a stage owes is
+in that skill, and is not repeated here.
 
-- **Criteria are settled before work starts, then never edited silently.** Work
-  drifts toward whatever got built; frozen criteria are what stop that.
-- **A check must be seen failing before the work that makes it pass.** A check
-  that has only ever been green proves nothing. Where no automated check is
-  possible, say so explicitly instead of inventing one.
-- **The author of a thing never reviews it alone.** Review means fresh eyes:
-  a different agent with a clean context, or the human.
-- **Every review finding gets an explicit disposition** — fixed, rejected with a
-  reason, or deferred with a named condition. A finding that just disappears is
-  a process failure.
-- **Deliverables are files on disk, not messages.** If the conversation were
-  lost, the next stage must be able to proceed from the files alone.
-- **Done means the human signed.** Tests green, review passed, agent confident —
-  none of these is completion. Only the signature is.
+| | stage | skill | deliverable | the next stage may refuse it for |
+|---|---|---|---|---|
+| 1 | ANALYZE | `/ae:analyze` | `<feature-dir>/analysis.md` | a criterion with no falsifier and no judgement mark; a premise answer with no evidence |
+| 2 | DISCUSS | `/ae:discuss` | a decision record in `<feature-dir>/` | a question it opened still open; a reason citing nothing a reader can open; a record that exists only in the conversation |
+| 3 | PLAN | `/ae:plan` | `<feature-dir>/plan.md` | a step that names no check to turn red; a criterion whose text differs from the analysis |
+| 4 | WORK | `/ae:work` | commits, plus `<feature-dir>/log.md` | a criterion's check never seen red; files changed that no step accounts for |
+| 5 | REVIEW | `/ae:review` | `<feature-dir>/review.md` | — |
 
-## Stage contracts
+DISCUSS runs only when a decision is genuinely contested — two defensible options leading to
+materially different work. Nothing contested → skip it, and say so in the plan.
 
-### 1 · ANALYZE
+## The two gates
 
-**Responsibility:** establish that the problem is real and define what "done"
-means — before any solution exists.
+**→ HUMAN CONFIRMS**, at the end of PLAN. The criteria are presented first; that is the thing
+being confirmed. The step cut is advisory. Work does not start without it.
 
-**Input:** the work item, the repository.
+**→ HUMAN SIGNS**, at the end of REVIEW. Done means the human signed — not tests green, not a
+pass verdict. A gate the executed party can open is not a gate.
 
-**Deliverable:** `<feature-dir>/analysis.md` containing:
-- *Premise* — three answers with evidence (file:line or a command): Does this
-  problem exist today? Has it already been decided the other way somewhere?
-  Can success be checked by a command — and if not, what would checking look like?
-- *Acceptance criteria* — one row per criterion: an id, the property that must
-  hold, and the falsifier (the concrete search/test/question that would expose
-  the property NOT holding). A criterion with no falsifier is a wish; either
-  find one or mark the row `judgement` and leave it to human review.
+## Return edges
 
-**Refused by the next stage when:** a criterion has no falsifier and no
-`judgement` mark, or a premise answer has no evidence behind it.
+Review sends implementation defects back to WORK. That is the ordinary loop and needs
+nobody's permission.
 
-**A `no` premise ends the item.** That is a success, not a failure — report it
-and stop.
+If a criterion itself turns out wrong or unmeetable, that goes back to ANALYZE — and
+**changing a criterion always requires the human**, because the criteria are what was
+confirmed. Work already done was done against the criteria as confirmed.
 
-### 2 · DISCUSS (optional)
+Everything else — re-planning, re-cutting steps, redoing work — is yours to do without asking.
 
-**Responsibility:** resolve a genuinely contested decision — one where two
-defensible options lead to materially different work.
+## Ground rules (every stage)
 
-**Input:** the analysis, the specific contested question.
-
-**Deliverable:** a decision record in `<feature-dir>/`: the options, the choice,
-the reason, and what evidence would reopen it.
-
-**Skip it** when no decision is contested. Note "discuss skipped: nothing
-contested" in the plan and move on. Do not hold a discussion as ceremony.
-
-### 3 · PLAN
-
-**Responsibility:** decide the method — how the work is cut into steps and how
-each criterion will be verified. The criteria themselves are NOT yours to edit;
-copy them exactly from the analysis (copy the text programmatically or quote it
-verbatim — retyping introduces silent drift).
-
-**Input:** `analysis.md`, any decision records.
-
-**Deliverable:** `<feature-dir>/plan.md` containing:
-- Steps, dependency-ordered. Each step: what it does, which criteria it serves,
-  which files it expects to touch, and its falsifier (what turns red→green).
-- Per criterion: how it will be verified (a command to run, an artifact a human
-  will judge, or an honest "manual — human confirms").
-
-**→ HUMAN CONFIRMS here.** Present the criteria and the plan. The human is
-confirming the acceptance criteria above all; the step cut is advisory.
-
-**Refused by the next stage when:** a step names no falsifier, or a criterion
-in the plan differs from the analysis text.
-
-**Worth one cheap round:** before showing the human, have one fresh-context
-agent read the plan against the criteria and answer: does any step build
-something no criterion asks for, and would any criterion still be unmet even if
-every step passed? Fix what it finds first. Scope questions like these have
-caught the worst defects; coverage questions catch fewer.
-
-### 4 · WORK
-
-**Responsibility:** execute the plan, one step per commit.
-
-**Input:** `plan.md` — reread it from disk at each step; do not trust memory.
-
-**Per step:**
-1. Write or run the step's check first; observe it fail. Record one line in the
-   working log: `RED: <check> — <what the failure said>`.
-2. Implement until the check passes. Run the project's test suite.
-3. Commit. One step, one commit; the message describes the change and why.
-4. If reality disagrees with the plan (a step won't close, a better cut
-   appears), change the plan and note what changed and why. That needs no
-   permission — only criteria changes do.
-
-**Deliverable:** commits, plus `<feature-dir>/log.md` (the RED lines, decisions
-made, anything rejected and why).
-
-**Refused by the next stage when:** a criterion's check was never seen red, or
-files changed that no step accounts for.
-
-### 5 · REVIEW
-
-**Responsibility:** judge the work against the criteria — nothing else.
-
-**Input:** the diff, `plan.md`, the working log. Reviewer must be fresh eyes
-(see Roles).
-
-**Ask exactly four questions:**
-1. Does the delivered work satisfy each criterion? (check the falsifier
-   actually ran and actually bit)
-2. Would a planted defect have been caught? (pick the most load-bearing
-   criterion and try it)
-3. Did anything get built that no criterion asked for — and does anything
-   the criteria demand remain missing? *(this question finds the worst
-   defects; do not skip it)*
-4. What was NOT checked? List it honestly — this list is for the human.
-
-**Deliverable:** `<feature-dir>/review.md` — per criterion verdict with evidence,
-findings with severity, and the not-checked list. Findings that are
-implementation defects go back to WORK; a wrong criterion goes back to ANALYZE
-via the human.
-
-**→ HUMAN SIGNS here.** Show: what changed, what was verified and how, every
-finding's disposition, and what was not checked. The human signs or doesn't.
-
-## Roles
-
-Other roles exist beyond you: the agent types this session offers, and any the
-project defines under `.claude/agents/` — each explains itself in its
-description. Default is solo — bring in a role when a stage contract demands
-fresh eyes or an independent judgment would change what you do next, never for
-ceremony. When you spawn one, tell it its role, what to read, and the one
-question it must answer.
+- **Criteria are settled before work starts, then never edited silently.** Work drifts toward
+  whatever got built; settled criteria are what stop that.
+- **A check must be seen failing before the work that makes it pass.** A check that has only
+  ever been green proves nothing. Where no automated check is possible, say so explicitly
+  instead of inventing one.
+- **The author of a thing never reviews it alone.** Fresh eyes: a different agent with a clean
+  context, a different model family, or the human.
+- **Every finding gets an explicit disposition** — fixed, rejected with a reason, or deferred
+  with a named condition. A finding that just disappears is a process failure.
+- **Deliverables are files on disk, not messages.** If the conversation were lost, the next
+  stage must be able to proceed from the files alone.
+- **Done means the human signed.** Tests green, review passed, agent confident — none of these
+  is completion. Only the signature is.
 
 ## When things go wrong
 
-- **A check refuses your input** — read what it expected vs what it saw, fix,
-  retry. Do not ask the human about mechanical refusals.
-- **Same failure three times** — stop repeating. Either re-cut the step, or
-  conclude the criterion is unmeetable and take it back to ANALYZE.
-- **Blocked on a missing capability** — record it as blocked with what exactly
-  would unblock it; finish everything else; report at the end. Do not invent a
-  substitute check and call it passed.
-- **Only stop and wait for the human when:** a criterion must change, a
-  signature point is reached, or proceeding under any assumption would make the
-  work worthless. Everything else: decide, note the decision, continue.
+- **A check refuses your input** — read what it expected against what it saw, fix, retry. Do
+  not ask the human about mechanical refusals.
+- **Same failure three times** — stop repeating. Either re-cut the step, or conclude the
+  criterion is unmeetable and take it back to ANALYZE.
+- **Blocked on a missing capability** — record it as blocked with what exactly would unblock
+  it; finish everything else; report at the end. Do not invent a substitute check and call it
+  passed.
+- **Only stop and wait for the human when** a criterion must change, a signature point is
+  reached, or proceeding under any assumption would make the work worthless. Everything else:
+  decide, note the decision, continue.

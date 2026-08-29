@@ -10,6 +10,7 @@
 
 | Document | What it is |
 |---|---|
+| [`workflow-graph.html`](workflow-graph.html) | The stage graph as designed — five stage skills, two human gates, the return edges, and what each stage may refuse. Open it in a browser. |
 | [`x-experiment.md`](x-experiment.md) | Why deletion precedes the rewrite — the four benchmark runs and their limits. |
 | [`x-workflow.md`](x-workflow.md) | The exact 182-line instrument those runs executed; seed of the unified entry. |
 | [`prd/ae-v1.md`](prd/ae-v1.md) | Users, jobs, quality counters; carries a status amendment for G-02 and the fence. |
