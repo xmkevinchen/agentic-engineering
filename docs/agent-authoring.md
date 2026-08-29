@@ -47,7 +47,7 @@ That's it. ae discovers it automatically and includes it in review teams.
 | `tools` | Restrict available tools (list) | All tools |
 | `skills` | Pre-load skills (list) | None |
 
-See the full [Agent Contract Specification](decisions/037-agent-contract.md) for details.
+See the full [Agent Contract Specification (local-only `docs/decisions/037-agent-contract.md`, untracked by convention) for details.
 
 ## Role Taxonomy
 
@@ -124,7 +124,7 @@ project_agents:
     role: reviewer
 ```
 
-This overrides description-based inference. All agents must still be in `.claude/agents/` to be spawnable. See the [Agent Contract Specification](decisions/037-agent-contract.md) for precedence rules.
+This overrides description-based inference. All agents must still be in `.claude/agents/` to be spawnable. See the [Agent Contract Specification (local-only `docs/decisions/037-agent-contract.md`, untracked by convention) for precedence rules.
 
 ## Tips
 

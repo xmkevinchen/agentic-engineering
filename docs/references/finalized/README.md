@@ -2,11 +2,11 @@
 
 > **Status: no longer the current plan.** This was the sole v1 specification when
 > it was frozen on 2026-08-23. It is now a normative design input and audit
-> record. The current pair is [`docs/v1/design.md`](../../v1/design.md) and
-> [`docs/v1/implementation-plan.md`](../../v1/implementation-plan.md); where they
+> record. The current pair is [`docs/v1/design.md`](../../history/v1/design.md) and
+> [`docs/v1/implementation-plan.md`](../../history/v1/implementation-plan.md); where they
 > disagree with this specification, they are current, and each difference is
 > recorded in
-> [`docs/v1/mechanism-disposition.md`](../../v1/mechanism-disposition.md).
+> [`docs/v1/mechanism-disposition.md`](../../history/v1/mechanism-disposition.md).
 >
 > The specification documents in this directory are unchanged. Read the original
 > framing below as it stood at the freeze.
@@ -33,7 +33,7 @@ retry / re-plan / amendment / human / finalize
 
 ## 规范权威
 
-`finalized/` 是设计定稿时的唯一 v1 规范；相邻的 `../claude/`、`../codex/` 与补充方案 [`../fable-v1/`](../../ae-v1-design-history/fable-v1/) 只是来源/审计档案。
+`finalized/` 是设计定稿时的唯一 v1 规范；相邻的 `../claude/`、`../codex/` 与补充方案 [`../fable-v1/`](../../history/ae-v1-design-history/fable-v1/) 只是来源/审计档案。
 
 发生冲突时按以下顺序解释：
 

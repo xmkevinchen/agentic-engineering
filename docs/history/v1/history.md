@@ -10,7 +10,7 @@ and how to read it.
 
 ## 1. The archived specification
 
-**[`../references/finalized/`](../references/finalized/)** — the AE 1.0
+**[`../references/finalized/`](../../references/finalized/)** — the AE 1.0
 specification as frozen on 2026-08-23.
 
 | Document | What it holds |
@@ -95,7 +95,7 @@ Its §3.2 — *native teams first; cross-family bridge only for the remaining ga
 
 ## 6. The implementation record
 
-**[`../../plugins/ae/docs/references/v1-foundation-freeze.md`](../../plugins/ae/docs/references/v1-foundation-freeze.md)**
+**[`../../plugins/ae/docs/references/v1-foundation-freeze.md`](../../../plugins/ae/docs/references/v1-foundation-freeze.md)**
 — the WP-P0.1 freeze record.
 
 It is neither history nor a second authority: it documents what the executable
@@ -150,7 +150,7 @@ Someone who needs the whole story, in order:
 3. [`mechanism-disposition.md`](mechanism-disposition.md) — what was dropped and why
 4. [`branch-disposition.md`](branch-disposition.md) — where each branch went
 5. [`superseded/design-and-limitations.md`](superseded/design-and-limitations.md) — the larger v1, for contrast
-6. [`../references/finalized/design.md`](../references/finalized/design.md) — the full frozen reasoning
+6. [`../references/finalized/design.md`](../../references/finalized/design.md) — the full frozen reasoning
 7. `docs/ae-v1-implementation-thinking` @ `8d8b1cc` — how the bootstrap phase reasoned
 
 Steps 1–3 are enough to work on AE. Steps 4–7 are for understanding why it looks

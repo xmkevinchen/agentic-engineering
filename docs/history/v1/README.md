@@ -5,8 +5,8 @@
 > **archived by its own signed decision record** — proven, unconsumed, and
 > reopened only on named observed events. The built artifact is preserved at
 > tag `v1-kernel-archive`; the account of why is
-> [`x-experiment.md`](x-experiment.md), whose instrument is reproduced verbatim
-> in [`x-workflow.md`](x-workflow.md).
+> [`x-experiment.md`](../../x-experiment.md), whose instrument is reproduced verbatim
+> in [`x-workflow.md`](../../x-workflow.md).
 >
 > The former rule — that `design.md` and `implementation-plan.md` override
 > anything that contradicts them — is **revoked**. Where this directory
@@ -16,8 +16,8 @@
 
 | Document | Question it answers |
 |---|---|
-| [`x-experiment.md`](x-experiment.md) | What did the minimal-workflow experiment establish, and why does deletion precede the rewrite? |
-| [`x-workflow.md`](x-workflow.md) | The exact 182-line instrument the four benchmark runs executed. |
+| [`x-experiment.md`](../../x-experiment.md) | What did the minimal-workflow experiment establish, and why does deletion precede the rewrite? |
+| [`x-workflow.md`](../../x-workflow.md) | The exact 182-line instrument the four benchmark runs executed. |
 
 ## The historical set
 
@@ -38,5 +38,5 @@ counter-example the rewrite was measured against — not as guidance.
 | [`superseded/`](superseded/) | The pre-acceptance documentation set. |
 
 The plugin's shipped behavior is described by the repository's
-[README](../../README.md) and [CHANGELOG](../../CHANGELOG.md). The rewrite that
+[README](../../../README.md) and [CHANGELOG](../../../CHANGELOG.md). The rewrite that
 supersedes this directory's plans is tracked on branch `feature/the-big-delete`.

@@ -251,7 +251,7 @@ plugins/ae/
 ```
 
 The research, cross-review, and decisions that produced the v1.0 design are
-preserved in the [AE v1.0 design history](docs/ae-v1-design-history/README.md).
+preserved in the [AE v1.0 design history](docs/history/ae-v1-design-history/README.md).
 
 ## License
 
