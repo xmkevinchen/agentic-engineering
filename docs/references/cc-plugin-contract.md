@@ -94,6 +94,59 @@ place an AE control on a hook.
 and resume, cross-session recovery, concurrent writers, and interaction between
 multiple plugins' hooks. None of these was exercised; no claim is made about them.
 
+## Hook design surface — official semantics, cross-checked (2026-08-28)
+
+The enforcement table above records what we **measured**. This section records
+what the official hooks reference **documents** (fetched 2026-08-28,
+code.claude.com/docs/en/hooks), cross-checked against those measurements, plus
+the capabilities relevant to the rewrite that the measurements did not cover.
+Classification: `empirical` = probed here; `documented` = official semantics not
+yet probed — verify before making one load-bearing.
+
+### Cross-check: every measurement matches the documented contract
+
+| Measured (above) | Official semantics | Verdict |
+|---|---|---|
+| `PreToolUse` exit 2 refuses | "Always blocks on events that support blocking" | match |
+| `PreToolUse` exit 1 fail-open | "Other exit codes: non-blocking error (action proceeds)" | match |
+| `PreToolUse` timeout fail-open | "canceled, output discarded… doesn't block; call proceeds through normal permission flow" | match |
+| `PostToolUse` feedback-only | "Can block: No (tool already ran)"; exit 2 merely "shows stderr to Claude" | match |
+| `TaskCompleted` exit 2 refuses | "rolls back/prevents task state change" | match |
+| `SubagentStop` exit 2 retries same worker | "prevents subagent from stopping" — continuation, not routing | match |
+
+### Capabilities the probes did not cover (`documented`, unprobed)
+
+| Capability | What it is | Why it matters to the rewrite |
+|---|---|---|
+| **Skill-frontmatter hooks** | A skill's YAML can register hooks, active from invocation for the rest of the session; `once: true` self-removes | **The unified entry can carry its own enforcement, scoped** — no plugin-global hooks, nothing runs for users who never invoke it |
+| **Subagent-frontmatter hooks** | Hooks active only while that subagent runs; its `Stop` becomes `SubagentStop` | A reviewer seat can bring its own verification hooks and take them away when it exits |
+| **`type: "agent"` hooks** (experimental) | The hook IS a subagent with Read/Grep/Glob, returning a JSON decision | A native mechanism for the checker-seat idea — a condition verified by an agent that can actually look, at a hook point |
+| **`type: "prompt"` hooks** | Single-turn model evaluation of the hook input, JSON decision out | Cheap semantic checks where a regex is dishonest |
+| **`Stop` deny** | Exit 2 / deny on `Stop` prevents the turn from ending; input carries `last_assistant_message` + `tool_use_count` | **The done-leash**: "you do not stop before the deliverable exists on disk" becomes checkable at the moment of claiming done. Fail-open on timeout, so an accelerator — but the strongest one available |
+| **`PostToolBatch` deny** | Blocks the agentic loop before the next model call | A parent-level halt point the morning probes never found — coarser than routing, stronger than PostToolUse feedback |
+| **`updatedInput`** (PreToolUse) | Hook rewrites the tool input before execution | Enforcement by correction rather than refusal — e.g. normalizing a path, adding a flag |
+| **`FileChanged`** | Watch literal filenames; fires on disk change with content | **Tamper-visibility for frozen artifacts at ~1% of a ledger's cost**: watch the confirmed-criteria file, surface any post-freeze edit. Partially services BL-224 reopening-event #1's monitoring |
+| **`if` permission-rule filter** | Per-hook rule like `Bash(git *)`, `Edit(*.ts)`; leading assignments stripped, `$()` and compound commands checked, best-effort | Precision without a matcher regex — but "best-effort; use the permission system for hard enforcement" is the doc's own words |
+| **`UserPromptExpansion`** | Fires when a typed command expands, can block; matcher = command name | Inspect/refuse a skill invocation before the model sees it |
+| **`TeammateIdle` deny** | Prevents a teammate going idle | The only documented control over team-member lifecycle |
+| **`CLAUDE_PLUGIN_DATA`** | Per-plugin persistent data directory, exported to hooks | A sanctioned home for plugin state that is neither repo nor `~/.claude` hand-wiring |
+
+### Design rules the two sources jointly force
+
+1. **A hook is an accelerator, never the sole carrier of a rule.** Timeout and
+   error are fail-open on nearly every event (`WorktreeCreate` is the lone
+   fail-closed exception). Anything that must hold, holds in the artifact
+   contract and the human gates; hooks make violations *visible sooner*.
+2. **Scope hooks to the skill, not the plugin.** Frontmatter registration means
+   the workflow's enforcement travels with the workflow. Plugin-global hooks
+   stay for genuinely global concerns only (today: cross-family env check).
+3. **Portability bound**: hooks are Claude Code surface. Any other host (e.g. a
+   Codex port) gets the same workflow with zero hooks and must lose nothing but
+   earliness of detection. If a rule breaks without its hook, rule 1 was
+   violated.
+4. **Anything from the `documented` table becomes load-bearing only after its
+   own probe** — the same discipline that produced the enforcement table above.
+
 ## BL-023 closure evidence
 
 BL-023 (`hooks.json / plugin.json registration gap`) was historically open because the CC plugin system's auto-discovery of `hooks.json` and `plugin.json hooks` blocks was uncertain. Empirical verification during T1 (Plan 054 NDJSON trace) ship on 2026-05-20 confirms `plugin.json hooks` block auto-registers and fires on SessionStart.
