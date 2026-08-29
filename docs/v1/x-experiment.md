@@ -15,7 +15,8 @@ conditional logic — a body of case law, not a program. The open question:
 
 ## 2. The experiment
 
-A separate plugin, `x`, with one entry (`/x:work`) and a **182-line** workflow:
+A separate plugin, `x`, with one entry (`/x:work`) and a **182-line** workflow
+(reproduced verbatim in [`x-workflow.md`](x-workflow.md)):
 
 - five stages (analyze → optional discuss → plan → work → review);
 - six ground rules (criteria frozen before work; checks seen red first; the
@@ -89,6 +90,9 @@ cast at spawn time by prompt, and it sufficed.
 - the Kernel is untouched until after the delete, then handled with restraint —
   its durable part (content identity, append-only ledger) is the persistence
   layer the minimal workflow lacks; its per-scenario gating is not core;
+  *(resolved 2026-08-28: an exploratory x run decided the Kernel is archived —
+  proven, unconsumed, reopened only on named observed events; tag
+  `v1-kernel-archive` is the resurrection point)*;
 - the prose case law is not lost by deletion: it remains in git history, with
   the working discussion as its index, and individual rules return only as
   structure or spec when something real hits them again.

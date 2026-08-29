@@ -7,6 +7,15 @@ target: ae@1.0.0
 
 # AE v1 — product requirements
 
+> **Status amendment (2026-08-28).** Two parts of this document are overtaken
+> by recorded decisions. **G-02** (the Kernel is reachable — "the highest-value
+> work in v1") is superseded: BL-224's signed decision archived the Kernel as
+> proven-but-unconsumed, and F-088 is abandoned at 2 of 5 steps. **§6's fence**
+> is being executed as a factoring — core kept, satellites extracted, prose
+> deleted — per [`../v1/x-experiment.md`](../v1/x-experiment.md). The users,
+> jobs, and remaining goals stand.
+
+
 > **AE v1 is not released.** This document states what v1 is *for*, who it
 > serves, and which shipped capabilities are deliberately outside it. It holds
 > no design or implementation authority: where it appears to contradict

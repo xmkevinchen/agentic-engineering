@@ -1,5 +1,10 @@
 # The Harness loop — nodes, delivery contracts, and return paths
 
+> **Status: historical (2026-08-28).** This graph describes the archived
+> Kernel's loop (tag `v1-kernel-archive`). Every node remains implemented and
+> none is reachable — which is no longer a gap to close but the archived state.
+> See [`x-experiment.md`](x-experiment.md).
+
 > **Status: current.** Companion to [`design.md`](design.md). It expands §8's
 > roles and handoffs into the whole graph: every node, what each owes the next,
 > and every edge that goes backwards. Where it appears to contradict `design.md`

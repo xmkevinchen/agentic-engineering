@@ -1,6 +1,6 @@
 # Old mechanisms — disposition
 
-> **Status:** current. Companion to [`design.md`](design.md). Every mechanism
+> **Status:** historical (2026-08-28) — accurate as the record of dispositions made; the v1 it disposed into is archived. Companion to [`design.md`](design.md). Every mechanism
 > proposed or built under the earlier v1 design is reviewed here and given one
 > disposition. Nothing carries forward by default.
 

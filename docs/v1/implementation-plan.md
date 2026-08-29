@@ -1,5 +1,9 @@
 # AE v1 — consolidated implementation plan
 
+> **Status: historical (2026-08-28).** The V1 slice completed (531 assertions,
+> archived at tag `v1-kernel-archive`); V2–V5 will not be built in this shape.
+> Superseded by deletion-first — see [`x-experiment.md`](x-experiment.md).
+
 > **Status:** current implementation plan for AE v1. Supersedes the P0–P6 plan in
 > [`../references/finalized/implementation-plan.md`](../references/finalized/implementation-plan.md),
 > which is retained as a design input and audit record.

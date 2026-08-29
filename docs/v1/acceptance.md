@@ -1,5 +1,10 @@
 # AE v1 — acceptance criteria
 
+> **Status: historical (2026-08-28).** These criteria defined a release that
+> will not ship in this shape; the Kernel they gate is archived by its signed
+> decision record. Retained as the record of what "released" was going to mean.
+> See [`x-experiment.md`](x-experiment.md).
+
 > **Status:** current. States the minimum for calling AE v1 released. Nothing
 > here is satisfied yet, and this document does not claim otherwise.
 
