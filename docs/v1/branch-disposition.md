@@ -1,6 +1,6 @@
 # AE v1 — branch disposition
 
-> **Status:** current. One row per source branch and per superseded design goal.
+> **Status:** historical (2026-08-28) — accurate as the record of where each branch's thinking went; the v1 they converged into is archived (tag `v1-kernel-archive`). One row per source branch and per superseded design goal.
 > Records where each branch's thinking went, and why.
 
 Consolidation branch: `feature/ae-v1-consolidation`, created from

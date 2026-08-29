@@ -1,6 +1,6 @@
 # AE after 1.0: candidate directions and admission experiments
 
-> **Status:** non-normative candidate roadmap
+> **Status:** historical (2026-08-28) — a non-normative candidate roadmap for a 1.0 that will not ship in this shape
 >
 > **Authority:** none
 >
