@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Generate a feature plan with acceptance criteria + plan review. Recommended: Sonnet or above
+description: "Generate a feature plan with acceptance criteria + plan review. Recommended: Sonnet or above"
 argument-hint: "<feature description>"
 user-invocable: true
 model: opus
@@ -112,7 +112,13 @@ TaskCreate(subject: "ae:plan: Step 5 — Confirm")
 
    Standalone plans (Form 3 free text — no resolved discussion) skip this entire #5 mandatory load.
 
-6. **Consume the analyze verification table** (F-063 — the front-loaded harness's consumer half): when a feature dir is resolved, read its `analysis.md` `### Verification considerations` table and use it as the **per-AC `verify_by` starting point** when writing the plan's Acceptance Criteria. This is an EXPLICIT consumption step (not an implicit nod): **for each row in the table, either map it to an AC's `verify_by` or record `# dimension dropped: <reason>`** (a rigor-downgrade → `# verify_by override (was X): <reason>`; see the Verification Harness conventions below). It is a **strong convention, not mechanically enforced** — review Check 7 is the correctness backstop and silent partial-mapping is not auto-detected (deferred, BL-179); the convention's job is to make divergence *visible*, closing the F-067 inert-floor gap (produced-but-never-read) without overclaiming mechanical enforcement. **Brownfield**: if `analysis.md` is absent or has no Verification-considerations table (legacy feature predating F-063, or a standalone plan), emit a non-blocking warning and derive `verify_by` from scratch — never block. Plan remains the canonical decider on conflict (see the override / dropped-dimension conventions in the Verification Harness section below).
+6. **Consume the analyze verification table** (F-063 — the front-loaded harness's consumer half): when a feature dir is resolved, read its `analysis.md` `### Verification considerations` table and use it as the **per-AC `verify_by` starting point** when writing the plan's Acceptance Criteria. This is an EXPLICIT consumption step (not an implicit nod): **for each row in the table, either map it to an AC's `verify_by` or record `# dimension dropped: <reason>`** (a rigor-downgrade → `# verify_by override (was X): <reason>`; see the Verification Harness conventions below). It is a **strong convention, not mechanically enforced** — review Check 7 is the correctness backstop and silent partial-mapping is not auto-detected (deferred, BL-179); the convention's job is to make divergence *visible*, closing the F-067 inert-floor gap (produced-but-never-read) without overclaiming mechanical enforcement. **Brownfield**: if `analysis.md` is absent or has no Verification-considerations table (legacy feature predating F-063, or a standalone plan), emit a non-blocking warning and derive `verify_by` from scratch — never block.
+
+**Who decides what (F-086).** Plan is the canonical decider on the **method** and not on the **criterion**:
+
+- **Copied, not re-authored** — the `id`, `property` and `falsifier` columns go into the plan's Acceptance Criteria verbatim. They were settled in analyze, before any solution existed, which is what stops a criterion from drifting toward whatever got built.
+- **Plan's own call** — which `verify_by` kind, and how the check is built. A rigor downgrade is still `# verify_by override (was X): <reason>`, recorded here.
+- **`# dimension dropped` is now a refusal, not a note.** Dropping a criterion is not plan's decision: send it back to analyze naming the criterion, per [Stage handovers](../../handover.md). The note form remains only for a legacy plan with no analysis table to send anything back to.
 
 ### 1.5. Prior Context (project knowledge graph)
 
@@ -167,16 +173,30 @@ One sentence: what problem does this feature solve.
 
 ## Steps
 
+A **dependency-ordered stack**: each step is a commit that closes on itself, and each
+depends only on steps above it. Splitting a large change this way is what makes a
+failure attributable — a stack of ten self-closing commits says which one broke; one
+commit of ten changes says only that something did.
+
 ### Step 1: <description> (AC1)
 - [ ] Subtask a
 - [ ] Subtask b
 Expected files: path/to/file1.ts, path/to/file2.ts ← REQUIRED: list all files this step will modify
+Falsifier: <the check this step makes go from red to green> ← REQUIRED
+Self-closing: yes | no — <if no, why, and what covers it instead>
 
 ### Step 2: <description> (AC2, AC3)
 - [ ] Subtask a
 Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:work
+Falsifier: <as above>
+Self-closing: yes | no
 
 ## Acceptance Criteria
+
+**Copied from `analysis.md`'s Verification considerations table — `id`, `property` and
+`falsifier` verbatim (F-086).** What is added here is the method: `verify_by`, `fixture`,
+and the concrete input/output pairs. A criterion that cannot be planned against goes back
+to analyze rather than being rewritten here.
 
 ### AC1: Reference Case — <description>
 - verify_by: unit          # unit|integration|e2e|contract|judge|manual — see Verification Harness mapping below
@@ -194,7 +214,55 @@ Expected files: path/to/file3.ts ← REQUIRED: enables drift detection in /ae:wo
 <Human-verifiable output — with the rubric question the reviewer answers>
 ```
 
+### What this stage refuses, and may be refused for (F-086)
+
+Per [Stage handovers](../../handover.md).
+
+**Refuse and send back to analyze** when a criterion arrives with no falsifier and no
+`judgement` mark. Without one, plan has to invent the standard it is planning against,
+and an invented standard drifts toward whatever gets built. Name the criterion in the
+refusal.
+
+**Re-run the premise citation** before planning against it. A verdict is provisionally
+true: if the cited `file:line` or command does not say what the verdict claims, the
+verdict is refuted and the item goes back, not forward.
+
+**This stage may be refused by work** for a step with no falsifier, or one marked
+`Self-closing: no` with nothing named as covering it.
+
+### Rules for the stack (F-086)
+
+- **The falsifier must be seen red, and where that happens depends on whether it
+  already exists.**
+
+  - **It does not exist yet** — the common case. Plan **names** it; it cannot be run,
+    because writing it is `/ae:work`'s first step. The red run belongs to the harness
+    loop there: write the check → red → implement → green, with the red recorded as
+    `FALSIFIED_AC <AC-id>:`. Plan's job is to name an observation precise enough that
+    work can write it without inventing the criterion.
+  - **It already exists** — an existing suite, a query, a grep over the tree. Then plan
+    **runs it now**, and a green result stops the plan: either the property already
+    holds and there is no work to do, or the check is aimed at something other than the
+    criterion. Both are cheaper to learn here than after a step is built.
+
+  What is not acceptable in either case is a check whose first observed state is green.
+  It establishes nothing: passing before the change and passing after it are the same
+  observation, and neither says the check would notice the change's absence.
+- **A step that cannot close on itself is declared, not hidden.** `Self-closing: no`
+  needs a reason and a statement of what covers it instead. Plan review either accepts
+  that or sends the step back to be split. **What it must not do is pass silently** —
+  an undeclared non-closing step is how a stack looks disciplined and is not.
+- **Per-step closure is necessary and not sufficient.** In F-086, three of the five
+  structural causes were composition defects: every commit self-consistent, the
+  composition wrong. Relations reconstructed by search and lost authority attenuation
+  are invisible to per-step verification by construction — each step checked the
+  authority, and none checked the authority the previous step had narrowed. So the plan
+  also names **one whole-path observation** that no single step owns, and that
+  observation must not be decomposed away into the steps.
+
 ### Rules
+- **Criteria, not methods (F-086).** An AC says what must be shown; it does not say how to build the thing that shows it. The test: **delete the clause — if the criterion is unchanged, it was a method.** *"the assertion is on what the endpoint received, not on what the caller passed"* is a criterion; *"start it over stdio against a local HTTP server"* is a method, and pinning it there rejects a better way of establishing the same thing. This is the same failure as writing the implementation in prose, one stage earlier, where it costs an approval round instead of a review round.
+- **The check should be seen failing before the work starts.** An observation that runs and passes before anything is built establishes nothing. Where a step can be ordered that way, write the check first and record that it was red; where it cannot, say which step is the falsifier and when it is expected to turn.
 - ACs must be **specific and verifiable** (no "results should be reasonable")
 - Numbers must have ranges ("10-15%"), not point values ("12%")
 - Each step references AC numbers (step-AC mapping)
@@ -374,7 +442,7 @@ Indicate next step is `/ae:work <plan file path>`.
 
 When guard passes, write pipeline state:
 
-- [ ] **Freeze the GOAL**: for a feature-dir plan, write the verbatim `## Acceptance Criteria` section of this `plan.md` → `<feature-dir>/goal.frozen.md` — the immutable acceptance standard a fresh `/ae:review` re-examines the work against (frozen at plan-approval so the executor cannot move the goalposts during work). Only the GOAL is frozen (AC substance + `verify_by` + `verify:`); the harness/means stay editable in the live plan (goal/harness split deferred). Legacy plans (no feature dir) skip.
+- [ ] **Freeze the GOAL**: for a feature-dir plan, write the verbatim `## Acceptance Criteria` section of this `plan.md` → `<feature-dir>/goal.frozen.md` — the immutable acceptance standard a fresh `/ae:review` re-examines the work against (frozen at plan-approval so the executor cannot move the goalposts during work). Only the GOAL is frozen (AC substance + `verify_by` + `verify:`); the harness/means stay editable in the live plan (goal/harness split deferred). **Re-freezing after an amendment (F-086)**: when a criterion is changed — which reaches analyze as an escalation, never as an in-place edit here — the new goal supersedes the old one and the old one stays readable, because work already done was done against it. That is the one signature point in the loop; see [Stage handovers](../../handover.md) § What needs a signature. Legacy plans (no feature dir) skip.
 - [ ] Read plan frontmatter `discussion:` field
 - [ ] If `discussion:` is non-empty → read that discussion's `index.md`:
   - Set `plan: "<path-to-this-plan-file>"`

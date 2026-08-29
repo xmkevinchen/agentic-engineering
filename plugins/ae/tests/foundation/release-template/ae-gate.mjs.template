@@ -1,0 +1,360 @@
+// runtime/ae-gate.mjs — minimal bootstrap launcher.
+//
+// Built by lib/release-build.mjs. Three things are injected at build time:
+//
+//   __EMBEDDED_CANONICAL_JSON__       the restricted-JCS parser/serializer
+//   __EMBEDDED_BOOTSTRAP_VALIDATOR__  the standalone release-manifest validator
+//   __EXPECTED_RELEASE_MANIFEST_DIGEST__
+//
+// All three are *embedded*, not imported. The launcher cannot import a member to
+// check the members: that is the cycle the DAG exists to break. The launcher is
+// therefore not itself a manifest member and has no digest recorded inside the
+// manifest it validates.
+//
+// Frozen order — no step may move:
+//
+//   1  read the installed manifest bytes
+//   2  strict lexical parse (BOM / duplicate keys / number domain)
+//   3  refuse a manifest that carries self_digest
+//   4  recompute SHA-256(JCS(manifest)) and compare to the embedded constant
+//   5  closed schema validation with the embedded bootstrap validator
+//   6  resolve every member ref: plugin-relative, no `..`, no symlink, unique
+//   7  recompute every installed member's raw digest
+//   8  import the now-verified validator, then the bridge
+//   9  obtain host active-root attestation; require it to equal our own verified digest
+//  10  mint the operation capability, bound to the bootstrap result that already exists
+//  11  only now import and call the core
+
+/*__EMBEDDED_CANONICAL_JSON__*/
+
+/*__EMBEDDED_BOOTSTRAP_VALIDATOR__*/
+
+import { createHash } from 'node:crypto';
+import { appendFileSync, lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const EXPECTED_RELEASE_MANIFEST_DIGEST = '__EXPECTED_RELEASE_MANIFEST_DIGEST__';
+
+// The launcher resolves its own plugin root from its own location. A caller does
+// not get to say which release is running — see the active-release rules in
+// finalized/design.md.
+const RELEASE_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+
+class BootstrapError extends Error {
+  constructor(code, message, guard = null) {
+    super(message);
+    this.name = 'BootstrapError';
+    this.code = code;
+    this.guard = guard;
+  }
+}
+
+const bail = (code, message, guard = null) => { throw new BootstrapError(code, message, guard); };
+
+// Fixture instrumentation: records the observable order of side effects so a test
+// can assert the sequence above, not merely the process exit status.
+function trace(event) {
+  const target = process.env.AE_FIXTURE_IMPORT_LOG;
+  if (target) appendFileSync(target, `${event}\n`);
+}
+
+function rawDigest(bytes) {
+  return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+// Exported so the ref-safety guard can be exercised directly. The closed schema's
+// `plugin_ref` pattern already refuses absolute refs, so a manifest carrying one
+// never reaches this function in practice — which is exactly why it needs its own
+// test rather than only an end-to-end one.
+// Lexical canonicality. `..`, `.` and empty components are aliases, not paths:
+// they let one file be named under several ref strings, which defeats duplicate
+// detection while resolving to the same bytes. `..` belongs here and not with the
+// containment check below, because `policies/../policies/runner-v1.json` resolves
+// perfectly well inside the root — containment cannot see it.
+export function assertCanonicalMemberRef(ref) {
+  if (ref.startsWith('/')) bail('member_ref_absolute', `member ref ${ref} is absolute`);
+  const parts = ref.split('/');
+  if (parts.some((part) => part === '' || part === '.' || part === '..')) {
+    bail('member_ref_non_canonical', `member ref ${ref} is not in canonical form`);
+  }
+  return parts;
+}
+
+// Resolved containment, with its own code. Sharing one code with the lexical rule
+// made each half untestable: every fixture violated both at once, so the harness
+// could not tell which fired and either could be deleted while green.
+export function assertMemberRefInsideRoot(ref) {
+  const abs = resolve(RELEASE_ROOT, ref);
+  if (abs !== join(RELEASE_ROOT, ref) || !abs.startsWith(RELEASE_ROOT + sep)) {
+    bail('member_ref_escapes_root', `member ref ${ref} does not resolve inside the release root`);
+  }
+  return abs;
+}
+
+export function resolveMemberRef(ref) {
+  assertCanonicalMemberRef(ref);
+  const abs = assertMemberRefInsideRoot(ref);
+  // Every path component must be a real directory/file, never a symlink: a
+  // symlinked component would let a verified ref name unverified bytes.
+  const relativeParts = ref.split('/');
+  for (let i = 0; i < relativeParts.length; i += 1) {
+    const partial = join(RELEASE_ROOT, ...relativeParts.slice(0, i + 1));
+    let stat;
+    try {
+      stat = lstatSync(partial);
+    } catch {
+      bail('member_missing', `member ${ref} is not installed`);
+    }
+    if (stat.isSymbolicLink()) bail('member_ref_symlink', `member ref ${ref} traverses a symlink`);
+  }
+  return abs;
+}
+
+export function verifyInstalledRelease() {
+  // 1 — read
+  const manifestPath = join(RELEASE_ROOT, 'release-manifest-v1.json');
+  let manifestBytes;
+  try {
+    manifestBytes = readFileSync(manifestPath);
+  } catch {
+    bail('manifest_unreadable', 'release-manifest-v1.json is missing or unreadable');
+  }
+
+  // 2 — strict lexical admission
+  let manifest;
+  try {
+    manifest = parseStrict(manifestBytes);
+  } catch (error) {
+    bail(error.code ?? 'manifest_unreadable', `release manifest is not admissible: ${error.message}`);
+  }
+
+  // 3 — the manifest may never describe its own digest
+  if (Object.prototype.hasOwnProperty.call(manifest, 'self_digest')) {
+    bail('manifest_has_self_digest', 'release manifest carries a self_digest field');
+  }
+
+  // 4 — the authoritative digest is computed over the complete object, externally
+  const observedDigest = rawDigest(canonicalize(manifest));
+  if (observedDigest !== EXPECTED_RELEASE_MANIFEST_DIGEST) {
+    bail('manifest_digest_mismatch',
+      `manifest digest ${observedDigest} does not match the digest embedded in this launcher`);
+  }
+
+  // 5 — closed validation
+  if (!validateReleaseManifest(manifest)) {
+    const first = (validateReleaseManifest.errors ?? [])[0];
+    bail('schema_invalid',
+      `release manifest failed closed validation: ${first ? `${first.instancePath} ${first.message}` : 'unknown'}`);
+  }
+
+  // 6 — ref safety and uniqueness.
+  //
+  // Uniqueness is over the RESOLVED identity, not the ref string. Two distinct
+  // strings can name one file — through a `.` alias, or through case folding on a
+  // case-insensitive volume — and string-level dedup would let one member's bytes
+  // satisfy two declared digests.
+  const seenRefs = new Set();
+  const seenIdentities = new Map();
+  const resolved = [];
+  for (const member of manifest.members) {
+    if (seenRefs.has(member.ref)) {
+      bail('member_ref_duplicate', `member ref ${member.ref} appears more than once`);
+    }
+    seenRefs.add(member.ref);
+    const abs = resolveMemberRef(member.ref);
+    // Identity is the inode, not the resolved path string. realpath does not fold
+    // case, so on a case-insensitive volume two differently-cased refs resolve to
+    // two different strings and the same file; device+inode is what actually
+    // answers "is this the same bytes under another name", and it catches `.`
+    // aliases and hardlinked members too.
+    const st = statSync(abs);
+    const identity = `${st.dev}:${st.ino}`;
+    if (seenIdentities.has(identity)) {
+      bail('member_ref_duplicate',
+        `member refs ${seenIdentities.get(identity)} and ${member.ref} resolve to the same file`);
+    }
+    seenIdentities.set(identity, member.ref);
+    resolved.push({ member, abs });
+  }
+
+  // The launcher is not a member of the manifest it validates.
+  if (seenRefs.has('runtime/ae-gate.mjs')) {
+    bail('launcher_is_member', 'the bootstrap launcher is listed as a manifest member');
+  }
+
+  // 7 — recompute every installed member's raw bytes
+  for (const { member, abs } of resolved) {
+    let bytes;
+    try {
+      bytes = readFileSync(abs);
+    } catch {
+      bail('member_missing', `member ${member.ref} is not installed`);
+    }
+    // Declared length is checked with its own code. Sharing `member_digest_mismatch`
+    // with the branch below made this check unobservable: removing it changed
+    // nothing any test could see, because the digest comparison caught the same
+    // inputs a moment later.
+    if (bytes.length !== member.length) {
+      bail('member_length_mismatch',
+        `member ${member.ref} length ${bytes.length} != declared ${member.length}`);
+    }
+    const digest = rawDigest(bytes);
+    if (digest !== member.raw_digest) {
+      bail('member_digest_mismatch', `member ${member.ref} digest ${digest} != declared ${member.raw_digest}`);
+    }
+  }
+
+  // 7b — the singleton activation base bundle must BE one of the members just
+  // verified. Without this cross-binding the manifest can advertise a base digest
+  // that belongs to no installed file, and every downstream policy decision binds
+  // to a number nothing produced.
+  const baseMembers = manifest.members.filter((m) => m.ref === manifest.activation_base_bundle_ref);
+  if (baseMembers.length !== 1) {
+    bail('activation_base_member_mismatch',
+      `activation_base_bundle_ref ${manifest.activation_base_bundle_ref} matches ${baseMembers.length} members`);
+  }
+  if (baseMembers[0].role !== 'policy') {
+    bail('activation_base_member_mismatch',
+      `activation base bundle member has role ${baseMembers[0].role}, expected policy`);
+  }
+  if (baseMembers[0].raw_digest !== manifest.activation_base_bundle_digest) {
+    bail('activation_base_member_mismatch',
+      `activation_base_bundle_digest ${manifest.activation_base_bundle_digest} `
+      + `does not match its member's raw digest ${baseMembers[0].raw_digest}`);
+  }
+
+  const byRole = (role) => {
+    const found = manifest.members.filter((m) => m.role === role);
+    if (found.length !== 1) bail('schema_invalid', `expected exactly one ${role} member, found ${found.length}`);
+    return found[0];
+  };
+
+  const rootIdentity = realpathSync(RELEASE_ROOT);
+  return {
+    manifest,
+    manifest_digest: observedDigest,
+    // The bootstrap result binds the root identity as well as the manifest, so two
+    // byte-identical installations do not share one.
+    bootstrap_result_digest: rawDigest(
+      Buffer.from(`${observedDigest}|${rootIdentity}|${manifest.members.length}`, 'utf8'),
+    ),
+    root_identity: rootIdentity,
+    roles: {
+      standalone_validator: byRole('standalone_validator'),
+      active_release_bridge: byRole('active_release_bridge'),
+      runtime_core: byRole('runtime_core'),
+    },
+  };
+}
+
+// The scope this launcher's self-test operates under. A capability minted for one
+// scope is inert in another.
+const SELF_TEST_SCOPE = Object.freeze({
+  repo: null,
+  feature_id: null,
+  purpose: 'bootstrap_selftest',
+  host_operation: 'verify_installed_release',
+});
+
+// BOTH halves of the identity must match. Comparing only the manifest digest would
+// make two byte-identical installations indistinguishable, so an inactive root
+// could run whenever its twin was the active one.
+//
+// Exported because end to end the digest branch cannot be isolated: the host
+// record either names this root, in which case both halves agree, or names
+// another, in which case the root branch reaches the same verdict. There is no
+// arrangement where only the digest differs, so through `bootstrap` the digest
+// comparison is deletable while every case stays green. `guard` names which half
+// refused, since all three share one code.
+export function assertActiveIdentity(attestation, verified) {
+  if (attestation.active_release_manifest_digest !== verified.manifest_digest) {
+    bail('release_not_active',
+      'the host active release manifest digest does not match the release this launcher verified',
+      'digest_mismatch');
+  }
+  let attestedIdentity;
+  try {
+    attestedIdentity = realpathSync(attestation.active_root);
+  } catch {
+    bail('release_not_active', 'the host active root does not resolve', 'attested_root_unresolvable');
+  }
+  if (attestedIdentity !== verified.root_identity) {
+    bail('release_not_active',
+      `the host active root ${attestedIdentity} is not this release root ${verified.root_identity}`,
+      'root_mismatch');
+  }
+}
+
+export async function bootstrap({ scope = SELF_TEST_SCOPE } = {}) {
+  const verified = verifyInstalledRelease();
+
+  // 8 — import the verified validator, then the verified bridge. Nothing above
+  // this line imported release code.
+  const validatorUrl = pathToFileURL(join(RELEASE_ROOT, verified.roles.standalone_validator.ref));
+  await import(validatorUrl.href);
+  const bridgeUrl = pathToFileURL(join(RELEASE_ROOT, verified.roles.active_release_bridge.ref));
+  const bridge = await import(bridgeUrl.href);
+
+  // 9 — the host says which root is active; we compare it to what we verified.
+  // The launcher's own path, the environment, and any caller claim are not inputs.
+  const attestation = bridge.attestActiveRoot({ observedReleaseRoot: RELEASE_ROOT });
+  trace('attestation:obtained');
+
+  assertActiveIdentity(attestation, verified);
+  // Traced so this comparison is observable in its own right. The bridge refuses
+  // to mint against a mismatched root as well, and without a separate signal that
+  // second guard would mask the loss of this one.
+  trace('active-root:matched');
+
+  // 10 — the bridge derives the bootstrap result itself, from the installed
+  // release, and we require it to equal what we computed independently. Handing
+  // the bridge our own object would make the binding a restatement of our claim
+  // rather than a second observation of the release.
+  const derived = bridge.deriveBootstrapResult({ releaseRoot: RELEASE_ROOT });
+  if (derived.manifest_digest !== verified.manifest_digest
+    || derived.root_identity !== verified.root_identity
+    || derived.bootstrap_result_digest !== verified.bootstrap_result_digest) {
+    bail('release_not_active',
+      'the bridge derived a different bootstrap result than this launcher verified');
+  }
+
+  const capability = bridge.mintOperationCapability({
+    attestation,
+    bootstrapResult: derived,
+    scope,
+  });
+  trace('capability:minted');
+
+  // 11 — core last
+  const coreUrl = pathToFileURL(join(RELEASE_ROOT, verified.roles.runtime_core.ref));
+  const core = await import(coreUrl.href);
+  return core.run({
+    capability,
+    bootstrapResultDigest: derived.bootstrap_result_digest,
+    scope,
+  });
+}
+
+// argv[1] is resolved through realpath before comparing: module URLs are already
+// symlink-resolved, and a plugin root reached through a symlinked path would
+// otherwise silently fail to recognise its own entry point.
+function invokedDirectly() {
+  if (!process.argv[1]) return false;
+  try {
+    return pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
+  } catch {
+    return false;
+  }
+}
+
+if (invokedDirectly()) {
+  try {
+    const result = await bootstrap();
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    process.exit(0);
+  } catch (error) {
+    process.stdout.write(`${JSON.stringify({ error: error.code ?? 'unknown', message: error.message })}\n`);
+    process.exit(1);
+  }
+}

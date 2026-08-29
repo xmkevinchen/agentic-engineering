@@ -1,6 +1,6 @@
 ---
 name: think
-description: Deep multi-step reasoning for complex architecture decisions, hard bugs, or performance analysis. Recommended: Sonnet or above
+description: "Deep multi-step reasoning for complex architecture decisions, hard bugs, or performance analysis. Recommended: Sonnet or above"
 argument-hint: "<problem or question>"
 user-invocable: true
 effort: high

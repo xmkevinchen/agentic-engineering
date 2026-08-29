@@ -250,6 +250,9 @@ plugins/ae/
   templates/pipeline.template.yml # Template for /ae:setup
 ```
 
+The research, cross-review, and decisions that produced the v1.0 design are
+preserved in the [AE v1.0 design history](docs/ae-v1-design-history/README.md).
+
 ## License
 
 MIT

@@ -1,0 +1,1932 @@
+// The Kernel — the only way in.
+//
+// The first implementation was a set of correct checks that a caller could
+// assemble, or not. `reduce` took an optional `admit`; omitting it let a bare
+// observation reach `passed`. `requireHumanInput` took any object whose caller
+// wrote `origin: 'host'`. Every check was right and none was compulsory, which is
+// the difference between "this path has checks" and "there is no other path" —
+// and the second is the whole point.
+//
+// So: one object owns the log, and the facts that decide admissibility exist only
+// because it wrote them. A caller cannot manufacture a host-collected input,
+// because the only function that stamps one is a method here, and stamping is not
+// exposed. Forging one means writing the log file directly, which is the OS-level
+// access §4 already concedes and does not pretend to resist.
+
+import { execFileSync } from 'node:child_process';
+import {
+  appendFileSync, existsSync, openSync, closeSync, lstatSync, readFileSync, readlinkSync,
+  realpathSync, unlinkSync,
+} from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
+import { encodeNdjson, parseNdjson, parseStrict, digestBytes, canonicalDigest } from './canonical-json.mjs';
+import { RECORDS } from '../schema/records.mjs';
+import { reduceAll } from './gate.mjs';
+import { admissibility, inputsChangedAgainst } from './admissibility.mjs';
+import { currentRevision as deriveCurrent, identify, verify } from './identity.mjs';
+import { dispatchRecord, requestedFamily } from './family.mjs';
+import { assertInsideLocation, assertNoSymlinkComponents } from './write-path.mjs';
+import { atomicFileNoReplace } from './fs-noreplace.mjs';
+import { checkVerifiableSources, formationProblems } from './formation.mjs';
+import { validate } from './schema.mjs';
+import {
+  ASSIGNMENT, CONTRACT, EVIDENCE_PACKAGE, checkContractRelations,
+} from '../schema/objects.mjs';
+import { fail } from './codes.mjs';
+
+// A durable object goes in as bytes and comes out only through here. `verify`
+// first, then the schema, then the value: a consumer that acts on an object whose
+// byte identity does not verify is AC-3's falsifier, and the way to make that
+// impossible is to have no other way to obtain the object.
+function openObject(bytes, identity, schema, what) {
+  verify(bytes, identity);
+  const value = parseStrict(Buffer.from(bytes, 'utf8'));
+  const problems = validate(schema, value);
+  if (problems.length > 0) {
+    fail('format_open', `the ${what} does not match its closed shape`, { problems });
+  }
+  return value;
+}
+
+// Origin is stamped here and nowhere else. It is not a brand — a brand travels
+// with a value a caller already holds. This is a property the caller never gets
+// to set, because the only writer of these records is below.
+const HOST = 'host';
+const HARNESS = 'harness';
+
+// The log. It lives inside this module because no other module may be able to
+// name it: it was its own file exporting `InternalLedger`, and "internal" is a
+// name rather than a boundary — any code could import it and append a
+// `command_result` with `origin: harness`, which is the forgery §4 does not
+// concede. The Kernel owns the only instance, and the readers a caller
+// legitimately needs are its methods.
+class Ledger {
+  #held = 0;
+
+  constructor(path) {
+    // Resolved, and through any symlink. The lock is named after this path, so
+    // two Kernels reaching one log by different names — a real path and a link to
+    // it — took different locks and both believed they held the log. One opener
+    // then received another's position, which is the execution-merging defect the
+    // lock exists to close.
+    // The file itself, following a final-component link even when its target does
+    // not exist yet. `realpathSync` throws on a dangling link, and falling back to
+    // the alias name meant two Kernels opened before the first append took
+    // different locks and then, once the file appeared, named one file between
+    // them. A link is resolved by reading it, not by the target being there.
+    let target = path;
+    for (let hops = 0; hops < 32; hops += 1) {
+      let stat;
+      try { stat = lstatSync(target); } catch { break; }
+      if (!stat.isSymbolicLink()) break;
+      const link = readlinkSync(target);
+      target = link.startsWith('/') ? link : join(dirname(target), link);
+    }
+    // The final directory resolved too: a link's target is written as it was
+    // given, so following one can land back on an unresolved path.
+    this.path = join(realpathSync(dirname(target)), basename(target));
+  }
+
+  // Appends are serialized by an exclusive-create lock, so a writer knows exactly
+  // where its record landed.
+  //
+  // Without it a writer had to *find* its own line afterwards, and two appends of
+  // byte-identical content are indistinguishable — which is how four concurrent
+  // openers all ended up holding one attempt while four had been opened. The
+  // choice is between a differentiator nobody can check and serialising the
+  // append; this serialises it.
+  //
+  // `O_EXCL` is the same primitive the completion write uses: the kernel decides,
+  // atomically, who created the file. A holder that dies leaves the lock behind,
+  // and the next writer fails with a named code rather than waiting forever or
+  // silently breaking in.
+  #withLock(fn) {
+    // Reentrant. Completion holds it across reducing, signing and writing, and
+    // each of those appends — without this, the second acquisition would wait for
+    // a lock the same call stack already holds.
+    if (this.#held > 0) {
+      this.#held += 1;
+      try { return fn(); } finally { this.#held -= 1; }
+    }
+    const lockPath = `${this.path}.lock`;
+    let fd = null;
+    const deadline = 5000;
+    const started = process.hrtime.bigint();
+    for (;;) {
+      try {
+        fd = openSync(lockPath, 'wx');
+        break;
+      } catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        if (Number(process.hrtime.bigint() - started) / 1e6 > deadline) {
+          fail('record_not_appended', 'the log is locked by another writer', { path: lockPath });
+        }
+      }
+    }
+    this.#held = 1;
+    try {
+      return fn();
+    } finally {
+      this.#held = 0;
+      closeSync(fd);
+      unlinkSync(lockPath);
+    }
+  }
+
+  // Read at append time, never cached. Two Ledgers on one log each held their own
+  // count, so both handed out the same sequence number — and since an attempt id
+  // is built from one, two runs could mint the same attempt and each other's
+  // evidence became selectable.
+  get seq() {
+    return this.read().length;
+  }
+
+  // A record's sequence number is its position in the log, assigned on the way
+  // out rather than stored on the way in.
+  //
+  // Allocating it at append time — even reading the length immediately before
+  // writing — is two operations, and two processes can read the same length and
+  // both write it. Position cannot collide: `appendFileSync` opens with `O_APPEND`,
+  // so each line lands whole and in some order, and that order is the numbering.
+  // Every line is checked on the way out, against the closed set and against the
+  // shape that set names. The append boundary is not enough on its own: a log is a
+  // file, other things can write to it — the suite does, to reach states two
+  // Kernels can produce — and a reader that trusts whatever it parses is a reader
+  // that acts on a record nothing agreed to.
+  //
+  // It is also the only place the closed set can be enforced where the suite can
+  // see it enforced. Checking a kind at the append boundary refuses nothing a
+  // caller can ask for, because every kind this program writes is a literal in its
+  // own source; checking it here refuses a line that is actually there.
+  //
+  // Not quite every record a consumer sees comes through here: `append` hands its
+  // caller the record it just wrote, and two operations read a `seq` off that
+  // rather than off a re-read. Those go through the schema check on the way in,
+  // and their kind is a literal a few lines above the call. Everything that comes
+  // back *from the log* comes through here.
+  //
+  // Validation is not what this costs. Parsing is: `records()` re-reads and
+  // re-parses the whole file on every call, and a single Gate reduction calls it
+  // about eight times. Measured over 8,000 lines, checking every line against its
+  // schema adds around five per cent to a read that was already the expensive
+  // part. Making reads cheap is a change to how the log is read, not to whether
+  // it is checked.
+  read() {
+    if (!existsSync(this.path)) return [];
+    const bytes = readFileSync(this.path);
+    if (bytes.length === 0) return [];
+    return parseNdjson(bytes).map((r, seq) => {
+      const record = { ...r, seq };
+      const schema = Object.prototype.hasOwnProperty.call(RECORDS, record.kind)
+        ? RECORDS[record.kind] : null;
+      if (!schema) {
+        fail('kind_without_consumer', `record kind outside the closed set: ${record.kind}`, {
+          kind: record.kind, seq,
+        });
+      }
+      const problems = validate(schema, record);
+      if (problems.length > 0) {
+        fail('format_open', `a recorded line does not match its shape: ${record.kind}`, {
+          seq, problems,
+        });
+      }
+      return record;
+    });
+  }
+
+  // Rejection happens here, at the append boundary. A record outside the closed
+  // set never becomes a record, so the Gate never sees it — and the Gate reporting
+  // `pending` for an obligation nothing was validly submitted for is correct,
+  // because nothing admissible exists.
+  append(record) {
+    return this.#withLock(() => this.#appendLocked(record));
+  }
+
+  // Everything a guarded operation checks and then writes belongs inside one
+  // lock, or the check and the write are two operations again.
+  transaction(fn) {
+    return this.#withLock(fn);
+  }
+
+  #appendLocked(record) {
+    // The kind is not checked here. Every kind this program writes is a literal in
+    // its own source, so the only defect a runtime check could catch is a typo in
+    // that source — and only on the lines a test happens to run. `auditRecordKinds`
+    // reads every one of them, and the two sets against each other, which holds for
+    // appends no test reaches. The payload is a different matter: its fields come
+    // from callers, so the schema check below refuses what a caller can actually do.
+    const schema = RECORDS[record.kind];
+    // Validated with the position it will occupy if nothing else appends first.
+    // The stored line carries no `seq`: it would be a second source for a fact the
+    // line's position already states, and the two could disagree.
+    const seq = this.seq;
+    const problems = validate(schema, { ...record, at: 0, seq });
+    if (problems.length > 0) {
+      fail('format_open', `record does not match its closed shape: ${record.kind}`, { problems });
+    }
+    // `at` is when the record landed, observed here rather than supplied — the
+    // same surface that observes a command's exit status. It is stored, because
+    // unlike a position it cannot be derived from the file.
+    //
+    // Sampled immediately before the write, after reading and validating, so it
+    // means what it says. Taken at the top it meant "the append began", which is
+    // a different quantity by however long validation took.
+    //
+    // Cost was measured by subtracting positions, which is an odometer that
+    // advances whenever anything moves: unrecorded drafting weighed nothing and
+    // ten unrelated records weighed ten, enough to reverse a retreat decision.
+    // Nothing the Gate reads consults this; it is a fact about the world, for the
+    // one question that asks about the world.
+    const stamped = { ...record, at: Date.now() };
+    // `encodeNdjson` canonicalizes on the way out, so the line on disk is the
+    // canonical spelling and `parseNdjson` will refuse anything else later.
+    appendFileSync(this.path, encodeNdjson([stamped]));
+    // Nobody else can have appended: the lock is held. The position read before
+    // the write is the position the record has.
+    return { ...stamped, seq };
+  }
+
+  // Replay is a check, not a re-enactment: the same records must reconstruct the
+  // same state in a fresh process. A state reachable in the real flow that replay
+  // cannot rebuild is the defect this exists to catch.
+  // Bucketing is not reconstruction, and a bucketed projection lived beside this
+  // one with no consumer: comparing two runs of it compared the sorting code with
+  // itself. `reconstruct` rebuilds the state a run reached, which is what AC-13
+  // asks for — the Gate verdicts and the human decisions included, since those are
+  // what completion relied on.
+  // `scope` names the run. Matching every key against every record dropped the
+  // approval and the unavailable decision, because those are facts about the
+  // lineage rather than about one execution — so a run-scoped reconstruction
+  // could not say which Contract it ran under.
+  reconstruct(scope) {
+    const matches = (r) => Object.entries(scope).every(
+      ([k, v]) => r[k] === undefined || r[k] === v,
+    );
+    const mine = this.read().filter(matches);
+    // The revision the run was assigned under, followed rather than scanned for.
+    // Taking the last approval of the lineage reported whichever was newest, so a
+    // successor approved mid-run made replay say the run had used it — while the
+    // live Gate, correctly, had judged it against the one its Assignment named.
+    const assigned = mine.find((r) => r.kind === 'assignment_issued');
+    const state = {
+      boundRevision: assigned ? assigned.contract_revision : null,
+      approvedRevision: null,
+      attempts: [],
+      gateVerdicts: {},
+      humanDecisions: {},
+      signoff: null,
+      completion: null,
+      unavailable: null,
+      requested: null,
+      unavailableDecision: null,
+      runFacts: null,
+      // Which review answered, and what was done about what it raised. Replay has
+      // to reach the same verdict, and after Phase 2 the verdict depends on these:
+      // a run holding two reviews holds none, so "a review happened" is not enough
+      // to rebuild what completion decided.
+      reviews: [],
+      dispositions: [],
+    };
+    for (const r of mine) {
+      switch (r.kind) {
+        case 'contract_approved_genesis':
+        case 'contract_approved_revision':
+          // The lineage's latest, which is what staleness is decided against.
+          // `boundRevision` above is what the run was judged as.
+          state.approvedRevision = r.revision;
+          break;
+        case 'attempt_opened':
+          // Its position is its name; there is no other field to push.
+          state.attempts.push(r.seq);
+          break;
+        case 'gate_result':
+          state.gateVerdicts[r.obligation] = r.status;
+          break;
+        case 'review':
+          state.reviews.push({
+            id: r.id, family: r.family, reviewer: r.reviewer,
+            deliverable: r.deliverable, findings: r.findings.map((f) => f.id),
+          });
+          break;
+        case 'finding_disposed':
+          state.dispositions.push({ review: r.review, finding: r.finding });
+          break;
+        case 'human_decision_activation':
+          state.humanDecisions[r.operation] = r.revision;
+          break;
+        case 'human_decision_choice':
+          state.humanDecisions[r.operation] = r.choice;
+          break;
+        case 'human_decision_judgement':
+          state.humanDecisions[r.operation] = { choice: r.choice, answers: r.answers };
+          break;
+        case 'human_decision_unavailable':
+          // The choice and what it answers. Keeping only the choice lost the
+          // relation: replay could say the Human Owner chose `stop` and not which
+          // unavailable event they were choosing about.
+          state.humanDecisions[r.operation] = r.choice;
+          state.unavailableDecision = { choice: r.choice, answers: r.answers };
+          break;
+        case 'human_signoff':
+          state.signoff = r.seq;
+          break;
+        case 'completion_committed':
+          state.completion = r.identity;
+          break;
+        case 'capability_unavailable':
+          state.unavailable = r.seq;
+          state.requested = r.requested;
+          break;
+        case 'run_record_clean':
+        case 'run_record_caught':
+          state.runFacts = {
+            formation: r.formation_elapsed, change: r.change_elapsed,
+            trace: r.trace_outcome, wentWrong: r.went_wrong,
+          };
+          break;
+        default:
+          // A kind with no branch here contributes nothing to the state a run
+          // reached — which is a claim, so it is stated rather than assumed. A
+          // silent default meant a kind added later would be dropped from every
+          // reconstruction without anything saying so.
+          if (!CONTRIBUTES_NOTHING.has(r.kind)) {
+            fail('replay_incomplete', 'no reconstruction rule for this kind', { kind: r.kind });
+          }
+          break;
+      }
+    }
+    return state;
+  }
+
+
+}
+
+// Kinds that carry no part of the state a run reached. Their content is read
+// during the reduction — an observation's bindings, a package's bytes — and what
+// it produced is already in the verdicts and decisions the reconstruction keeps.
+const CONTRIBUTES_NOTHING = new Set([
+  'assignment_issued', 'command_result', 'observation', 'evidence_package',
+  'artifact_recorded', 'input_observed', 'input_gone', 'dispatch_attempt',
+  'gate_completed', 'formation_opened', 'human_decision_activation',
+  'human_decision_choice',
+]);
+
+export class Kernel {
+  // Private. A public `ledger` let anything holding a Kernel append a record
+  // without passing the operation that guards it — `gate_result: passed` and
+  // `human_signoff` included. Being the only writer is not a property if the
+  // writer is reachable around the front door.
+  #ledger;
+
+  // Where completion is written. Held by the Kernel rather than passed to the
+  // write, because a caller that chooses the destination chooses what "the
+  // completion" is.
+  #completionRoot;
+
+  // Where cited sources are resolved from. Approval checks the digest a Contract
+  // records for each cited file against the file itself, so a citation to
+  // something that has since changed is a citation to something else.
+  #sourceRoot;
+
+  // How the Contract is rendered for a human to read. Configured here, not passed
+  // to `approve`: a renderer supplied by the party presenting the view is that
+  // party judging its own presentation, and `render: () => rendered` approved
+  // anything at all.
+  #render;
+
+  // Who the Human Owner is, configured outside any Contract. Reading the signer
+  // out of the Contract being approved let one caller write a Contract naming
+  // itself, approve it with the matching string, and hold every authority the
+  // Contract grants. The root has to sit outside what it authorises.
+  #owner;
+
+  // Which command reaches which family. Configured here, outside any Contract,
+  // for the same reason the owner is: a producer that could name the command
+  // could name a command that agrees with it.
+  //
+  // What this establishes is narrow and worth stating where it is defined. The
+  // Kernel can show that a command ran, which one, and what came back. It cannot
+  // show that a real model answered — an entry pointing a family at `echo` yields
+  // a passing review with that family stamped. That is §4's `workflow_attested`
+  // boundary, unchanged. What it removes is the producer's ability to forge a
+  // review *alone*: doing so now needs control of this registry, which is set
+  // once and is auditable on its own.
+  #families;
+
+  constructor(logPath, { completionRoot, sourceRoot, render, owner, families } = {}) {
+    this.#ledger = new Ledger(logPath);
+    this.#completionRoot = completionRoot || null;
+    this.#sourceRoot = sourceRoot || null;
+    this.#render = typeof render === 'function' ? render : null;
+    this.#owner = owner || null;
+    this.#families = families && typeof families === 'object' ? { ...families } : null;
+  }
+
+  // --- reads -------------------------------------------------------------
+
+  records() { return this.#ledger.read(); }
+
+  // The log this Kernel is attached to, resolved. Two Kernels reaching one file
+  // by different names — a real path and a link to it — must agree on this, or
+  // they take different locks and both believe they hold the log.
+  get logPath() { return this.#ledger.path; }
+
+  // The log's own readers. They live here because the Ledger is not reachable
+  // from outside — a caller that could construct one could also append to it.
+  reconstruct(scope) { return this.#ledger.reconstruct(scope); }
+
+  // No `assertRecorded`. AC-13's completeness half — "did we write what we relied
+  // on" — is carried by the shape of the reduction rather than by a check: the
+  // Gate reduces from records and from nothing else, so a fact that was not
+  // recorded is a fact it cannot have used. Calling it on the completion path
+  // could never fail, because completion already requires each of those facts to
+  // have produced a passing verdict.
+
+  approvals() {
+    return this.records().filter(
+      (r) => r.kind === 'contract_approved_genesis' || r.kind === 'contract_approved_revision',
+    );
+  }
+
+  // Current revision is derived from the approval history, never accepted from a
+  // caller. An earlier draft took it as a parameter, which let the party being
+  // judged choose the yardstick.
+  currentRevision(lineage) {
+    return deriveCurrent(this.approvalsFor(lineage), lineage);
+  }
+
+  // A lineage's approvals, checked to be a chain. Two writers can each see a
+  // coherent history and together produce a fan: eight revisions all naming the
+  // genesis as predecessor were siblings, and whichever landed last was read as
+  // current. Counting genesis records caught two roots and nothing else.
+  //
+  // Checked here rather than at approval, for the reason uniqueness is: the check
+  // and the append are two operations, and only the reader sees what they left.
+  approvalsFor(lineage) {
+    const prior = this.approvals().filter((a) => a.lineage === lineage);
+    const genesis = prior.filter((a) => a.kind === 'contract_approved_genesis');
+    if (genesis.length > 1) {
+      fail('lineage_second_genesis', 'a lineage may open only one genesis', {
+        lineage, count: genesis.length,
+      });
+    }
+    // One label, one set of bytes. Currentness is the revision string, so two
+    // approvals sharing a label meant evidence captured under the first stayed
+    // `passed` while completion named the second's identity.
+    const labels = new Set();
+    for (const a of prior) {
+      if (labels.has(a.revision)) {
+        fail('lineage_immutable', 'a revision label is used twice in this lineage', {
+          lineage, revision: a.revision,
+        });
+      }
+      labels.add(a.revision);
+    }
+    for (let i = 1; i < prior.length; i += 1) {
+      if (prior[i].predecessor !== prior[i - 1].identity.byte_sha256) {
+        fail('lineage_predecessor_wrong', 'the approval history forks', {
+          lineage, revision: prior[i].revision,
+        });
+      }
+    }
+    return prior;
+  }
+
+  // --- host-collected inputs ---------------------------------------------
+  //
+  // The trust root, as a write path. `collectHumanInput` is the only producer of
+  // a record with `origin: host`, and it is a method rather than a free function
+  // so that holding one requires having gone through the Kernel.
+
+  // Private. It was public, so `decideUnavailable`'s ordering check could be
+  // walked around entirely: calling this with `operation: 'unavailable_decision'`
+  // appended a valid choice before anything had been found unavailable. Being
+  // the only stamper is not a property if the stamper is reachable directly.
+  #collectHumanInput({ operation, actor, lineage, ...payload }) {
+    // No guard against a caller-supplied origin here. Every call site is inside
+    // this class and none passes one; the property that matters is that no public
+    // method takes an origin at all, which `auditOriginSurface` reads off the
+    // source. A guard nothing can trip is a claim with nothing behind it.
+    // One kind per operation shape. The single `human_decision` shape carried
+    // every operation's fields as optional, so it admitted an activation with a
+    // choice and an unavailable decision with none. Two branches rather than a
+    // computed kind, so each is a real call site the kind audit can see.
+    if (operation === 'activation') {
+      return this.#ledger.append({
+        kind: 'human_decision_activation', operation, actor, lineage, origin: HOST, ...payload,
+      });
+    }
+    if (operation === 'retreat_decision' || operation === 'worth_decision') {
+      return this.#ledger.append({
+        kind: 'human_decision_judgement', operation, actor, lineage, origin: HOST, ...payload,
+      });
+    }
+    if (operation === 'unavailable_decision') {
+      return this.#ledger.append({
+        kind: 'human_decision_unavailable', operation, actor, lineage, origin: HOST, ...payload,
+      });
+    }
+    return this.#ledger.append({
+      kind: 'human_decision_choice', operation, actor, lineage, origin: HOST, ...payload,
+    });
+  }
+
+  // The Harness runs the command. It does not accept an account of one.
+  //
+  // This took `exit`, `raw` and `subjects` as arguments and stamped them
+  // `origin: harness`, so the party being judged wrote the fact that decided
+  // whether it had passed. §4 concedes editing the records directly; it does not
+  // concede an API that writes them on request, and AC-2 asks for raw content the
+  // submission can neither author nor alter.
+  //
+  // The subject count comes from the command's own output, on a line it prints:
+  // `AE-SUBJECTS: <n>`. A command that prints none leaves the count absent, which
+  // admissibility reads as unestablishable — not as zero, and not as "assume it
+  // exercised something".
+  // Running the command and digesting what it ran against are one operation.
+  //
+  // They were two, and the artifact was normally recorded first: record A, change
+  // it to B, run against B, and the Acceptance carried A's digest. Digesting
+  // after the command binds the identity to the execution that produced it.
+  runObservation({ id, lineage, run, attempt, obligation, artifact }) {
+    // What is run, what it runs against, and what it reads all come from the run's
+    // Contract — the revision its Assignment named. `command` and `inputsUsed`
+    // were arguments: a producer could declare it had read nothing, and then
+    // nothing could ever be stale.
+    const { contract } = this.contractForRun(lineage, run) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    // The obligation is the caller's word, and nothing before this compares it
+    // with the Contract: the attempt's own scope is checked when evidence is
+    // submitted, which is after this runs. Without this the command still runs and
+    // the failure arrives as a crash reading a field of nothing.
+    const entry = contract.observations.find((o) => o.obligation === obligation);
+    if (!entry) {
+      fail('observation_not_named', 'the Contract names no observation for this obligation', {
+        obligation,
+      });
+    }
+    const command = entry.observation;
+    const inputsUsed = entry.material_inputs;
+    // No `cwd`. It was a parameter, so a command could be run somewhere the
+    // deliverable was not: the approved command ran, exited zero, and exercised a
+    // decoy. The Harness runs where the Kernel is rooted, which is the same place
+    // cited sources resolve from.
+    if (!this.#sourceRoot) {
+      fail('binding_unresolved', 'this Kernel has no root, so it cannot run anything', { id });
+    }
+    let raw = '';
+    let exit = 0;
+    try {
+      raw = execFileSync('/bin/sh', ['-c', command], {
+        encoding: 'utf8', cwd: this.#sourceRoot, stdio: ['ignore', 'pipe', 'pipe'],
+        maxBuffer: 64 * 1024 * 1024,
+      });
+    } catch (error) {
+      exit = typeof error.status === 'number' ? error.status : 1;
+      raw = `${error.stdout || ''}${error.stderr || ''}`;
+    }
+    // After the command, not before.
+    this.#recordArtifact({ id: artifact, lineage, run, entry, artifactKind: 'file' });
+    const marker = /^AE-SUBJECTS:\s*(\d+)\s*$/m.exec(raw);
+    return this.#ledger.append({
+      kind: 'command_result', id, lineage, run, attempt, command, artifact, exit,
+      raw, ...(marker ? { subjects: Number(marker[1]) } : {}),
+      inputs_used: inputsUsed, origin: HARNESS,
+    });
+  }
+
+  // The package is the producer's account of what it produced, so its author is
+  // checked against the mutation grant. It arrives as bytes and carries its own
+  // identity, like the other three durable objects.
+  recordPackage({ lineage, run, bytes, identity, submitter }) {
+    const pkg = openObject(bytes, identity, EVIDENCE_PACKAGE, 'Evidence Package');
+    // Its own bytes must name the lineage it is filed under. Only the envelope
+    // was checked, so a package whose bytes named another lineage was recorded
+    // and admitted here whenever the other identifiers happened to match.
+    if (pkg.lineage !== lineage) {
+      fail('binding_cross_execution', 'the package names another lineage', {
+        lineage, named: pkg.lineage,
+      });
+    }
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (submitter !== pkg.producer) {
+      fail('identity_self_asserted', 'the submitter is not the producer it names', {
+        submitter, producer: pkg.producer,
+      });
+    }
+    if (assignment.grants.mutation_producer !== pkg.producer) {
+      fail('mutation_producer_ungranted', 'changes submitted under an ungranted producer', {
+        producer: pkg.producer,
+      });
+    }
+    return this.#ledger.append({
+      kind: 'evidence_package', id: pkg.id, lineage, run, bytes, identity,
+    });
+  }
+
+  // A material input's identity as the Harness finds it now. Staleness compares
+  // this against what the package recorded. It used to be a callback the caller
+  // passed to the Gate, so the party being judged decided whether its own
+  // evidence was still current.
+  // The Harness looks, and records what it found. It took the identity as an
+  // argument, so the party whose evidence would be judged stale decided whether
+  // it was.
+  // Paths are repository-relative, resolved against the root — the same root the
+  // Harness runs in and cited sources resolve from. An absolute path from a
+  // caller would be a way to point "now" at a file nobody else can see.
+  observeInput({ lineage, path }) {
+    // No `id`. A material input is identified by the path the Contract states,
+    // so there is nothing for a producer to label: it used to pass both, and
+    // could observe a decoy under the id of the file it had packaged.
+    const id = path;
+    // The path is recorded with the identity. Without it the log said an input
+    // had a digest and not what had been looked at, so replay could not say
+    // where "now" was read from — and nothing tied two observations of the same
+    // id to the same file.
+    let identity;
+    try {
+      identity = digestBytes(readFileSync(`${this.#sourceRoot}/${path}`));
+    } catch {
+      return this.#ledger.append({ kind: 'input_gone', lineage, id, path, origin: HARNESS });
+    }
+    return this.#ledger.append({
+      kind: 'input_observed', lineage, id, path, identity, origin: HARNESS,
+    });
+  }
+
+  // The latest observation wins. `null` means the Harness looked and it was gone,
+  // which is different from never having looked — a never-observed input has no
+  // record at all, and the resolver says so by returning `undefined`.
+  #inputsNowFor(lineage) {
+    const records = this.records().filter(
+      (r) => (r.kind === 'input_observed' || r.kind === 'input_gone') && r.lineage === lineage,
+    );
+    return (id) => {
+      for (let i = records.length - 1; i >= 0; i -= 1) {
+        if (records[i].id !== id) continue;
+        if (records[i].kind === 'input_gone') return null;
+        return { identity: records[i].identity, seq: records[i].seq, path: records[i].path };
+      }
+      return undefined;
+    };
+  }
+
+  // On the Harness surface, like the command result. It was the only evidential
+  // record with no origin at all, which left the party being judged writing what
+  // it had produced — and the Acceptance names that identity as the deliverable.
+  // Digested here, not declared. The identity recorded is the deliverable the
+  // Acceptance names, so accepting one as an argument let the producer name what
+  // its own evidence would be taken to have exercised.
+  // The path comes from the run's Contract, not from the caller, and this is where
+  // its existence is decided: nothing earlier reads it, so a Contract may name a
+  // path the tree does not have, and the refusal has to be here.
+  #recordArtifact({ id, lineage, run, entry, artifactKind }) {
+    const path = `${this.#sourceRoot}/${entry.artifact}`;
+    let identity;
+    try {
+      identity = digestBytes(readFileSync(path));
+    } catch {
+      fail('binding_unresolved', 'the artifact does not resolve', { id, path });
+    }
+    return this.#ledger.append({
+      kind: 'artifact_recorded', id, lineage, run, artifact_kind: artifactKind,
+      path, identity, origin: HARNESS,
+    });
+  }
+
+  // --- the guarded operations --------------------------------------------
+
+  // Approval fixes which bytes are judged, so it is where the Contract is
+  // actually checked. An earlier version compared one digest and appended: a
+  // schema-invalid Contract, or one whose obligations named no observation, was
+  // approved and only failed later, somewhere else, as something else.
+  //
+  // `rendered` is the bytes the host displayed, not a digest of them. A digest a
+  // caller computes is a claim about a rendering nobody else saw; the bytes can
+  // be re-rendered and compared.
+  approve({ lineage, revision, bytes, identity, predecessor, actor, rendered }) {
+    const contract = openObject(bytes, identity, CONTRACT, 'Contract');
+    if (contract.lineage !== lineage) {
+      fail('identity_mismatch', 'the Contract names another lineage', {
+        lineage, named: contract.lineage,
+      });
+    }
+    if (contract.revision !== revision) {
+      fail('identity_mismatch', 'the Contract names another revision', {
+        revision, named: contract.revision,
+      });
+    }
+    const relations = checkContractRelations(contract);
+    if (relations.length > 0) {
+      fail('format_open', 'the Contract is schema-valid but incoherent', { problems: relations });
+    }
+    // AC-6, on the path rather than beside it. These checks existed and nothing
+    // called them, so a Contract whose statements cited nothing was approved and
+    // the citation check was something a test ran on a fixture.
+    const formation = formationProblems(contract);
+    if (formation.length > 0) {
+      fail(formation[0].code, 'the Contract does not trace to its sources', {
+        problems: formation,
+      });
+    }
+    // And the cited files must still be what was cited. Checking the ids without
+    // checking the digests establishes that a citation is well-formed, not that
+    // it points at the content it claims.
+    //
+    // Not conditional on the caller having supplied a root: every Contract cites
+    // at least one verifiable source, so a Kernel that cannot resolve them cannot
+    // approve. Running the check only when a root happened to be configured is
+    // the optional check this whole slice exists to stop having.
+    if (!this.#sourceRoot) {
+      fail('citation_unknown', 'this Kernel cannot resolve cited sources, so it cannot approve', {
+        lineage,
+      });
+    }
+    const stale = checkVerifiableSources(
+      contract.provenance, (source) => `${this.#sourceRoot}/${source}`,
+    );
+    if (stale.length > 0) {
+      fail('citation_unknown', 'a cited source does not resolve, or has changed', {
+        problems: stale,
+      });
+    }
+
+    const prior = this.approvals().filter((a) => a.lineage === lineage);
+    if (prior.length === 0 && predecessor != null) {
+      fail('lineage_predecessor_wrong', 'a lineage genesis has no predecessor', { lineage });
+    }
+    if (prior.length > 0) {
+      if (predecessor == null) {
+        fail('lineage_second_genesis', 'a lineage may open only one genesis', { lineage });
+      }
+      const last = prior[prior.length - 1];
+      if (predecessor !== last.identity.byte_sha256) {
+        fail('lineage_predecessor_wrong', 'predecessor is not the prior revision', { lineage });
+      }
+      if (contract.predecessor !== last.identity.byte_sha256) {
+        fail('lineage_predecessor_wrong', 'the Contract names another predecessor', { lineage });
+      }
+    }
+
+    // What was shown must be what these bytes render to. Both halves are computed
+    // here; neither is accepted.
+    if (typeof rendered !== 'string' || rendered.length === 0) {
+      fail('human_input_absent', 'approval must record what was shown', { lineage });
+    }
+    // The Kernel's renderer, not one the approval supplied. AC-6 asks for a
+    // derivation that is checkable; a caller passing both the rendering and the
+    // function that judges it makes the check answer to itself.
+    if (!this.#render) {
+      fail('human_input_absent', 'this Kernel has no renderer, so it cannot approve', { lineage });
+    }
+    const expected = this.#render(bytes);
+    if (digestBytes(Buffer.from(expected, 'utf8')) !== digestBytes(Buffer.from(rendered, 'utf8'))) {
+      fail('identity_mismatch', 'the recorded rendering is not what those bytes render to', {
+        lineage,
+      });
+    }
+    const view = {
+      renders_sha256: identity.byte_sha256,
+      rendering_sha256: digestBytes(Buffer.from(rendered, 'utf8')),
+    };
+
+    // AC-5's table puts activation, sign-off and the unavailable decision in one
+    // row: the Human Owner, and no model. The Contract names who that is, so
+    // approval is the first place it can be checked — and a Contract approved by
+    // someone it does not name is approved by nobody in particular.
+    this.#requireOwner(actor);
+    // Approval is where the two are bound: the Kernel serves one Human Owner,
+    // configured outside any Contract, and a Contract names who signs it. They
+    // must be the same party, or the document under review would be nominating
+    // its own authority. Every operation after this compares the actor with the
+    // owner alone — restating the Contract's field downstream was a second copy
+    // of a fact this line already settles.
+    if (contract.final_signer !== this.#owner) {
+      fail('authority_not_granted', 'the Contract names a signer this Kernel does not serve', {
+        final_signer: contract.final_signer,
+      });
+    }
+
+    const decision = this.#collectHumanInput({
+      operation: 'activation', actor, lineage, revision, view,
+    });
+    // Genesis and revision are separate shapes, so the key is absent rather than
+    // present-and-undefined. `undefined` is still an own property, and a closed
+    // schema counts it as one — which is the honest behaviour: "absent" cannot be
+    // spelled as a value.
+    const base = { lineage, revision, identity, bytes, decision: decision.seq };
+    return this.#ledger.append(
+      prior.length === 0
+        ? { kind: 'contract_approved_genesis', ...base }
+        : { kind: 'contract_approved_revision', ...base, predecessor },
+    );
+  }
+
+  // The approved Contract, from the approved bytes. The Gate took this as an
+  // argument, so the party being judged chose the obligations it would be judged
+  // against — fewer of them, or `independence.required: none`.
+  // The Contract a *run* is bound to: the revision its Assignment named, not
+  // whichever is newest.
+  //
+  // Everything used `contractFor(lineage)`, so approving a successor mid-run
+  // changed what an unfinished run was judged against — its dispatch recorded the
+  // new revision's requested family, and evidence bound to the old one reported
+  // `unavailable` where it should have been `stale`. Currentness decides
+  // staleness; it does not decide what the run was asked to do.
+  contractForRun(lineage, run) {
+    // Through `assignmentFor`, which is where a run's Assignment is resolved and
+    // where uniqueness is decided. Re-deriving both here was a second copy of the
+    // rule, and a planted defect could not tell the copies apart.
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) return null;
+    // No "this revision was never approved" check: issuing requires the
+    // Assignment to bind the current revision, and the log only grows — so the
+    // revision it names is in this lineage's history by construction.
+    const bound = this.approvalsFor(lineage).find(
+      (a) => a.revision === assignment.contract_revision,
+    );
+    return {
+      contract: openObject(bound.bytes, bound.identity, CONTRACT, 'Contract'),
+      identity: bound.identity,
+      revision: bound.revision,
+    };
+  }
+
+  contractFor(lineage) {
+    const prior = this.approvalsFor(lineage);
+    if (prior.length === 0) return null;
+    const latest = prior[prior.length - 1];
+    return {
+      contract: openObject(latest.bytes, latest.identity, CONTRACT, 'Contract'),
+      identity: latest.identity,
+      revision: latest.revision,
+    };
+  }
+
+  // The Assignment is issued by the Human Owner, bound to an approved revision,
+  // and the party it grants may not issue it. A producer minting one that grants
+  // itself what it wants is the regress this ends.
+  //
+  // It arrives as bytes. Its boundary and its grants live in those bytes and
+  // nowhere else, so there is no second place for them to differ, and it has an
+  // identity of its own as AC-3 requires of all four objects.
+  issueAssignment({ lineage, run, bytes, identity, actor }) {
+    const assignment = openObject(bytes, identity, ASSIGNMENT, 'Assignment');
+    if (assignment.lineage !== lineage) {
+      fail('identity_mismatch', 'the Assignment names another lineage', { lineage });
+    }
+    const granted = [assignment.grants.attempt_producer, assignment.grants.mutation_producer];
+    if (granted.includes(actor)) {
+      fail('assignment_self_issued', 'the party an Assignment grants may not issue it', {
+        id: assignment.id,
+      });
+    }
+    // AC-5: issuing an Assignment at all is the Human Owner's, bound to an
+    // approved revision. Any actor but the beneficiary was accepted, so a second
+    // producer could hand the first its authority.
+    // No separate "nothing is approved" refusal: with nothing approved there is no
+    // current revision, so the revision check below refuses first, with the same
+    // code and a reason that says more.
+    const approvedContract = this.contractFor(lineage);
+    this.#requireOwner(actor);
+    const current = this.currentRevision(lineage);
+    if (current !== assignment.contract_revision) {
+      fail('assignment_not_issued', 'an Assignment must bind the current approved revision', {
+        id: assignment.id, contractRevision: assignment.contract_revision, current,
+      });
+    }
+    const { contract } = approvedContract;
+    for (const obligation of assignment.grants.obligations) {
+      if (!contract.obligations.includes(obligation)) {
+        fail('authority_not_granted', 'an Assignment may not grant an obligation the Contract does not state', {
+          obligation,
+        });
+      }
+    }
+    // One per run, not one per lineage. A lineage outlives its runs, and refusing
+    // a second run's Assignment made retry impossible.
+    const existing = this.records().filter(
+      (r) => r.kind === 'assignment_issued' && r.lineage === lineage && r.run === run,
+    );
+    if (existing.length > 0) {
+      fail('assignment_not_unique', 'a run holds exactly one Assignment', { id: assignment.id });
+    }
+    this.#collectHumanInput({
+      operation: 'assignment_issuance', actor, lineage, run, choice: 'issue',
+    });
+    return this.#ledger.append({
+      kind: 'assignment_issued', lineage, run, id: assignment.id,
+      contract_revision: assignment.contract_revision, actor, bytes, identity, origin: HOST,
+    });
+  }
+
+  // The run's Assignment, from the issued bytes. Taking it as an argument let a
+  // caller keep the issued id and widen the boundary.
+  assignmentFor(lineage, run) {
+    const issued = this.records().filter(
+      (r) => r.kind === 'assignment_issued' && r.lineage === lineage && r.run === run,
+    );
+    if (issued.length === 0) return null;
+    // Uniqueness is enforced here, not only before the append. Checking the log
+    // and then writing is two operations: two issuers both saw none and both
+    // wrote one, and the run then had two — with the reader quietly taking the
+    // first. A run that holds two Assignments holds no Assignment.
+    if (issued.length > 1) {
+      fail('assignment_not_unique', 'a run holds exactly one Assignment', {
+        lineage, run, count: issued.length,
+      });
+    }
+    return openObject(issued[0].bytes, issued[0].identity, ASSIGNMENT, 'Assignment');
+  }
+
+  // An attempt may be opened only by the producer the Assignment names, for the
+  // obligations it grants, and the record of who opened it is written here rather
+  // than claimed by the opener.
+  openAttempt({ lineage, run, producer, obligations, submitter }) {
+    if (submitter !== producer) {
+      fail('identity_self_asserted', 'the submitter is not the producer it names', {
+        submitter, producer,
+      });
+    }
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (assignment.grants.attempt_producer !== producer) {
+      fail('attempt_not_granted', 'only the granted producer may open an attempt', { producer });
+    }
+    // The grant names which obligations. Without this a producer granted one
+    // obligation opened an attempt against another and the Gate never noticed,
+    // because the check lived in a helper nothing called.
+    for (const obligation of obligations) {
+      if (!assignment.grants.obligations.includes(obligation)) {
+        fail('authority_not_granted', 'the Assignment does not grant this obligation', {
+          producer, obligation,
+        });
+      }
+    }
+    // No minted name. The attempt is identified by where its record landed, which
+    // is a fact rather than a prediction: joining the Assignment id to the position
+    // the log was about to reach let two writers predict the same one, and two
+    // runs then shared an attempt.
+    const opened = this.#ledger.append({
+      kind: 'attempt_opened', lineage, run, assignment: assignment.id, producer, obligations,
+    });
+    // Its own position, which appends being serialized makes knowable. Returning
+    // "the latest attempt in the run" instead was wrong in the way that matters:
+    // four concurrent openers each opened a distinct attempt, and telling three
+    // of them they held a fourth's merged executions that never happened together.
+    return { ...opened, attempt: opened.seq };
+  }
+
+  // The dispatch carries what the Contract states, resolved here. `dispatchRecord`
+  // builds it from the Contract and nothing else, which is AC-8's point: there is
+  // no parameter through which an Assignment or a configuration could supply it.
+  //
+  // `substitutedFamily` and `answeredFamily` exist so a Harness can record that a
+  // seat did in fact answer. They are not defaults — omitted, the keys are absent,
+  // and their absence is what AC-8 checks.
+  recordDispatch({ lineage, run, attempt, obligation, substitutedFamily, answeredFamily }) {
+    const { contract } = this.contractForRun(lineage, run) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    const built = dispatchRecord({ contract, lineage, run, attempt, obligation });
+    return this.#ledger.append({
+      ...built,
+      ...(substitutedFamily ? { substituted_family: substitutedFamily } : {}),
+      ...(answeredFamily ? { answered_family: answeredFamily } : {}),
+    });
+  }
+
+  // The request comes from the run's Contract, like the dispatch's does. It was
+  // an argument, so a caller could describe a capability nobody had asked for as
+  // missing, reduce that to `unavailable`, and open the Human Owner's decision
+  // path on it.
+  recordUnavailable({ lineage, run, obligation, attempt }) {
+    const bound = this.contractForRun(lineage, run);
+    if (!bound) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    const requested = requestedFamily(bound.contract);
+    if (requested === null) {
+      fail('requested_from_wrong_source', 'this Contract requested no family', { lineage, run });
+    }
+    return this.#ledger.append({
+      kind: 'capability_unavailable', lineage, run, obligation, attempt,
+      requested, origin: HARNESS,
+    });
+  }
+
+
+  // An observation names the runner's record; it does not carry one. The
+  // separation is what stops a submission authoring its own raw result.
+  //
+  // Which Assignment and which revision it is bound to are resolved, not taken:
+  // a submission that names them names the two things it is being judged against.
+  submitObservation({ lineage, run, obligation, observation, attempt,
+    producer, artifact, pkg, commandResult, submitter }) {
+    if (submitter !== producer) {
+      fail('identity_self_asserted', 'the submitter is not the producer it names', {
+        submitter, producer,
+      });
+    }
+    const assignment = this.assignmentFor(lineage, run);
+    if (!assignment) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (assignment.grants.attempt_producer !== producer) {
+      fail('authority_not_granted', 'only the granted producer may submit evidence', { producer });
+    }
+    // The attempt has to exist before it can narrow anything. It was allowed not
+    // to: the scope check ran only `if (opened)`, so naming an attempt nobody
+    // opened skipped it, and an obligation the Assignment never granted was
+    // written by pointing at a number. An attempt is the record that says what an
+    // execution is for, and evidence for no execution is evidence for nothing.
+    const opened = this.records().find(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run
+        && r.seq === attempt,
+    );
+    if (!opened) {
+      fail('attempt_not_granted', 'no attempt was opened at that position', { run, attempt });
+    }
+    // And what it opened for, and only that. Checking the Assignment's own grant
+    // instead was half the authority: the attempt's narrowing says what this
+    // execution is for, and a surface that re-checks the broader grant hands back
+    // what the narrower one removed. With the attempt now required to exist, the
+    // broader check could not fail — an attempt opens only for obligations the
+    // Assignment granted. The Gate refuses such a record too — it decides what
+    // counts as evidence — but a surface should not write what it knows is out of
+    // scope.
+    if (!opened.obligations.includes(obligation)) {
+      fail('authority_not_granted', 'this attempt did not open for that obligation', {
+        producer, obligation,
+      });
+    }
+    // No outcome parameter. What the run produced is in the runner's record; the
+    // observation says which obligation it answers and which evidence it points
+    // at, and stops there.
+    return this.#ledger.append({
+      kind: 'observation', lineage, run, obligation, observation, attempt,
+      contract_revision: assignment.contract_revision, assignment: assignment.id,
+      producer, artifact, package: pkg, command_result: commandResult,
+    });
+  }
+
+  // AC-1 requires the sign-off to come after the Gate reported, and names a
+  // pre-Gate sign-off as a case that must be rejected. It is refused here, where
+  // a caller can actually attempt one: `complete` appends its own sign-off after
+  // reducing, so a check downstream of that could never fail through it, and the
+  // rejection AC-1 asks for was not being exercised at all.
+  // Public, because AC-1 names a pre-Gate sign-off as a case that must be
+  // rejected and a private method cannot be attempted. Bound, because it stamps
+  // `origin: host`: it took a caller-chosen actor, revision and deliverable, so it
+  // could mint a host record saying an unrelated party had signed for a revision
+  // that did not exist. What it signs for is resolved; only *whether* to sign is
+  // the caller's.
+  // A review is obtained, not handed in. The caller names a **family**; the Kernel
+  // resolves the command from its own registry, runs it, and stamps the family it
+  // resolved — so "reviewed by openai" is a fact about which command ran, not a
+  // claim the reviewed party made. A `command` parameter would give that back,
+  // which is why `runObservation` takes the command from the Contract and this
+  // takes it from the registry.
+  //
+  // The reviewer's words are recorded whole. Without them a review is a boolean,
+  // and the one thing a person can still check — whether a real judgement came
+  // back or a canned string — would be unavailable to them.
+  obtainReview({ id, lineage, run, family, reviewer, findings }) {
+    const { contract } = this.contractForRun(lineage, run) || {};
+    if (!contract) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    if (!this.#families) {
+      fail('review_required_absent', 'this Kernel was given no families, so it can obtain no review', { family });
+    }
+    const command = Object.prototype.hasOwnProperty.call(this.#families, family)
+      ? this.#families[family] : null;
+    if (!command) {
+      fail('review_family_unknown', 'no command reaches that family', {
+        family, known: Object.keys(this.#families),
+      });
+    }
+    // What was reviewed, resolved from the run rather than taken as an argument —
+    // a review naming its own subject reviews whatever it says it did.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
+
+    let raw = '';
+    let exit = 0;
+    try {
+      raw = execFileSync('/bin/sh', ['-c', command], {
+        encoding: 'utf8', cwd: this.#sourceRoot, stdio: ['ignore', 'pipe', 'pipe'],
+        maxBuffer: 64 * 1024 * 1024,
+      });
+    } catch (error) {
+      exit = typeof error.status === 'number' ? error.status : 1;
+      raw = `${error.stdout || ''}${error.stderr || ''}`;
+    }
+
+    // A call that failed obtained nothing. Recording it as a review would record
+    // something that did not happen — and an earlier version did worse than that:
+    // it substituted "(the reviewer returned nothing)" for empty output, so a
+    // command that exited non-zero and said nothing became a review with text in
+    // it, and completion accepted it. What is available here is the unavailable
+    // arm, which is where a capability that could not be used belongs.
+    if (exit !== 0) {
+      fail('reviewer_unreachable', 'the reviewer could not be reached', {
+        family, exit, raw: raw.slice(0, 400),
+      });
+    }
+    // Nor is silence. A reviewer that answered nothing left nothing for anyone to
+    // read, and a record of nothing still satisfies a check that only asks whether
+    // a review exists.
+    if (raw.trim().length === 0) {
+      fail('reviewer_silent', 'the reviewer answered nothing', { family });
+    }
+
+    return this.#ledger.append({
+      kind: 'review', id, lineage, run, reviewer, family, command, exit,
+      deliverable: deliverable.identity,
+      raw,
+      findings: findings || [],
+      origin: HARNESS,
+    });
+  }
+
+  // The reviews recorded for a run. One place, because "which review answers" is
+  // a cardinality question and those are decided at the reader — a name answering
+  // to two records answers to neither.
+  reviewsFor(lineage, run) {
+    return this.records().filter(
+      (r) => r.kind === 'review' && r.lineage === lineage && r.run === run,
+    );
+  }
+
+  // What was done about a finding the review raised. The Kernel does not judge the
+  // answer — it has no opinion about whether a disposition is adequate. It requires
+  // that one exists, which is what stops a finding being passed over in silence.
+  disposeFinding({ lineage, run, review, finding, disposition, actor }) {
+    const found = this.reviewsFor(lineage, run).find((r) => r.id === review);
+    if (!found) {
+      fail('binding_unresolved', 'no such review is recorded for this run', { lineage, run, review });
+    }
+    // Against the findings that review actually raised. A disposition naming
+    // something nobody found answers nothing, and would still satisfy a check
+    // that only counted dispositions.
+    if (!found.findings.some((f) => f.id === finding)) {
+      fail('binding_unresolved', 'that review raised no such finding', { review, finding });
+    }
+    return this.#ledger.append({
+      kind: 'finding_disposed', lineage, run, review, finding, disposition, actor,
+      origin: HOST,
+    });
+  }
+
+  // The findings a review raised that nothing has answered.
+  undisposedFindings(lineage, run, review) {
+    const answered = new Set(this.records()
+      .filter((r) => r.kind === 'finding_disposed' && r.lineage === lineage
+        && r.run === run && r.review === review.id)
+      .map((r) => r.finding));
+    return review.findings.filter((f) => !answered.has(f.id));
+  }
+
+  // The one review that answers this run's requirement, or a refusal saying why
+  // none does. Private: a caller that could ask for "a review" could ask again
+  // until it liked the answer, and the point is that there is nothing to choose.
+  #answeringReview({ lineage, run, contract, producer }) {
+    // No "none is recorded" refusal. The Gate reads the requirement now: with no
+    // review obtained the obligations are `unavailable`, so completion refuses
+    // `not_all_passed` and never reaches here. Verified by deleting it and asking
+    // for a completion — the code that came back was the Gate's.
+    const found = this.reviewsFor(lineage, run);
+    // Two is not "pick the later one". Ambiguity is refused for the same reason a
+    // second Assignment or a second genesis is: choosing is not resolving.
+    if (found.length > 1) {
+      fail('review_not_unique', 'a run holding two reviews holds none', {
+        lineage, run, count: found.length,
+      });
+    }
+    const review = found[0];
+    if (review.reviewer === producer) {
+      fail('review_self_authored', 'the reviewed party is the reviewer', {
+        reviewer: review.reviewer,
+      });
+    }
+    const requested = contract.independence.requested_family;
+    if (requested && !requested.includes(review.family)) {
+      fail('review_wrong_family', 'the review is not from a family the Contract requested', {
+        family: review.family, requested,
+      });
+    }
+    // Against the deliverable as it stands now. This is the check that a later
+    // attempt can invalidate, and the reason all of this runs at completion.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
+    if (review.deliverable !== deliverable.identity) {
+      fail('review_wrong_deliverable', 'the review examined something other than this run\'s deliverable', {
+        reviewed: review.deliverable, deliverable: deliverable.identity,
+      });
+    }
+    const open = this.undisposedFindings(lineage, run, review);
+    if (open.length > 0) {
+      fail('finding_undisposed', 'a finding the review raised has no disposition', {
+        review: review.id, findings: open.map((f) => f.id),
+      });
+    }
+    return review;
+  }
+
+  signOff({ lineage, run, actor, acceptedReview }) {
+    const approved = this.contractForRun(lineage, run);
+    if (!approved) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    this.#requireOwner(actor);
+    // A verdict has to have been *recorded*, not merely computable: reducing on
+    // demand always produces a status, so asking the reduction whether the Gate
+    // had reported was asking it to answer for itself.
+    const reported = this.records().some(
+      (r) => r.kind === 'gate_result' && r.lineage === lineage && r.run === run,
+    );
+    if (!reported) {
+      fail('signoff_before_gate', 'the sign-off predates the Gate result', { lineage, run });
+    }
+    // The recorded verdicts, and they must say `passed` — not "the Gate reported
+    // something, and recomputing now says passed". A run could report `pending`,
+    // receive its evidence afterwards, and be signed for while the only verdict
+    // in the log still said `pending`.
+    const latest = new Map();
+    for (const r of this.records()) {
+      if (r.kind !== 'gate_result' || r.lineage !== lineage || r.run !== run) continue;
+      if (r.contract_revision !== approved.revision) continue;
+      latest.set(r.obligation, r);
+    }
+    const verdicts = new Map([...latest].map(([o, r]) => [o, r.status]));
+    // And it signs for a run that passed. It checked only that the Gate had
+    // reported *something*, so a failing run produced a host sign-off record.
+    for (const obligation of approved.contract.obligations) {
+      if (verdicts.get(obligation) !== 'passed') {
+        fail('not_all_passed', 'there is nothing here to sign for', {
+          obligation, status: verdicts.get(obligation),
+        });
+      }
+    }
+    const deliverable = this.deliverableFor({ lineage, run, contract: approved.contract });
+    return this.#ledger.append({
+      kind: 'human_signoff', lineage, run, contract_revision: approved.revision,
+      deliverable: deliverable.identity, actor, origin: HOST,
+      ...(acceptedReview ? { accepted_review: acceptedReview } : {}),
+    });
+  }
+
+
+  // Private. A public one appended `completion_committed` without the write ever
+  // happening, which is a record of a completion that does not exist.
+  // Where a run's Acceptance goes. Named rather than inlined so the destination
+  // can be checked without writing: the lineage and the run are the only two
+  // things that shape it, and both come from records.
+  completionPathFor({ lineage, run }) {
+    if (!this.#completionRoot) {
+      fail('writer_not_sole', 'this Kernel has no completion root, so it cannot complete', { run });
+    }
+    // Escape is checked first because it is the more severe fault. What remains
+    // is that the name answer to one run.
+    //
+    // The composition joins two caller-chosen ids with `.`, and an id is any
+    // non-empty string — so lineage `L.a` with run `b` and lineage `L` with run
+    // `a.b` name one file. The write side refuses the second on `O_EXCL`, which
+    // is the wrong run refused; a reader resolving by path would answer
+    // "accepted" to a run that earned nothing. A name answering to two answers
+    // to neither.
+    //
+    // Refusing a component that contains the delimiter was tried and is wrong: a
+    // lineage naming a directory called `..inside` is legitimate and contains
+    // one, and refusing it is the false refusal the guard above already exists to
+    // avoid. Encoding the delimiter is also wrong, for the opposite reason — an
+    // escaping lineage would become a literal directory name and retire
+    // `write_escapes_location` by making it unreachable.
+    //
+    // So the pair itself is what disambiguates: a digest of both ids, which
+    // differs whenever the pair differs however the readable part collides. The
+    // readable part stays, because a directory of digests is not something a
+    // person can scan.
+    // The digest is `sha256:<64 hex>`; slicing the whole string takes seven
+    // characters of constant prefix and leaves almost no entropy. Take the hex.
+    const stamp = canonicalDigest({ lineage, run }).split(':').pop().slice(0, 16);
+    const path = `${this.#completionRoot}/${lineage}.${run}.${stamp}.acceptance.json`;
+    assertNoSymlinkComponents(resolve(this.#completionRoot), resolve(path));
+    assertInsideLocation(this.#completionRoot, resolve(path));
+    return path;
+  }
+
+  #recordCompletion({ lineage, run, identity, path }) {
+    return this.#ledger.append({
+      kind: 'completion_committed', lineage, run, identity, path,
+    });
+  }
+
+  // AC-9's four facts. The two cost figures are derived from boundaries, and a
+  // boundary is the position of a record that exists for another reason — an
+  // approval, an attempt, a Gate result. Elapsed quantities used to be numbers a
+  // caller passed, which made "formation cost more than the change" an opinion
+  // wearing a number: nothing said what was measured, or that the two figures
+  // were of the same kind.
+  // Where forming this lineage began, if it began once.
+  //
+  // Uniqueness is decided here rather than only before the append, as it is for an
+  // Assignment: `openFormation` checks and then appends, which is two operations,
+  // and eight concurrent writers all saw none.
+  formationFor(lineage) {
+    const opened = this.records().filter(
+      (r) => r.kind === 'formation_opened' && r.lineage === lineage,
+    );
+    if (opened.length > 1) {
+      fail('run_facts_incomplete', 'formation opens once for a lineage', {
+        lineage, count: opened.length,
+      });
+    }
+    return opened[0] || null;
+  }
+
+  // The first act of forming a Contract. Recorded because AC-9 measures formation
+  // from it and nothing else marks it: the earliest record of a lineage was the
+  // activation decision, written inside `approve`, so formation measured one
+  // append rather than the work.
+  openFormation({ lineage, actor }) {
+    this.#requireOwner(actor);
+    const already = this.records().some(
+      (r) => r.kind === 'formation_opened' && r.lineage === lineage,
+    );
+    if (already) {
+      fail('run_facts_incomplete', 'formation opens once for a lineage', { lineage });
+    }
+    return this.#ledger.append({ kind: 'formation_opened', lineage, actor, origin: HOST });
+  }
+
+  recordRun({ lineage, run, traceOutcome, discrepancy, disposition, wentWrong }) {
+    // The boundaries are derived, not chosen. Formation runs from the record that
+    // opened it to the approval that fixed the Contract; the change from the run's
+    // attempt to the Gate finishing. Both are records that exist for other
+    // reasons, so neither end is something anyone picked for this purpose.
+    //
+    // They were four caller-supplied positions, and nothing checked their kind,
+    // lineage, run or role — facts could be recorded for one run out of another's
+    // boundaries. AC-9 asks for boundaries fixed before the run, and the only
+    // version of that a caller cannot move is one it does not supply.
+    const all = this.records();
+    const only = (which, test) => {
+      const found = all.filter(test);
+      if (found.length === 0) {
+        fail('run_facts_incomplete', `there is no ${which} to measure from`, { lineage, run });
+      }
+      return found;
+    };
+    // Each end is the *first* record of its kind, so repeating an operation
+    // cannot move it. Taking the last let a second `status()` call extend the
+    // change interval without anything about the run having changed.
+    const formationFrom = this.formationFor(lineage);
+    if (!formationFrom) {
+      fail('run_facts_incomplete', 'there is no record of formation opening to measure from', {
+        lineage,
+      });
+    }
+    const bound = this.contractForRun(lineage, run);
+    if (!bound) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    // The approval this run was assigned under, not the lineage's latest: a
+    // successor approved mid-run moved formation's endpoint.
+    const [approval] = only(
+      'approval for this run', (r) => r.lineage === lineage
+        && r.kind.startsWith('contract_approved') && r.revision === bound.revision,
+    );
+    const [attempt] = only(
+      'attempt', (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    // The evaluation that closed the change: the first one after the last attempt
+    // was opened. Taking the first in the run ended the interval before a retry
+    // had even begun, so the cost excluded the work the retry did — and taking the
+    // last moved the endpoint every time anyone asked the Gate again.
+    const attempts = all.filter(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    const lastAttempt = attempts[attempts.length - 1];
+    const [verdict] = only(
+      'completed Gate evaluation of the latest attempt',
+      (r) => r.kind === 'gate_completed' && r.lineage === lineage && r.run === run
+        && r.seq > lastAttempt.seq,
+    );
+
+    // One set of facts per run, refused here and at every reader. Two sets meant
+    // the live judgement read the first and replay read the last, so the Human
+    // Owner's decision and the reconstruction of it disagreed.
+    if (this.runFactsFor(lineage, run)) {
+      fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
+    }
+    // Elapsed time between the boundaries, observed when each record landed.
+    //
+    // Subtracting positions measured protocol traffic: unrecorded drafting
+    // weighed nothing, and ten unrelated records weighed ten — enough to reverse
+    // a retreat decision without anything about the run having changed. Two
+    // durations are quantities of the same kind whatever else the log is doing.
+    //
+    // Each interval is checked on its own. They were one predicate, so a mutation
+    // that disabled both turned red on whichever half a test happened to reach,
+    // and the other half was covered by appearance only.
+    //
+    // Both ends of both intervals, because the clock is `Date.now()` and a
+    // rollback between two appends makes a valid ordering produce a negative
+    // duration. The two figures are comparable only if they are durations; a
+    // negative one is not the smaller of two durations, it is neither.
+    if (!(approval.seq > formationFrom.seq)) {
+      fail('cost_incomparable', 'formation does not enclose an interval', { lineage, run });
+    }
+    // No order check for the change: the evaluation is selected as one that
+    // follows the last attempt, so the ordering is how it was found.
+    if (!(approval.at >= formationFrom.at)) {
+      fail('cost_incomparable', 'formation ran backwards on the clock', { lineage, run });
+    }
+    if (!(verdict.at >= attempt.at)) {
+      fail('cost_incomparable', 'the change ran backwards on the clock', { lineage, run });
+    }
+
+    const base = {
+      lineage, run,
+      formation_from: formationFrom.seq, formation_to: approval.seq,
+      change_from: attempt.seq, change_to: verdict.seq,
+      formation_elapsed: approval.at - formationFrom.at,
+      change_elapsed: verdict.at - attempt.at,
+      trace_outcome: traceOutcome,
+      went_wrong: wentWrong,
+    };
+    if (traceOutcome === 'caught_something') {
+      // Two conditions, two refusals. As one predicate, a test that omitted both
+      // turned it red while saying nothing about either.
+      if (!discrepancy) {
+        fail('trace_outcome_unsupported', 'caught_something needs the discrepancy', { run });
+      }
+      if (!disposition) {
+        fail('trace_outcome_unsupported', 'caught_something needs what was done about it', { run });
+      }
+      return this.#ledger.append({ kind: 'run_record_caught', ...base, discrepancy, disposition });
+    }
+    return this.#ledger.append({ kind: 'run_record_clean', ...base });
+  }
+
+
+  // The index resolves from the log and takes nothing from a caller. An earlier
+  // version accepted `index` and `inputsNow` as parameters, which let the party
+  // being judged supply the evidence universe — packages and command results that
+  // had never been recorded resolved fine and produced `passed`.
+  // Scoped to one run. Unscoped, evidence recorded for `run1` resolved while
+  // completing `run2`: every reference still pointed at a real record, and no
+  // check asked whether it belonged to this execution.
+  index({ lineage, run }) {
+    const records = this.records().filter((r) => r.lineage === lineage && r.run === run);
+    // Ambiguity is refused, not resolved by order. These match on ids a producer
+    // chooses, and `find` returned the first — so recording a second result under
+    // an id already used silently decided which one the evidence pointed at.
+    // Uniqueness is decided here for the same reason it is for an Assignment:
+    // checking before the append is two operations, and only the reader sees what
+    // they left.
+    const findBy = (kind, field) => (value) => {
+      const found = records.filter((r) => r.kind === kind && r[field] === value);
+      if (found.length > 1) {
+        fail('binding_unresolved', `two ${kind} records answer to one name`, {
+          lineage, run, [field]: value,
+        });
+      }
+      return found[0] || null;
+    };
+    const packageRecord = findBy('evidence_package', 'id');
+    return {
+      commandResult: findBy('command_result', 'id'),
+      attempt: findBy('attempt_opened', 'seq'),
+      artifact: findBy('artifact_recorded', 'id'),
+      // Parsed through `verify`, so a consumer cannot reach a package whose byte
+      // identity does not check out.
+      dispatch: (attempt, obligation) => {
+        const found = records.filter(
+          (r) => r.kind === 'dispatch_attempt' && r.attempt === attempt
+            && r.obligation === obligation,
+        );
+        if (found.length > 1) {
+          fail('binding_unresolved', 'two dispatches answer to one attempt and obligation', {
+            lineage, run, attempt, obligation,
+          });
+        }
+        return found[0] || null;
+      },
+      package: (id) => {
+        const rec = packageRecord(id);
+        if (!rec) return null;
+        // The parsed object, plus where its record landed — staleness compares an
+        // observation's position against it, and the object's own bytes cannot
+        // carry a position they were written before.
+        return {
+          ...openObject(rec.bytes, rec.identity, EVIDENCE_PACKAGE, 'Evidence Package'),
+          seq: rec.seq,
+        };
+      },
+    };
+  }
+
+  // The verdict, computed from what the runner observed. Nothing the submission
+  // says is read here — there is no field it could say it in.
+  //
+  // Only the exit status. Non-vacuity is admissibility's (AC-2), and a copy of it
+  // here was unreachable: the reduction calls this only after `admit` returned
+  // null, and `admit` already refuses a result with no subjects. A second layer no
+  // planted defect can turn red is a claim of protection nothing holds to account,
+  // so it states the property once, where it is reachable.
+  #outcomeReader({ lineage, run }) {
+    const index = this.index({ lineage, run });
+    return (record) => {
+      const result = index.commandResult(record.command_result);
+      if (!result) return null;
+      return result.exit === 0;
+    };
+  }
+
+  // AC-9's arithmetic reads this. The retreat condition fires when formation
+  // elapsed exceeds change elapsed and the trace caught nothing; recording the
+  // facts without anything reading them would be a kind with no consumer.
+  // AC-9's two judgements, as operations that can record them.
+  //
+  // The record kinds existed and nothing produced them: the criterion reserves
+  // the *judgement* for the Human Owner, and reserving a judgement is not the
+  // same as having nowhere to put it. Each names the run facts it answers, so a
+  // decision cannot float free of the arithmetic it was made against.
+  decideWorth({ lineage, run, actor, choice }) {
+    return this.#humanJudgement({
+      lineage, run, actor, choice, operation: 'worth_decision',
+    });
+  }
+
+  decideRetreat({ lineage, run, actor, choice }) {
+    // Checked before it is written. Appending and then refusing left a durable
+    // host record of a decision the Kernel had rejected — a log that says the
+    // Human Owner decided something they were not permitted to.
+    const arithmetic = this.retreatCondition(lineage, run);
+    if (arithmetic && arithmetic.fired !== (choice === 'yes')) {
+      fail('retreat_contradicts_facts', 'the decision disagrees with the recorded facts', {
+        fired: arithmetic.fired, choice,
+      });
+    }
+    return this.#humanJudgement({
+      lineage, run, actor, choice, operation: 'retreat_decision',
+    });
+  }
+
+  // No `yes`/`no` check here: the record shape states it, and a copy beside it is
+  // a claim no planted defect can turn red.
+  #humanJudgement({ lineage, run, actor, choice, operation }) {
+    this.#requireOwner(actor);
+    // Against recorded facts, so the judgement answers something. AC-9's two
+    // questions are asked *of* a run's arithmetic, and one asked of nothing is
+    // not the judgement the criterion reserves.
+    const facts = this.runFactsFor(lineage, run);
+    if (!facts) {
+      fail('run_facts_incomplete', 'there are no run facts to judge', { lineage, run });
+    }
+    return this.#collectHumanInput({
+      operation, actor, lineage, run, choice, answers: facts.seq,
+    });
+  }
+
+  // A run's facts, if it recorded them once. Uniqueness lived in three places —
+  // the writer and two readers — and no planted defect could tell the copies
+  // apart, so it lives here and the others ask.
+  // The Human Owner acted, or nobody did. Both halves in one place, because they
+  // are one question and the second alone answers it wrongly: an absent owner is
+  // held as `null`, and `null !== null` is false, so an actor of `null` would pass
+  // a bare comparison and act for a Kernel that serves no one. Six copies of the
+  // comparison stood before this, and the missing half was restored to two of them
+  // and not the other four.
+  #requireOwner(actor) {
+    if (!this.#owner) {
+      fail('human_input_absent', 'this Kernel has no Human Owner, so nobody may act for it', {});
+    }
+    if (actor !== this.#owner) {
+      fail('authority_not_granted', 'only the Human Owner this Kernel was given may act', {
+        actor,
+      });
+    }
+  }
+
+  runFactsFor(lineage, run) {
+    const found = this.records().filter(
+      (r) => (r.kind === 'run_record_clean' || r.kind === 'run_record_caught')
+        && r.lineage === lineage && r.run === run,
+    );
+    if (found.length > 1) {
+      fail('run_facts_incomplete', 'a run records its facts once', { lineage, run });
+    }
+    return found[0] || null;
+  }
+
+  retreatCondition(lineage, run) {
+    const record = this.runFactsFor(lineage, run);
+    if (!record) return null;
+    return {
+      fired: record.formation_elapsed > record.change_elapsed
+        && record.trace_outcome === 'caught_nothing',
+      formation: record.formation_elapsed,
+      change: record.change_elapsed,
+      trace: record.trace_outcome,
+    };
+  }
+
+  // --- the reduction ------------------------------------------------------
+  //
+  // No optional admissibility. The Gate always runs the full check, because a
+  // check a caller may omit is a check that does not exist.
+
+  // Two arguments, both names of things already recorded. The Contract, the
+  // Assignment and the current identity of every material input used to come in
+  // as parameters, so the party being judged supplied the standard, the authority
+  // and the notion of "current" — three different ways to pass without changing
+  // anything true.
+  // Reducing and recording the verdict are one operation. They were two, so
+  // another writer could open a newer attempt between them and the log kept a
+  // `passed` a replay recomputes as `pending`.
+  status(args) {
+    return this.#ledger.transaction(() => this.#statusLocked(args));
+  }
+
+  #statusLocked({ lineage, run }) {
+    const result = this.#reduce({ lineage, run });
+    const { contract, revision: bound } = this.contractForRun(lineage, run);
+
+    // The verdict is recorded, because completion relies on it and AC-13 says
+    // everything either the Gate or the Human Owner relies on is recorded when it
+    // happens. Without this, replay could reconstruct the inputs but not the
+    // decision they produced — and "the Gate said passed" would be a claim with
+    // nothing behind it.
+    for (const obligation of contract.obligations) {
+      const v = result.byObligation[obligation];
+      this.#ledger.append({
+        // The revision judged, which is the one the run was assigned under.
+        // Recording the lineage's current revision instead named something the
+        // reduction had not looked at, and the sign-off — which filters by the
+        // bound revision — then found no verdicts at all.
+        kind: 'gate_result', lineage, run, contract_revision: bound, obligation,
+        status: v.status,
+        ...(v.code ? { code: v.code } : {}),
+        ...(v.attempt != null ? { attempt: v.attempt } : {}),
+        ...(v.selected ? { selected: v.selected } : {}),
+      });
+    }
+    // The reduction is over. One event for the operation, because the per-
+    // obligation verdicts are its components and no component marks its end.
+    this.#ledger.append({ kind: 'gate_completed', lineage, run });
+    return result;
+  }
+
+  #reduce({ lineage, run }) {
+    // The run's Contract decides what is being judged; the lineage's current
+    // revision decides only whether the evidence is stale.
+    const approved = this.contractForRun(lineage, run);
+    if (approved === null) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    const { contract } = approved;
+    // `contractForRun` resolved the Assignment already, and refuses without one.
+    const assignment = this.assignmentFor(lineage, run);
+    const records = this.records();
+    const index = this.index({ lineage, run });
+    const inputsNow = this.#inputsNowFor(lineage);
+    const current = this.currentRevision(lineage);
+    const admit = admissibility({
+      contract, assignment, approvals: this.approvals(), index, inputsNow, run,
+    });
+    const result = reduceAll({
+      records, lineage, run, obligations: contract.obligations,
+      currentRevision: current, boundRevision: approved.revision,
+      admit,
+      inputsChanged: inputsChangedAgainst(index, inputsNow),
+      outcomeOf: this.#outcomeReader({ lineage, run }),
+      reviewRequired: contract.independence.required === 'cross_family_required',
+      // Whether one was obtained, not whether it is the right one. Which review
+      // answers, and whether it is admissible, is decided at completion — the Gate
+      // is asked before a review can exist and must not need the answer twice.
+      reviewObtained: this.reviewsFor(lineage, run).length > 0,
+    });
+
+    return result;
+  }
+
+  // Completion. There is no second entry point: `emitAcceptance` used to live in
+  // its own module, call the reducer itself, and forward admissibility as an
+  // optional argument — so the channel could be walked around by importing the
+  // other thing. It is deleted rather than deprecated.
+  // The whole of completion happens under one lock.
+  //
+  // Reducing, resolving the deliverable, signing and writing were four separate
+  // moments: a newer passing attempt could land between the deliverable being
+  // resolved and the bytes being written, so the Acceptance named an artifact the
+  // final reduction had not judged. "The latest attempt decides at the moment the
+  // bytes land" is either one operation or it is a hope.
+  complete(args) {
+    return this.#ledger.transaction(() => this.#completeLocked(args));
+  }
+
+  #completeLocked({ lineage, run, actor, acceptedReview }) {
+    const bound = this.contractForRun(lineage, run);
+    if (!bound) {
+      fail('assignment_not_issued', 'no Assignment was issued for this run', { lineage, run });
+    }
+    const { contract, identity: contractIdentity, revision: current } = bound;
+    const { byObligation, allPassed } = this.status({ lineage, run });
+    if (!allPassed) {
+      const first = contract.obligations.find((o) => byObligation[o].status !== 'passed');
+      fail('not_all_passed', 'completion requires every obligation to be passed', {
+        obligation: first, status: byObligation[first].status,
+      });
+    }
+
+    // A Contract that requires independent review is judged here, not where the
+    // review was recorded.
+    //
+    // The distinction is load-bearing. A review that was bound to the right
+    // deliverable when it arrived can be bound to a superseded one by a later
+    // attempt, and a check that fired only at ingestion would never see that. What
+    // decides is the state at completion.
+    //
+    // An earlier version accepted a `recordReview` that took a digest and a family
+    // as arguments and stamped them `origin: harness`, so the party being judged
+    // wrote its own judge into being. The producer now chooses none of it — see
+    // `obtainReview` — and these four refusals are what reads it back.
+    // The producer, from the run's Assignment — the same place every other
+    // authority question reads it, so "who was reviewed" is not a second source.
+    const granted = this.assignmentFor(lineage, run);
+    const requiredReview = contract.independence.required === 'cross_family_required'
+      ? this.#answeringReview({
+        lineage, run, contract, producer: granted.grants.attempt_producer,
+      })
+      : null;
+    if (!requiredReview && acceptedReview) {
+      fail('review_required_absent', 'a review is carried where the Contract required none', {});
+    }
+
+
+    // The deliverable is the artifact the evidence attests to, resolved from the
+    // record. Taking it as an argument let an Acceptance name one thing while the
+    // evidence had exercised another.
+    const deliverable = this.deliverableFor({ lineage, run, contract });
+
+    const signoff = this.signOff({ lineage, run, actor, acceptedReview });
+
+    // The Acceptance is exactly the shape the schema states — the verdicts travel
+    // beside it rather than inside it, because a closed schema means an extra
+    // field is a validation failure and not a helpful addition.
+    const acceptance = {
+      lineage,
+      contract_revision: current,
+      contract_identity: contractIdentity,
+      deliverable,
+      decision: { outcome: 'accepted', origin: HOST, run, seq: signoff.seq },
+      // What the review requirement was, and what answered it. A stated absence
+      // when none was required — never an empty slot — and the answering review's
+      // identity when one was. Without the identity a reader has "a review
+      // happened" and no way to find which one, so the verdict cannot be
+      // reconstructed from the Acceptance alone.
+      review: requiredReview
+        ? {
+          required: true,
+          statement: `reviewed by ${requiredReview.family}`,
+          accepted_review: identify(Buffer.from(JSON.stringify(requiredReview), 'utf8')).byte_sha256,
+        }
+        : { required: false, statement: 'no independent review required by this Contract' },
+    };
+
+    // The write is the last step of this method, not a function a caller invokes
+    // afterwards with whatever it likes. Its destination belongs to the Kernel,
+    // and the verdicts it reads are the ones just recorded.
+    const written = this.#commitCompletion({ acceptance, run });
+    // Two identities, like the other three durable objects. It used to record one
+    // digest, which cannot tell a lexical mutation of the written file from the
+    // same content spelled differently — the exact thing AC-3 keeps a pair for.
+    this.#recordCompletion({
+      lineage, run, identity: identify(written.bytes), path: written.path,
+    });
+    return { acceptance, written };
+  }
+
+  // The artifact this run's evidence actually exercised. Every admissible
+  // observation names one; they must agree, because two artifacts in one run
+  // means the Acceptance would have to pick, and picking is not resolving.
+  deliverableFor({ lineage, run, contract }) {
+    const index = this.index({ lineage, run });
+    // Only the attempt the Gate selected. Reading every observation in the run
+    // meant a failed first attempt naming one artifact and a passing retry naming
+    // another left completion with two — so an attempt the Gate had already
+    // superseded still decided what could be accepted.
+    const attempts = this.records().filter(
+      (r) => r.kind === 'attempt_opened' && r.lineage === lineage && r.run === run,
+    );
+    const latest = attempts.length > 0 ? attempts[attempts.length - 1].seq : null;
+    const named = new Set();
+    for (const obligation of contract.obligations) {
+      for (const r of this.records()) {
+        if (r.kind !== 'observation') continue;
+        if (r.lineage !== lineage || r.run !== run || r.obligation !== obligation) continue;
+        if (r.attempt !== latest) continue;
+        named.add(r.artifact);
+      }
+    }
+    if (named.size !== 1) {
+      fail('binding_cross_execution', 'the run does not name exactly one artifact', {
+        run, artifacts: [...named],
+      });
+    }
+    // The name is taken from the observation records, which carry whatever id was
+    // submitted — submitting one does not require the artifact to be recorded, and
+    // this is a public reader. Without this the deliverable would be read off
+    // nothing and the Acceptance would name a kind and an identity of undefined.
+    const record = index.artifact([...named][0]);
+    if (!record) {
+      fail('binding_unresolved', 'the artifact the evidence names is not recorded', { run });
+    }
+    return { kind: record.artifact_kind, identity: record.identity };
+  }
+
+  // AC-7's choice, recorded when it is made. "After the capability was found
+  // unavailable" is a property of the append — there is a record it must follow —
+  // so it is checked here rather than at completion, where an unavailable run
+  // never arrives: completion stops at `not_all_passed` first, which left the
+  // ordering check sitting in a branch nothing could reach.
+  decideUnavailable({ lineage, run, actor, choice }) {
+    this.#requireOwner(actor);
+    if (!['wait', 'stop', 'amend'].includes(choice)) {
+      fail('human_input_absent', 'the decision must be wait, stop, or amend', { choice });
+    }
+    // The arm has to have been reached, not merely claimed. A record the Gate
+    // found inadmissible — a substituted request, say — left the obligation
+    // `invalid`, and the Human Owner could still record a choice about it.
+    // The exact event the reduction selected, by position. Matching on lineage,
+    // run and attempt found *a* record like it, and with two obligations under one
+    // attempt that was the wrong one: the Gate reached `unavailable` for the
+    // second and the decision answered the first.
+    const reduced = this.#reduce({ lineage, run }).byObligation;
+    const entry = Object.entries(reduced).find(([, v]) => v.status === 'unavailable');
+    const unavailable = entry && entry[1].selected != null
+      ? this.records()[entry[1].selected]
+      : null;
+    if (!unavailable) {
+      // A pre-authorized choice is not a decision about something that had not
+      // happened yet.
+      fail('human_input_absent', 'nothing has been found unavailable in this run', {
+        lineage, run,
+      });
+    }
+    return this.#collectHumanInput({
+      operation: 'unavailable_decision', actor, lineage, run,
+      obligation: unavailable.obligation, choice, answers: unavailable.seq,
+    });
+  }
+
+
+  #commitCompletion({ acceptance, run }) {
+    const path = this.completionPathFor({ lineage: acceptance.lineage, run });
+
+    // No shape check here. The Acceptance is a literal built four lines above from
+    // parts already checked, so a check at this point refuses nothing a caller can
+    // ask for — it could only catch a change to this file, which is what reading
+    // the written file back against the schema does, where the suite can see it.
+    const bytes = Buffer.from(JSON.stringify(acceptance), 'utf8');
+    const target = resolve(path);
+
+    // What the preflight does not close: it walks the parents, then `O_EXCL` opens
+    // the final component, and those are separate syscalls. A parent swapped for a
+    // symlink between them redirects the write, and nothing here detects it. Closing
+    // that needs directory handles held across both operations — `openat` relative
+    // to a held fd — which Node does not expose.
+    //
+    // Under §2's boundary this is expected: swapping a parent mid-write requires
+    // the same OS access that could edit the log directly. It is stated because the
+    // preflight otherwise reads as a guarantee it is not.
+
+    // The reduction and the write happen under one lock, so nothing can open a
+    // newer attempt between them. Re-deriving and then writing were two
+    // operations, which narrowed the window rather than closing it — and "the
+    // latest attempt decides at the moment the bytes land" is either an invariant
+    // or a hope.
+    // No second reduction here. The whole of completion holds one lock, so
+    // nothing can have moved since it reduced — re-deriving under the same lock
+    // reads the same records and reaches the same answer, which is a copy rather
+    // than a check.
+    const result = atomicFileNoReplace({ path: target, bytes });
+    if (result.outcome === 'exists') {
+      fail('write_would_clobber', 'completion does not overwrite an existing target', { path: target });
+    }
+    // The resolved target, so what gets recorded is where the bytes actually went
+    // rather than the path someone asked for.
+    return { ...result, path: target, bytes: bytes.toString('utf8') };
+  }
+
+}

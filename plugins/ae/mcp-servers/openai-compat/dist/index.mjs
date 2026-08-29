@@ -21237,12 +21237,13 @@ var SESSION_TTL_MS = 30 * 60 * 1e3;
 var CLEANUP_INTERVAL_MS = 5 * 60 * 1e3;
 var REQUEST_TIMEOUT_MS = Number(env("AE_OPENAI_COMPAT_TIMEOUT_MS") || 12e4);
 var sessions = /* @__PURE__ */ new Map();
-function headers() {
+function headers(apiKeyEnv) {
   const h = { "content-type": "application/json" };
-  if (API_KEY) h["authorization"] = `Bearer ${API_KEY}`;
+  const key = apiKeyEnv ? env(apiKeyEnv) : API_KEY;
+  if (key) h["authorization"] = `Bearer ${key}`;
   return h;
 }
-async function callChat(endpoint, model, messages, reasoningEffort) {
+async function callChat(endpoint, model, messages, reasoningEffort, apiKeyEnv) {
   const body = { model, messages };
   let sent = false;
   if (reasoningEffort) {
@@ -21255,7 +21256,7 @@ async function callChat(endpoint, model, messages, reasoningEffort) {
   try {
     res = await fetch(`${endpoint.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
-      headers: headers(),
+      headers: headers(apiKeyEnv),
       body: JSON.stringify(body),
       signal: ctrl.signal
     });
@@ -21303,13 +21304,16 @@ server.tool(
     model: external_exports.string().optional().describe("Model id; defaults to AE_OPENAI_COMPAT_MODEL"),
     endpoint: external_exports.string().optional().describe("OpenAI-compatible base URL ending in /v1"),
     family: external_exports.string().optional().describe("Weight lineage of this model (e.g. qwen, deepseek, llama) \u2014 NOT the host it runs on"),
+    api_key_env: external_exports.string().optional().describe(
+      "Name of the environment variable holding this backend's API key \u2014 the `api_key_env` its `cross_family` entry declares. The name travels, never the secret. Named and unset means no credential is sent, not the process-wide one."
+    ),
     system: external_exports.string().optional().describe("System instruction"),
     reasoning_effort: external_exports.enum(["minimal", "low", "medium", "high"]).optional().describe("Passed through as reasoning_effort; rejected by backends that do not support it"),
     expect: external_exports.enum(["findings"]).optional().describe(
       "Output contract to state to the backend and validate the reply against. 'findings' = AE's review findings shape. A non-compliant reply is reported as such and returned unchanged \u2014 never reshaped."
     )
   },
-  async ({ prompt, model, endpoint, family, system, reasoning_effort, expect }) => {
+  async ({ prompt, model, endpoint, family, system, reasoning_effort, expect, api_key_env }) => {
     const ep = endpoint || DEFAULT_ENDPOINT;
     const mdl = model || DEFAULT_MODEL;
     if (!mdl) {
@@ -21323,7 +21327,7 @@ server.tool(
     if (sys) history.push({ role: "system", content: sys });
     history.push({ role: "user", content: prompt });
     try {
-      const { content, reasoning, raw_id } = await callChat(ep, mdl, history, reasoning_effort);
+      const { content, reasoning, raw_id } = await callChat(ep, mdl, history, reasoning_effort, api_key_env);
       history.push({ role: "assistant", content });
       const id = randomUUID();
       sessions.set(id, {
@@ -21331,6 +21335,7 @@ server.tool(
         family: family || DEFAULT_FAMILY,
         endpoint: ep,
         model: mdl,
+        apiKeyEnv: api_key_env,
         history,
         lastUsed: Date.now()
       });
@@ -21385,7 +21390,7 @@ server.tool(
     const mdl = model || s.model;
     s.history.push({ role: "user", content: prompt });
     try {
-      const { content, reasoning, raw_id } = await callChat(s.endpoint, mdl, s.history, reasoning_effort);
+      const { content, reasoning, raw_id } = await callChat(s.endpoint, mdl, s.history, reasoning_effort, s.apiKeyEnv);
       s.history.push({ role: "assistant", content });
       s.lastUsed = Date.now();
       if (model) s.model = model;
@@ -21413,11 +21418,16 @@ server.tool(
 server.tool(
   "models",
   "List models an OpenAI-compatible endpoint currently serves.",
-  { endpoint: external_exports.string().optional() },
-  async ({ endpoint }) => {
+  {
+    endpoint: external_exports.string().optional(),
+    api_key_env: external_exports.string().optional().describe(
+      "Name of the environment variable holding this backend's API key \u2014 the `api_key_env` its `cross_family` entry declares. The name travels, never the secret. Named and unset means no credential is sent, not the process-wide one."
+    )
+  },
+  async ({ endpoint, api_key_env }) => {
     const ep = endpoint || DEFAULT_ENDPOINT;
     try {
-      const res = await fetch(`${ep.replace(/\/$/, "")}/models`, { headers: headers() });
+      const res = await fetch(`${ep.replace(/\/$/, "")}/models`, { headers: headers(api_key_env) });
       if (!res.ok) throw new Error(`http ${res.status}`);
       const data = await res.json();
       const list = (data?.data ?? []).map((m) => ({

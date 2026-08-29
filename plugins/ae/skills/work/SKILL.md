@@ -1,6 +1,6 @@
 ---
 name: work
-description: Execute plan (TDD + commit + review, pre-checks chain). Recommended: Sonnet or above
+description: "Execute plan (TDD + commit + review, pre-checks chain). Recommended: Sonnet or above"
 argument-hint: "<plan file path>"
 user-invocable: true
 effort: high
@@ -253,6 +253,34 @@ Before each step's TDD Cycle (or direct Lead execution in single-platform mode),
 
 The ~30KB-and-5-steps threshold is carried forward from Plan 046 Known Limits — documented approximation, not a measured protocol invariant. If this becomes painful, re-file as targeted BL.
 
+## Re-cutting the plan (F-086)
+
+The plan is a working artifact and is expected to change while the loop runs — merging two
+steps, splitting one that will not close, reordering after learning something. **No
+approval is needed**: nobody agreed to the stack, they agreed to the goal, and the goal is
+frozen separately. See [Stage handovers](../../handover.md) § The plan is expected to
+change.
+
+Record it: one line in `<milestone-dir>/notes.md` — `RECUT [Step N]: <what changed> — <why>`.
+That is information, not a gate. A plan quietly rewritten to match its outcome hides the
+most useful thing a finished feature has to say.
+
+**What a re-cut may not do is move the goal.** A change that would alter what a criterion
+means is not a re-cut; it is an escalation to analyze, per the refusal rules below.
+
+## Refusing the plan (F-086)
+
+Per [Stage handovers](../../handover.md). Before executing a step, **refuse and send it
+back to plan** when:
+
+- the step names no falsifier — there is nothing that would turn red, so "done" would be
+  the executor's opinion; or
+- the step is marked `Self-closing: no` and nothing is named as covering it — an
+  undeclared non-closing step is how a stack looks disciplined and is not.
+
+Name which of the two failed. A refusal goes back **one stage**, not to the start: it is
+a loop iteration, and it is meant to be cheap enough to use.
+
 ## TDD Cycle
 
 The agent begins each step's TDD cycle with the Primary Context already loaded (see "Per-step Primary Context Load" above).
@@ -269,7 +297,13 @@ If `test.command` is empty → skip TDD, implement directly.
 
 If `test.command` is set:
 1. **Write test** — based on step's AC
-2. **Confirm red** — test fails (passes → test too loose, fix)
+2. **Confirm red** — test fails (passes → test too loose, fix), **and record it (F-086)**:
+   write `FALSIFIED_AC <AC-id>: <command> — red before the change: <one line of the failure>`
+   to `<milestone-dir>/notes.md`. A red run that happens only in the conversation cannot be
+   checked later; `ae:review` Check 7 reads this line and reports an AC that is green and
+   never seen red as **unfalsified**. The record is the cheap form of "would this check
+   notice if the change were absent"; for a load-bearing AC, the stronger form is to plant a
+   defect after green and confirm the check turns red, recorded the same way.
 3. **Cross-family testgen** — Codex suggests edge cases
 4. **Synthesize** — merge Claude + cross-family test ideas
 5. **Implement** — minimum code to pass tests
@@ -288,7 +322,10 @@ Track consecutive failures per test file. Same test file fails N times (default:
 Options:
 1. Retry with a different approach
 2. Skip this subtask and defer
-3. Pause for human help
+3. Pause for human help — **last resort**. Options 1 and 2 are the loop's own; this one
+   stops it. Take it only when the criteria themselves look wrong, per
+   [Stage handovers](../../handover.md) § Who decides, inside the loop. "This is hard" is
+   option 1; "this criterion cannot be met however the work is divided" is an escalation.
 ```
 
 ## Pre-commit Checks

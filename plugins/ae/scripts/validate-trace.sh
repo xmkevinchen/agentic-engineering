@@ -2,7 +2,23 @@
 # validate-trace.sh — Plan 054 Step 5: ~/.ae/traces/<session-id>.ndjson schema validator
 #
 # Usage: bash validate-trace.sh <path/to/file.ndjson>
-# Exit 0 = all records valid; Exit 1 = any record invalid or file unreadable.
+#
+# SCOPE — this validates ONE record shape, not the file.
+#
+# A trace file holds several emitter shapes. This checks only the 9-field protocol
+# record, which is the one with no `record_type` field. A record that carries a
+# `record_type` is out of scope here and IS REPORTED INVALID even when it is
+# correctly formed — that is expected, and adding those shapes to this validator is
+# explicitly refused (see plugins/ae/tests/assertions/trace-schema-cross-family-rows.md).
+# The registry of shapes lives in plugins/ae/docs/references/trace-schema.md.
+#
+# So: exit 1 means "some record is not a valid 9-field record". It does not mean the
+# file is malformed. The header used to say exit 0 was all records valid and exit 1
+# was any record invalid, which told a reader with a correctly-formed trace that
+# their file was broken.
+#
+# Exit 0 = every record checked is a valid 9-field record; Exit 1 = one is not, or
+# the file is unreadable.
 #
 # Schema v1.2 (9 fields per record):
 #   timestamp / project_root / skill / feature_id (nullable) /

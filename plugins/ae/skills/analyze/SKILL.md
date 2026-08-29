@@ -271,7 +271,17 @@ After all teammates have SendMessage'd findings to TL, before synthesis — the 
 
 TL collects findings, resolves disagreements, writes to `.ae/features/active/F-NNN-<slug>/analysis.md`:
 
-**Exit gate (analyze DoD — F-063)**: do NOT finish `analysis.md` until its `### Verification considerations` table (see below) is present with one row per likely acceptance dimension. This is `/ae:analyze`'s definition-of-done — the front-load that `/ae:plan` consumes. **Honest scope**: it is a presence gate and the *weak, self-graded half* of the harness (it raises the floor by forcing the verification means to be discovered, but cannot catch a specific-looking-but-vacuous row); review Check 7 remains the correctness check.
+**Exit gate, part 1 — the premise (F-086)**: do NOT finish `analysis.md` until its `## Premise` section (see below) answers all three questions with citations, and do NOT continue past a `no`. A `no` **ends the item here** — record it, close or re-aim the BL, and stop. This is the cheapest step in the pipeline and the only one that can save a whole cycle: across the first two Kernel runs it ended three candidates before any work started, one of which had already been written, tested and passed a Gate under an earlier attempt whose premise nobody had checked. The Gate cannot catch it — it checks whether evidence stands, not whether the premise does.
+
+**Exit gate, part 2 (analyze DoD — F-063)**: do NOT finish `analysis.md` until its `### Verification considerations` table (see below) is present with one row per likely acceptance dimension. This is `/ae:analyze`'s definition-of-done — the front-load that `/ae:plan` consumes. **Honest scope**: it is a presence gate and the *weak, self-graded half* of the harness (it raises the floor by forcing the verification means to be discovered, but cannot catch a specific-looking-but-vacuous row); review Check 7 remains the correctness check.
+
+**Handovers are bidirectional — see [Stage handovers](../../handover.md) (F-086).** This
+stage may also **be refused**: the premise verdict's citations are re-runnable, and a
+downstream stage that re-runs one and finds it does not hold sends the item back here. A
+verdict is provisionally true, never settled — which is why each row cites a `file:line`
+or a command rather than saying "checked".
+
+**Before handing anything to a person (F-086)**: run every check the next stage will run. A handover contract is not what this stage produces, it is **what the next stage will refuse it for** — and a person should be waiting for a signature, never for a repair. Every repair-interruption is a defect in this stage, not a slow reply. (Observed: a Contract was shown for approval after three of its four admission checks were run; the Human Owner approved, the fourth refused, and the bytes that landed were not the bytes that were approved.)
 
 **Per CLAUDE.md `Output Standards`** — pyramid tip ≤ 5 lines (required), supporting detail below (on-demand, omit empty sections). TL must first understand and distill — do not just splice raw agent findings together.
 
@@ -284,6 +294,19 @@ created: YYYY-MM-DD
 ---
 
 # Analysis: <feature title>
+
+## Premise (REQUIRED — a verdict, and a `no` ends the item)
+
+| question | verdict | evidence |
+|---|---|---|
+| Does this problem exist **today**? | yes / no | file:line, or the command that shows it |
+| Has this already been decided **the other way**? | no / yes | the doc, comment or assertion that decided it — or "searched `<what>`, nothing found" |
+| Can it be answered by a **command**? | yes / no / partly | the command, or why no command can settle it |
+
+Rules:
+- **Cite, do not assert.** "I checked" is not evidence; a path, a line or a command is.
+- **A `no` in row 1, or a `yes` in row 2, ends the item.** Write what was found and stop. That outcome is a result, not a failure — it is the cheapest one available.
+- **Row 3 routes the work, it does not block it.** A `no` means no Gate can accept this item: it is a prose-rule or judgement change, and it must not be planned as if an executable observation will appear later. Say so here so the next three stages do not spend effort discovering it.
 
 ## TL;DR
 
@@ -307,12 +330,28 @@ Only write the sections below when the TL;DR tip is insufficient to carry the us
 ### Industry comparison (on-demand)
 <standards-expert, only when it has actionable impact on the current judgment. Otherwise omit.>
 
-### Verification considerations (REQUIRED — per acceptance dimension)
-**Mandatory, not on-demand** (the one always-present supporting section — this is HDD's front-load: discover the verification means before planning). Record it as a **table**, one row **per likely acceptance dimension**:
+### Verification considerations (REQUIRED — the acceptance criteria, settled here)
+**Mandatory, not on-demand** (the one always-present supporting section — this is HDD's front-load: discover the verification means before planning). Record it as a **table**, one row **per acceptance dimension**:
 
-| dimension | verify_by | runnable-check sketch / rubric |
-|---|---|---|
-| `<acceptance dimension>` | `unit`\|`integration`\|`e2e`\|`contract`\|`judge`\|`manual` | deterministic → the check that would run; `judge` → annotate the class in the cell — `judge (fact-claim)` or `judge (form)` — plus the candidate rubric question, the artifact it judges, and (fact-claim only) a sketch of the source set the judge would read first; `manual` → what a human confirms |
+| id | property | falsifier | verify_by | runnable-check sketch / rubric |
+|---|---|---|---|---|
+| `AC1` | `<what must hold>` | `<the search that would find the counterexample — or `judgement`>` | `unit`\|`integration`\|`e2e`\|`contract`\|`judge`\|`manual` | deterministic → the check that would run; `judge` → annotate the class in the cell — `judge (fact-claim)` or `judge (form)` — plus the candidate rubric question, the artifact it judges, and (fact-claim only) a sketch of the source set the judge would read first; `manual` → what a human confirms |
+
+**This table is the acceptance criteria, not a sketch of them (F-086).** They are settled
+here, before any solution exists — criteria written after a design drift toward whatever
+the design produced. `/ae:plan` copies the `id`, `property` and `falsifier` columns
+verbatim into the plan; it does not re-author them, and **dropping one is a refusal that
+comes back here**, not a note plan writes to itself. What plan does own is the
+**method** — which `verify_by` kind, and how the check is built. Criteria here, methods
+there, per [Stage handovers](../../handover.md).
+
+**The falsifier column is the load-bearing one**, and it is not always a test — it is the
+search that would find the counterexample. A document is read against **the thing it
+describes**, never against another document. A data invariant is the query that returns
+the violating rows, where an empty result is the evidence. A wired path is checked by
+asking the far end what it received. Where no such search exists: `presence + audit` for
+a rule a model is asked to follow (say what the audit would read), or `judgement` for a
+design preference — and a `judgement` row yields **no acceptance criterion at all**.
 
 Map each dimension to a `verify_by` kind per [`docs/references/verify-by-kinds.md`](../../../../docs/references/verify-by-kinds.md) — push each as far toward deterministic as it honestly goes; cover **non-code dimensions too** (business-data validity, domain invariants, BDD/behavioral scenarios), not just code checks. This table is the raw material `/ae:plan` consumes (its Step-1 Research reads it as the per-AC `verify_by` starting point + the runnable-check mandate), so a vague row here becomes a vacuous AC there. It must be PRESENT + per-dimension — the `### Synthesize` **Exit gate (analyze DoD)** above blocks finishing `analysis.md` without it. (Pre-F-063 this section was REQUIRED-but-ungated; F-063 gave it teeth.)
 

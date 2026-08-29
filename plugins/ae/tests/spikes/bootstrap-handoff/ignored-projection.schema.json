@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ae:bootstrap-handoff/ignored-projection.schema.json",
+  "title": "bootstrap_ignored_v1 projection",
+  "description": "Closed shape of the repository-wide ignored-path projection. The profile has NO caller-selected roots and NO globs: the enumerator always starts at the Git toplevel, always takes every path git reports as ignored plus every untracked descendant of project-root .ae/**, and the only subtractions are exact entries in protocol_output_exclusions[]. Directory and prefix exclusions are invalid by construction — an exclusion names one path, and that path must be bound by an independent artifact field in the request -> result -> subject -> review -> pointer DAG. Read alongside validate-artifacts.sh, which enforces the rules a schema cannot state: no traversal, no symlinked output, no self-reference cycle, and no change to an ignored file that is neither excluded nor bound. Validated by the compact schema interpreter in validate-artifacts.sh, which supports type / properties / required / additionalProperties:false / items / minItems / enum / const / pattern / $ref -> #/$defs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_kind",
+    "artifact_version",
+    "authority",
+    "feature_id",
+    "work_package",
+    "attempt_id",
+    "capture_phase",
+    "captured_at",
+    "repository_root",
+    "commit",
+    "profile",
+    "enumerator",
+    "request_scope",
+    "inputs",
+    "protocol_output_exclusions",
+    "entries"
+  ],
+  "properties": {
+    "artifact_kind": { "const": "bootstrap_ignored_projection" },
+    "artifact_version": { "const": 1 },
+    "authority": { "const": "bootstrap_non_authoritative" },
+    "feature_id": { "type": "string", "pattern": "^F-[0-9]{3}$" },
+    "work_package": { "type": "string", "pattern": "^WP-[A-Za-z0-9._-]+$" },
+    "attempt_id": { "type": "string", "pattern": "^A-[0-9]{3}$" },
+    "capture_phase": { "enum": ["before", "after"] },
+    "captured_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z$" },
+    "repository_root": { "const": "." },
+    "commit": { "$ref": "#/$defs/sha1" },
+    "profile": { "const": "bootstrap_ignored_v1" },
+    "enumerator": { "$ref": "#/$defs/identity" },
+    "request_scope": { "$ref": "#/$defs/identity" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["git_ignored", "ae_untracked", "canonical_ignored_raw", "ignore_config"],
+      "properties": {
+        "git_ignored": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["argv", "raw_sha256"],
+          "properties": {
+            "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "raw_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "ae_untracked": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root", "canonical_raw_sha256"],
+          "properties": {
+            "root": { "const": ".ae" },
+            "canonical_raw_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "canonical_ignored_raw": { "$ref": "#/$defs/identity" },
+        "ignore_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gitignore", "info_exclude", "global_excludes"],
+          "properties": {
+            "gitignore": { "$ref": "#/$defs/config_identity" },
+            "info_exclude": { "$ref": "#/$defs/config_identity" },
+            "global_excludes": { "$ref": "#/$defs/config_identity" }
+          }
+        }
+      }
+    },
+    "protocol_output_exclusions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exclusion" }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "path": { "type": "string", "pattern": "^[^/\\\\][^\\\\]*$" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "config_identity": {
+      "description": "An ignore-configuration input. A missing or unknown input invalidates the profile, so 'absent' and 'not_configured' are recorded explicitly rather than omitted.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "path", "type", "sha256", "link_target"],
+      "properties": {
+        "state": { "enum": ["present", "absent", "not_configured", "configured_missing"] },
+        "path": { "type": ["string", "null"] },
+        "type": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"] },
+        "link_target": { "type": ["string", "null"] }
+      }
+    },
+    "exclusion": {
+      "description": "One exact path subtracted from the projection. 'reason' is closed: every allowed value names an artifact in the protocol DAG whose own field carries the excluded bytes. 'evidence_entry' expands to individual paths and never covers a directory.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "capture_phase", "reason", "expected_state", "binding"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "capture_phase": { "enum": ["before", "after"] },
+        "reason": {
+          "enum": [
+            "projection_manifest",
+            "projection_raw_component",
+            "work_request",
+            "work_result",
+            "verification_subject",
+            "package_review",
+            "accepted_pointer",
+            "implementation_continuation",
+            "evidence_manifest",
+            "evidence_entry"
+          ]
+        },
+        "expected_state": { "enum": ["present", "absent"] },
+        "binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["artifact_path", "field"],
+          "properties": {
+            "artifact_path": { "$ref": "#/$defs/path" },
+            "field": { "description": "Where in the binding artifact the excluded bytes are carried. Either a dotted field path (baseline_after.git_status.sha256), an entry selector naming the exact row (entries[path=<repo-relative path>].sha256), or a $-prefixed name for an identity carried outside that artifact — an unreviewed verification subject is bound by the next layer, not by itself. A selector names one path: it cannot stand for a directory of them.", "type": "string", "pattern": "^(\\$[A-Za-z0-9_]+|[A-Za-z0-9_-]+(\\[path=[^\\]]+\\])?(\\.[A-Za-z0-9_-]+(\\[path=[^\\]]+\\])?)*)$" }
+          }
+        }
+      }
+    },
+    "entry": {
+      "description": "One lstat'd path. Links are recorded, never followed: a symlink carries link_target and no digest, so a projection cannot be widened by pointing at something outside the repository.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "type", "mode", "sha256", "link_target"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "type": { "enum": ["file", "directory", "symlink", "other", "missing"] },
+        "mode": { "type": ["string", "null"], "pattern": "^[0-7]{4}$" },
+        "sha256": { "type": ["string", "null"] },
+        "link_target": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

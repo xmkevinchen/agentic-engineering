@@ -12,7 +12,7 @@ source: regression
 #### Fast path present with all guards (AC1)
 - [text:contains] Rule 2 opens with `**Any REVISE** (after Rule 1.5 filtering)` (label preserved) and routes to two branches
 - [text:contains] `Convergent-REVISE fast path` branch exists with the three conditions: `方向收敛互不冲突`, `无需用户独有判断`, `不实质改动框架结构`
-- [text:contains] Structural diff gate present: demotion on heading add/remove/rename OR `>30% in line count AND by more than 5 lines absolute`, logging `[FAST-PATH DEMOTED: diff exceeded structural bound]`
+- [text:contains] Structural diff gate present: demotion on heading add/remove/rename OR `in-force line count grows >30% AND by more than 5 lines absolute` (in-force excludes text under a `**Out of scope**` label from both diff sides), logging `[FAST-PATH DEMOTED: ...]` with an explicit growth classification (`mechanism-growth` or `documented-exclusion, N line(s) excluded`)
 - [text:contains] `round_0: integrated_no_rerun` set on fast-path pass; framing template enum comment includes `integrated_no_rerun`
 - [text:contains] Structured three-condition record in `round_0_notes` with labeled entries `convergent:`, `no_user_call:`, `not_structural:`
 - [text:contains] Standard-2 three-line announcement template opening `## Round 0: convergent revisions integrated`, listing the integrated items, ending with the correction-window line (有异议现在说)

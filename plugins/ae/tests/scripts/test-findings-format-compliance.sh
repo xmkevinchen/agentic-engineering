@@ -7,8 +7,9 @@
 #
 # Two halves, and the split is what keeps the suite environment-independent:
 #
-#   DETERMINISTIC (always runs) — a stub HTTP server on an ephemeral port returns canned replies
-#     and the bridge is pointed at it. This is where the negative cases live: a missing required
+#   DETERMINISTIC (always runs) — a stub HTTP server uses an ephemeral port by default, or an
+#     exact validated loopback endpoint when the offline boundary requests one, and returns canned
+#     replies to the bridge. This is where the negative cases live: a missing required
 #     field, a severity outside the allowed set, and prose instead of JSON. They are the
 #     assertions that matter and they must not depend on talking a real model into misbehaving.
 #
@@ -101,6 +102,50 @@ def ok(m):  print("  ok: %s" % m)
 def bad(m): print("  FAIL: %s" % m, file=sys.stderr); failures.append(m)
 def skip(m): print("  SKIP: %s" % m)
 
+# A-006 can opt into one literal TCP/IPv4 endpoint. The default remains port 0 so ordinary
+# callers retain the collision-free fixture; any other opt-in form fails before socket creation.
+EXPECTED_FIXED_ENDPOINT = "http://127.0.0.1:48183/v1"
+def parse_loopback_endpoint(value):
+    if value != EXPECTED_FIXED_ENDPOINT:
+        raise ValueError("endpoint is not the exact A-006 HTTP/TCP4 loopback endpoint")
+    return ("127.0.0.1", 48183)
+
+INVALID_LOOPBACK_OVERRIDES = (
+    "http://localhost:48183/v1",
+    "http://0.0.0.0:48183/v1",
+    "http://127.0.0.1:0/v1",
+    "http://127.0.0.1:48184/v1",
+    "http://127.0.0.1:48183/v2",
+    "http://127.0.0.1:48183/v1 trailing",
+)
+invalid_overrides_rejected = 0
+for invalid_override in INVALID_LOOPBACK_OVERRIDES:
+    try:
+        parse_loopback_endpoint(invalid_override)
+    except ValueError:
+        invalid_overrides_rejected += 1
+    else:
+        raise SystemExit("unsafe loopback override was accepted: %s" % invalid_override)
+
+fixed_endpoint = os.environ.get("AE_TEST_FINDINGS_LOOPBACK_ENDPOINT")
+observation_path = os.environ.get("AE_TEST_FINDINGS_OBSERVATION_PATH")
+if (fixed_endpoint is None) != (observation_path is None):
+    raise SystemExit("fixed loopback endpoint and observation path must be supplied together")
+fixed_loopback = None
+if fixed_endpoint is not None:
+    try:
+        fixed_loopback = parse_loopback_endpoint(fixed_endpoint)
+    except ValueError as exc:
+        raise SystemExit("invalid fixed loopback endpoint: %s" % exc)
+    expected_observation_path = os.path.join(os.environ.get("TMPDIR", ""),
+                                             "findings-loopback-observation.json")
+    if not os.path.isabs(expected_observation_path) or observation_path != expected_observation_path:
+        raise SystemExit("loopback observation path must be the exact TMPDIR sidecar")
+    if os.environ.get("AE_TEST_OFFLINE_ONLY") != "1":
+        raise SystemExit("fixed loopback mode requires AE_TEST_OFFLINE_ONLY=1")
+    if os.environ.get("AE_OPENAI_COMPAT_ENDPOINT") != "offline://a006-zero-call":
+        raise SystemExit("fixed loopback mode requires the bound offline provider endpoint")
+
 # --- payloads under test -------------------------------------------------------------------
 # Boundary values are instantiated, not approximated: the EMPTY findings list and the MAXIMUM
 # severity (P1) each get a case. "Nothing was found" and "the format was not followed" are
@@ -124,12 +169,13 @@ CASES = [
 # Returns whatever payload the current case names as the assistant message, in the OpenAI
 # response shape. A canned server rather than a real model because the negative cases must be
 # reproducible — "get a model to emit a bad severity on demand" is not a test.
-current = {"payload": ""}
+current = {"payload": "", "handled_requests": 0}
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("content-length", 0))
         self.rfile.read(length)
+        current["handled_requests"] += 1
         body = json.dumps({
             "id": "chatcmpl-stub", "object": "chat.completion",
             "choices": [{"index": 0, "finish_reason": "stop",
@@ -143,9 +189,12 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):  # keep the suite output clean
         pass
 
-srv = HTTPServer(("127.0.0.1", 0), Handler)
+bind_host, bind_port = fixed_loopback or ("127.0.0.1", 0)
+srv = HTTPServer((bind_host, bind_port), Handler)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 stub_endpoint = "http://127.0.0.1:%d/v1" % srv.server_address[1]
+if fixed_endpoint is not None and stub_endpoint != fixed_endpoint:
+    raise RuntimeError("stub server did not bind the exact requested endpoint")
 
 # --- driving the bridge over stdio ----------------------------------------------------------
 def call_bridge(args, env_extra=None, timeout=60):
@@ -251,59 +300,81 @@ for label, expect_compliant, payload in CASES:
 
     ok("%s — bridge and spec agree" % label)
 
+if current["handled_requests"] != len(CASES):
+    bad("stub handled %d request(s), expected %d" %
+        (current["handled_requests"], len(CASES)))
 srv.shutdown()
+srv.server_close()
 
-# --- live half (skips when nothing answers) -------------------------------------------------
-endpoint = os.environ.get("AE_OPENAI_COMPAT_ENDPOINT", "http://127.0.0.1:8000/v1")
-import urllib.request, urllib.error
+# --- live half (skips mechanically inside the A-006 zero-call boundary) ---------------------
 live = False
-try:
-    urllib.request.urlopen(endpoint.rstrip("/") + "/models", timeout=3).read()
-    live = True
-except Exception as e:
-    skip("no backend answers at %s (%s) — the live assertion is not run; the deterministic "
-         "cases above are unaffected" % (endpoint, type(e).__name__))
-
-if live:
+external_backend_attempted = False
+if os.environ.get("AE_TEST_OFFLINE_ONLY") == "1":
+    skip("offline-only boundary — optional live backend assertion was not attempted")
+else:
+    endpoint = os.environ.get("AE_OPENAI_COMPAT_ENDPOINT", "http://127.0.0.1:8000/v1")
+    import urllib.request, urllib.error
+    external_backend_attempted = True
     try:
-        models = json.loads(urllib.request.urlopen(endpoint.rstrip("/") + "/models", timeout=5).read())
-        model = (models.get("data") or [{}])[0].get("id")
-    except Exception:
-        model = None
-    if not model:
-        skip("endpoint answered but served no model id — live assertion not run")
-    else:
-        res = call_bridge({"model": model, "family": "unknown", "endpoint": endpoint,
-                           "expect": "findings", "system": "Role: security reviewer.",
-                           "prompt": "Review this function in src/auth.js, which starts at line 12.\n\n"
-                                     "function auth(user, pass) {\n"
-                                     "  const q = \"SELECT * FROM users WHERE name='\" + user + \"'\";\n"
-                                     "  return db.query(q);\n}\n"},
-                          # Tightly bounded on purpose. This test is in the standard suite, and
-                          # the endpoint's first-listed model may be a large one — a 180s budget
-                          # turned a suite that ran in under a minute into a multi-minute wait.
-                          # A slow backend degrades to SKIP; it does not get to hold the suite.
-                          timeout=45)
-        if res is None:
-            skip("live call to %s produced no response within the budget — the deterministic "
-                 "cases stand; a slow or absent backend does not hold the suite" % model)
+        urllib.request.urlopen(endpoint.rstrip("/") + "/models", timeout=3).read()
+        live = True
+    except Exception as e:
+        skip("no backend answers at %s (%s) — the live assertion is not run; the deterministic "
+             "cases above are unaffected" % (endpoint, type(e).__name__))
+
+    if live:
+        try:
+            models = json.loads(urllib.request.urlopen(endpoint.rstrip("/") + "/models", timeout=5).read())
+            model = (models.get("data") or [{}])[0].get("id")
+        except Exception:
+            model = None
+        if not model:
+            skip("endpoint answered but served no model id — live assertion not run")
         else:
-            text = "".join(c.get("text", "") for c in res.get("content", []))
-            try:
-                doc = json.loads(text)
-            except json.JSONDecodeError:
-                doc = {}
-            if doc.get("compliant") is True:
-                ok("live: %s satisfied the contract (%d finding(s))"
-                   % (model, len(doc.get("findings") or [])))
-            elif doc.get("compliant") is False:
-                # A real non-compliance is a genuine result about that backend, not a broken
-                # test. It is reported and does not redden the suite — the assertion this test
-                # owns is that non-compliance is DETECTED, which the deterministic half proves.
-                skip("live: %s did not satisfy the contract (%s) — reported, not reshaped, which "
-                     "is the required behaviour" % (model, doc.get("violations")))
+            res = call_bridge({"model": model, "family": "unknown", "endpoint": endpoint,
+                               "expect": "findings", "system": "Role: security reviewer.",
+                               "prompt": "Review this function in src/auth.js, which starts at line 12.\n\n"
+                                         "function auth(user, pass) {\n"
+                                         "  const q = \"SELECT * FROM users WHERE name='\" + user + \"'\";\n"
+                                         "  return db.query(q);\n}\n"},
+                              # Tightly bounded on purpose. This test is in the standard suite,
+                              # and the endpoint's first-listed model may be a large one.
+                              timeout=45)
+            if res is None:
+                skip("live call to %s produced no response within the budget — the deterministic "
+                     "cases stand; a slow or absent backend does not hold the suite" % model)
             else:
-                skip("live: %s returned no compliance verdict" % model)
+                text = "".join(c.get("text", "") for c in res.get("content", []))
+                try:
+                    doc = json.loads(text)
+                except json.JSONDecodeError:
+                    doc = {}
+                if doc.get("compliant") is True:
+                    ok("live: %s satisfied the contract (%d finding(s))"
+                       % (model, len(doc.get("findings") or [])))
+                elif doc.get("compliant") is False:
+                    skip("live: %s did not satisfy the contract (%s) — reported, not reshaped, "
+                         "which is the required behaviour" % (model, doc.get("violations")))
+                else:
+                    skip("live: %s returned no compliance verdict" % model)
+
+if observation_path is not None:
+    observation = {
+        "artifact_kind": "a006_findings_loopback_observation",
+        "artifact_version": 1,
+        "bound_host": fixed_loopback[0],
+        "bound_port": fixed_loopback[1],
+        "endpoint": fixed_endpoint,
+        "external_backend_attempted": external_backend_attempted,
+        "handled_requests": current["handled_requests"],
+        "invalid_overrides_rejected": invalid_overrides_rejected,
+        "live_backend_skipped": not live,
+    }
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(observation_path, flags, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        json.dump(observation, stream, indent=2)
+        stream.write("\n")
 
 sys.exit(1 if failures else 0)
 PY

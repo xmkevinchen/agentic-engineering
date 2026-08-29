@@ -1,6 +1,6 @@
 ---
 name: discuss
-description: Structured design discussion (create topics or continue pending ones, all decisions persisted). Recommended: Sonnet or above
+description: "Structured design discussion (create topics or continue pending ones, all decisions persisted). Recommended: Sonnet or above"
 argument-hint: "<topic description or discussion directory path>"
 user-invocable: true
 model: opus
@@ -270,8 +270,8 @@ Canonical statement, producer inventory and correlator requirement: `ae:agent-se
 2. **Any REVISE** (after Rule 1.5 filtering) → TL first classifies the valid REVISE set, then routes to one of two branches (this classification is internal to Rule 2 — the rule-ordering and first-match-wins semantics of Rules 1–4 are unchanged):
 
    **(a) Convergent-REVISE fast path** — fires only when ALL three conditions hold: ① 方向收敛互不冲突 (all suggested edits point the same direction, none contradict another); ② 无需用户独有判断 (no REVISE requires a business/preference call only the user can make); ③ 不实质改动框架结构 (TL can integrate each edit faithfully; the integration is wording/supplement-level, not structural — calibration evidence: F-036/F-037 reruns where deltas had shrunk to wording level were pure churn, while F-037's FIRST run had substantive REVISEs that merited a rerun).
-   - **Structural diff gate** (mechanical pre-commit check, after the three-condition judgment, before announcing): diff the integrated framing against the pre-integration version. Demote to the contested path automatically (no override, no user prompt) if **the diff adds, removes, or renames any section heading** (structural = the section structure itself changed) OR **any section grows >30% in line count AND by more than 5 lines absolute** (the absolute floor keeps single-sentence additions to short sections inside the fast path); log `[FAST-PATH DEMOTED: diff exceeded structural bound]`. This makes the `not_structural:` record evidence, not assertion. (Bounds recalibrated at F-038 review: a section-count bound would demote legitimate multi-section wording integrations — the F-037 case this fast path exists to serve.)
-   - On pass: TL integrates the edits (`## User Question (Frozen)` byte-for-byte preserved, as in every rewrite), sets `round_0: integrated_no_rerun`, and writes a structured three-condition record into `round_0_notes` with three labeled entries: `convergent:` (each REVISE theme + why they coexist), `no_user_call:` (why no user judgment was needed), `not_structural:` (which integrations were wording/supplement-level; cite the diff-gate numbers).
+   - **Structural diff gate** (mechanical pre-commit check, after the three-condition judgment, before announcing): diff the integrated framing against the pre-integration version. Demote to the contested path automatically (no override, no user prompt) if **the diff adds, removes, or renames any section heading** (structural = the section structure itself changed) OR **any section's in-force line count grows >30% AND by more than 5 lines absolute** (the absolute floor keeps single-sentence additions to short sections inside the fast path). *In-force* excludes, from both the pre- and post-integration text, any span starting at a line matching `**Out of scope**` and running to the next bold label or the section's end — a REVISE that turns a scope item into a reasoned exclusion is a reduction, not an addition, and recorded exclusions are audit trail, not mechanism (BL-209). Log `[FAST-PATH DEMOTED: <heading-changed | growth: in-force <before> -> <after> lines (+<pct>%), <mechanism-growth | documented-exclusion, N line(s) excluded>>]` — the growth branch always names which of the two it was, not just the raw percentage. This makes the `not_structural:` record evidence, not assertion. (Bounds recalibrated at F-038 review: a section-count bound would demote legitimate multi-section wording integrations — the F-037 case this fast path exists to serve.)
+   - On pass: TL integrates the edits (`## User Question (Frozen)` byte-for-byte preserved, as in every rewrite), sets `round_0: integrated_no_rerun`, and writes a structured three-condition record into `round_0_notes` with three labeled entries: `convergent:` (each REVISE theme + why they coexist), `no_user_call:` (why no user judgment was needed), `not_structural:` (which integrations were wording/supplement-level; cite the diff-gate numbers and growth classification — `mechanism-growth` or `documented-exclusion, N line(s) excluded`).
    - Announce to the user (Standard 2 three-line form — the user's correction window needs the delta visible):
      ```
      ## Round 0: convergent revisions integrated
@@ -520,6 +520,15 @@ Keep the readout in plain language — no internal bookkeeping terms (Round 0 / 
 
 For escalated topics: use `AskUserQuestion` with team findings + genuine dilemma + YOUR leaning.
 
+**Before escalating anything, quote it (F-086).** Two checks, in order:
+
+1. **Is it already answered?** If a Contract, a decision record or an assertion file settles it, it is not a question — it is a lookup, and putting it to a person turns a recorded fact into an opinion.
+2. **Is it answerable by evidence?** If verifying something in the tree would settle it, verify it. A clear defect with an unknown blast radius is a thing to investigate, not a thing to escalate.
+
+If it survives both, **paste the wording that reserves the decision, then ask.** Paraphrasing from memory changes the question: observed three times in one session — a recorded fact asked as a judgement, a menu offering an option the machinery would refuse, and *"was this worth it?"* in place of *"worth doing even if AE did not exist"*, which the reader reasonably heard as "should we stop the project". Two of the three inflated a small question into a large one.
+
+Also name what is being judged in **plain language**, not by identifier. A person who must first translate `BL-214` back into "the bridge sends one API key to every endpoint" is doing the skill's work before they can do their own.
+
 **Record** for each topic decided:
 1. **Quality check** — rationale must cite team evidence, not "hand-wavy reasoning". Weak rationale → force revisit.
 2. **Write round file**: `topic-NN-slug/round-NN.md` with team discussion content + outcome
@@ -559,7 +568,12 @@ Can the team obtain the missing info?
 | **Spawn as backlog** | Execution problem, not design | Write to `output.backlog/unscheduled/` — allocate the `BL-NNN` via `bash plugins/ae/scripts/next-bl-id.sh` (canonical allocator; do not hand-pick a number). New BLs land unscheduled; sprint assignment via `/ae:roadmap plan` |
 | **Explain + assume** | Delay cost > assumption risk | Record assumption + revisit trigger |
 
-**TL resolves autonomously first.** Only escalate to user when TL genuinely can't resolve.
+**TL resolves autonomously first.** "Genuinely can't resolve" has a definition, and it is
+narrow — see [Stage handovers](../../handover.md) § Who decides, inside the loop. A topic
+is the TL's whenever the frozen criteria are unchanged, **including a design that failed at
+acceptance and has to be decided differently**: the criteria held, the design did not, and
+nobody agreed to the design. Escalate only to change a criterion, or where the criteria do
+not cover the question at all and either answer would be a guess about intent.
 
 Update summary.md and index.md for each resolution.
 
@@ -580,9 +594,9 @@ entities: []
 
 ## Decision Summary (Converged)
 
-| # | Topic | Decision | Rationale | Reversibility |
-|---|-------|----------|-----------|---------------|
-| 1 | [topic] | [decision] | [evidence-based reason] | high/medium/low |
+| # | Topic | Decision | Falsifier | Rationale | Reversibility |
+|---|-------|----------|-----------|-----------|---------------|
+| 1 | [topic] | [decision] | [what observation would show it is not met — or `judgement`] | [evidence-based reason] | high/medium/low |
 
 ## Spawned Discussions
 | # | Topic | New Discussion | Reason |
@@ -609,6 +623,50 @@ entities: []
 ## Doodlestein Review
 [Challenges raised, how each was resolved, any topics reopened — audit trail, kept below Next Steps]
 ```
+
+**The falsifier column is what `/ae:plan` consumes (F-086).** A decision states a
+**property**; the falsifier states **what would show the property does not hold**. Plan
+turns the pair into an acceptance criterion and an observation; without the second half
+it has to invent one, which is where vacuous ACs come from.
+
+- **A falsifier is not a test. It is the search that would find the counterexample.**
+  In code that search happens to be a test; in other work it is something else, and the
+  question is the same — *what would I look at, and what would I see there, if this were
+  not so?*
+
+  | the claim | the counterexample search |
+  |---|---|
+  | code behaves this way | a check that fails against the code as it stands today |
+  | a document describes the thing | read the document against **the thing**, never against another document |
+  | data holds an invariant | the query that returns the violating rows — an empty result is the evidence |
+  | a path is wired end to end | ask the far end what it received |
+  | a model follows a rule | **no such search exists** — see below |
+  | we chose A over B | none. It is a judgement. |
+
+- **Observe the far end, not the near end.** The three Kernel runs each turned on this:
+  assert the header the *endpoint received*, not the arguments the caller passed; ask the
+  *built bundle* what it accepts, not a third document; *run* the validator, do not compare
+  two pieces of prose. Two documents agreeing with each other establish nothing.
+
+- **Name the observation, not the method.** *"a request to an endpoint that named its own
+  key variable carries a different key than one that named none"* is a falsifier. *"write
+  a unit test"* is not — it names a technique and settles nothing.
+- **When no search exists, say which kind of nothing it is.** Two cases, handled
+  differently. *Checkable only afterwards* — whether a model followed a written rule, and
+  anything else about behaviour rather than state: the strongest instrument is a
+  **presence** check (the rule cannot be silently deleted) plus a **retrospective sample**
+  once runs exist. Write the falsifier cell as `presence + audit` and say what the audit
+  would read. *Not checkable at all* — a design preference: write `judgement`.
+
+- **A decision whose falsifier cannot be named does not go to plan.** It is not ready:
+  either what it claims is not yet decidable, or it is a judgement rather than a
+  criterion. Route it to a **Spawned Discussion** with the reason `no falsifier — <what
+  is undecided>`, or mark the cell `judgement` when it is genuinely a preference the
+  team has settled and nothing observable turns on it. Marking it `judgement` says plan
+  must not derive an AC from it.
+- **Do not write a falsifier you have not thought through.** A cell that restates the
+  decision in the negative (*"the thing does not work"*) is the vacuous row this column
+  exists to prevent, and it costs a plan round to discover.
 
 **Conclusion prose follows [AE Output Standards](../../output-standards.md)** (same as `analyze`): lead with the single most important decision (no preamble); rationale concise and directly supporting the decision; risks explicit; rejected alternatives + round-by-round detail belong in the lower-layer audit trail, not the pyramid tip.
 

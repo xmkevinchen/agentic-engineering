@@ -91,3 +91,4 @@
 - 2026-08-22T18:46:50Z rejected: F-082: relates_to -> F-081 [untagged] lint-revert
 - 2026-08-22T18:46:50Z rejected: F-082: relates_to -> BL-215 [untagged] lint-revert
 - 2026-08-22T18:47:35Z add-edges: F-082: 2 edge(s)
+- 2026-08-29T00:32:53Z re-anchor: syn-knowledge-graph, syn-cross-family-provenance, syn-verification-harness (skill-prose anchor drift after F-086/F-088 edits; 3 anchors re-pointed, 1 re-hashed after re-look — claim holds, body unchanged)

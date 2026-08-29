@@ -35,6 +35,15 @@
 #      (`check-proxy-residual.sh`) was already red — F-082's own Step 4 edited a proxy, the
 #      recorded residual went stale, and no suite entry was pointed at the corpus to notice. A
 #      check that works and is not wired is indistinguishable from no check.
+#   5. A definition's declared frontmatter is the metadata actually in force. This is the
+#      script's own subject applied to the corpus it lives in, and the corpus failed it: five
+#      SKILL.md files and one agent carried a `Recommended: Sonnet or above` description or a
+#      shell-shaped `probe: [...]` value, neither of which is valid YAML. The host's response
+#      to an unparseable block is to load the definition with EMPTY metadata — every declared
+#      field silently dropped, no error at the point of use — so `model`, `effort`, `tools`
+#      and `user-invocable` were declared and none were in force. Grep saw the keys and was
+#      satisfied, which is why this pair parses instead: presence of a declaration is not
+#      evidence of a projection.
 #
 # HONEST SCOPE — what this cannot see, stated because a declared-vs-effective check that
 # overstates its reach is the exact defect it exists to catch:
@@ -48,6 +57,9 @@
 #     `test-manifest-single-source.sh` covers the one shape of this that is visible in a
 #     declaration; the install path itself is not reachable from a test.
 #   * It cannot see paraphrase, in any pair. Every comparison here is literal.
+#   * Pair 5 parses with PyYAML, not with the host's parser. The two agree on the malformations
+#     that motivated it, and `claude plugin validate` is the authority when they disagree; what
+#     this pair guarantees is that a parse failure cannot reach a commit unremarked.
 #   * Pair 4 asserts a check is RUN, not that what it asserts is correct or complete.
 #
 # Exit 0 = every pair evaluated and agreed. Exit 1 = at least one disagreement, or a pair that
@@ -161,6 +173,78 @@ for path in "$SCRIPTS"/check-*.sh; do
           CORPUS_LINTS, or to NOT_CORPUS_WIDE with the reason it cannot run corpus-wide."
   fi
 done
+
+# --- Pair 5: declared frontmatter is the metadata actually in force ------------------------
+#
+# Every skill and agent definition in the tree is parsed. A block that does not parse, or that
+# parses to something other than a non-empty mapping, is reported per file — those are the two
+# shapes of "declared but not effective", and the host reports neither at the point of use.
+#
+# The parser is a hard requirement, not a nicety: without one this pair can only look at text,
+# and looking at text is the failure it exists to end. No parser is a failure.
+if ! command -v python3 >/dev/null 2>&1; then
+  bad "frontmatter projection" "python3 not found — the corpus cannot be parsed, so this pair
+          is unchecked, which fails closed"
+elif ! python3 -c 'import yaml' >/dev/null 2>&1; then
+  bad "frontmatter projection" "PyYAML not importable — a grep-shaped substitute would pass the
+          exact corpus this pair was added for, so it fails closed instead"
+else
+  if out="$(python3 - "$REPO" <<'PY'
+import sys, pathlib, yaml
+
+repo = pathlib.Path(sys.argv[1])
+roots = [
+    sorted((repo / "plugins/ae/skills").glob("*/SKILL.md")),
+    # CLAUDE.md is a directory guide the host loads as plain memory — it projects
+    # no agent metadata, so holding it to name/description would demand a false
+    # declaration, the exact disease this pair exists to catch.
+    sorted(p for p in (repo / "plugins/ae/agents").rglob("*.md") if p.name != "CLAUDE.md"),
+]
+defs = [p for group in roots for p in group]
+if not defs:
+    print("no skill or agent definition found — this pair audited nothing")
+    sys.exit(1)
+
+bad = []
+for path in defs:
+    rel = path.relative_to(repo)
+    text = path.read_text(encoding="utf-8", errors="replace")
+    lines = text.split("\n")
+    if not lines or lines[0] != "---":
+        bad.append(f"{rel}: no leading --- fence; the host reads no metadata at all")
+        continue
+    close = next((i for i in range(1, len(lines)) if lines[i] == "---"), None)
+    if close is None:
+        bad.append(f"{rel}: leading frontmatter never closed")
+        continue
+    block = "\n".join(lines[1:close])
+    try:
+        parsed = yaml.safe_load(block)
+    except yaml.YAMLError as exc:
+        detail = str(exc).replace("\n", " ")[:160]
+        bad.append(f"{rel}: frontmatter does not parse, so the host loads it with EMPTY "
+                   f"metadata and every declared field is silently dropped — {detail}")
+        continue
+    if not isinstance(parsed, dict) or not parsed:
+        bad.append(f"{rel}: frontmatter parses to {type(parsed).__name__}, not a non-empty "
+                   f"mapping — declarations are present with no projection behind them")
+        continue
+    for key in ("name", "description"):
+        if not str(parsed.get(key, "")).strip():
+            bad.append(f"{rel}: parses, but '{key}' is absent or empty in the projection")
+
+if bad:
+    print("\n".join(bad))
+    sys.exit(1)
+print(f"{len(defs)} definition(s) parsed to a non-empty projection")
+PY
+  )"; then
+    ok "frontmatter projection" "$out"
+  else
+    bad "frontmatter projection" "declared metadata is not in force:"
+    printf '%s\n' "$out" | sed 's/^/          /' >&2
+  fi
+fi
 
 echo
 if [ "$fail" -eq 0 ]; then

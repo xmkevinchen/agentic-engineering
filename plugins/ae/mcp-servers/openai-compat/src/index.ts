@@ -20,6 +20,11 @@ interface Session {
   family: string;
   endpoint: string;
   model: string;
+  /** The variable this session's credential is read from, if the caller named one.
+   *  A session belongs to one endpoint, so the credential belongs to the session:
+   *  without this, the first turn is authenticated per endpoint and every later
+   *  turn falls back to the process-wide key. */
+  apiKeyEnv?: string;
   history: Msg[];
   lastUsed: number;
 }
@@ -54,7 +59,9 @@ const DEFAULT_FAMILY =
 /** Deliberately not a plugin option: one key here is sent to every endpoint the caller names,
  *  including local ones that never asked for credentials (`BL-214`). Promoting it to a
  *  configurable field would advertise that shape as supported. A per-endpoint key belongs to
- *  the per-entry `api_key_env` the `cross_family` table declares. */
+ *  the per-entry `api_key_env` the `cross_family` table declares — which is what a caller
+ *  naming `api_key_env` reaches. This one remains the fallback for a caller that names none,
+ *  so no existing configuration changes behaviour. */
 const API_KEY = env("AE_OPENAI_COMPAT_API_KEY");
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
@@ -62,9 +69,17 @@ const REQUEST_TIMEOUT_MS = Number(env("AE_OPENAI_COMPAT_TIMEOUT_MS") || 120_000)
 
 const sessions = new Map<string, Session>();
 
-function headers(): Record<string, string> {
+/** The credential for one call, chosen by the variable the caller named.
+ *
+ *  Naming a variable that is unset sends **no** authorization header — it does not
+ *  fall back to the process-wide key. Falling back would be the defect this exists
+ *  to remove wearing another name: the caller has said which credential this
+ *  endpoint takes, and the answer to "that one is not configured" is to send none,
+ *  not to send a different backend's. */
+function headers(apiKeyEnv?: string): Record<string, string> {
   const h: Record<string, string> = { "content-type": "application/json" };
-  if (API_KEY) h["authorization"] = `Bearer ${API_KEY}`;
+  const key = apiKeyEnv ? env(apiKeyEnv) : API_KEY;
+  if (key) h["authorization"] = `Bearer ${key}`;
   return h;
 }
 
@@ -83,6 +98,7 @@ async function callChat(
   model: string,
   messages: Msg[],
   reasoningEffort?: string,
+  apiKeyEnv?: string,
 ): Promise<{ content: string; reasoning: ReasoningReport; raw_id: string | null }> {
   const body: Record<string, unknown> = { model, messages };
   let sent = false;
@@ -97,7 +113,7 @@ async function callChat(
   try {
     res = await fetch(`${endpoint.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
-      headers: headers(),
+      headers: headers(apiKeyEnv),
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
@@ -163,6 +179,9 @@ server.tool(
       .string()
       .optional()
       .describe("Weight lineage of this model (e.g. qwen, deepseek, llama) — NOT the host it runs on"),
+    api_key_env: z.string().optional().describe(
+      "Name of the environment variable holding this backend's API key — the `api_key_env` its `cross_family` entry declares. The name travels, never the secret. Named and unset means no credential is sent, not the process-wide one.",
+    ),
     system: z.string().optional().describe("System instruction"),
     reasoning_effort: z
       .enum(["minimal", "low", "medium", "high"])
@@ -175,7 +194,7 @@ server.tool(
         "Output contract to state to the backend and validate the reply against. 'findings' = AE's review findings shape. A non-compliant reply is reported as such and returned unchanged — never reshaped.",
       ),
   },
-  async ({ prompt, model, endpoint, family, system, reasoning_effort, expect }) => {
+  async ({ prompt, model, endpoint, family, system, reasoning_effort, expect, api_key_env }) => {
     const ep = endpoint || DEFAULT_ENDPOINT;
     const mdl = model || DEFAULT_MODEL;
     if (!mdl) {
@@ -192,7 +211,7 @@ server.tool(
     history.push({ role: "user", content: prompt });
 
     try {
-      const { content, reasoning, raw_id } = await callChat(ep, mdl, history, reasoning_effort);
+      const { content, reasoning, raw_id } = await callChat(ep, mdl, history, reasoning_effort, api_key_env);
       history.push({ role: "assistant", content });
       const id = randomUUID();
       sessions.set(id, {
@@ -200,6 +219,7 @@ server.tool(
         family: family || DEFAULT_FAMILY,
         endpoint: ep,
         model: mdl,
+        apiKeyEnv: api_key_env,
         history,
         lastUsed: Date.now(),
       });
@@ -263,7 +283,7 @@ server.tool(
     const mdl = model || s.model;
     s.history.push({ role: "user", content: prompt });
     try {
-      const { content, reasoning, raw_id } = await callChat(s.endpoint, mdl, s.history, reasoning_effort);
+      const { content, reasoning, raw_id } = await callChat(s.endpoint, mdl, s.history, reasoning_effort, s.apiKeyEnv);
       s.history.push({ role: "assistant", content });
       s.lastUsed = Date.now();
       if (model) s.model = model;
@@ -292,11 +312,16 @@ server.tool(
 server.tool(
   "models",
   "List models an OpenAI-compatible endpoint currently serves.",
-  { endpoint: z.string().optional() },
-  async ({ endpoint }) => {
+  {
+    endpoint: z.string().optional(),
+    api_key_env: z.string().optional().describe(
+      "Name of the environment variable holding this backend's API key — the `api_key_env` its `cross_family` entry declares. The name travels, never the secret. Named and unset means no credential is sent, not the process-wide one.",
+    ),
+  },
+  async ({ endpoint, api_key_env }) => {
     const ep = endpoint || DEFAULT_ENDPOINT;
     try {
-      const res = await fetch(`${ep.replace(/\/$/, "")}/models`, { headers: headers() });
+      const res = await fetch(`${ep.replace(/\/$/, "")}/models`, { headers: headers(api_key_env) });
       if (!res.ok) throw new Error(`http ${res.status}`);
       const data = (await res.json()) as any;
       const list = (data?.data ?? []).map((m: any) => ({

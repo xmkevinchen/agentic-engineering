@@ -1,0 +1,644 @@
+// AC-11, AC-12, AC-13 — the write, the formats, the record.
+
+import {
+  mkdtempSync, mkdirSync, symlinkSync, readdirSync, readFileSync, writeFileSync, existsSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
+// `AE_REPO_ROOT` for the mutation check and the sweep, which run this suite from a
+// copy of the slice and so cannot reach the repository by walking up from here.
+const REPO = process.env.AE_REPO_ROOT || join(libDir, '..', '..', '..', '..');
+import { auditWritePath, auditReductionIgnoresTime } from '../lib/source-audit.mjs';
+import { KINDS, auditKinds } from '../lib/ledger.mjs';
+import { encodeNdjson, canonicalDigest, digestBytes } from '../lib/canonical-json.mjs';
+import { FROZEN, freezeProblems } from '../schema/frozen.mjs';
+import { auditRecordKinds } from '../lib/source-audit.mjs';
+import { lintSchema, validate } from '../lib/schema.mjs';
+import { OBJECTS, checkContractRelations } from '../schema/objects.mjs';
+import { RECORDS } from '../schema/records.mjs';
+import {
+  fail, ALL_KERNEL_CODES, RAISABLE, BY_CONSTRUCTION, RESERVED,
+} from '../lib/codes.mjs';
+import { execFileSync } from 'node:child_process';
+import { Kernel } from '../lib/kernel.mjs';
+import {
+  asObject, assignmentDoc, contractDoc, walk, RENDERED, SOURCE_ROOT, OWNER, FAILING,
+} from './fixtures.mjs';
+import { group, ok, eq, refuses } from './harness.mjs';
+
+const tmp = (p) => mkdtempSync(join(tmpdir(), p));
+
+export function recordTests() {
+  group('AC-11 · the completion write', () => {
+    // Through `complete`, because there is no other way in. It used to be an
+    // exported `commitCompletion(root, path, acceptance, verdicts)`, which was a
+    // second completion entry point however carefully the Kernel called it:
+    // importing the module wrote an Acceptance with no Gate and no sign-off.
+    const completed = () => {
+      const dir = tmp('v1w-');
+      const k = new Kernel(join(dir, 'log.ndjson'), { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+      const w = walk(k);
+      return { dir, k, w };
+    };
+
+    const { k, w, dir } = completed();
+    const written = k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' });
+    eq('a first write succeeds', written.written.outcome, 'created');
+    refuses('it does not overwrite', 'write_would_clobber',
+      () => k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' }));
+    ok('and it landed inside the root', written.written.path.startsWith(dir));
+
+    // Not a flag a fixture sets to be refused — that only proves a `fail` fires
+    // when asked. The write path's own call sites are read, so a move, link or
+    // copy is found whether or not anyone thought to test for it.
+    const staging = auditWritePath({ readFileSync, dir: libDir });
+    eq('it does not stage', staging.map((f) => `${f.file}:${f.call}`).join(','), '');
+
+    // The destination is built from the lineage and the run, so those are the two
+    // ways a caller could aim it somewhere else.
+    const esc = completed();
+    const escaping = new Kernel(join(esc.dir, 'log.ndjson'), { completionRoot: esc.dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+    refuses('a lineage that climbs out of the root', 'write_escapes_location', () => {
+      const c = asObject(contractDoc({ lineage: '../../escaped' }));
+      escaping.approve({
+        lineage: '../../escaped', revision: 'r1', bytes: c.bytes, identity: c.identity,
+        actor: 'Human Owner', rendered: RENDERED(c.bytes),
+      });
+      const a2 = asObject(assignmentDoc({ lineage: '../../escaped' }));
+      escaping.issueAssignment({
+        lineage: '../../escaped', run: 'run1', bytes: a2.bytes, identity: a2.identity,
+        actor: 'Human Owner',
+      });
+      escaping.completionPathFor({ lineage: '../../escaped', run: 'run1' });
+    });
+
+    // Both kinds of symlink, because `O_EXCL` refuses one at the final component
+    // and nothing at the parents — which is why the preflight exists.
+    const linked = tmp('v1l-');
+    const elsewhere = tmp('v1o-');
+    mkdirSync(join(linked, 'inside'));
+    symlinkSync(elsewhere, join(linked, 'outlink'));
+    symlinkSync(join(linked, 'inside'), join(linked, 'inlink'));
+    // A configured root that is not on disk. Containment is decided by resolving
+    // it, so there is nothing to be inside of — and this used to leave a raw
+    // ENOENT coming out of a path check rather than a refusal, for an escaping
+    // lineage and an ordinary one alike.
+    const hasNoRoot = tmp('v1n-');
+    const k4 = new Kernel(join(hasNoRoot, 'log.ndjson'), {
+      completionRoot: join(hasNoRoot, 'absent'),
+      sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    refuses('a completion root that does not exist', 'writer_not_sole',
+      () => k4.completionPathFor({ lineage: 'L', run: 'run1' }));
+    refuses('and the same for one that climbs out of it', 'writer_not_sole',
+      () => k4.completionPathFor({ lineage: '../escape', run: 'run1' }));
+
+    // Two dots as a component, not as a prefix: a directory named `..inside` is
+    // inside the root, and reading the prefix as an escape refused a destination
+    // that never left.
+    const dots = tmp('v1d-');
+    mkdirSync(join(dots, '..inside'));
+    const k5 = new Kernel(join(dots, 'log.ndjson'), {
+      completionRoot: dots, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    ok('a lineage naming a directory that starts with two dots',
+      typeof k5.completionPathFor({ lineage: '..inside/L', run: 'run1' }) === 'string');
+
+    // A symlink *between* the root and the file, rather than the root itself, and
+    // one pointing back inside the root — so the resolved-path check has nothing to
+    // object to and this is the only thing standing between the write and a
+    // component someone can swap. The destination has an intermediate component
+    // whenever the lineage does.
+    const mid = tmp('v1m-');
+    mkdirSync(join(mid, 'real'));
+    symlinkSync(join(mid, 'real'), join(mid, 'via'));
+    const k3 = new Kernel(join(mid, 'log.ndjson'), {
+      completionRoot: mid, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    refuses('a symlinked component under a real root', 'write_through_symlink',
+      () => k3.completionPathFor({ lineage: 'via/L', run: 'run1' }));
+
+    for (const [name, root] of [
+      ['a parent symlink pointing outside', join(linked, 'outlink')],
+      ['a parent symlink pointing inside', join(linked, 'inlink')],
+    ]) {
+      const k2 = new Kernel(join(linked, `${name.length}.ndjson`), { completionRoot: root, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+      const w2 = walk(k2);
+      refuses(name, 'write_through_symlink',
+        () => k2.complete({ lineage: w2.lineage, run: w2.run, actor: 'Human Owner' }));
+    }
+  });
+
+  group('AC-12 · a refusal names a code the taxonomy knows', () => {
+    // "Every falsifier in the Contract that says a thing is refused names a code
+    // here" was a sentence in a comment with no reader: nothing compared a raised
+    // code against the taxonomy, so a typo travelled as a plausible-looking
+    // string that no test could assert on.
+    refuses('a code no taxonomy names', 'kind_without_consumer',
+      () => fail('invented_code', 'something went wrong', {}));
+    ok('the taxonomy is not empty', ALL_KERNEL_CODES.length > 0);
+
+    // Every raisable code is raised somewhere, and every by-construction one is
+    // not. A code nothing can raise, sitting in the raisable set, is a claim of
+    // protection no test could ever assert on — and there were ten.
+    //
+    // Call sites, not occurrences: this looked for the string, so a mention in a
+    // comment counted as a use and a code could stop being raised while the
+    // assertion stayed green.
+    const source = readdirSync(libDir).filter((f) => f.endsWith('.mjs'))
+      .filter((f) => f !== 'codes.mjs')
+      .map((f) => readFileSync(join(libDir, f), 'utf8')).join('\n');
+    // Two shapes reach a caller: a refusal raised by name, and a code carried on
+    // a problem the caller then raises. Both count; a mention in prose does not.
+    const called = new Set([
+      ...[...source.matchAll(/(?:fail|return)\s*\(?\s*'([a-z_]+)'/g)].map((m) => m[1]),
+      ...[...source.matchAll(/code:\s*'([a-z_]+)'/g)].map((m) => m[1]),
+    ]);
+    eq('every raisable code is raised', RAISABLE.filter((c) => !called.has(c)).join(','), '');
+    eq('and nothing raises one the design rules out',
+      Object.keys(BY_CONSTRUCTION).filter((c) => called.has(c)).join(','), '');
+
+    // The three sets partition the taxonomy. Comparing against `RAISABLE` alone
+    // could not fail: it is *defined* as what the other two leave over, so the
+    // assertion restated its definition. Disjointness and containment are what
+    // it was meant to say.
+    const ruledOut = Object.keys(BY_CONSTRUCTION);
+    const reserved = Object.keys(RESERVED);
+    eq('nothing is both ruled out and reserved',
+      ruledOut.filter((c) => RESERVED[c]).join(','), '');
+    const known = new Set(ALL_KERNEL_CODES);
+    eq('and every named code is in the taxonomy',
+      [...ruledOut, ...reserved].filter((c) => !known.has(c)).join(','), '');
+    eq('which the three sets cover exactly',
+      RAISABLE.length + ruledOut.length + reserved.length, ALL_KERNEL_CODES.length);
+    refuses('a code the design rules out', 'kind_without_consumer',
+      () => fail('write_staged', 'this cannot happen', {}));
+  });
+
+  group('AC-12 · relations a schema cannot state', () => {
+    // Each of these is data-level: schema-valid, and incoherent. None was
+    // exercised, so deleting any of them left the suite green.
+    const ok3 = (why, over) => {
+      const problems = checkContractRelations({ ...contractDoc(), ...over });
+      ok(why, problems.length > 0);
+    };
+    ok3('an obligation named twice', {
+      obligations: ['O'],
+      observations: [
+        { obligation: 'O', observation: 'a', artifact: 'x', material_inputs: [] },
+        { obligation: 'O', observation: 'b', artifact: 'x', material_inputs: [] },
+      ],
+    });
+    ok3('an observation for an obligation the Contract does not list', {
+      obligations: ['O'],
+      observations: [
+        { obligation: 'O', observation: 'a', artifact: 'x', material_inputs: [] },
+        { obligation: 'ELSEWHERE', observation: 'b', artifact: 'x', material_inputs: [] },
+      ],
+    });
+    ok3('an obligation no observation answers', { obligations: ['O', 'UNANSWERED'] });
+    ok3('cross-family required with no family named', {
+      independence: { required: 'cross_family_required', assurance: 'workflow_attested' },
+    });
+    ok3('a requested family where none was required', {
+      independence: {
+        required: 'none', requested_family: ['openai'], assurance: 'workflow_attested',
+      },
+    });
+    eq('and a coherent Contract has none', checkContractRelations(contractDoc()).length, 0);
+  });
+
+  group('AC-12 · every schema is closed, recursively', () => {
+    for (const [name, schema] of Object.entries(OBJECTS)) {
+      eq(`${name} is closed`, lintSchema(schema, name).length, 0);
+    }
+  });
+
+  group('AC-12 · the linter catches the shapes that reopen a format', () => {
+    // The three the Contract names. Each passed an earlier draft's fixtures.
+    const emptyProperty = {
+      type: 'object', additional: false, required: ['a'], properties: { a: {} },
+    };
+    ok('a property defined as {}', lintSchema(emptyProperty).length > 0);
+
+    const openItems = {
+      type: 'object', additional: false, required: ['c'],
+      properties: { c: { type: 'array', minItems: 1, items: {} } },
+    };
+    // Rejects an empty array while admitting [null] — the same defect one level in.
+    ok('items defined as {}', lintSchema(openItems).some((p) => p.path.includes('[]')));
+
+    const openObject = { type: 'object', additional: false, required: [], properties: {} };
+    ok('an object with no properties', lintSchema(openObject).length > 0);
+
+    const permissive = {
+      type: 'object', required: ['a'], properties: { a: { type: 'string', minLength: 1 } },
+    };
+    ok('an object that admits additional properties', lintSchema(permissive).length > 0);
+  });
+
+  group('AC-12 · values are constrained, not merely present', () => {
+    const s = OBJECTS.Assignment;
+    const base = {
+      id: 'A1', lineage: 'L', contract_revision: 'r1',
+      owner: { role: 'implementer', session: 's1' },
+      dependencies: [], boundary: ['docs/v1'],
+      grants: { attempt_producer: 'P', mutation_producer: 'P', obligations: ['O'] },
+    };
+    eq('a well-formed Assignment', validate(s, base).length, 0);
+    ok('an empty string is refused', validate(s, { ...base, id: '' }).length > 0);
+    ok('null is refused', validate(s, { ...base, id: null }).length > 0);
+    ok('an additional property is refused', validate(s, { ...base, family: 'openai' }).length > 0);
+    // The family field specifically: two sources for one fact is how the fact
+    // gets quietly changed, so the Assignment has none at all.
+    ok('a family field is an additional property',
+      validate(s, { ...base, family: 'openai' })[0].why === 'additional property');
+  });
+
+  group('AC-12 · relations a schema cannot state', () => {
+    const c = {
+      obligations: ['O1', 'O2'],
+      observations: [{ obligation: 'O1', observation: 'x' }, { obligation: 'O2', observation: 'y' }],
+      independence: { required: 'none', assurance: 'workflow_attested' },
+    };
+    eq('every obligation has an observation', checkContractRelations(c).length, 0);
+    ok('an obligation with none is caught',
+      checkContractRelations({ ...c, obligations: ['O1', 'O2', 'O3'] }).length > 0);
+    ok('an observation for an unlisted obligation is caught',
+      checkContractRelations({ ...c, obligations: ['O1'] }).length > 0);
+    ok('cross-family without a requested family is caught',
+      checkContractRelations({
+        ...c, independence: { required: 'cross_family_required', assurance: 'workflow_attested' },
+      }).length > 0);
+  });
+
+  group('AC-12 · a second freeze entry names what the first did not', () => {
+    // Adding a record kind moves what the freeze pins. A frozen entry is never
+    // edited, so the set grows by appending: the prior entry stays byte-identical
+    // and keeps describing what was in force when work was accepted under it.
+    ok('there is more than one entry', FROZEN.length > 1);
+    const [first, current] = [FROZEN[0], FROZEN[FROZEN.length - 1]];
+    eq('the first entry still names the run it rested on',
+      first.exercised_by.acceptance,
+      'sha256:9ea38e8068401e0a59a8dbdad67d43286bb463e206fbc78f2fc1e4e40af822bc');
+    ok('and every kind it named is still named by the current entry',
+      Object.keys(first.records).every((k) => current.records[k] !== undefined));
+    // The kind this step adds, and the reason the entry exists at all. Later steps
+    // add their own kinds and their own entries — a kind and the code that writes
+    // and reads it cannot be separated without leaving a commit red, so the freeze
+    // moves once per such step rather than once per feature.
+    ok('the current entry names review', current.records.review !== undefined);
+    ok('and review is absent from the first', first.records.review === undefined);
+    // And an entry that no run has exercised says so rather than borrowing the
+    // provenance of one that could not have touched it. AC-12 asks a format to be
+    // frozen after its run; an entry ahead of that run is honest about being
+    // ahead, and a null here is what makes the gap findable.
+    ok('the first entry names the run that exercised it',
+      first.exercised_by !== null);
+    for (const entry of FROZEN.slice(1)) {
+      ok(`${entry.id} does not claim a run that predates its kinds`,
+        entry.exercised_by === null);
+    }
+  });
+
+  group('AC-12 · the freeze, and what it pins', () => {
+    // Frozen after AC-9's real run exercised the formats, not before. The entry
+    // names that run, and the run's own log is read here rather than trusted — a
+    // freeze citing a run that did not happen pins nothing.
+    //
+    // The FIRST entry, because that is the one a real run exercised. Later entries
+    // name kinds newer than that run and say `exercised_by: null` rather than
+    // borrowing its provenance — reading the last entry here would have asked the
+    // newest entry to prove something only the oldest can.
+    const entry = FROZEN[0];
+    const runLog = join(REPO, '.ae', 'features', 'active', 'F-086-v1-minimal-kernel',
+      'ac9-run-2', 'log.ndjson');
+    const exercised = existsSync(runLog)
+      ? readFileSync(runLog, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
+      : [];
+    ok('the freeze names the run that exercised the formats',
+      entry.exercised_by.lineage === 'BL-214' && entry.exercised_by.run === 'run1');
+    // The identity, not merely the presence of a completion: a freeze resting on
+    // "some run finished" rests on nothing in particular.
+    const committed = exercised.find((r) => r.kind === 'completion_committed'
+      && r.lineage === entry.exercised_by.lineage && r.run === entry.exercised_by.run);
+    ok('and that run reached an Acceptance', Boolean(committed));
+    eq('and it is the Acceptance the freeze names',
+      committed && committed.identity.byte_sha256, entry.exercised_by.acceptance);
+    ok('and recorded its facts, which is what closes AC-9',
+      exercised.some((r) => r.kind === 'run_record_clean' || r.kind === 'run_record_caught'));
+
+    // The enforcement half. A schema value can stay identical while the validator
+    // starts accepting more, and then the frozen thing describes a check nobody
+    // performs.
+    ok('the freeze pins what enforces the formats, not only the formats',
+      Object.keys(entry.enforcement).length > 0
+        && Object.keys(entry.enforcement).some((f) => f.endsWith('schema.mjs')));
+
+    const args = {
+      readFileSync, canonicalDigest, digestBytes,
+      objects: OBJECTS, records: RECORDS, dir: join(libDir, '..'),
+    };
+    eq('nothing has moved since the freeze',
+      freezeProblems(args).map((p) => `${p.label}:${p.why}`).join(','), '');
+  });
+
+  group('AC-12 · a frozen format cannot be changed in place', () => {
+    // The falsifier, in all four directions a freeze can be defeated: the schema
+    // value edited, a record shape edited, a persisted format added without being
+    // frozen, and the enforcing file changed while every schema stays identical.
+    const args = {
+      readFileSync, canonicalDigest, digestBytes,
+      objects: OBJECTS, records: RECORDS, dir: join(libDir, '..'),
+    };
+    const why = (over) => freezeProblems({ ...args, ...over }).map((p) => p.why).join(',');
+
+    eq('an object schema edited in place',
+      why({ objects: { ...OBJECTS, Contract: { ...OBJECTS.Contract, additional: true } } }),
+      'changed in place since it was frozen');
+    eq('a record shape edited in place',
+      why({ records: { ...RECORDS, formation_opened: { ...RECORDS.formation_opened, additional: true } } }),
+      'changed in place since it was frozen');
+    eq('a persisted format added and not frozen',
+      why({ objects: { ...OBJECTS, LATECOMER: { type: 'object' } } }),
+      'not named by the freeze');
+    // The one a value-only freeze misses: every schema identical, the validator
+    // replaced.
+    eq('the enforcing file changed while every schema stayed identical',
+      why({ readFileSync: (p) => (String(p).endsWith('lib/schema.mjs') ? Buffer.from('drifted') : readFileSync(p)) }),
+      'changed in place since it was frozen');
+  });
+
+  group('AC-12 · a line in the log is checked against the closed set', () => {
+    // The log is a file. Two Kernels write to it, and so can anything else — the
+    // suite itself writes lines by hand to reach states one process cannot. A
+    // reader that trusts whatever it parses acts on a record nothing agreed to,
+    // and this is the boundary where the closed set is a set rather than a claim.
+    const dir = mkdtempSync(join(tmpdir(), 'v1k-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    walk(k);
+    const good = k.records().map(({ seq, ...r }) => r);
+
+    const withLine = (line) => {
+      writeFileSync(logPath, encodeNdjson([...good, line]));
+      return new Kernel(logPath, {
+        completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+      });
+    };
+    refuses('a kind the set does not name', 'kind_without_consumer',
+      () => withLine({ kind: 'invented', lineage: 'L', at: 0 }).records());
+    // A name every object carries, which a membership test that is really a
+    // lookup would find in a set that does not contain it.
+    refuses('a kind every object appears to have', 'kind_without_consumer',
+      () => withLine({ kind: 'constructor', lineage: 'L', at: 0 }).records());
+    refuses('a known kind missing a field its shape requires', 'format_open',
+      () => withLine({ kind: 'formation_opened', lineage: 'L', at: 0 }).records());
+  });
+
+  group('AC-12 · every persisted kind has a producer and a consumer', () => {
+    // Real call sites, not hand-written labels. An earlier draft checked that the
+    // metadata rows contained non-empty strings, which is a check on the comment
+    // rather than on the program — and several of those labels were wrong. The
+    // first run of this version found twelve.
+    const problems = auditKinds({ readdirSync, readFileSync, dir: libDir });
+    eq('no kind is orphaned', problems.map((p) => `${p.kind}:${p.code}`).join(','), '');
+    ok('the set is non-empty', Object.keys(KINDS).length > 0);
+
+    // The other direction, and the one a run cannot show: a kind written anywhere
+    // in the program that the closed set does not name, and the set drifting apart
+    // from the schemas. Both used to be refused at the append boundary, where they
+    // were unreachable — a typo is caught there only if a test runs that line.
+    const drift = auditRecordKinds({
+      readdirSync, readFileSync, dir: libDir, kinds: KINDS, schemas: RECORDS,
+    });
+    eq('no kind is written outside the set, and the set and the schemas agree',
+      drift.map((p) => `${p.kind}:${p.why}`).join(','), '');
+  });
+
+  // AC-13's actual wording: the same records reconstruct the same state in a
+  // fresh process. Reconstructing in the process that wrote the log establishes
+  // that the objects in memory agree with themselves, which is not the claim.
+  group('AC-13 · a fresh process rebuilds what the run reached', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'v1r-'));
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+    const w = walk(k);
+    const { acceptance } = k.complete({ lineage: w.lineage, run: w.run, actor: 'Human Owner' });
+
+    const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const out = JSON.parse(execFileSync(
+      process.execPath, [here, logPath, w.lineage, w.run], { encoding: 'utf8' },
+    ));
+
+    eq('the approved revision comes back', out.approvedRevision, 'r1');
+    eq('the attempt comes back', out.attempts.join(','), String(w.attempt.attempt));
+    eq('the Gate verdict comes back', out.gateVerdicts.O, 'passed');
+    ok('the sign-off comes back', out.signoffPresent);
+    // Both identities, like the other three durable objects: a single digest
+    // cannot tell a lexical mutation of the written file from the same content
+    // spelled differently, which is the pair's whole reason.
+    ok('the completion comes back with two identities',
+      typeof out.completion?.byte_sha256 === 'string'
+        && typeof out.completion?.canonical_sha256 === 'string');
+    ok('and it is the Acceptance that was written', acceptance.decision.run === w.run);
+
+    // The decisive half: recomputing from the records alone agrees with what the
+    // original run decided. A log that replays into a different verdict is a log
+    // that cannot account for its own Acceptance.
+    eq('and recomputing agrees', out.recomputed.O, 'passed');
+  });
+
+  group('AC-4 · the verdict does not read when a record landed', () => {
+    // Records carry `at` because AC-9 asks a question about the world. A verdict
+    // reading it would depend on how long something took — and the noninterference
+    // cases below cannot catch that, because they replay one log and a stored
+    // timestamp is the same on every replay.
+    const timely = auditReductionIgnoresTime({ readFileSync, dir: libDir });
+    eq('the reduction ignores it',
+      timely.map((t) => `${t.file}:${t.source}`).join(','), '');
+  });
+
+  group('AC-13 · the verdict depends on the log and nothing else', () => {
+    // The completeness half — "did we write what we relied on" — asked as
+    // noninterference: hold the log fixed, vary everything around it, and the
+    // verdict must not move. If it cannot move, then nothing outside the log
+    // reached it, and whatever the Gate relied on was written down.
+    //
+    // A source-level blacklist was the first attempt and reached too little: it
+    // covered the reduction's two modules while the readers it uses are assembled
+    // in `kernel.mjs`, which legitimately touches the filesystem. Teaching one of
+    // those readers to consult an environment variable left the suite green.
+    const dir = tmp('v1n-');
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, {
+      completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const w = walk(k);
+    const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const verdict = (env) => JSON.parse(execFileSync(
+      process.execPath, [here, logPath, w.lineage, w.run],
+      { encoding: 'utf8', env: { ...process.env, ...env }, cwd: env.CWD || process.cwd() },
+    )).recomputed.O;
+
+    // Two logs identical but for when each record landed. The environment cases
+    // below hold one log fixed, so a verdict reading a *stored* timestamp would be
+    // the same on every replay and pass them; this is what covers that dataflow,
+    // through the readers assembled in `kernel.mjs` rather than only the two
+    // modules a source audit can read.
+    const shifted = join(dir, 'shifted.ndjson');
+    writeFileSync(shifted, readFileSync(logPath, 'utf8')
+      .split('\n').filter(Boolean)
+      .map((line, i) => {
+        const record = JSON.parse(line);
+        return JSON.stringify({ ...record, at: 1_000_000 + i * 7919 });
+      }).join('\n') + '\n');
+    const shiftedVerdict = JSON.parse(execFileSync(
+      process.execPath, [here, shifted, w.lineage, w.run], { encoding: 'utf8' },
+    )).recomputed.O;
+
+    const plain = verdict({});
+    eq('a log with every timestamp changed agrees', shiftedVerdict, plain);
+    eq('a second process agrees', verdict({}), plain);
+    eq('a different timezone and locale agree',
+      verdict({ TZ: 'Asia/Tokyo', LANG: 'ja_JP.UTF-8' }), plain);
+    eq('a different working directory agrees', verdict({ CWD: dir }), plain);
+    eq('an environment full of noise agrees',
+      verdict({ AE_ANYTHING: 'x', AE_PASS: 'yes', AE_FAIL: 'yes', HOME: dir }), plain);
+
+    // A run the environment could plausibly be asked to rescue: it failed, and
+    // the noise includes exactly the sort of flag a shortcut would read. The
+    // comparisons above cannot catch that on a passing run — a defect that turns
+    // things green changes nothing that was already green.
+    const other = tmp('v1n2-');
+    const otherLog = join(other, 'log.ndjson');
+    const k2 = new Kernel(otherLog, {
+      completionRoot: other, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER,
+    });
+    const failing = walk(k2, { command: FAILING });
+    const failedVerdict = (env) => JSON.parse(execFileSync(
+      process.execPath, [here, otherLog, failing.lineage, failing.run],
+      { encoding: 'utf8', env: { ...process.env, ...env } },
+    )).recomputed.O;
+    eq('a failing run fails', failedVerdict({}), 'failed');
+    eq('and nothing in the environment rescues it',
+      failedVerdict({ AE_PASS: 'yes', AE_FORCE: '1', CI: 'true' }), 'failed');
+
+    // And not vacuous: different facts must reach a different verdict, or the
+    // comparisons would pass on a function that ignores its input.
+    ok('different facts reach a different verdict', failedVerdict({}) !== plain);
+  });
+
+  group('AC-13 · the unavailable arm replays too', () => {
+    // The ordinary path was the only one a fresh process rebuilt. AC-7's arm has
+    // its own state — a request, a capability that was missing, and the Human
+    // Owner's answer to *that* event — and a reconstruction that keeps the choice
+    // without what it answers cannot say which event was decided about.
+    const dir = tmp('v1u-');
+    const logPath = join(dir, 'log.ndjson');
+    const k = new Kernel(logPath, { sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+    const cross = asObject(contractDoc({
+      independence: {
+        required: 'cross_family_required',
+        requested_family: ['openai', 'qwen'],
+        assurance: 'workflow_attested',
+      },
+    }));
+    k.approve({
+      lineage: 'L', revision: 'r1', bytes: cross.bytes, identity: cross.identity,
+      actor: OWNER, rendered: RENDERED(cross.bytes),
+    });
+    const a = asObject(assignmentDoc());
+    k.issueAssignment({
+      lineage: 'L', run: 'run1', bytes: a.bytes, identity: a.identity, actor: OWNER,
+    });
+    const at = k.openAttempt({
+      lineage: 'L', run: 'run1', producer: 'P', obligations: ['O'], submitter: 'P',
+    });
+    k.recordDispatch({ lineage: 'L', run: 'run1', attempt: at.attempt, obligation: 'O' });
+    const missing = k.recordUnavailable({
+      lineage: 'L', run: 'run1', obligation: 'O', attempt: at.attempt,
+    });
+    k.status({ lineage: 'L', run: 'run1' });
+    k.decideUnavailable({ lineage: 'L', run: 'run1', actor: OWNER, choice: 'stop' });
+
+    const here = fileURLToPath(new URL('./replay.mjs', import.meta.url));
+    const out = JSON.parse(execFileSync(
+      process.execPath, [here, logPath, 'L', 'run1'], { encoding: 'utf8' },
+    ));
+    eq('the request comes back', (out.requested || []).join(','), 'openai,qwen');
+    eq('so does the capability that was missing', out.unavailable, missing.seq);
+    eq('and the choice', out.unavailableDecision.choice, 'stop');
+    eq('bound to the event it answers', out.unavailableDecision.answers, missing.seq);
+    eq('and the arm did not become a pass', out.gateVerdicts.O, 'unavailable');
+  });
+
+  group('AC-13 · the record appends, closes, and replays', () => {
+    // Through a Kernel, because there is no other way to append. `Ledger` was
+    // exported, so `import { Ledger }` and `append` was a second way into the log
+    // — which made "the Kernel is the only way in" a sentence in a README rather
+    // than a property.
+    const dir = tmp('v1l-');
+    const path = join(dir, 'log.ndjson');
+    const k = new Kernel(path, { completionRoot: dir, sourceRoot: SOURCE_ROOT, render: RENDERED, owner: OWNER });
+    const w = walk(k);
+    k.status({ lineage: w.lineage, run: w.run });
+
+    // The closure itself, asserted against the shapes that enforce it: a kind
+    // outside the set has no shape, and a known kind with a missing, null or
+    // additional field does not match the one it has.
+    ok('a kind outside the closed set has no shape', RECORDS.invented_kind === undefined);
+    for (const [why, record] of [
+      ['a field missing', { kind: 'attempt_opened', lineage: 'L', run: 'run1', seq: 0 }],
+      ['a null field', {
+        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: null,
+        producer: 'P', obligations: ['O'], seq: 0,
+      }],
+      ['an additional field', {
+        kind: 'attempt_opened', lineage: 'L', run: 'run1', assignment: 'A1',
+        producer: 'P', obligations: ['O'], smuggled: 'value', seq: 0,
+      }],
+      ['a decision claiming a different origin', {
+        kind: 'human_decision_unavailable', operation: 'unavailable_decision',
+        actor: 'Human Owner', lineage: 'L', run: 'run1', answers: 3,
+        choice: 'stop', origin: 'model', seq: 0,
+      }],
+    ]) {
+      ok(`${why} is refused`, validate(RECORDS[record.kind], record).length > 0);
+    }
+
+    // Reconstructed here and again by a fresh reader: the same records must
+    // rebuild the same state. A bucketed projection used to be compared instead,
+    // which compared the sorting code with itself.
+    const scope = { lineage: w.lineage, run: w.run };
+    const here = k.reconstruct(scope);
+    ok('the run rebuilt something', here.attempts.length > 0);
+    eq('and a fresh reader agrees',
+      JSON.stringify(new Kernel(path).reconstruct(scope)), JSON.stringify(here));
+    eq('including the verdict it reached', here.gateVerdicts.O, 'passed');
+    eq('and the revision it was judged against', here.boundRevision, 'r1');
+
+    // Every kind is accounted for: one the reconstruction has no branch for and
+    // has not declared as carrying nothing is refused, rather than dropped from
+    // the state without anything saying so.
+    const present = new Set(k.records().map((r) => r.kind));
+    ok('the run exercised several kinds', present.size > 5);
+    ok('and the reconstruction accounted for all of them', here.boundRevision === 'r1');
+
+    // The completeness half — "did we write what we relied on" — is carried by
+    // the shape of the reduction rather than by a check. The Gate reduces from
+    // records and from nothing else, so a fact that was not recorded is a fact it
+    // cannot have used: this asserts that every input the verdict rested on is in
+    // the log, by finding it there.
+    const kinds = new Set(k.records().map((r) => r.kind));
+    for (const relied of ['attempt_opened', 'observation', 'command_result', 'gate_result']) {
+      ok(`${relied} is in the log`, kinds.has(relied));
+    }
+  });
+
+}

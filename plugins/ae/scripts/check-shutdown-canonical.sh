@@ -26,7 +26,10 @@ REFERENCE_PATTERN="ae:agent-teams § Shutdown handshake (canonical)"
 # Hard exclusion whitelist (per Plan 055 dep-analyst MF2):
 # These agents have lifecycle contracts that don't use shutdown_response handshake.
 # Adding new agents: either reference canonical OR add here with explicit rationale.
-SHUTDOWN_EXEMPT="agents/engineering/minimal-change-engineer.md
+# agents/CLAUDE.md: a directory guide the host loads as memory, not a spawnable
+# agent — it owns no session and has no shutdown to make canonical.
+SHUTDOWN_EXEMPT="agents/CLAUDE.md
+agents/engineering/minimal-change-engineer.md
 agents/workflow/test-lead.md"
 
 [ -d "$AGENTS_DIR" ] || { echo "[check-shutdown] error: agents dir not found at $AGENTS_DIR" >&2; exit 1; }

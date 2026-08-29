@@ -1,6 +1,6 @@
 ---
 name: review
-description: Deep multi-agent review + fixup (feature completion gate). Recommended: Sonnet or above
+description: "Deep multi-agent review + fixup (feature completion gate). Recommended: Sonnet or above"
 argument-hint: "<plan file path>"
 user-invocable: true
 model: opus
@@ -223,9 +223,47 @@ For each AC in the plan:
 - **Judge AC** (`verify_by: judge`): the reviewer evaluates the AC's stated rubric against the actual output, **never the executor's self-report**. For a judge AC whose rubric needs a **captured runtime artifact** (UI screenshot, perf metric, data sample), the executor writes it to `<milestone-dir>/artifacts/<AC-id>.<ext>` and the reviewer evaluates **that artifact** — no artifact at the expected path → **block verdict pass**. For code/doc/prose judge ACs, the **diff/output IS the artifact** the reviewer reads (no separate file). A `judge` AC with **no rubric** or a **failing rubric** → **block verdict pass**. (Committed `judge` enforcement — review-stage rubric-confirmation; no separate engine.) Covers **non-code dimensions — business-data validity, domain invariants, BDD/behavioral scenarios**. **`judge-class: fact-claim` execution contract**: (a) the judge reads the rubric's named source set BEFORE the artifact — two-pass, anti-anchoring: form your own understanding of the sources first, THEN compare the artifact's claims against it; (b) the review records **per-claim verdicts** — for each material claim: verdict, evidence cite (file:line or quoted snippet), and the judge's own re-derived answer — a holistic pass with no claim records is NOT a valid fact-claim verdict (the claim table is the enforceable surface; spot-check its citations when in doubt); (c) a **self-authored artifact** (written by this session or this pipeline's executor) gets a **cross-family, fresh-context judge** — the same isolation discipline as the deterministic-AC coverage judge above (same-family review catches form, never its own confabulations; fallback when cross-family is unavailable: Claude-isolated + flag `cross_family_degraded`, never silent-pass). `judge-class: form` ACs keep the one-question evaluation — no source pass, no claim table.
 - **`manual` AC**: surfaced for human confirmation in the verdict section; not auto-blocking.
 - **WAIVED AC** (any `verify_by`): an AC whose body states it is WAIVED → the reviewer MUST grep `<milestone-dir>/notes.md` for a line **`WAIVED_AC <this-AC-id>: <reason>`** — a waiver KEYED to this specific AC id (a generic deferred-finding `Disposition: WAIVED: <reason>` line is NOT an AC waiver — it has no AC id, so an unrelated finding's waiver must not satisfy an AC). `WAIVED_AC <this-AC-id>:` present → accept the waiver for that AC (the recorded reason is the audit trail; closes the gated-deferral gap for deterministic/`contract` ACs that legitimately did not run). No keyed `WAIVED_AC <this-AC-id>` line → treat as unverified → **block verdict pass** (a prose-only or mis-keyed waiver is the silent-drop this backstop catches). The canonical AC-waiver write format is `WAIVED_AC <AC-id>: <reason>` — distinct from the deferred-finding `Disposition: WAIVED:` form.
-- **Confidence per AC (report it)**: tag each AC `strong` (a deterministic check re-ran + passed), `partial` (the judge evaluated an artifact — not a re-run), or `manual` (human-confirmed). Surface the mix in the verdict (e.g. `harness confidence: 5 strong / 2 partial / 1 manual`) so the reader sees how much of "done" is deterministically re-verified vs judged vs human.
+- **Green is not closure — was the check ever red? (F-086)** For each deterministic AC, grep `<milestone-dir>/notes.md` for `FALSIFIED_AC <this-AC-id>:`, the line `/ae:work` writes when the check failed before the change. Present → the check is known to detect the change's absence. Absent → report the AC as **`unfalsified`** and count it in the verdict (`harness falsification: 6 of 8 ACs seen red first`). This does **not** block on its own: a legacy plan predating the record cannot produce one. What it must not do is stay invisible — in F-086, no commit shipped implementation without tests and for **nine consecutive review rounds** the question *"name a check whose deletion the suite would not notice"* returned a hit every time. A check that has only ever been green is a check nothing has held to account.
+- **Confidence per AC (report it)**: tag each AC `strong` (a deterministic check re-ran + passed **and was seen red first**), `partial` (the judge evaluated an artifact — not a re-run; or the check was never seen red), or `manual` (human-confirmed). Surface the mix in the verdict (e.g. `harness confidence: 5 strong / 2 partial / 1 manual`) so the reader sees how much of "done" is deterministically re-verified vs judged vs human.
 
 If the plan has NO `verify_by` fields → **distinguish by PATH, not date**: a **feature-dir plan** (`.ae/features/.../F-NNN/plan.md`, post-F-041 by construction) with zero `verify_by` → **block verdict pass** (forgotten harness, not legacy); only a **legacy-path plan** (`output.plans/`) → skip with `Harness satisfaction: skipped (pre-F-041 legacy plan)`. Never infer legacy from a date.
+
+### Check 8: Re-divide or escalate — which one is this? (F-086)
+
+Per [Stage handovers](../../handover.md). Findings are not all the same kind, and
+treating them as one kind is what made F-086's review cost twenty rounds instead of six.
+
+- **The fix changes code** → back to work. Ordinary; the inner loop.
+- **Findings keep arriving and the work is not shrinking** → **re-divide**, do not
+  escalate. The partition is wrong, not the criterion. Ask *what is generating these* and
+  report the answer as one finding, not the instances as many. In F-086 the first
+  fourteen rounds each found and fixed something real while the set never shrank; the
+  fifteenth asked that question and the next five rounds closed five families.
+- **The fix would change what a criterion means** → escalate to analyze. Not a code
+  defect; the standard is wrong.
+- **A deterministic AC has no `FALSIFIED_AC` record** → back to work to produce one, or
+  report the AC `unfalsified` where the plan predates the record.
+
+Report which of these each finding is. A review that returns twelve findings without
+saying whether they are twelve problems or one is the instance-chasing this check exists
+to interrupt.
+
+**What this review does not report.** Every finding traces to a criterion or to a
+falsifiability gap. Anything that traces to neither does not belong in the verdict:
+
+- **wording, naming and phrasing** where no criterion turns on them — the single largest
+  source of rounds that change nothing;
+- **an alternative the reviewer prefers**, where the one implemented meets the criterion.
+  "I would have done it differently" is not a defect. If the difference matters, it is a
+  criterion that is missing, and the honest move is to escalate to analyze and say so;
+- **restating what the code does** back to the author;
+- **a defect in something the change did not touch** — real, and it belongs in the
+  backlog, not in this verdict. Blocking a change on a pre-existing problem it did not
+  cause is how a correct change gets recorded as a failure. (F-086 nearly lost a feature
+  meeting both of its stated criteria to exactly this.)
+
+The discipline is one sentence: **name the criterion, or name the check that cannot turn
+red.** A finding that can do neither goes to the backlog or goes away.
 
 ### Prior Context (project knowledge graph)
 
