@@ -12,7 +12,8 @@
 |---|---|
 | [`v1/x-experiment.md`](v1/x-experiment.md) + [`v1/x-workflow.md`](v1/x-workflow.md) | The pivot evidence and its verbatim instrument — the seed of `ae:go`. |
 | [`prd/ae-v1.md`](prd/ae-v1.md) | Users, jobs, quality counters stand; G-02 and the fence carry a status amendment. |
-| [`references/cc-plugin-contract.md`](references/cc-plugin-contract.md) | Host dependencies + measured hook enforcement. Grows with the hooks deep-dive. |
+| [`references/hooks.md`](references/hooks.md) | The consolidated hooks reference: measured enforcement, official semantics, Codex convergence, AE's minimal hook set. |
+| [`references/cc-plugin-contract.md`](references/cc-plugin-contract.md) | Host dependencies + mitigations; hook detail lives in `hooks.md`. |
 | [`references/claude-code-plugin-api.md`](references/claude-code-plugin-api.md) | Host API facts. |
 | [`references/cross-family-rationale.md`](references/cross-family-rationale.md) | The kept capability's design rationale. |
 | [`references/model-effort-matrix.md`](references/model-effort-matrix.md) | Model/effort guidance. |
