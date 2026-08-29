@@ -143,7 +143,7 @@ registration, prompt/agent handlers).
 4. **Anything from the `documented` table becomes load-bearing only after its
    own probe** — the same discipline that produced the enforcement table above.
 
-### AE's minimal hook set (designed 2026-08-28, `unprobed`)
+### AE's minimal hook set (designed 2026-08-28; H1 **probed** 2026-08-29, H2 still `unprobed`)
 
 Two hooks, chosen against the deletion-first baseline — every additional hook
 must earn its place the way every surviving line does.
@@ -156,6 +156,31 @@ with one sentence naming the missing file. This mechanizes the ground rule
 Fail-open by contract, so it is an accelerator; the rule itself lives in the
 workflow's gates. On Codex the same script ships with a three-line output shim
 (`continue: false`).
+
+**H1's probe ran 2026-08-29 and the design holds. Nothing is built on it yet** —
+the throwaway skill and script used to measure it left with the run that made
+them; what survives is the measurement. On **CC 2.1.251**, nine scenarios:
+
+| measured | consequence |
+|---|---|
+| A `Stop` hook declared **only** in SKILL.md frontmatter fires, with a hook-free `plugin.json`. The skill was verifiably invoked — a token in its body reached a model request. | Skill-scoped registration works; design rule 2 is satisfiable. |
+| Its `decision: block` prevents the turn ending: parent model calls 2 → 3, and the reason reached the next request. | The leash can refuse. |
+| The second `Stop` firing carries `stop_hook_active: true`. | The loop guard exists; a script that ignores it can trap a session. |
+| The identical hook registered plugin-globally also fires and blocks. | Interpretability control, declared in advance — a silent result on the skill-scoped case would have been readable rather than ambiguous. |
+| A hook sleeping 10 s against a 1 s timeout: the turn ended anyway in 1,267 ms, the reason never reached the model. | **Fail-open confirmed, and observably different from a refusal** — the declared void condition "blocking and timing-out look the same" did not fire. |
+| In the hook process: `CLAUDE_PLUGIN_ROOT` set, `CLAUDE_PROJECT_DIR` set, **`CLAUDE_SKILL_DIR` unset**. | A script placed beside the skill and referenced that way is unreachable. Ship it under the plugin. |
+| A frontmatter `command:` written as the literal `${CLAUDE_PLUGIN_ROOT}/hook-entry.sh`, reachable by no other path, fired. | The host **does** expand the variable in a frontmatter command string. |
+| End to end: a script reading a run marker refused with its own sentence naming the missing file; a run with no marker produced no extra turn; a run whose deliverable was present produced no refusal. | The three states behave as designed. |
+
+Expectations and three void conditions were declared **before** any run.
+Evidence, per-scenario transcripts and re-run commands:
+`.ae/research/2026-08-28-done-leash/` (`verify.mjs` compares each observation
+against `EXPECTED.md`; exit 0 = every declared expectation held).
+
+**Still unresolved, and not relied on:** `claude-code-plugin-api.md:22` says a
+skill's hooks are active "only during skill execution" while this section says
+for the rest of the session. The probe ran in `-p`, which cannot separate the
+two, and the readings give opposite failure modes.
 
 **H2 — the freeze-watch (`FileChanged`; Claude Code only).** Matcher on the
 conventional deliverable filenames; fires when a file under a run dir whose
@@ -175,8 +200,11 @@ in the review stage's own spawns — the path four benchmark runs validated),
 `PreToolUse` guards (no current need), `PostToolBatch`. Listed so their absence
 is a decision; adding one later means writing its probe first.
 
-**Probe-first.** H1's probe is the first action of the entry-skill work: plant
-the defect (delete the stage deliverable, claim done) → the Stop hook must
-refuse; remove the marker → zero interference; let it time out → the turn ends
-anyway and the log says so. Same fixture method that produced the enforcement
-table. H2 likewise before registration.
+**Probe-first.** H1's probe was performed and it held: plant the defect (marker
+present, stage deliverable absent) → the hook refused; remove the marker → zero
+interference; let it time out → the turn ended anyway. Same fixture method that
+produced the enforcement table, with one addition worth carrying forward — a
+control scenario registering the identical hook plugin-globally, so a silent
+result could be told apart from a broken harness rather than read as "skill
+scoping does not work". **H2 remains unprobed**; the same discipline applies
+before it is registered.
