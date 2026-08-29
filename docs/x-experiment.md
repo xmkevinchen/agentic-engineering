@@ -2,8 +2,8 @@
 
 > **Status: evidence record.** One controlled experiment, run 2026-08-28, that
 > settles the sequencing question for v1: the prose layer is cut back **before**
-> any further mechanism is built. Companion to the measurements in the
-> `002-ae-shape` working discussion (process artifact, not shipped).
+> any further mechanism is built. The underlying measurements are summarized in
+> §1; their working notes are unshipped process artifacts.
 
 ## 1. The question
 
@@ -36,9 +36,9 @@ sessions, with an independent session verifying every claim against the tree.
 
 | run | item | shape | outcome |
 |---|---|---|---|
-| 1 | BL-200 | should die at premise | Died at premise. Found the resolution had already shipped, found the BL's own citations stale, closed it. Zero human stops, zero agent spawns, minutes. |
-| 2 | BL-223 | mechanical fix, deterministic pass signal | Suite red→green in 22m35s, 3 path-scoped commits. Its pre-check caught a genuine contradiction between two criteria before the human gate; its review re-ran every falsifier and planted a defect to prove the checks bite. Zero findings. It also caught two defects in the observing session's own work. |
-| 3 | BL-209 | prose-rule fix, no unit test possible | Ran on a model **two tiers below** runs 1–2, deliberately. Same protocol compliance, same judgment quality: a discrimination fixture pair (same magnitude, opposite verdicts), an honest property-class argument where the historical instance was unlogged, criteria marked `judgement` where mechanical checks were impossible rather than faked. One visible tier difference: the pre-check round was performed but not self-documented in the plan artifact. |
+| 1 | a stale work item claiming a validator misrepresented its scope | should die at premise | Died at premise. Found the fix had already shipped the day before, found the item's own citations stale against the tree, closed it. Zero human stops, zero agent spawns, minutes. |
+| 2 | three knowledge-index pages declaring fresh while their own checker computed stale | mechanical fix, deterministic pass signal | Suite red→green in 22m35s, 3 path-scoped commits. Its pre-check caught a genuine contradiction between two criteria before the human gate; its review re-ran every falsifier and planted a defect to prove the checks bite. Zero findings. It also caught two defects in the observing session's own work. |
+| 3 | a prose review gate that demoted documented subtraction as if it were growth | prose-rule fix, no unit test possible | Ran on a model **two tiers below** runs 1–2, deliberately. Same protocol compliance, same judgment quality: a discrimination fixture pair (same magnitude, opposite verdicts), an honest property-class argument where the historical instance was unlogged, criteria marked `judgement` where mechanical checks were impossible rather than faked. One visible tier difference: the pre-check round was performed but not self-documented in the plan artifact. |
 
 Across all three runs the independent verification found **zero defects** in
 x's output. The two suspicions the observer raised were both the observer's own

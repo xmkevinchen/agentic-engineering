@@ -9,7 +9,7 @@ target: ae@1.0.0
 
 > **Status amendment (2026-08-28).** Two parts of this document are overtaken
 > by recorded decisions. **G-02** (the Kernel is reachable — "the highest-value
-> work in v1") is superseded: BL-224's signed decision archived the Kernel as
+> work in v1") is superseded: the signed kernel-disposition decision (2026-08-28, an exploratory run of the minimal workflow) archived the Kernel as
 > proven-but-unconsumed, and F-088 is abandoned at 2 of 5 steps. **§6's fence**
 > is being executed as a factoring — core kept, satellites extracted, prose
 > deleted — per [`../v1/x-experiment.md`](../x-experiment.md). The users,
