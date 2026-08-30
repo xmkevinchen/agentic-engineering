@@ -15,7 +15,7 @@ Judge the delivered work against the acceptance criteria the human confirmed. No
 
 `$ARGUMENTS` is the plan path; `<feature-dir>` is its parent directory. Empty → ask which feature to review.
 
-What you judge is the feature's whole change — everything committed since the feature started, not the last commit — read against the plan, the working log, and the criteria. The criteria are the ones the human confirmed in the analysis; if the plan's copy has drifted from them, the analysis text governs and the drift is itself a finding.
+What you judge is the feature's whole change — everything committed since the feature started, not the last commit — read against the plan, the working log, and the criteria. The criteria are the ones the human signed in `acceptance.md`, and that file is where they are read from.
 
 ## Fresh eyes
 

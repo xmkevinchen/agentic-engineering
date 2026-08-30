@@ -12,7 +12,7 @@ session's own model or effort is used.
 | Skill | Model | Effort | Role |
 |-------|-------|--------|------|
 | ae:go | — | — | The entry: runs the work item through the five stages |
-| ae:analyze | — | medium | Premise check + acceptance criteria |
+| ae:analyze | — | high | Problem named, done defined, evidence behind both |
 | ae:discuss | opus | high | Structured decision record for a contested call |
 | ae:plan | opus | high | Step cut against the frozen criteria |
 | ae:work | — | high | Plan execution (check red first, then commit) |

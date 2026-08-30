@@ -13,7 +13,7 @@ Settle one decision where two defensible options lead to materially different wo
 plan does not have to guess which one was meant. Nothing contested → skip the stage; a
 discussion held as ceremony costs a cycle and decides nothing.
 
-**Input:** the analysis, and the contested question.
+**Input:** the analysis, and one id from its `discuss:` list. You settle the question under that heading, not a neighbouring one you find more interesting.
 
 **Deliverable:** one decision record, a file in `<feature-dir>/`. If this conversation were
 lost, the next stage must be able to proceed from that file alone.
@@ -38,15 +38,17 @@ lost, the next stage must be able to proceed from that file alone.
 - It leaves nothing open. Every question the discussion raised is decided here, or stated as
   an assumption together with what would retract it.
 
-The decision itself is yours. A decision that would change an acceptance criterion is not:
-the criteria were confirmed by the human, so it goes back to ANALYZE through the human.
+The decision itself is yours, including one that changes what a criterion means: the criteria
+are not signed yet, and settling this question is why they were not. Edit `acceptance.md` in
+place and name the id you moved. Do not carry its old wording into the record — the reason
+belongs there, the superseded text belongs nowhere.
 
-If the question cannot be decided from evidence at all, it was never contested — it was
-under-analysed. Return it to ANALYZE rather than holding another round.
+If the question can be decided from evidence after all, it was never contested and should not
+have been on the list. Settle it and say so, so the misrouting is visible later.
 
 ## What the next stage may refuse it for
 
 - A question the discussion opened is still open — there is nothing to plan against.
 - The reason cites nothing a reader can open.
 - The record exists only in the conversation.
-- The record states an acceptance criterion differently from the analysis.
+- It changed what a criterion means without changing `acceptance.md` to match.

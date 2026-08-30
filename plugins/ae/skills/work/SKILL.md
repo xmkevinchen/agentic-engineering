@@ -13,7 +13,7 @@ check can actually fail.
 
 ## Input
 
-The plan at **$ARGUMENTS** and the acceptance criteria it carries; `<feature-dir>` is the
+The plan at **$ARGUMENTS** and the signed criteria in `<feature-dir>/acceptance.md`; `<feature-dir>` is the
 plan's parent directory. Reread the plan from disk at the start of every step — never from
 memory, which compaction drops without saying so.
 
