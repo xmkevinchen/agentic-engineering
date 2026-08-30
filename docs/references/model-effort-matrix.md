@@ -23,7 +23,6 @@ session's own model or effort is used.
 | Agent | Model | Effort | Role |
 |-------|-------|--------|------|
 | architect | sonnet | high | Plan decomposition, solution design |
-| challenger | sonnet | high | Pure opposition, blind spot detection |
 | qa | sonnet | high | Code review + cross-family |
 | archaeologist | sonnet | medium | Deep code investigation |
 | dependency-analyst | sonnet | medium | Dependency mapping |

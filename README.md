@@ -89,7 +89,7 @@ Invoke a single stage directly when you are resuming or redoing one part; otherw
 
 ## Agents
 
-18 specialized agents in four groups. `/ae:go` and the stage skills spawn them; you can also
+17 specialized agents in four groups. `/ae:go` and the stage skills spawn them; you can also
 ask for one by name in any session.
 
 ### Review Agents — the quality gate
@@ -111,7 +111,6 @@ ask for one by name in any session.
 | Agent | Focus |
 |-------|-------|
 | `architect` | Step decomposition, parallel execution strategy |
-| `challenger` | Pure adversarial opposition, blind spot detection |
 | `qa` | Post-step code review + cross-family validation |
 | `codex-proxy` | Routes requests to Codex (OpenAI) via MCP |
 | `gemini-proxy` | Routes requests to Gemini (Google) via MCP |
