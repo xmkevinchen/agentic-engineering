@@ -60,8 +60,9 @@ when a criterion has no falsifier and no judgement mark, or an answer rests on n
 **2 · Invoke `/ae:discuss` once per id in the analysis frontmatter's `discuss:` list** — an
 empty list is a decision already made, not an omission, and you do not second-guess it into a
 discussion. Each run settles one id. Then read each decision record. Send it back when a question it
-opened is still open, when its reason cites nothing a reader can open, or when it exists only
-in the conversation. A decision that changes what a criterion means changes `acceptance.md`
+opened is still open, when its reason cites nothing a reader can open, when it exists only
+in the conversation, or when one party argued both sides and the record does not say why no
+other was reachable. A decision that changes what a criterion means changes `acceptance.md`
 before the signature, not after.
 
 **→ HUMAN CONFIRMS.** The criteria have stopped moving; this is where they are confirmed.

@@ -38,6 +38,44 @@ lost, the next stage must be able to proceed from that file alone.
 - It leaves nothing open. Every question the discussion raised is decided here, or stated as
   an assumption together with what would retract it.
 
+## Who argues, and what they are sent
+
+Both options are argued by parties that do not share a prior. One model asked to argue both
+sides writes both from the same preference, and the one it already favoured wins on prose
+rather than on evidence — the failure this stage exists to prevent. Where another model family
+is reachable it is that party: `ae:workflow:codex-proxy`, `ae:workflow:gemini-proxy` and
+`ae:workflow:openai-compat-proxy` each hold a seat, and each reports plainly when its backend
+is not there. Where none is, a fresh-context agent stands in. Where it was neither, the record
+says so — a decision made by one party is still a decision, it is one whose blind spot is
+unrecorded.
+
+**What goes out is the analysis's own words**: the section under the `discuss:` id as it
+stands, and as material what the analysis cites. This is the rule already governing the record,
+pointed outward — a question restated by someone who knows the answer carries the answer.
+Needing to send material the analysis does not cite is not a packaging problem; the analysis
+is incomplete, and that goes back to ANALYZE.
+
+**They answer before they see your answer, and the second exchange is the one that pays.** The
+first carries the question and nothing else, and returns options and leads. The second shows
+the option you chose and the reason you chose it and asks what is wrong with it — that is where
+a premise you never thought to check gets refuted, and it is not optional. Reversed, you get a
+reflection of your own draft back. Seats never see each other: parties answering the same
+question blind are not a debate, and a debate is what is being avoided, because it needs
+something to converge on and a record written by one decider has nothing.
+
+**Each exchange records which backend and which model answered it.** A seat can degrade
+silently — falling back a model tier on a quota or retirement error — and an answer's weight
+depends on what produced it. Where two exchanges ran on different models, say so rather than
+reading the difference between them as the questions having improved.
+
+**What you ask for is an option or an objection nobody here has named**, never a vote:
+agreement from another family raises nothing, two families share blind spots, and a majority
+is not a reason. What comes back is argued in the record like anything else, and what nobody
+produced is not invented to fill the slot. **The record names who produced what**, one clause
+per option and per objection. That attribution is what makes this stage falsifiable: across
+enough features it can be read off whether an outside party ever changed a decision, and if
+the answer is never, this section should go.
+
 The decision itself is yours, including one that changes what a criterion means: the criteria
 are not signed yet, and settling this question is why they were not. Edit `acceptance.md` in
 place and name the id you moved. Do not carry its old wording into the record — the reason
@@ -52,3 +90,4 @@ have been on the list. Settle it and say so, so the misrouting is visible later.
 - The reason cites nothing a reader can open.
 - The record exists only in the conversation.
 - It changed what a criterion means without changing `acceptance.md` to match.
+- One party argued both sides, and the record does not say why no other was reachable.
