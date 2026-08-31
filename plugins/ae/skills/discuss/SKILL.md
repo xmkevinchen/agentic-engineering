@@ -58,14 +58,16 @@ argue with; being unlike you does not redeem it. So there is no ranking among se
 whoever clears both counts, and more than one where you can, since seats answer blind and two
 blind answers tend to bring different things rather than the same thing twice.
 
-A fresh-context agent of your own family clears the floor and fails the prior, which makes it a
-real participant carrying a named weakness rather than a last resort. **Seat it alongside the
-others, not behind them.** Its capability is the one you can count on; the closing round asks
-only that a reader argued none of the composite, which it satisfies as well as anyone; and on
-the evidence so far the sharpest objection any exchange has produced came from a same-family
-seat. What the record owes is the weakness itself — say that it shared the prior. Where there
-was no outside party at all, say that instead: a decision made by one party is still a
-decision, it is one whose blind spot is unrecorded.
+The same-family seat is `ae:workflow:discuss-seat`, and it is a definition rather than
+whichever agent was nearest to hand — what it can do is settled before the round instead of
+when the round is spawned. A fresh-context agent of your own family clears the floor and fails
+the prior, which makes it a real participant carrying a named weakness rather than a last
+resort. **Seat it alongside the others, not behind them.** Its capability is the one you can
+count on; the closing round asks only that a reader argued none of the composite, which it
+satisfies as well as anyone; and on the evidence so far the sharpest objection any exchange has
+produced came from a same-family seat. What the record owes is the weakness itself — say that
+it shared the prior. Where there was no outside party at all, say that instead: a decision made
+by one party is still a decision, it is one whose blind spot is unrecorded.
 
 **What goes out is the analysis's own words**: the section under the `discuss:` id as it
 stands, and as material what the analysis cites. This is the rule already governing the record,

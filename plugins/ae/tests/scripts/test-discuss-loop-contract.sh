@@ -293,6 +293,26 @@ if seat is not None:
         bad("the discuss seat's body leaves the outside-source route unnamed",
             f"{SEAT}: an untold Bash-only seat abstains where it could have checked")
 
+# --- F-097: the skill names the seat, and keeps what the paragraph already said ------------
+#
+# Naming the definition is what stops the seat being picked at spawn time. It goes into the
+# paragraph that already describes a same-family seat, not over it: that paragraph carries the
+# rule that a record made with a seat sharing your prior must disclose it, and an edit that
+# replaced the paragraph would take the disclosure with it. One assertion holds both halves —
+# the second string is green today, so on its own it is a check nobody could watch fail.
+
+if discuss is not None:
+    names_seat = "ae:workflow:discuss-seat" in discuss
+    keeps_disclosure = "say that it shared the prior" in flat
+    if names_seat and keeps_disclosure:
+        ok("the same-family seat is named as a definition, and its shared-prior rule survived")
+    elif not names_seat:
+        bad("the stage names no agent for rounds one and two",
+            "plugins/ae/skills/discuss/SKILL.md: a seat nobody names is a seat chosen at spawn")
+    else:
+        bad("naming the seat took the shared-prior disclosure with it",
+            "plugins/ae/skills/discuss/SKILL.md: the id was added by replacing the paragraph")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
