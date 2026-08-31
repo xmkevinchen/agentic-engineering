@@ -4,7 +4,6 @@ description: Fresh-eyes blunder check at Agent Teams close-out. Reads team outpu
 tools: Read, Write, Grep, Glob
 model: sonnet
 color: red
-omitClaudeMd: true
 effort: medium
 maxTurns: 25
 ---

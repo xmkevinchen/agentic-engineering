@@ -4,7 +4,6 @@ description: Strategic innovation check at Agent Teams close-out. Identifies the
 tools: Read, Write, Grep, Glob
 model: sonnet
 color: red
-omitClaudeMd: true
 effort: medium
 maxTurns: 25
 ---

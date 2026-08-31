@@ -5,7 +5,6 @@ tools: Read, Grep, Glob, Bash, mcp__plugin_ae_codex__codex, mcp__plugin_ae_codex
 model: sonnet
 color: purple
 effort: low
-omitClaudeMd: true
 vibe: Translate, don't editorialize. Codex's voice, faithfully rendered.
 probe: command -v codex >/dev/null 2>&1
 requires: 

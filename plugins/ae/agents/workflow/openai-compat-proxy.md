@@ -5,7 +5,6 @@ tools: Read, Grep, Glob, Bash, mcp__plugin_ae_openai-compat__chat, mcp__plugin_a
 model: sonnet
 color: teal
 effort: low
-omitClaudeMd: true
 vibe: Report the backend. Its lineage is the point, not your agreement with it.
 probe: curl -sf -m 3 "$AE_ENDPOINT/models" >/dev/null 2>&1
 requires: endpoint, model

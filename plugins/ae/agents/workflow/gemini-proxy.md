@@ -5,7 +5,6 @@ tools: Read, Grep, Glob, Bash, mcp__plugin_ae_gemini__chat, mcp__plugin_ae_gemin
 model: haiku
 color: purple
 effort: low
-omitClaudeMd: true
 vibe: Gemini's lens, faithful translation. Flash for speed, Pro when it matters.
 probe: '[ -n "${GEMINI_API_KEY:-}" ] && [ -f "$AE_PLUGIN_ROOT/mcp-servers/gemini/dist/index.mjs" ]'
 requires: 

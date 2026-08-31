@@ -4,7 +4,6 @@ description: Regret prediction check at Agent Teams close-out. Identifies which 
 tools: Read, Write, Grep, Glob
 model: sonnet
 color: red
-omitClaudeMd: true
 effort: medium
 maxTurns: 25
 ---

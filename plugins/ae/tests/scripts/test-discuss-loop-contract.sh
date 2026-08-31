@@ -328,6 +328,25 @@ if discuss is not None:
             "plugins/ae/skills/discuss/SKILL.md: backend and model do not name the seat or its "
             "declared settings, and the seat cannot report them itself")
 
+# --- F-097: nothing is configured that does nothing ---------------------------------------
+#
+# `omitClaudeMd` is not effective for plugin agents and is not in the published field list
+# (`docs/references/claude-code-plugin-api.md:57`). A field that has been read by nothing for
+# months is worse than absent: it reads as a setting somebody chose, and the next reader budgets
+# for a cost it does not remove. Repo-wide rather than over one file, because a criterion about
+# what a definition sets is not met by keeping the newest definition clean.
+
+inert = []
+for path in sorted((REPO / "plugins/ae/agents").rglob("*.md")):
+    for line in frontmatter(path.read_text()).splitlines():
+        if line.startswith("omitClaudeMd:"):
+            inert.append(f"{path.relative_to(REPO)}: {line.strip()}")
+if inert:
+    bad("a definition sets omitClaudeMd, which the host does not read",
+        "; ".join(inert))
+else:
+    ok("no definition sets omitClaudeMd, a field measured to do nothing")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
