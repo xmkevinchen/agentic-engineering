@@ -196,9 +196,26 @@ one you cannot place; both re-enter, and the record is where a preference lands,
 that already governs it. A finding
 that survives has changed what is being asked, and the changed question earns the same
 independent answering the first one got; closing out again over a composite no seat has seen
-uncorrelated tests the new version more weakly than the old one was tested. Stop when a pass
-produces nothing the composite does not already hold, and record what the close-out still
-objected to — an objection you overrode belongs in the record, not in the bin.
+uncorrelated tests the new version more weakly than the old one was tested.
+
+**Stop when a pass produces nothing the composite does not already hold — and stop at two passes
+regardless.** The close-out runs at most twice on one posing of a question. The first stop is a
+judgement about what came back and may never fire: nothing makes a pass run out of things to say,
+because each rewrite of the composite is fresh surface for the next pass to object to. The second
+fires on a count and cannot be argued with, which is the point — this loop re-enters itself with no
+human in the path, so the thing that ends it has to be something that does not depend on the loop
+agreeing to end.
+
+**Count the completed `pass-N/` directories on disk, not passes you are holding in mind.** A run
+that resumes after an interruption has to arrive at the same number, and a pass whose close-out
+never finished is not one of them. Two is the floor rather than a preference: a finding that
+survives earns one newly independent pass, so a bound of one would quietly delete that. Nothing
+observed has asked for a third.
+
+**Both ways out owe the same thing — record what the close-out still objected to.** An objection
+you overrode belongs in the record, not in the bin, and the bound is what makes that load-bearing
+rather than incidental: a record written because the count ran out is precisely the one that leaves
+an objection standing.
 
 **Nothing here is settled by counting.** No round converges by majority and agreement raises
 nothing — two families share blind spots, and how many said a thing is not a reason. A round is

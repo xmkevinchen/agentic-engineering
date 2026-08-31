@@ -268,7 +268,7 @@ footer{
 
   <figure>
     <div class="scroller">
-      <svg viewBox="0 0 920 700" role="img" aria-label="The main session invokes discuss once per id and runs three rounds against three unnamed seats: a Codex seat, a Gemini seat, and a fresh-context Claude seat of its own family. Round one sends the question and its cited material and the seats cannot see each other. Round two relays every answer to the other seats through the main session, returning one composite answer and a separate list of what could not be settled. Round three attacks the composite from four separate angles, held by readers who argued none of it. A close-out finding either says the premise is wrong, which writes a returned-id file and returns the work to analyze, or says the answer can be better, which re-enters at round one because the question has changed. The record is written only when a pass changes nothing.">
+      <svg viewBox="0 0 920 700" role="img" aria-label="The main session invokes discuss once per id and runs three rounds against three unnamed seats: a Codex seat, a Gemini seat, and a fresh-context Claude seat of its own family. Round one sends the question and its cited material and the seats cannot see each other. Round two relays every answer to the other seats through the main session, returning one composite answer and a separate list of what could not be settled. Round three attacks the composite from four separate angles, held by readers who argued none of it. A close-out finding either says the premise is wrong, which writes a returned-id file and returns the work to analyze, or says the answer can be better, which re-enters at round one because the question has changed. The record is written when a pass changes nothing, or when the second pass ends, whichever comes first — the loop runs at most twice on one posing of a question.">
         <defs>
           <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -383,10 +383,10 @@ footer{
         <!-- record -->
         <path class="flow" d="M488,644 L488,664" marker-end="url(#ar)"/>
         <rect class="node-sunk" x="276" y="664" width="424" height="30" rx="3"/>
-        <text class="t-sub" x="292" y="684">nothing changes &rarr; decision-&lt;id&gt;.md, naming who produced what</text>
+        <text class="t-sub" x="292" y="684">nothing changes, or two passes are done &rarr; decision-&lt;id&gt;.md, objections and all</text>
       </svg>
     </div>
-    <figcaption>Round &#9312; carries the question and nothing else, and the seats have no peer address, so independence is a property of the wiring. Round &#9313; lets each seat see the others &mdash; but through the main session, not over an edge between them. Round &#9314; attacks the composite from four angles kept deliberately apart. The loop at the bottom is the stage&rsquo;s own ReAct: only a finding about the premise leaves the stage, and it leaves a <code>returned-&lt;id&gt;.md</code> behind &mdash; without it, a question that was argued and sent back is byte-identical on disk to one nobody ever started.</figcaption>
+    <figcaption>Round &#9312; carries the question and nothing else, and the seats have no peer address, so independence is a property of the wiring. Round &#9313; lets each seat see the others &mdash; but through the main session, not over an edge between them. Round &#9314; attacks the composite from four angles kept deliberately apart. The loop at the bottom is the stage&rsquo;s own ReAct, and it is bounded at two passes: nothing makes a pass run out of objections, so what ends the loop is a count of passes on disk rather than a judgement about what came back. Only a finding about the question&rsquo;s own premise leaves the stage, and it leaves a <code>returned-&lt;id&gt;.md</code> behind &mdash; without it, a question that was argued and sent back is byte-identical on disk to one nobody ever started.</figcaption>
   </figure>
 
   <div class="col">
@@ -586,7 +586,7 @@ footer{
   </table>
 
   <div class="note">
-    <strong>Cost.</strong> Two seats through two rounds, then a close-out from four separate angles &mdash; eight agent turns for one contested question, and more whenever a close-out sends the composite back for another pass. That is the budget, and it buys one thing: a correction, an option, or an objection the deciding session could not have produced alone. It does not buy consensus. Nothing here converges by counting, because agreement raises nothing when two families can share a blind spot.
+    <strong>Cost.</strong> Two seats through two rounds, then a close-out from four separate angles &mdash; eight agent turns for one contested question, and roughly double that whenever a close-out sends the composite back for another pass — which it may do once, since the loop is bounded at two passes. That is the budget, and it buys one thing: a correction, an option, or an objection the deciding session could not have produced alone. It does not buy consensus. Nothing here converges by counting, because agreement raises nothing when two families can share a blind spot.
   </div>
 </section>
 

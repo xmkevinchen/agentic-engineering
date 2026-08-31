@@ -178,6 +178,43 @@ if discuss is not None:
             + " and ".join(missing),
             "plugins/ae/skills/discuss/SKILL.md")
 
+# --- AC4 + AC5: the loop ends, and what it still objected to survives ----------------------
+#
+# The written stop was a judgement about what a pass produced, and a pass never runs out of
+# things to produce: each rewrite of the composite is fresh surface for the next objection. A
+# reader handed the protocol and a sequence of always-new findings reported that nothing in the
+# file ever ends it, and that the only sentence mentioning "the loop's bound" pointed at a
+# number the file never defined.
+
+if discuss is not None:
+    if "stop at two passes" in flat:
+        ok("the loop has a stated bound, not only a judgement about what came back")
+    else:
+        bad("nothing in the close-out ends the loop on a count",
+            "plugins/ae/skills/discuss/SKILL.md: a content stop can be starved forever")
+
+    if "Count the completed `pass-N/` directories on disk" in flat:
+        ok("the bound is counted from disk, and only from completed passes")
+    else:
+        bad("the bound names no source, or counts passes that never finished",
+            "plugins/ae/skills/discuss/SKILL.md: a count held in the session dies with it, and a "
+            "half-finished pass would fire the bound early")
+
+    if "Both ways out owe the same thing" in flat:
+        ok("the objection-recording obligation attaches to the bound, not only to the content stop")
+    else:
+        bad("a record written because the count ran out owes no objection",
+            "plugins/ae/skills/discuss/SKILL.md: that is the exit most likely to leave one standing")
+
+analyze = read("plugins/ae/skills/analyze/SKILL.md")
+if analyze is not None:
+    if "question ids, like `F-NNN`, are never reused" in " ".join(analyze.split()):
+        ok("a re-posed question gets a new id, so the pass count starts from zero")
+    else:
+        bad("a returned question can be re-posed under the same id",
+            "plugins/ae/skills/analyze/SKILL.md: the old pass directories survive the return, so "
+            "the bound would fire before the re-posed question argued anything")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)

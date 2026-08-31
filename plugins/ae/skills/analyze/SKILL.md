@@ -90,9 +90,15 @@ second is not a gap — it is what a finished analysis can see, and what a plan 
 would decide silently and leave no record of.
 
 A `returned-<id>.md` in the directory is a discussion that ran and sent the question back
-because its premise did not hold. Re-decide it — dissolve the id or pose it again — and
-**delete the file**: it says the question is currently sent back, and once you have acted that
-is no longer true. It carries no evidence of its own, so nothing is lost with it.
+because its premise did not hold. Re-decide it — dissolve the id, or **pose it again under a new
+id, since question ids, like `F-NNN`, are never reused** — and **delete the file**: it says the
+question is currently sent back, and once you have acted that is no longer true. It carries no
+evidence of its own, so nothing is lost with it.
+
+The new id is not bookkeeping. The discussion bounds itself by counting the passes it has already
+run, and those directories survive the return — they hold the findings that sent the question back.
+Re-posing under the same id would hand the next discussion a count that is already spent, so its
+bound would fire before it had argued anything, and the record would have no objection to carry.
 
 The ids are what the runner acts on without reading prose: `discuss:` says how many times
 `/ae:discuss` runs and which section each run opens, and a `blocked_by:` still holding ids
