@@ -1,7 +1,7 @@
 ---
 name: gemini-proxy
 description: Google family representative. Internally calls Gemini MCP to provide cross-family perspective in Agent Teams.
-tools: Read, Grep, Glob, Bash, mcp__plugin_ae_gemini__chat, mcp__plugin_ae_gemini__reply, mcp__plugin_ae_gemini__info
+tools: Read, Grep, Glob, Bash, mcp__plugin_ae_gemini__chat, mcp__plugin_ae_gemini__reply, mcp__plugin_ae_gemini__models, mcp__plugin_ae_gemini__info
 model: haiku
 color: purple
 effort: low

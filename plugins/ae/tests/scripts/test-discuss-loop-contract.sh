@@ -347,6 +347,25 @@ if inert:
 else:
     ok("no definition sets omitClaudeMd, a field measured to do nothing")
 
+# --- F-097: what a seat is given matches what it is asked to do ---------------------------
+#
+# The Google seat is told to report the model that actually answered and to fall back when one
+# is unavailable, and its backend implements a `models` tool for exactly that
+# (`plugins/ae/mcp-servers/gemini/src/index.ts:290`). Without the grant it has to guess: it has
+# already reported a model as no longer available that the model list disproved.
+
+google_seat = read("plugins/ae/agents/workflow/gemini-proxy.md")
+if google_seat is not None:
+    google_tools = ""
+    for line in frontmatter(google_seat).splitlines():
+        if line.startswith("tools:"):
+            google_tools = line
+    if "mcp__plugin_ae_gemini__models" in google_tools:
+        ok("the Google seat can list the models it is asked to pick between")
+    else:
+        bad("the Google seat is asked which model answered but cannot list the models",
+            f"plugins/ae/agents/workflow/gemini-proxy.md: {google_tools.strip() or 'no tools: line'}")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
