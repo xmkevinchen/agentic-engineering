@@ -75,6 +75,25 @@ is incomplete, and that goes back to ANALYZE.
 
 **Three exchanges, and each asks for something the one before it cannot give.**
 
+```
+      analysis.md § <id>
+             │
+             ▼
+       1 INDEPENDENT ◄───────────┐  every seat unnamed; none
+             │                   │  can address another
+             ▼                   │
+       2 CORRECT EACH OTHER      │  you relay each answer to the
+             │                   │  others → one composite, and
+             ▼                   │  what could not be settled
+       3 CLOSE OUT ──────────────┘  four angles kept apart; "the
+             │                      answer can be better" means
+             │                      the question has changed
+             │
+             │ ╌╌╌► the premise is wrong — back to ANALYZE
+             ▼
+      decision-<id>.md — written when a pass changes nothing
+```
+
 **One — independent.** Each seat gets the question and the material the analysis cites, and
 nothing else: not another seat's answer, and not yours. What comes back is options and leads
 that are uncorrelated, which is the only form of "several parties" that is not one party
