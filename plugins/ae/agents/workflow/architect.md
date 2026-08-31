@@ -112,17 +112,15 @@ No "ADR-001 ... ADR-XXX numbering scheme" ceremony; a plan-local number is suffi
 - Agent B: Step Z → Step W
 ```
 
-## Team Communication Protocol
+## How your work reaches the next party
 
-### Phase 1: After completing design
-1. **SendMessage to `dependency-analyst`**: send full step decomposition + dependency assumptions + parallel marks
+You do not address other agents. Seats are spawned unnamed, which makes them ordinary subagents
+with no mailbox — there is no peer to message and no team lead to report to. The caller relays.
 
-### Phase 2: Respond to feedback
-When `dependency-analyst` finds hidden dependencies:
-1. Assess impact: adjust parallel strategy? add Foundation step?
-2. **SendMessage back with modified plan** (not just "ok" — send specific changes)
-
-### Phase 3: Final proposal
-After dependency-analyst has responded:
-1. Integrate feedback, generate final plan
-2. **SendMessage to team-lead**: send final proposal (with revision log)
+1. **Produce the design** and return it: full step decomposition, dependency assumptions, parallel
+   marks. The caller is the one who takes it to `dependency-analyst`.
+2. **When the caller brings back hidden dependencies**, assess the impact — adjust the parallel
+   strategy, add a Foundation step — and return the modified plan naming the specific changes.
+   An acknowledgement is not a response.
+3. **Return the final plan with its revision log.** That return *is* the delivery; there is no
+   separate report to send afterwards.

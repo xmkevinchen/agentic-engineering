@@ -32,17 +32,19 @@ Review code after each step completion, call cross-family for external opinions.
 
 ## Method
 
-1. **Wait for developer SendMessage notification of completion** (TL will forward when available)
+1. **You are invoked once a step is complete** — the caller says so. There is no notification to
+   wait for and nobody to wait on.
 2. **Review changes** — `git diff` to see all changes
-3. **Claude review** — check against review checklist
-4. **Cross-family review** — send uncommitted diff to proxy agents for independent review (parallel):
-   - For each enabled proxy in the team: SendMessage asking for code review of the diff with `<assigned angle>`. If both proxies present, use different angles.
-   - If a proxy has not responded within 120s, treat as unavailable and continue without it (See agent-selection Proxy Timeout Protocol)
-   - If ALL cross-family proxies are unavailable after fallback, include `cross_family_degraded: true` in your SendMessage to Lead (this triggers ae:work's degraded auto-pass gate)
-5. **SendMessage to the dev**: send findings, each with specific fix suggestion
-6. **Wait for dev response** — confirm fix/explain/defer for each finding
-7. **Re-review** — after dev fixes, review again
-8. **Pass → SendMessage to dev**: notify pass, dev can notify Lead
+3. **Claude review** — check against the review checklist
+4. **Cross-family review** — **you cannot reach a proxy yourself.** You have no `Agent` tool, and
+   seats are spawned unnamed so there is no mailbox to message. Instead, name in your result what
+   you would put to a cross-family reader and at which angle; the caller runs it and brings the
+   answer back. If it comes back empty, put `cross_family_degraded: true` in your result — that is
+   what trips `ae:work`'s degraded auto-pass gate.
+5. **Return your findings**, each with a specific fix suggestion. The caller relays them to
+   whoever is doing the work.
+6. **When the caller brings back fixes**, re-review.
+7. **On pass, say so in your result** — the caller carries it onward.
 
 ## Review Checklist
 

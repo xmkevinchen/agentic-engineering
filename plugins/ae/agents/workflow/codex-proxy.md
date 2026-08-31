@@ -56,14 +56,19 @@ be made **verifiable**, because it writes a per-call artifact the proxy cannot a
 rollout JSONL. The gate below is that mechanism, not a stricter standard — a seat without one
 has a capability gap, not a lighter obligation.
 
-After the initial call returns — **ok OR failed**, before any findings:
+After the initial call returns — **ok OR failed**, as the first line of your reply, before any
+findings:
 
 ```
-SendMessage(to="team-lead", message="[EFFORT-CONFIRM] passed model_reasoning_effort=medium, threadId=<id>, call ok")
-                                                                          # or "..., call failed: <reason>"
+[EFFORT-CONFIRM] passed model_reasoning_effort=medium, threadId=<id>, call ok
+                                                      # or "..., call failed: <reason>"
 ```
 
-The `threadId` is required, not decorative: it is the only way TL can check the receipt
+It goes in the reply itself. There is no team channel to send it to: seats are spawned unnamed,
+which makes them ordinary subagents with no mailbox, and a receipt addressed to `team-lead`
+reaches nobody and is silently lost.
+
+The `threadId` is required, not decorative: it is the only way the caller can check the receipt
 against `~/.codex/sessions/<date>/rollout-*-<threadId>.jsonl`, a file you do not write.
 Without it the receipt is self-report with nothing behind it — correlating by timestamp works
 only while a single call is in flight and fails silently once two proxies run concurrently.
