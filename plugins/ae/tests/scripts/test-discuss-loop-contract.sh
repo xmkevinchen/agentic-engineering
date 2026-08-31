@@ -114,6 +114,33 @@ for relative, role in RETURN_TAG_LEGS:
         bad(f"{pathlib.Path(relative).parent.name} never names returned-<id>.md",
             f"{relative}: this leg {role}, and nothing says so")
 
+# --- AC1: every round leaves its output on disk -------------------------------------------
+#
+# Nothing resumes across rounds: the next round reads what the last one wrote. So anything a
+# round produces that is not written down cannot reach the round that needs it. Three artifact
+# classes have gone missing in real runs — a seat's own answer, the composite the correction
+# round produces, and the fact that a seat could not answer at all.
+
+discuss = read("plugins/ae/skills/discuss/SKILL.md")
+if discuss is not None:
+    if "pass-1/" in discuss:
+        ok("the directory layout shows the pass level, so a pass is countable from disk")
+    else:
+        bad("the directory layout has no pass level",
+            "plugins/ae/skills/discuss/SKILL.md: a bare round-N/ cannot say which pass it was")
+
+    if "composite.md" in discuss:
+        ok("the correction round's composite is a named file")
+    else:
+        bad("the correction round's composite is named as a deliverable but given no path",
+            "plugins/ae/skills/discuss/SKILL.md: a deliverable with no path is not on disk")
+
+    if "could not answer" in discuss or "cannot answer" in discuss:
+        ok("a seat that produced no answer still leaves the absence on disk")
+    else:
+        bad("nothing records a seat that could not answer",
+            "plugins/ae/skills/discuss/SKILL.md: a silent gap reads as a seat nobody asked")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)

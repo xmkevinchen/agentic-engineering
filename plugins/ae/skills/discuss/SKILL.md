@@ -108,18 +108,58 @@ be settled**, kept separate. The second is not a shortfall — it is what enters
 assumption carrying the condition that would retract it.
 
 **You carry the round; the seats never address each other.** A peer can address an agent by
-name and cannot address one that has none, so spawn every seat **unnamed** and relay their
-answers yourself, unattributed. Independence in exchange one then holds because of how the
-agents are wired, not because a prompt asked for it. Relaying also costs less than an open
-channel between them: two seats each waiting on the other is a coordination stall, and any live
-edge between seats is only as long-lived as the shortest backend session behind it — which can
-be dead before it is used, and silently.
+name and cannot address one that has none, so spawn every seat **unnamed**. Independence in
+exchange one then holds because of how the agents are wired, not because a prompt asked for it.
+Carrying it yourself also costs less than an open channel between them: two seats each waiting
+on the other is a coordination stall, and any live edge between seats is only as long-lived as
+the shortest backend session behind it — which can be dead before it is used, and silently.
 
-**Nothing is resumed across rounds either.** Each round spawns its seats fresh, and what carries
-forward is the previous round's written output, injected by you — not a seat's own history. This
-is the disk hand-off rule the workflow already runs on, applied one level down, and it retires
-the same lifetime problem a second time: no backend session has to survive the gap between
-rounds, and a round that fails is simply re-run rather than recovered.
+**Every seat writes its own file, and you never write it for them.**
+
+```
+<feature-dir>/discuss-<id>/
+  pass-1/
+    round-1/<seat>.md
+    round-2/<seat>.md      + round-2/composite.md
+    round-3/<angle>.md
+  pass-2/
+    ...
+```
+
+**Every pass, including the first, writes under `pass-N/`.** There is never a bare `round-N/`
+directly under `discuss-<id>/`: a round that does not say which pass it belonged to leaves a
+directory that cannot be counted, and the loop's bound is counted from exactly here.
+
+You give a seat two things: **the path it writes**, and **the paths it reads**. It writes its own
+file. You do not author it and you do not paraphrase it into a summary that then travels in its
+place — a summary standing in for the thing summarised is how a round's evidence quietly becomes
+your account of that evidence, and every later round then argues with your account.
+
+**So relaying is a matter of paths, not of content.** Round two hands each seat the paths of the
+others' round-one files, unattributed; a seat with local file access reads them itself, and a
+seat fronting a backend without local access reads them and inlines them in the call it makes.
+This is what keeps a prompt short enough to stay on the question: a round that has to carry three
+full answers inside its own text invites answers sized to match.
+
+**Nothing is resumed across rounds.** Each round spawns fresh and the files are what carry
+forward — not a seat's own history. This is the disk hand-off rule the workflow already runs on,
+applied one level down, and it retires the same lifetime problem a second time: no backend
+session has to survive the gap between rounds, a round that fails is re-run rather than
+recovered, and an interrupted run resumes from the directory rather than from this conversation.
+
+**The composite is a file too, at `round-2/composite.md`.** It is the round's deliverable and the
+thing round three attacks, so it is the one artifact a later round is guaranteed to need — and it
+is the one most easily left in the conversation, because you wrote it and you can still see it.
+Written by you rather than by a seat, which is why it is named here rather than left to the rule
+above.
+
+**A seat that could not answer still leaves a file at its own path**, written by you and saying so
+— which backend, which model, what failed. That file is not a seat's answer and says it is not:
+what it prevents is a silent gap, where a seat that failed and a seat nobody asked look identical,
+and the record then reports a challenge that never happened.
+
+**The record stays at `<feature-dir>/decision-<id>.md`, outside that directory.** What sits under
+`discuss-<id>/` is how the answer was reached; the record is the answer.
 
 **Three — close it out.** The composite is attacked, and from several angles at once rather
 than by one reader working down a list: where it is wrong, which of its decisions is most
