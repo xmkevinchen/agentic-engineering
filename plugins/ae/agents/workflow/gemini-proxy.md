@@ -83,8 +83,8 @@ produce — an expectation that you will find one is a slot you will fill (`BL-2
 When the caller names a path, **write your answer there before you return it.** The reply is how
 the caller reads it without opening the file; the file is what the next round reads, and a round
 that has to be reconstructed from a reply is a round that was never written down. You have `Bash`,
-so a heredoc is enough — the header above goes at the top, then the backend's answer as it came
-back. Write the file even when the backend was unreachable, saying so: an absent seat that leaves
+so a heredoc is enough. The perspective header below goes at the top of that file, then the
+backend's answer as it came back. Write the file even when the backend was unreachable, saying so: an absent seat that leaves
 nothing is indistinguishable from a seat nobody asked.
 
 ## Perspective header

@@ -268,7 +268,7 @@ footer{
 
   <figure>
     <div class="scroller">
-      <svg viewBox="0 0 920 700" role="img" aria-label="The main session invokes discuss once per id and runs three rounds against three unnamed seats: a Codex seat, a Gemini seat, and a fresh-context Claude seat of its own family. Round one sends the question and its cited material and the seats cannot see each other. Round two relays every answer to the other seats through the main session, returning one composite answer and a separate list of what could not be settled. Round three attacks the composite from four separate angles, held by readers who argued none of it. A close-out finding either says the premise is wrong, which writes a returned-id file and returns the work to analyze, or says the answer can be better, which re-enters at round one because the question has changed. The record is written when a pass changes nothing, or when the second pass ends, whichever comes first — the loop runs at most twice on one posing of a question.">
+      <svg viewBox="0 0 920 700" role="img" aria-label="The main session invokes discuss once per id and runs three rounds against three unnamed seats: a Codex seat, a Gemini seat, and a fresh-context Claude seat of its own family. Round one sends the question and its cited material and the seats cannot see each other. Round two relays every answer to the other seats through the main session, returning one composite answer and a separate list of what could not be settled. Round three attacks the composite from four separate angles, held by readers who argued none of it. A close-out finding either says the question's own premise is wrong — asserted false, not merely unconfirmed — which writes a returned-id file and returns the work to analyze, or it does not, in which case it re-enters at round one; there is no third class. An analysis that cited too little goes back the same way, and the tag says which of the two happened. The record is written when a pass changes nothing, or when the second pass ends, whichever comes first — the loop runs at most twice on one posing of a question.">
         <defs>
           <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -370,15 +370,15 @@ footer{
 
         <!-- THE FORK -->
         <path class="flow" d="M488,520 L488,546" marker-end="url(#ar)"/>
-        <text class="t-title" x="292" y="568">a finding is not a verdict &mdash; which is it saying?</text>
+        <text class="t-title" x="292" y="568">a finding is not a verdict &mdash; whose premise, and asserted how?</text>
 
         <!-- premise wrong: all the way back to analyze -->
         <path class="flow-stop" d="M292,582 L240,582 L240,48 L224,48" marker-end="url(#ar-s)"/>
-        <text class="t-stop" x="292" y="598">the premise is wrong &rarr; returned-&lt;id&gt;.md, back to ANALYZE</text>
+        <text class="t-stop" x="292" y="598">the question&rsquo;s own premise is wrong &rarr; returned-&lt;id&gt;.md, back to ANALYZE</text>
 
         <!-- can be better: back to round one -->
         <path class="flow-accent" d="M676,626 L890,626 L890,74 L488,74 L488,96" marker-end="url(#ar-a)"/>
-        <text class="t-accent" x="292" y="630">the answer can be better &rarr; the question has changed; round &#9312; again</text>
+        <text class="t-accent" x="292" y="630">anything else &rarr; the question has changed; round &#9312; again, at most twice</text>
 
         <!-- record -->
         <path class="flow" d="M488,644 L488,664" marker-end="url(#ar)"/>

@@ -68,11 +68,16 @@ for angle in CLOSE_OUT:
     for line in frontmatter(text).splitlines():
         if line.startswith("tools:"):
             tools = line
-    if "Write" in tools:
-        ok(f"close-out seat {angle} is granted Write")
-    else:
+    told = ("to the file path the caller names" in text
+            and "Write the file before you return" in text)
+    if "Write" in tools and told:
+        ok(f"close-out seat {angle} is granted Write and told to use it")
+    elif "Write" not in tools:
         bad(f"close-out seat {angle} is told to write a file but is not granted Write",
             f"{relative}: {tools.strip() or 'no tools: line'}")
+    else:
+        bad(f"close-out seat {angle} can write a file but is never told to",
+            f"{relative}: a grant with no instruction produces nothing")
 
 # The proxy seats front a backend and have always returned their findings in a reply. A reply
 # is not a round's output: the next round reads files. Each must be told to write its own.
@@ -108,11 +113,20 @@ for relative, role in RETURN_TAG_LEGS:
     text = read(relative)
     if text is None:
         continue
-    if "returned-<id>.md" in text:
-        ok(f"{pathlib.Path(relative).parent.name} {role}")
-    else:
-        bad(f"{pathlib.Path(relative).parent.name} never names returned-<id>.md",
+    stage = pathlib.Path(relative).parent.name
+    if "returned-<id>.md" not in text:
+        bad(f"{stage} never names returned-<id>.md",
             f"{relative}: this leg {role}, and nothing says so")
+        continue
+    body = " ".join(text.split())
+    if stage == "analyze" and "**delete the file**" not in body:
+        bad("analyze names the tag but never tears it off",
+            f"{relative}: a tag left on a question that has passed is wrong information")
+    elif stage == "go" and "means that id is back at step 1, not here" not in body:
+        bad("go names the tag but does not route on it",
+            f"{relative}: a tag nothing acts on is not a reader")
+    else:
+        ok(f"{stage} {role}")
 
 # --- AC1: every round leaves its output on disk -------------------------------------------
 #
@@ -123,13 +137,13 @@ for relative, role in RETURN_TAG_LEGS:
 
 discuss = read("plugins/ae/skills/discuss/SKILL.md")
 if discuss is not None:
-    if "pass-1/" in discuss:
+    if "pass-1/" in discuss and "There is never a bare `round-N/`" in " ".join(discuss.split()):
         ok("the directory layout shows the pass level, so a pass is countable from disk")
     else:
         bad("the directory layout has no pass level",
             "plugins/ae/skills/discuss/SKILL.md: a bare round-N/ cannot say which pass it was")
 
-    if "composite.md" in discuss:
+    if "The composite is a file too, at `round-2/composite.md`" in " ".join(discuss.split()):
         ok("the correction round's composite is a named file")
     else:
         bad("the correction round's composite is named as a deliverable but given no path",
@@ -193,7 +207,8 @@ if discuss is not None:
         bad("nothing in the close-out ends the loop on a count",
             "plugins/ae/skills/discuss/SKILL.md: a content stop can be starved forever")
 
-    if "Count the completed `pass-N/` directories on disk" in flat:
+    if ("Count the completed `pass-N/` directories on disk" in flat
+            and "completed means all four angle files are there" in flat):
         ok("the bound is counted from disk, and only from completed passes")
     else:
         bad("the bound names no source, or counts passes that never finished",

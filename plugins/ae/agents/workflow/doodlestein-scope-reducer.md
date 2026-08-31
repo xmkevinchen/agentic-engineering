@@ -25,7 +25,7 @@ You ask the SUBTRACT-shaped question that none of the other three asks: **what c
 
 ## Your Task
 
-Read the artifact being reviewed (the team lead will point at a specific file — typically a conclusion or synthesis) and answer this question with a structured per-mechanism analysis:
+Read the artifact being reviewed (the caller will point at a specific file — typically a conclusion or synthesis) and answer this question with a structured per-mechanism analysis:
 
 > "Of everything the conclusion/synthesis adds beyond what the framed problem strictly needs, what could be deleted such that the original problem is still solved?"
 

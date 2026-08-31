@@ -90,13 +90,14 @@ rather than leaving it to be inferred from a filename that covers both.
        2 CORRECT EACH OTHER      │  you relay each answer to the
              │                   │  others → one composite, and
              ▼                   │  what could not be settled
-       3 CLOSE OUT ──────────────┘  four angles kept apart; "the
-             │                      answer can be better" means
-             │                      the question has changed
+       3 CLOSE OUT ──────────────┘  four angles kept apart; anything
+             │                      that is not the question's own
+             │                      premise re-enters at round one
              │
-             │ ╌╌╌► the premise is wrong — back to ANALYZE
+             │ ╌╌╌► the question's own premise is wrong, or the analysis
+             │      cited too little — returned-<id>.md, back to ANALYZE
              ▼
-      decision-<id>.md — written when a pass changes nothing
+      decision-<id>.md — a pass changes nothing, or two passes are done
 ```
 
 **One — independent.** Each seat gets the question and the material the analysis cites, and
@@ -133,7 +134,9 @@ the shortest backend session behind it — which can be dead before it is used, 
 ```
 
 `<seat>` is the family the seat answers for — `codex.md`, `gemini.md`, `claude.md`, and a seat
-fronting some other backend named for its family the same way — and `<angle>` is the angle it took: `adversarial.md`, `regret.md`, `strategic.md`, `scope-reducer.md`. Fixed
+fronting some other backend named for its family the same way — and `<angle>` is the angle it
+took: `adversarial.md`, `regret.md`, `strategic.md`, `scope-reducer.md`, held by
+`ae:workflow:doodlestein-adversarial`, `-regret`, `-strategic` and `-scope-reducer`. Fixed
 names, because a resuming run has to tell a seat that did not answer from a seat whose file it
 cannot find, and neither can be read off a directory whose naming was invented per run.
 
@@ -187,7 +190,11 @@ own premises can still be attacked.
 
 **The three are a default path, not a pipeline.** Each round ends by reading what came back and
 choosing the next move, rather than advancing on schedule: a correction round that shows the
-question was posed wrong sends you back to it, not forward.
+question was posed wrong sends you back to ANALYZE — the same exit the close-out takes, tag and
+all — rather than forward into a close-out over a question that should not have been asked. It
+does **not** restart the pass. A pass that never reaches round three never completes, and an
+incomplete pass is not counted, so a loop that turned back on itself here would be one the bound
+cannot see.
 
 **A close-out finding is not a verdict either.** Sort what it returns by one question — **does it
 say the question's own premise is wrong, asserted false rather than merely unconfirmed or at risk
@@ -204,12 +211,19 @@ found it are, and what ANALYZE must re-decide. Without it the id is byte-identic
 never ran, and whoever resumes cannot tell a question that was argued and sent back from one nobody
 has started.
 
-**A pass says in writing what it was asked.** `pass-N/question.md` holds it: for the first pass
+**A pass says in writing what it was asked.** `pass-N/question.md` holds it, written by you: for the first pass
 the analysis's section as it stands, and for every pass after it that same section **plus the
 surviving findings, verbatim and attributed to nobody**. That is how a changed question still goes
 out in the analysis's own words — the change is carried as the finding that made it, not as your
 paraphrase of what the question has become. Without this the reasoning that opened a pass lives
 only in your conversation, which is the one place the next pass cannot read.
+
+**A round is sorted finding by finding, and a return outranks the rest.** When one close-out
+produces both — one angle says the question's own premise is wrong, another has an improvement that
+would survive — the return wins and the pass ends there. Carry the surviving findings into
+`returned-<id>.md` alongside it: they were not answered, and ANALYZE re-posing the question is what
+decides whether they still apply. Polishing an answer to a question that is going back is work
+thrown away.
 
 **Everything that does not say so re-enters at round one. There is no third class** — a finding
 that the remaining disagreement is a preference rather than a fact is not an exit, and neither is
