@@ -263,6 +263,13 @@ silently — falling back a model tier on a quota or retirement error — and an
 depends on what produced it. Where two exchanges ran on different models, say so rather than
 reading the difference between them as the questions having improved.
 
+**And which agent held the seat, with the settings its own definition declares** — the agent id,
+its model and its grant. This is yours to write because the seat cannot: a spawn on a definition
+declaring `model: sonnet` reported no sentence naming a model anywhere in its context, and no
+seat can see its own agent type. Where a backend does not expose what answered, the file says
+that rather than leaving the slot empty: `model: not exposed` has said what the round ran as, and
+a blank has not.
+
 **What comes back is argued in the record like anything else**, and what nobody produced is not
 invented to fill the slot. **The record names who produced what**, one clause per option, per
 correction, and per close-out finding. That attribution is what makes this stage falsifiable:

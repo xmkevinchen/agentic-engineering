@@ -313,6 +313,21 @@ if discuss is not None:
         bad("naming the seat took the shared-prior disclosure with it",
             "plugins/ae/skills/discuss/SKILL.md: the id was added by replacing the paragraph")
 
+# --- F-097: a finished run can say what answered each round -------------------------------
+#
+# A seat cannot report its own agent type or the settings its definition declared — a spawn on a
+# definition declaring `model: sonnet` reported no model-naming sentence in its context at all.
+# So the obligation is the caller's, and it is stage-level: one rule covers every seat in a
+# round rather than each definition carrying its own.
+
+if discuss is not None:
+    if "which agent held the seat" in flat:
+        ok("the caller records which agent held each seat, not only which backend answered")
+    else:
+        bad("a finished run cannot say which agent answered a round",
+            "plugins/ae/skills/discuss/SKILL.md: backend and model do not name the seat or its "
+            "declared settings, and the seat cannot report them itself")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
