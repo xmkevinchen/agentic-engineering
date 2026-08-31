@@ -366,6 +366,19 @@ if google_seat is not None:
         bad("the Google seat is asked which model answered but cannot list the models",
             f"plugins/ae/agents/workflow/gemini-proxy.md: {google_tools.strip() or 'no tools: line'}")
 
+    # The body tells this seat to fetch its backend tools by name when they arrive deferred. A
+    # tool that is in the grant but absent from that fetch list is the one tool the seat would
+    # not hold on the deferred path — the grant and the fetch list have to name the same set.
+    granted = set(re.findall(r"mcp__plugin_ae_gemini__\w+", google_tools))
+    fetch_lists = " ".join(re.findall(r"ToolSearch\(query: \"select:[^\"]*\"", google_seat))
+    fetched = set(re.findall(r"mcp__plugin_ae_gemini__\w+", fetch_lists))
+    if granted and granted <= fetched:
+        ok("the Google seat's deferred-tool fetch names every backend tool it is granted")
+    else:
+        bad("the Google seat is granted a backend tool its own fetch list does not name",
+            "plugins/ae/agents/workflow/gemini-proxy.md: granted but never fetched: "
+            f"{sorted(granted - fetched) or '(none)'}")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)

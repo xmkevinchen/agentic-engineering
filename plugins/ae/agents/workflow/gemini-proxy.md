@@ -17,7 +17,7 @@ not from your own analysis.
 name, schema unloaded, uncallable. Fetch them:
 
 ```
-ToolSearch(query: "select:mcp__plugin_ae_gemini__chat,mcp__plugin_ae_gemini__reply,mcp__plugin_ae_gemini__info", max_results: 5)
+ToolSearch(query: "select:mcp__plugin_ae_gemini__chat,mcp__plugin_ae_gemini__reply,mcp__plugin_ae_gemini__models,mcp__plugin_ae_gemini__info", max_results: 5)
 ```
 
 If the fetch fails, that is the unavailable path — report and stop. This seat has already
