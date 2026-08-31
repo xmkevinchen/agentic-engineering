@@ -58,11 +58,14 @@ argue with; being unlike you does not redeem it. So there is no ranking among se
 whoever clears both counts, and more than one where you can, since seats answer blind and two
 blind answers tend to bring different things rather than the same thing twice.
 
-A fresh-context agent of your own family clears the floor and fails the prior. That makes it a
-real participant carrying a named weakness, not a last resort ranked beneath a backend that
-cannot argue: seat it when it is the best party available, and let the record say it shared the
-prior. Where there was no outside party at all, say that instead — a decision made by one party
-is still a decision, it is one whose blind spot is unrecorded.
+A fresh-context agent of your own family clears the floor and fails the prior, which makes it a
+real participant carrying a named weakness rather than a last resort. **Seat it alongside the
+others, not behind them.** Its capability is the one you can count on; the closing round asks
+only that a reader argued none of the composite, which it satisfies as well as anyone; and on
+the evidence so far the sharpest objection any exchange has produced came from a same-family
+seat. What the record owes is the weakness itself — say that it shared the prior. Where there
+was no outside party at all, say that instead: a decision made by one party is still a
+decision, it is one whose blind spot is unrecorded.
 
 **What goes out is the analysis's own words**: the section under the `discuss:` id as it
 stands, and as material what the analysis cites. This is the rule already governing the record,
@@ -70,46 +73,73 @@ pointed outward — a question restated by someone who knows the answer carries 
 Needing to send material the analysis does not cite is not a packaging problem; the analysis
 is incomplete, and that goes back to ANALYZE.
 
-**They answer before they see your answer, and the second exchange is the one that pays.** The
-first carries the question and nothing else and returns options and leads; the second shows the
-option you chose and the reason you chose it and asks what is wrong with it. That is where a
-premise you never thought to check gets refuted, and it is not optional. Reversed, you get a
-reflection of your own draft back.
+**Three exchanges, and each asks for something the one before it cannot give.**
 
-**Seats never address each other, and the wiring is what holds it.** A peer can address an
-agent by name and cannot address one that has none, so spawn every seat **unnamed** —
-independence then holds because of how the agents are wired, not because a prompt asked for it,
-which is the only form of it that survives a seat having some reason to compare notes. What
-carries a seat from the first exchange into the second is the backend conversation, not the
-agent process: a thread or session id resumes it in whichever agent is holding it.
+**One — independent.** Each seat gets the question and the material the analysis cites, and
+nothing else: not another seat's answer, and not yours. What comes back is options and leads
+that are uncorrelated, which is the only form of "several parties" that is not one party
+counted twice.
 
-**Carry the challenge across yourself.** In the second exchange, forward one specific claim a
-seat made — its own words, unattributed — to the seats that did not make it, and ask whether it
-is wrong. Every other constraint here is one you wrote, and so is bounded by what you already
-knew to ask; a claim from a party that answered blind is the only thing in the exchange you did
-not author, which makes it the only route by which an error you cannot see reaches the record.
-An open channel between the seats buys that same property and costs more: seats waiting on each
-other, and an edge no longer-lived than the shortest backend session behind it — which can be
-dead before it is used, and silently. One forwarded claim needs no coordination round and no
-session held alive between exchanges.
+**Two — correct each other.** Each seat now sees what the others wrote. What you ask for is
+neither agreement nor a preference; it is **which of these claims is not true, and which of
+them does not answer what was actually asked**. A seat that has committed to its own answer
+reads another's better than you do. Two things come back, and both are the deliverable of the
+round: **one composite answer**, the most correct thing that survives it, and **what could not
+be settled**, kept separate. The second is not a shortfall — it is what enters the record as an
+assumption carrying the condition that would retract it.
 
-**It is still not a debate to be won.** One relayed claim, one answer to it, then each seat
-states its final objection. Nothing converges and nobody votes. The point is to kill weak
-objections before they reach the record, not to produce agreement, and the decision was never
-on the table.
+**You carry the round; the seats never address each other.** A peer can address an agent by
+name and cannot address one that has none, so spawn every seat **unnamed** and relay their
+answers yourself, unattributed. Independence in exchange one then holds because of how the
+agents are wired, not because a prompt asked for it. Relaying also costs less than an open
+channel between them: two seats each waiting on the other is a coordination stall, and any live
+edge between seats is only as long-lived as the shortest backend session behind it — which can
+be dead before it is used, and silently.
+
+**Nothing is resumed across rounds either.** Each round spawns its seats fresh, and what carries
+forward is the previous round's written output, injected by you — not a seat's own history. This
+is the disk hand-off rule the workflow already runs on, applied one level down, and it retires
+the same lifetime problem a second time: no backend session has to survive the gap between
+rounds, and a round that fails is simply re-run rather than recovered.
+
+**Three — close it out.** The composite is attacked, and from several angles at once rather
+than by one reader working down a list: where it is wrong, which of its decisions is most
+likely to be reversed, what single change would improve it most, and which of its mechanisms is
+surplus and should be argued out of it. Together those are its gains and its costs, which is
+what has to be weighed before it is written down. **The angles stay separate**, because a
+reader who has answered the first question is anchored for the rest — the same reason exchange
+one runs blind. Whoever does this argued none of it, and that is the whole qualification: by
+now the composite is what you are about to write down, so this is the last round in which your
+own premises can still be attacked.
+
+**The three are a default path, not a pipeline.** Each round ends by reading what came back and
+choosing the next move, rather than advancing on schedule: a correction round that shows the
+question was posed wrong sends you back to it, not forward.
+
+**A close-out finding is not a verdict either.** Sort what it returns by one question — **does
+it say the premise is wrong, or does it say the answer can be better?** A premise that does not
+hold ends the loop here and goes back to ANALYZE; no amount of further polish repairs a question
+that was malformed or already settled. **Everything else re-enters at round one.** A finding
+that survives has changed what is being asked, and the changed question earns the same
+independent answering the first one got; closing out again over a composite no seat has seen
+uncorrelated tests the new version more weakly than the old one was tested. Stop when a pass
+produces nothing the composite does not already hold, and record what the close-out still
+objected to — an objection you overrode belongs in the record, not in the bin.
+
+**Nothing here is settled by counting.** No round converges by majority and agreement raises
+nothing — two families share blind spots, and how many said a thing is not a reason. A round is
+settled by what is true and by what actually answers the question. The decision stays yours.
 
 **Each exchange records which backend and which model answered it.** A seat can degrade
 silently — falling back a model tier on a quota or retirement error — and an answer's weight
 depends on what produced it. Where two exchanges ran on different models, say so rather than
 reading the difference between them as the questions having improved.
 
-**What you ask for is an option or an objection nobody here has named**, never a vote:
-agreement from another family raises nothing, two families share blind spots, and a majority
-is not a reason. What comes back is argued in the record like anything else, and what nobody
-produced is not invented to fill the slot. **The record names who produced what**, one clause
-per option and per objection. That attribution is what makes this stage falsifiable: across
-enough features it can be read off whether an outside party ever changed a decision, and if
-the answer is never, this section should go.
+**What comes back is argued in the record like anything else**, and what nobody produced is not
+invented to fill the slot. **The record names who produced what**, one clause per option, per
+correction, and per close-out finding. That attribution is what makes this stage falsifiable:
+across enough features it can be read off whether an outside party ever changed a decision, and
+if the answer is never, this section should go.
 
 The decision itself is yours, including one that changes what a criterion means: the criteria
 are not signed yet, and settling this question is why they were not. Edit `acceptance.md` in

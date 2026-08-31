@@ -1,0 +1,609 @@
+<title>Discuss: Three Rounds and a Loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --ground:#EDF0F3;
+  --surface:#F8FAFB;
+  --sunk:#E3E8EC;
+  --ink:#16202B;
+  --muted:#546577;
+  --rule:#C7D2DA;
+  --accent:#8F6104;
+  --accent-soft:#F0E4C6;
+  --stop:#7B2D3B;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F171E;
+    --surface:#18232D;
+    --sunk:#131D26;
+    --ink:#E2EAF1;
+    --muted:#94A6B4;
+    --rule:#2B3A47;
+    --accent:#E0AA45;
+    --accent-soft:#3A2E12;
+    --stop:#DC8494;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F171E;
+  --surface:#18232D;
+  --sunk:#131D26;
+  --ink:#E2EAF1;
+  --muted:#94A6B4;
+  --rule:#2B3A47;
+  --accent:#E0AA45;
+  --accent-soft:#3A2E12;
+  --stop:#DC8494;
+}
+
+*{box-sizing:border-box}
+
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:17px;
+  line-height:1.62;
+  margin:0;
+  padding:0 24px 96px;
+}
+
+.wrap{max-width:1000px;margin:0 auto}
+.col{max-width:64ch}
+
+header.masthead{
+  padding:72px 0 40px;
+  border-bottom:2px solid var(--ink);
+  margin-bottom:44px;
+}
+.eyebrow{
+  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11.5px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:0 0 18px;
+}
+h1{
+  font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
+  font-weight:700;
+  font-size:clamp(2.4rem,6vw,3.9rem);
+  line-height:1.02;
+  letter-spacing:-.025em;
+  margin:0 0 20px;
+  text-wrap:balance;
+}
+.standfirst{
+  font-size:1.2rem;
+  color:var(--muted);
+  margin:0;
+  max-width:56ch;
+  text-wrap:pretty;
+}
+
+h2{
+  font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
+  font-weight:600;
+  font-size:1.55rem;
+  letter-spacing:-.012em;
+  line-height:1.2;
+  margin:0 0 6px;
+  text-wrap:balance;
+}
+h3{
+  font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
+  font-weight:600;
+  font-size:1.05rem;
+  letter-spacing:-.005em;
+  margin:0 0 8px;
+}
+section{margin-bottom:64px}
+.sec-label{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin:0 0 10px;
+}
+p{margin:0 0 18px}
+p:last-child{margin-bottom:0}
+
+code{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.86em;
+  background:var(--sunk);
+  border:1px solid var(--rule);
+  border-radius:3px;
+  padding:1px 5px;
+}
+
+figure{
+  margin:32px 0;
+  padding:26px 22px 18px;
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-radius:4px;
+}
+.scroller{overflow-x:auto}
+figure svg{display:block;max-width:100%;height:auto;min-width:640px;color:var(--ink)}
+figcaption{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:12px;
+  line-height:1.6;
+  color:var(--muted);
+  margin-top:18px;
+  padding-top:14px;
+  border-top:1px solid var(--rule);
+}
+
+/* diagram primitives */
+.node{fill:var(--surface);stroke:currentColor;stroke-width:1.4}
+.node-sunk{fill:var(--sunk);stroke:currentColor;stroke-width:1.4}
+.zone{fill:none;stroke:currentColor;stroke-width:1.2;stroke-dasharray:5 4;opacity:.55}
+.zone-accent{fill:none;stroke:var(--accent);stroke-width:1.6}
+.foreign{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.6}
+.flow{stroke:currentColor;stroke-width:1.4;fill:none}
+.flow-accent{stroke:var(--accent);stroke-width:2;fill:none}
+.flow-stop{stroke:var(--stop);stroke-width:1.6;fill:none;stroke-dasharray:4 3}
+.blind{stroke:var(--stop);stroke-width:1.4;fill:none;stroke-dasharray:3 4}
+
+text{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;fill:currentColor}
+.t-title{font-family:Archivo,sans-serif;font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.t-sub{font-size:11px;fill:var(--muted)}
+.t-edge{font-size:11px;fill:var(--muted)}
+.t-accent{fill:var(--accent);font-size:11px}
+.t-stop{fill:var(--stop);font-size:11px}
+.t-num{font-family:Archivo,sans-serif;font-size:12px;font-weight:700;fill:var(--accent)}
+
+ul{margin:0 0 18px;padding-left:0;list-style:none}
+li{
+  position:relative;
+  padding-left:26px;
+  margin-bottom:11px;
+}
+li::before{
+  content:"";
+  position:absolute;
+  left:2px;top:.63em;
+  width:11px;height:1.5px;
+  background:var(--accent);
+}
+
+.grid2{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(270px,1fr));
+  gap:1px;
+  background:var(--rule);
+  border:1px solid var(--rule);
+  border-radius:4px;
+  overflow:hidden;
+  margin:28px 0;
+}
+.cell{background:var(--surface);padding:20px}
+.cell p{font-size:15px;color:var(--muted);margin:0}
+.cell .tag{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:10.5px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  display:inline-block;
+  margin-bottom:9px;
+  padding:2px 7px;
+  border-radius:2px;
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+.cell .tag.same{background:var(--sunk);color:var(--muted)}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:26px 0;
+  font-size:15px;
+}
+th,td{
+  text-align:left;
+  padding:11px 14px;
+  border-bottom:1px solid var(--rule);
+  vertical-align:top;
+}
+th{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:10.5px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  font-weight:500;
+  border-bottom:1.5px solid var(--ink);
+}
+td:first-child{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+
+.note{
+  border-left:3px solid var(--accent);
+  padding:2px 0 2px 20px;
+  margin:26px 0;
+  color:var(--muted);
+  font-size:15.5px;
+}
+.note strong{color:var(--ink);font-weight:600}
+
+footer{
+  margin-top:80px;
+  padding-top:22px;
+  border-top:1px solid var(--rule);
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11.5px;
+  color:var(--muted);
+  line-height:1.8;
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">AE · stage 2 · /ae:discuss</p>
+  <h1>Outside Seats</h1>
+  <p class="standfirst">How the discuss stage reaches a party that does not share the deciding model&rsquo;s prior &mdash; when it spawns, which seat it picks, and where the family boundary actually falls.</p>
+</header>
+
+<section class="col">
+  <p class="sec-label">Precondition</p>
+  <h2>When the stage runs at all</h2>
+  <p><code>/ae:go</code> invokes this stage <strong>once per id</strong> in the analysis frontmatter&rsquo;s <code>discuss:</code> list. An empty list is a decision the analysis already made &mdash; nothing was contested &mdash; and the entry does not second-guess it into a discussion. No id, no spawn, no cost.</p>
+  <p>Each run settles exactly one id, and it settles the question written under that heading rather than a neighbouring one that looks more interesting. Its record is named for that id &mdash; <code>decision-&lt;id&gt;.md</code> &mdash; which is the only fixed thing about the file. The name carries control flow: it says which question a record answers, and it makes a record that was never written visible, because the ids in the analysis minus the files on disk is the work still outstanding.</p>
+</section>
+
+<section>
+  <div class="col">
+    <p class="sec-label">Mechanism</p>
+    <h2>Three rounds, a loop, and seats that never address each other</h2>
+    <p>The main session never leaves. It relays every round, decides, and writes the record; the seats supply what it could not have produced alone. The ordering is the whole point &mdash; a seat that sees your answer first returns a reflection of your draft &mdash; and the three are a default path rather than a pipeline: each round ends by reading what came back and choosing the next move.</p>
+  </div>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 920 700" role="img" aria-label="The main session invokes discuss once per id and runs three rounds against three unnamed seats: a Codex seat, a Gemini seat, and a fresh-context Claude seat of its own family. Round one sends the question and its cited material and the seats cannot see each other. Round two relays every answer to the other seats through the main session, returning one composite answer and a separate list of what could not be settled. Round three attacks the composite from four separate angles, held by readers who argued none of it. A close-out finding either says the premise is wrong, which returns the work to analyze, or says the answer can be better, which re-enters at round one because the question has changed. The record is written only when a pass changes nothing.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="ar-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+          <marker id="ar-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--stop)"/>
+          </marker>
+        </defs>
+
+        <!-- source artifact -->
+        <rect class="node-sunk" x="24" y="20" width="196" height="56" rx="3"/>
+        <text class="t-title" x="40" y="42">analysis.md</text>
+        <text class="t-sub" x="40" y="62">discuss: { Q1: &hellip; }</text>
+
+        <path class="flow" d="M122,76 L122,102" marker-end="url(#ar)"/>
+        <text class="t-edge" x="132" y="94">one run per id</text>
+
+        <!-- main session lane -->
+        <rect class="node" x="24" y="102" width="196" height="418" rx="3"/>
+        <text class="t-title" x="40" y="126">Main session</text>
+        <text class="t-sub" x="40" y="144">Claude &middot; runs the stage</text>
+        <line x1="40" y1="156" x2="204" y2="156" stroke="currentColor" stroke-width="1" opacity=".3"/>
+        <text class="t-sub" x="40" y="178">relays every round</text>
+        <text class="t-sub" x="40" y="198">decides the question</text>
+        <text class="t-sub" x="40" y="218">writes the record</text>
+        <text class="t-sub" x="40" y="238">never delegates the call</text>
+
+        <!-- ROUND 1 -->
+        <rect class="zone" x="276" y="102" width="424" height="106" rx="6"/>
+        <text class="t-num" x="292" y="124">&#9312;</text>
+        <text class="t-title" x="310" y="124">independent</text>
+        <rect class="node" x="292" y="136" width="128" height="56" rx="3"/>
+        <text class="t-title" x="304" y="158">codex-seat</text>
+        <text class="t-sub" x="304" y="176">unnamed &middot; OpenAI</text>
+        <rect class="node" x="432" y="136" width="128" height="56" rx="3"/>
+        <text class="t-title" x="444" y="158">gemini-seat</text>
+        <text class="t-sub" x="444" y="176">unnamed &middot; Google</text>
+        <rect class="node" x="572" y="136" width="112" height="56" rx="3"/>
+        <text class="t-title" x="584" y="158">claude-seat</text>
+        <text class="t-sub" x="584" y="176">fresh context</text>
+        <line class="blind" x1="422" y1="164" x2="430" y2="164"/>
+        <line class="blind" x1="562" y1="164" x2="570" y2="164"/>
+        <text class="t-stop" x="418" y="204">&#10005; no seat can address another</text>
+        <path class="flow-accent" d="M220,155 L272,155" marker-end="url(#ar-a)"/>
+        <text class="t-accent" x="712" y="146">question + what</text>
+        <text class="t-accent" x="712" y="162">it cites, nothing else</text>
+        <text class="t-sub" x="712" y="184">&rarr; options and leads,</text>
+        <text class="t-sub" x="712" y="200">uncorrelated</text>
+
+        <!-- ROUND 2 -->
+        <rect class="zone" x="276" y="228" width="424" height="130" rx="6"/>
+        <text class="t-num" x="292" y="250">&#9313;</text>
+        <text class="t-title" x="310" y="250">correct each other</text>
+        <rect class="node" x="292" y="260" width="128" height="40" rx="3"/>
+        <text class="t-sub" x="304" y="284">codex-seat</text>
+        <rect class="node" x="432" y="260" width="128" height="40" rx="3"/>
+        <text class="t-sub" x="444" y="284">gemini-seat</text>
+        <rect class="node" x="572" y="260" width="112" height="40" rx="3"/>
+        <text class="t-sub" x="584" y="284">claude-seat</text>
+        <path class="flow-accent" d="M356,300 L356,316" marker-end="url(#ar-a)"/>
+        <path class="flow-accent" d="M356,316 L356,300" marker-end="url(#ar-a)"/>
+        <path class="flow-accent" d="M496,300 L496,316" marker-end="url(#ar-a)"/>
+        <path class="flow-accent" d="M496,316 L496,300" marker-end="url(#ar-a)"/>
+        <path class="flow-accent" d="M628,300 L628,316" marker-end="url(#ar-a)"/>
+        <path class="flow-accent" d="M628,316 L628,300" marker-end="url(#ar-a)"/>
+        <rect class="node-sunk" x="292" y="316" width="392" height="28" rx="3"/>
+        <text class="t-accent" x="304" y="335">you relay every answer to the other seats, unattributed</text>
+        <path class="flow-accent" d="M220,290 L272,290" marker-end="url(#ar-a)"/>
+        <text class="t-accent" x="712" y="256">which claim is not</text>
+        <text class="t-accent" x="712" y="272">true, and which does</text>
+        <text class="t-accent" x="712" y="288">not answer the ask</text>
+        <text class="t-sub" x="712" y="312">&rarr; one composite</text>
+        <text class="t-sub" x="712" y="328">&rarr; what is unsettled,</text>
+        <text class="t-sub" x="712" y="344">kept separate</text>
+
+        <!-- ROUND 3 -->
+        <rect class="zone-accent" x="276" y="378" width="424" height="142" rx="6"/>
+        <text class="t-num" x="292" y="400">&#9314;</text>
+        <text class="t-title" x="310" y="400">close it out</text>
+        <text class="t-sub" x="392" y="400">&mdash; readers who argued none of it, any family</text>
+        <rect class="node" x="292" y="412" width="192" height="44" rx="3"/>
+        <text class="t-sub" x="304" y="438">where is it wrong</text>
+        <rect class="node" x="496" y="412" width="188" height="44" rx="3"/>
+        <text class="t-sub" x="508" y="438">what gets reversed</text>
+        <rect class="node" x="292" y="466" width="192" height="44" rx="3"/>
+        <text class="t-sub" x="304" y="492">one best change</text>
+        <rect class="node" x="496" y="466" width="188" height="44" rx="3"/>
+        <text class="t-sub" x="508" y="492">what is surplus</text>
+        <path class="flow-accent" d="M220,444 L272,444" marker-end="url(#ar-a)"/>
+        <text class="t-accent" x="712" y="404">separate angles &mdash;</text>
+        <text class="t-accent" x="712" y="420">one reader is</text>
+        <text class="t-accent" x="712" y="436">anchored after</text>
+        <text class="t-accent" x="712" y="452">the first</text>
+        <text class="t-sub" x="712" y="476">&rarr; gains and costs,</text>
+        <text class="t-sub" x="712" y="492">weighed</text>
+
+        <!-- THE FORK -->
+        <path class="flow" d="M488,520 L488,546" marker-end="url(#ar)"/>
+        <text class="t-title" x="292" y="568">a finding is not a verdict &mdash; which is it saying?</text>
+
+        <!-- premise wrong: all the way back to analyze -->
+        <path class="flow-stop" d="M292,582 L240,582 L240,48 L224,48" marker-end="url(#ar-s)"/>
+        <text class="t-stop" x="292" y="598">the premise is wrong &rarr; back to ANALYZE; no polish repairs it</text>
+
+        <!-- can be better: back to round one -->
+        <path class="flow-accent" d="M292,614 L256,614 L256,170 L268,170" marker-end="url(#ar-a)"/>
+        <text class="t-accent" x="292" y="630">the answer can be better &rarr; the question has changed; round &#9312; again</text>
+
+        <!-- record -->
+        <path class="flow" d="M488,644 L488,664" marker-end="url(#ar)"/>
+        <rect class="node-sunk" x="276" y="664" width="424" height="30" rx="3"/>
+        <text class="t-sub" x="292" y="684">nothing changes &rarr; decision-&lt;id&gt;.md, naming who produced what</text>
+      </svg>
+    </div>
+    <figcaption>Round &#9312; carries the question and nothing else, and the seats have no peer address, so independence is a property of the wiring. Round &#9313; lets each seat see the others &mdash; but through the main session, not over an edge between them. Round &#9314; attacks the composite from four angles kept deliberately apart. The loop at the bottom is the stage&rsquo;s own ReAct: only a finding about the premise leaves the stage.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>Every round asks for something the one before it cannot give. The first buys answers that are uncorrelated; the second buys correction against fact rather than agreement; the third is the last point at which the deciding session&rsquo;s own premises can still be attacked, because by then the composite is what is about to be written down.</p>
+    <p>Nothing is relayed over a live edge between seats, and that is not only a matter of independence. Any such edge is only as long-lived as the shortest backend session behind it: in the one run that tried it, a thirty-minute session TTL expired inside the gap between two exchanges and the edge was dead before it was used, silently. Relaying through the main session has no such lifetime. Nothing is resumed across rounds either: each round spawns its seats fresh and the main session injects what the last round wrote. A seat is carried forward by its output, not by its own history &mdash; which is the disk hand-off rule the workflow already runs on, applied one level down.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <p class="sec-label">Selection</p>
+    <h2>Two tests, not a priority list</h2>
+    <p>A seat qualifies on two counts that do not substitute for each other. A <strong>different prior</strong> is what the stage is buying. <strong>Enough capability to produce an objection you can check</strong> is the floor beneath it &mdash; and being unlike you does not redeem a backend that answers with the generic benefits of whatever it was asked about. That reading costs real attention and leaves nothing to argue with.</p>
+    <p>Ranking the seats in a fixed order gets this wrong in a specific way: it puts a weak local backend ahead of a capable agent of your own family, purely for being foreign. There is no such ranking. Take whoever clears both tests, and more than one where you can.</p>
+  </div>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 860 420" role="img" aria-label="Two independent tests place each candidate seat. The horizontal axis is capability: can it produce an objection you can check. The vertical axis is prior: same family or different. Every seat that clears both tests is taken, and there are three: the Codex proxy, the Gemini proxy, and a fresh-context Claude seat of your own family. The Claude seat is seated alongside the others rather than behind them, carrying one named weakness that the record states. A weak backend is not seated no matter how foreign it is.">
+        <defs>
+          <marker id="ar2-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <!-- axes -->
+        <line class="flow" x1="176" y1="336" x2="806" y2="336"/>
+        <line class="flow" x1="176" y1="336" x2="176" y2="40"/>
+        <text class="t-sub" x="176" y="368">weak &mdash; returns generic benefits</text>
+        <text class="t-sub" x="806" y="368" text-anchor="end">strong &mdash; objection you can check</text>
+        <text class="t-sub" x="168" y="56" text-anchor="end">different</text>
+        <text class="t-sub" x="168" y="74" text-anchor="end">prior</text>
+        <text class="t-sub" x="168" y="310" text-anchor="end">same</text>
+        <text class="t-sub" x="168" y="328" text-anchor="end">prior</text>
+
+        <!-- capability floor -->
+        <line class="flow-accent" x1="428" y1="40" x2="428" y2="336" stroke-dasharray="6 4"/>
+        <text class="t-accent" x="440" y="34">capability floor &mdash; below it, do not seat</text>
+
+        <!-- qualifying zone -->
+        <rect class="zone-accent" x="440" y="44" width="366" height="140" rx="4"/>
+
+        <rect class="foreign" x="466" y="66" width="200" height="44" rx="3"/>
+        <text class="t-title" x="482" y="94">codex-proxy</text>
+
+        <rect class="foreign" x="466" y="124" width="200" height="44" rx="3"/>
+        <text class="t-title" x="482" y="152">gemini-proxy</text>
+
+        <text class="t-accent" x="686" y="94">take every seat that</text>
+        <text class="t-accent" x="686" y="112">clears both tests</text>
+        <text class="t-sub" x="686" y="142">blind seats are not</text>
+        <text class="t-sub" x="686" y="160">a debate</text>
+
+        <!-- weak foreign: excluded -->
+        <rect class="node-sunk" x="212" y="88" width="196" height="44" rx="3"/>
+        <text class="t-sub" x="228" y="107">a weak local backend</text>
+        <text class="t-stop" x="228" y="125">foreign, and not seated</text>
+
+        <!-- same-family capable -->
+        <rect class="node" x="466" y="240" width="200" height="60" rx="3"/>
+        <text class="t-title" x="482" y="264">claude-seat</text>
+        <text class="t-sub" x="482" y="284">own family &middot; fresh context</text>
+        <text class="t-sub" x="686" y="264">seated alongside, not</text>
+        <text class="t-sub" x="686" y="282">behind &mdash; a named</text>
+        <text class="t-sub" x="686" y="300">weakness, which the</text>
+        <text class="t-sub" x="686" y="318">record states</text>
+
+        <!-- the wrong edge, struck out -->
+        <path class="flow-stop" d="M408,110 L408,264 L462,264"/>
+        <text class="t-stop" x="196" y="176">✕ ranking by foreignness alone</text>
+        <text class="t-stop" x="196" y="194">puts this below that</text>
+      </svg>
+    </div>
+    <figcaption>Reachability is still tested rather than assumed &mdash; each proxy carries its own <code>probe:</code>, and a seat that cannot reach its backend says so and stops instead of answering from its own reasoning. What changed is that failing to reach one seat does not promote a weaker one.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>Where there was no outside party at all, the record says that. A decision made by one party is still a decision &mdash; it is one whose blind spot is unrecorded, and a record that hides which kind it is gets sent back.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <p class="sec-label">The family question</p>
+    <h2>The seat is Claude. The voice is not.</h2>
+    <p>Yes &mdash; agents of the main session&rsquo;s own family take part, in three distinct roles, and only one of them is a voice in the argument. Conflating them is what makes &ldquo;cross-family&rdquo; sound like more than it is.</p>
+  </div>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 860 372" role="img" aria-label="A boundary encloses the main session, the two proxy seats, and the claude-seat, all of which are Claude-family processes. Outside the boundary sit Codex and Gemini, reached over MCP. Only the MCP arrows cross the family boundary, so the seat process is inside the family and only the voice comes from outside; the claude-seat is the only one arguing in its own name.">
+        <defs>
+          <marker id="ar3-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <rect class="zone" x="20" y="36" width="470" height="312" rx="8"/>
+        <text class="t-sub" x="38" y="60">your session&rsquo;s family &mdash; Claude</text>
+
+        <rect class="node" x="44" y="80" width="196" height="80" rx="3"/>
+        <text class="t-title" x="60" y="106">main session</text>
+        <text class="t-sub" x="60" y="126">argues its own side</text>
+        <text class="t-sub" x="60" y="144">and decides</text>
+
+        <rect class="node" x="268" y="80" width="196" height="80" rx="3"/>
+        <text class="t-title" x="284" y="106">codex-seat</text>
+        <text class="t-sub" x="284" y="126">Sonnet process,</text>
+        <text class="t-sub" x="284" y="144">adds no analysis</text>
+
+        <rect class="node" x="268" y="184" width="196" height="80" rx="3"/>
+        <text class="t-title" x="284" y="210">gemini-seat</text>
+        <text class="t-sub" x="284" y="230">Sonnet process,</text>
+        <text class="t-sub" x="284" y="248">adds no analysis</text>
+
+        <rect class="node-sunk" x="44" y="184" width="196" height="80" rx="3"/>
+        <text class="t-title" x="60" y="210">claude-seat</text>
+        <text class="t-sub" x="60" y="230">a real voice &mdash; but</text>
+        <text class="t-sub" x="60" y="248">one that shares the prior</text>
+
+        <text class="t-sub" x="44" y="304">the only seat that argues in its own name &mdash;</text>
+        <text class="t-sub" x="44" y="322">the other two carry a voice that is not theirs</text>
+
+        <!-- the crossing -->
+        <path class="flow-accent" d="M464,120 L622,120" marker-end="url(#ar3-a)"/>
+        <path class="flow-accent" d="M464,224 L622,224" marker-end="url(#ar3-a)"/>
+        <text class="t-accent" x="502" y="110">MCP</text>
+        <text class="t-accent" x="502" y="214">MCP</text>
+
+        <rect class="foreign" x="622" y="80" width="212" height="80" rx="3"/>
+        <text class="t-title" x="638" y="106">Codex</text>
+        <text class="t-sub" x="638" y="126">OpenAI &mdash; local CLI,</text>
+        <text class="t-sub" x="638" y="144">can read the repo</text>
+
+        <rect class="foreign" x="622" y="184" width="212" height="80" rx="3"/>
+        <text class="t-title" x="638" y="210">Gemini</text>
+        <text class="t-sub" x="638" y="230">Google &mdash; remote API,</text>
+        <text class="t-sub" x="638" y="248">no local access</text>
+
+        <text class="t-accent" x="622" y="304">only the voice crosses this line &mdash;</text>
+        <text class="t-accent" x="622" y="322">the seat that carries it does not</text>
+      </svg>
+    </div>
+    <figcaption>The proxy seat is a Claude subagent whose entire job is to not think: assemble the caller&rsquo;s question, relay what comes back, report the backend&rsquo;s own shape, and stop when the backend is unreachable. Its family membership is irrelevant precisely because it contributes no opinion.</figcaption>
+  </figure>
+
+  <div class="grid2">
+    <div class="cell">
+      <span class="tag same">same family · decides</span>
+      <h3>The main session</h3>
+      <p>Argues its own side, relays every round, chooses, and writes the record. The decision was never delegated &mdash; the seats correct it, they do not settle it.</p>
+    </div>
+    <div class="cell">
+      <span class="tag">same family · foreign voice</span>
+      <h3>The proxy seats</h3>
+      <p>Claude processes that relay. Substituting their own reasoning for the backend&rsquo;s, or reporting a comparison the backend did not make, is the failure they are written to prevent.</p>
+    </div>
+    <div class="cell">
+      <span class="tag same">same family · own voice</span>
+      <h3>The same-family seat</h3>
+      <p>A fresh-context agent of your own family, seated alongside the others rather than behind them. It brings capability you can count on and clean context, and fails only the prior &mdash; which the record names. On the evidence so far, the sharpest objection any exchange produced came from one of these.</p>
+    </div>
+  </div>
+</section>
+
+<section class="col">
+  <p class="sec-label">Host mechanics</p>
+  <h2>What the spawn actually creates</h2>
+  <p>Whether an agent is given a name decides what it becomes. With agent teams enabled a named subagent launches as a teammate &mdash; with a mailbox, a place in the sibling roster, and a nesting ban of its own. The seats are left unnamed on purpose: the independence round &#9312; depends on then follows from the wiring rather than from anything a prompt asks for.</p>
+
+  <table>
+    <thead>
+      <tr><th>Fact</th><th>Consequence for this stage</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>AGENT_TEAMS=1</td>
+        <td>A <em>named</em> subagent launches as a teammate rather than a plain subagent. That is why the seats are deliberately unnamed &mdash; naming does not merely add an address, it changes the agent&rsquo;s runtime class.</td>
+      </tr>
+      <tr>
+        <td>unnamed</td>
+        <td>An unnamed spawn stays an ordinary subagent: no mailbox, absent from the sibling roster, and its answer returns as the Agent call&rsquo;s own result rather than over a team channel. Its effort receipt therefore arrives in-band, in the reply itself.</td>
+      </tr>
+      <tr>
+        <td>no resume</td>
+        <td>Every round spawns fresh. What carries forward is the previous round&rsquo;s written output, injected by the main session &mdash; not a seat&rsquo;s own history. No backend session has to survive the gap between rounds, and a failed round is re-run rather than recovered.</td>
+      </tr>
+      <tr>
+        <td>model</td>
+        <td>The spawn prompt&rsquo;s model beats the agent definition&rsquo;s. A seat may therefore run on something other than the model its own file declares.</td>
+      </tr>
+      <tr>
+        <td>skills</td>
+        <td>A definition&rsquo;s <code>skills:</code> is not applied to a teammate in either display mode. Anything a seat must know belongs in its body or its spawn prompt.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>Cost.</strong> Two seats through two rounds, then a close-out from four separate angles &mdash; eight agent turns for one contested question, and more whenever a close-out sends the composite back for another pass. That is the budget, and it buys one thing: a correction, an option, or an objection the deciding session could not have produced alone. It does not buy consensus. Nothing here converges by counting, because agreement raises nothing when two families can share a blind spot.
+  </div>
+</section>
+
+<section class="col">
+  <p class="sec-label">Falsifiability</p>
+  <h2>Why the record names names</h2>
+  <p>Every option and every objection carries one clause saying which party produced it. That attribution is not bookkeeping &mdash; it is the only thing that will ever settle whether this section earns its cost.</p>
+  <ul>
+    <li>Across enough features, it can be read off whether an outside party ever changed a decision, or ever corrected one.</li>
+    <li>If the answer turns out to be never, the right move is to delete this whole mechanism &mdash; and there will be evidence for doing it.</li>
+    <li>Until then, an unattributed record is a claim that the seats helped, with nothing behind it.</li>
+  </ul>
+</section>
+
+<footer>
+  plugins/ae/skills/discuss/SKILL.md &middot; &sect; Who argues, and what they are sent<br>
+  Host mechanics verified against Claude Code 2.1.251 and a live session team, 2026-08-30.
+</footer>
+
+</div>
