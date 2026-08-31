@@ -64,8 +64,9 @@ discussion. Each run settles one id. **Read the feature directory before you inv
 `returned-<id>.md` means that id is back at step 1, not here** — a discussion that sent a
 question back does not want it re-run, it wants the analysis changed. Then read each decision record. Send it back when a question it
 opened is still open, when its reason cites nothing a reader can open, when it exists only
-in the conversation, or when one party argued both sides and the record does not say why no
-other was reachable. A decision that changes what a criterion means changes `acceptance.md`
+in the conversation, when it changed what a criterion means without changing `acceptance.md` to
+match, or when one party argued both sides and the record does not say why no other was
+reachable. A decision that changes what a criterion means changes `acceptance.md`
 before the signature, not after.
 
 **→ HUMAN CONFIRMS.** The criteria have stopped moving; this is where they are confirmed.

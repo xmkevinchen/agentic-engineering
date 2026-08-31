@@ -89,8 +89,10 @@ One you settled and then saw past: done is clear, and two routes to it both stan
 second is not a gap — it is what a finished analysis can see, and what a plan written alone
 would decide silently and leave no record of.
 
-A `returned-<id>.md` in the directory is a discussion that ran and sent the question back
-because its premise did not hold. Re-decide it — dissolve the id, or **pose it again under a new
+A `returned-<id>.md` in the directory is a discussion that ran and sent the question back — the
+file says why, and there are two reasons it can give: the question's own premise did not hold, or
+it cited material the seats needed and the analysis did not have. The first means the question was
+not worth asking as posed; the second means it was, and you owe it more to stand on. Re-decide it — dissolve the id, or **pose it again under a new
 id, since question ids, like `F-NNN`, are never reused** — and **delete the file**: it says the
 question is currently sent back, and once you have acted that is no longer true. It carries no
 evidence of its own, so nothing is lost with it.

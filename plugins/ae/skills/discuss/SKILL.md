@@ -1,7 +1,7 @@
 ---
 name: discuss
 description: "Settle one contested design decision into a record /ae:plan can consume — the options, the choice, the reason, and what would reopen it. Recommended: Sonnet or above"
-argument-hint: "<the contested question, or a discussion directory path>"
+argument-hint: "<feature-dir> and one id from its discuss: list, or a discuss-<id>/ directory to resume>"
 model: opus
 effort: high
 user-invocable: true
@@ -71,7 +71,12 @@ decision, it is one whose blind spot is unrecorded.
 stands, and as material what the analysis cites. This is the rule already governing the record,
 pointed outward — a question restated by someone who knows the answer carries the answer.
 Needing to send material the analysis does not cite is not a packaging problem; the analysis
-is incomplete, and that goes back to ANALYZE.
+is incomplete, and that goes back to ANALYZE — **writing `<feature-dir>/returned-<id>.md` on the
+way out, as the close-out's own return does.** This is the other route back, and a return that
+leaves no tag is invisible to whatever reads the directory next. The tag says which of the two
+happened: a premise that does not hold, or material the analysis needed to cite and did not. They
+are different events and ANALYZE does different things about them, so the file names which one
+rather than leaving it to be inferred from a filename that covers both.
 
 **Three exchanges, and each asks for something the one before it cannot give.**
 
@@ -119,12 +124,18 @@ the shortest backend session behind it — which can be dead before it is used, 
 ```
 <feature-dir>/discuss-<id>/
   pass-1/
+    question.md            what this pass was asked
     round-1/<seat>.md
     round-2/<seat>.md      + round-2/composite.md
     round-3/<angle>.md
   pass-2/
     ...
 ```
+
+`<seat>` is the family the seat answers for — `codex.md`, `gemini.md`, `claude.md`, and a seat
+fronting some other backend named for its family the same way — and `<angle>` is the angle it took: `adversarial.md`, `regret.md`, `strategic.md`, `scope-reducer.md`. Fixed
+names, because a resuming run has to tell a seat that did not answer from a seat whose file it
+cannot find, and neither can be read off a directory whose naming was invented per run.
 
 **Every pass, including the first, writes under `pass-N/`.** There is never a bare `round-N/`
 directly under `discuss-<id>/`: a round that does not say which pass it belonged to leaves a
@@ -146,6 +157,9 @@ forward — not a seat's own history. This is the disk hand-off rule the workflo
 applied one level down, and it retires the same lifetime problem a second time: no backend
 session has to survive the gap between rounds, a round that fails is re-run rather than
 recovered, and an interrupted run resumes from the directory rather than from this conversation.
+
+**Both of round two's deliverables go in `round-2/composite.md`** — the surviving answer, and
+what could not be settled under its own heading, kept separate there rather than merged into it.
 
 **The composite is a file too, at `round-2/composite.md`.** It is the round's deliverable and the
 thing round three attacks, so it is the one artifact a later round is guaranteed to need — and it
@@ -190,6 +204,13 @@ found it are, and what ANALYZE must re-decide. Without it the id is byte-identic
 never ran, and whoever resumes cannot tell a question that was argued and sent back from one nobody
 has started.
 
+**A pass says in writing what it was asked.** `pass-N/question.md` holds it: for the first pass
+the analysis's section as it stands, and for every pass after it that same section **plus the
+surviving findings, verbatim and attributed to nobody**. That is how a changed question still goes
+out in the analysis's own words — the change is carried as the finding that made it, not as your
+paraphrase of what the question has become. Without this the reasoning that opened a pass lives
+only in your conversation, which is the one place the next pass cannot read.
+
 **Everything that does not say so re-enters at round one. There is no third class** — a finding
 that the remaining disagreement is a preference rather than a fact is not an exit, and neither is
 one you cannot place; both re-enter, and the record is where a preference lands, under the rule
@@ -208,7 +229,7 @@ agreeing to end.
 
 **Count the completed `pass-N/` directories on disk, not passes you are holding in mind.** A run
 that resumes after an interruption has to arrive at the same number, and a pass whose close-out
-never finished is not one of them. Two is the floor rather than a preference: a finding that
+never finished is not one of them — completed means all four angle files are there. Two is the floor rather than a preference: a finding that
 survives earns one newly independent pass, so a bound of one would quietly delete that. Nothing
 observed has asked for a third.
 
@@ -234,7 +255,7 @@ if the answer is never, this section should go.
 
 The decision itself is yours, including one that changes what a criterion means: the criteria
 are not signed yet, and settling this question is why they were not. Edit `acceptance.md` in
-place and name the id you moved. Do not carry its old wording into the record — the reason
+place and name the criterion id you moved. Do not carry its old wording into the record — the reason
 belongs there, the superseded text belongs nowhere.
 
 If the question can be decided from evidence after all, it was never contested and should not
