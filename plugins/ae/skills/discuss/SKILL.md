@@ -15,8 +15,12 @@ discussion held as ceremony costs a cycle and decides nothing.
 
 **Input:** the analysis, and one id from its `discuss:` list. You settle the question under that heading, not a neighbouring one you find more interesting.
 
-**Deliverable:** one decision record, a file in `<feature-dir>/`. If this conversation were
-lost, the next stage must be able to proceed from that file alone.
+**Deliverable:** one decision record at `<feature-dir>/decision-<id>.md`, named for the
+`discuss:` id this run settles. The name is the only fixed thing about the file, and it is
+fixed because it carries control flow: it is how a later stage tells which question a record
+answers, and how a record that was never written becomes visible, since the ids in the analysis
+minus the files on disk is the work still outstanding. If this conversation were lost, the next
+stage must be able to proceed from that file alone.
 
 ## What must be true of the record
 
@@ -42,12 +46,23 @@ lost, the next stage must be able to proceed from that file alone.
 
 Both options are argued by parties that do not share a prior. One model asked to argue both
 sides writes both from the same preference, and the one it already favoured wins on prose
-rather than on evidence — the failure this stage exists to prevent. Where another model family
-is reachable it is that party: `ae:workflow:codex-proxy`, `ae:workflow:gemini-proxy` and
-`ae:workflow:openai-compat-proxy` each hold a seat, and each reports plainly when its backend
-is not there. Where none is, a fresh-context agent stands in. Where it was neither, the record
-says so — a decision made by one party is still a decision, it is one whose blind spot is
-unrecorded.
+rather than on evidence — the failure this stage exists to prevent.
+
+Two things make a seat worth having, and neither substitutes for the other: **a different
+prior**, which is what the stage is buying, and **enough capability to produce an objection you
+can check**, which is the floor beneath it. `ae:workflow:codex-proxy`,
+`ae:workflow:gemini-proxy` and `ae:workflow:openai-compat-proxy` each hold a seat on another
+family, and each reports plainly when its backend is not there. A backend that answers with the
+generic benefits of whatever it was asked about has cost you the reading and left nothing to
+argue with; being unlike you does not redeem it. So there is no ranking among seats — take
+whoever clears both counts, and more than one where you can, since seats answer blind and two
+blind answers tend to bring different things rather than the same thing twice.
+
+A fresh-context agent of your own family clears the floor and fails the prior. That makes it a
+real participant carrying a named weakness, not a last resort ranked beneath a backend that
+cannot argue: seat it when it is the best party available, and let the record say it shared the
+prior. Where there was no outside party at all, say that instead — a decision made by one party
+is still a decision, it is one whose blind spot is unrecorded.
 
 **What goes out is the analysis's own words**: the section under the `discuss:` id as it
 stands, and as material what the analysis cites. This is the rule already governing the record,
@@ -56,12 +71,32 @@ Needing to send material the analysis does not cite is not a packaging problem; 
 is incomplete, and that goes back to ANALYZE.
 
 **They answer before they see your answer, and the second exchange is the one that pays.** The
-first carries the question and nothing else, and returns options and leads. The second shows
-the option you chose and the reason you chose it and asks what is wrong with it — that is where
-a premise you never thought to check gets refuted, and it is not optional. Reversed, you get a
-reflection of your own draft back. Seats never see each other: parties answering the same
-question blind are not a debate, and a debate is what is being avoided, because it needs
-something to converge on and a record written by one decider has nothing.
+first carries the question and nothing else and returns options and leads; the second shows the
+option you chose and the reason you chose it and asks what is wrong with it. That is where a
+premise you never thought to check gets refuted, and it is not optional. Reversed, you get a
+reflection of your own draft back.
+
+**Seats never address each other, and the wiring is what holds it.** A peer can address an
+agent by name and cannot address one that has none, so spawn every seat **unnamed** —
+independence then holds because of how the agents are wired, not because a prompt asked for it,
+which is the only form of it that survives a seat having some reason to compare notes. What
+carries a seat from the first exchange into the second is the backend conversation, not the
+agent process: a thread or session id resumes it in whichever agent is holding it.
+
+**Carry the challenge across yourself.** In the second exchange, forward one specific claim a
+seat made — its own words, unattributed — to the seats that did not make it, and ask whether it
+is wrong. Every other constraint here is one you wrote, and so is bounded by what you already
+knew to ask; a claim from a party that answered blind is the only thing in the exchange you did
+not author, which makes it the only route by which an error you cannot see reaches the record.
+An open channel between the seats buys that same property and costs more: seats waiting on each
+other, and an edge no longer-lived than the shortest backend session behind it — which can be
+dead before it is used, and silently. One forwarded claim needs no coordination round and no
+session held alive between exchanges.
+
+**It is still not a debate to be won.** One relayed claim, one answer to it, then each seat
+states its final objection. Nothing converges and nobody votes. The point is to kill weak
+objections before they reach the record, not to produce agreement, and the decision was never
+on the table.
 
 **Each exchange records which backend and which model answered it.** A seat can degrade
 silently — falling back a model tier on a quota or retirement error — and an answer's weight
