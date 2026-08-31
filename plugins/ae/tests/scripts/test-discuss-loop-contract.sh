@@ -141,6 +141,43 @@ if discuss is not None:
         bad("nothing records a seat that could not answer",
             "plugins/ae/skills/discuss/SKILL.md: a silent gap reads as a seat nobody asked")
 
+# --- AC2: the sort asks one question and leaves no residue --------------------------------
+#
+# The sort used to pose a two-way question and then give premise-wrong / everything-else rules.
+# The shapes differed, and the gap was not academic: three readers were given one real finding
+# and the same protocol, and the cross-family one routed it differently from the other two.
+#
+# Prose wraps, so every comparison here is against the text with its whitespace collapsed.
+
+if discuss is not None:
+    flat = " ".join(discuss.split())
+
+    if "does it say the premise is wrong, or does it say the answer can be better?" in flat:
+        bad("the sort still poses a two-way question over premise-wrong / everything-else rules",
+            "plugins/ae/skills/discuss/SKILL.md: the question and the rules have different shapes")
+    else:
+        ok("the sort no longer poses a question whose shape differs from its own rules")
+
+    if "There is no third class" in flat:
+        ok("the sort names no third class, so every finding has a destination")
+    else:
+        bad("the sort leaves a residue between its two exits",
+            "plugins/ae/skills/discuss/SKILL.md: a finding that fits neither branch has nowhere to go")
+
+    binds_target = "question's own premise" in flat
+    binds_modality = "merely unconfirmed or at risk of failing" in flat
+    if binds_target and binds_modality:
+        ok("the sort binds both loose words — whose premise, and asserted how strongly")
+    else:
+        missing = []
+        if not binds_target:
+            missing.append("whose premise")
+        if not binds_modality:
+            missing.append("asserted false rather than unconfirmed")
+        bad("the sort leaves a word loose that readers have already split on: "
+            + " and ".join(missing),
+            "plugins/ae/skills/discuss/SKILL.md")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)

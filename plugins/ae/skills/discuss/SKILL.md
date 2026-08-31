@@ -175,14 +175,25 @@ own premises can still be attacked.
 choosing the next move, rather than advancing on schedule: a correction round that shows the
 question was posed wrong sends you back to it, not forward.
 
-**A close-out finding is not a verdict either.** Sort what it returns by one question — **does
-it say the premise is wrong, or does it say the answer can be better?** A premise that does not
-hold ends the loop here and goes back to ANALYZE; no amount of further polish repairs a question
-that was malformed or already settled. **Write `<feature-dir>/returned-<id>.md` before you
-leave** — which premise failed, where the findings that found it are, and what ANALYZE must
-re-decide. Without it the id is byte-identical to one that never ran, and whoever resumes cannot
-tell a question that was argued and sent back from one nobody has started.
-**Everything else re-enters at round one.** A finding
+**A close-out finding is not a verdict either.** Sort what it returns by one question — **does it
+say the question's own premise is wrong, asserted false rather than merely unconfirmed or at risk
+of failing?** Both of those words are load-bearing. A finding against the *answer's* premise is an
+attack on what you built, which is what round three is for; only a finding against the *question's*
+premise says the thing being asked was not worth asking. And "this may not hold" is not "this does
+not hold": a finding that names an unconfirmed precondition and proposes a hedge is improving the
+answer, not returning the question.
+
+A premise that does not hold ends the loop here and goes back to ANALYZE; no amount of further
+polish repairs a question that was malformed or already settled. **Write
+`<feature-dir>/returned-<id>.md` before you leave** — which premise failed, where the findings that
+found it are, and what ANALYZE must re-decide. Without it the id is byte-identical to one that
+never ran, and whoever resumes cannot tell a question that was argued and sent back from one nobody
+has started.
+
+**Everything that does not say so re-enters at round one. There is no third class** — a finding
+that the remaining disagreement is a preference rather than a fact is not an exit, and neither is
+one you cannot place; both re-enter, and the record is where a preference lands, under the rule
+that already governs it. A finding
 that survives has changed what is being asked, and the changed question earns the same
 independent answering the first one got; closing out again over a composite no seat has seen
 uncorrelated tests the new version more weakly than the old one was tested. Stop when a pass
