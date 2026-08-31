@@ -230,6 +230,69 @@ if analyze is not None:
             "plugins/ae/skills/analyze/SKILL.md: the old pass directories survive the return, so "
             "the bound would fire before the re-posed question argued anything")
 
+# --- F-097: the rounds-one-and-two seat is a definition on disk, not a pick made at spawn --
+#
+# The stage's first two rounds used to be filled by whichever agent the caller reached for, so
+# two runs of one stage could be answered by parties with different capabilities. The seat is
+# now one definition, and what it is made of has to be readable from the file: the grant it
+# holds, the model it runs as, the jobs it is told to do, and nothing set that does nothing.
+#
+# Text on disk is all this can check. Whether `model:` and `tools:` arrive on the spawned agent
+# is a property of a spawn, and no assertion here stands in for one.
+
+SEAT = "plugins/ae/agents/workflow/discuss-seat.md"
+SEAT_KEYS = ["name", "description", "tools", "model"]
+
+seat = read(SEAT)
+if seat is not None:
+    seat_fields = {}
+    for line in frontmatter(seat).splitlines():
+        if re.match(r"^[A-Za-z][A-Za-z0-9_-]*:", line):
+            key, _, value = line.partition(":")
+            seat_fields[key.strip()] = value.strip()
+
+    if seat_fields.get("tools") == "Read, Write, Bash":
+        ok("the discuss seat is granted exactly Read, Write, Bash")
+    else:
+        bad("the discuss seat's grant is not Read, Write, Bash",
+            f"{SEAT}: tools: {seat_fields.get('tools') or '(no tools: line)'}")
+
+    if seat_fields.get("model") == "opus":
+        ok("the discuss seat declares model: opus")
+    else:
+        bad("the discuss seat does not declare model: opus",
+            f"{SEAT}: model: {seat_fields.get('model') or '(no model: line)'}")
+
+    # An allowlist, not a denylist. Definitions here already carry keys the host does not read,
+    # so forbidding the three known inert ones would wave through the next one.
+    if sorted(seat_fields) == sorted(SEAT_KEYS):
+        ok("the discuss seat's frontmatter is exactly name, description, tools, model")
+    else:
+        extra = [k for k in seat_fields if k not in SEAT_KEYS]
+        missing = [k for k in SEAT_KEYS if k not in seat_fields]
+        bad("the discuss seat's frontmatter is not exactly the four keys that take effect",
+            f"{SEAT}: unexpected {extra or '(none)'}, absent {missing or '(none)'}")
+
+    flat_seat = " ".join(seat.split()).lower()
+
+    if "## Where your answer goes" in seat and "write your answer there before you return it" in flat_seat:
+        ok("the discuss seat is told to write its own file at a caller-named path")
+    else:
+        bad("the discuss seat is never told to write its own file",
+            f"{SEAT}: the next round reads files, and a returned reply is not one")
+
+    if "round one" in flat_seat and "round two" in flat_seat:
+        ok("the discuss seat's body describes both of the rounds it fills")
+    else:
+        bad("the discuss seat's body describes only one of the two rounds it fills",
+            f"{SEAT}: the rounds differ in the body's task text, so a body naming one fills one")
+
+    if "curl" in flat_seat and "unchecked" in flat_seat:
+        ok("the discuss seat's body names the outside-source route and what an unopened claim is marked")
+    else:
+        bad("the discuss seat's body leaves the outside-source route unnamed",
+            f"{SEAT}: an untold Bash-only seat abstains where it could have checked")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
