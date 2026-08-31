@@ -92,6 +92,28 @@ for proxy in PROXIES:
         bad(f"proxy seat {proxy} is never told to write its own file",
             f"{relative}: a returned reply is not a round's written output")
 
+# --- AC3: the return tag has a writer, a reader and a discharger --------------------------
+#
+# A question that ran and was sent back is byte-identical on disk to one nobody started, unless
+# something writes a tag. The tag is worth nothing unless something reads it, and it becomes a
+# lie unless something tears it off. Three legs; losing any one is silent.
+
+RETURN_TAG_LEGS = [
+    ("plugins/ae/skills/discuss/SKILL.md", "writes it on a premise-wrong exit"),
+    ("plugins/ae/skills/go/SKILL.md", "reads it and routes that id back to ANALYZE"),
+    ("plugins/ae/skills/analyze/SKILL.md", "discharges it and deletes it"),
+]
+
+for relative, role in RETURN_TAG_LEGS:
+    text = read(relative)
+    if text is None:
+        continue
+    if "returned-<id>.md" in text:
+        ok(f"{pathlib.Path(relative).parent.name} {role}")
+    else:
+        bad(f"{pathlib.Path(relative).parent.name} never names returned-<id>.md",
+            f"{relative}: this leg {role}, and nothing says so")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)

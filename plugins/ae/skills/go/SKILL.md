@@ -22,6 +22,7 @@ written below as `<feature-dir>`; `/ae:analyze` creates it.
            │       └── several items, not one → stop, the human picks the cut
            ▼
       [2 DISCUSS] ─── one run per question ANALYZE named; none named → skipped
+           │       ──► premise wrong → returned-<id>.md, back to ANALYZE
            │
            ▼  ← HUMAN CONFIRMS the acceptance criteria
        3 PLAN
@@ -59,7 +60,9 @@ when a criterion has no falsifier and no judgement mark, or an answer rests on n
 
 **2 · Invoke `/ae:discuss` once per id in the analysis frontmatter's `discuss:` list** — an
 empty list is a decision already made, not an omission, and you do not second-guess it into a
-discussion. Each run settles one id. Then read each decision record. Send it back when a question it
+discussion. Each run settles one id. **Read the feature directory before you invoke anything: a
+`returned-<id>.md` means that id is back at step 1, not here** — a discussion that sent a
+question back does not want it re-run, it wants the analysis changed. Then read each decision record. Send it back when a question it
 opened is still open, when its reason cites nothing a reader can open, when it exists only
 in the conversation, or when one party argued both sides and the record does not say why no
 other was reachable. A decision that changes what a criterion means changes `acceptance.md`

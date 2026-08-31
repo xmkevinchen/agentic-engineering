@@ -256,7 +256,7 @@ footer{
   <p class="sec-label">Precondition</p>
   <h2>When the stage runs at all</h2>
   <p><code>/ae:go</code> invokes this stage <strong>once per id</strong> in the analysis frontmatter&rsquo;s <code>discuss:</code> list. An empty list is a decision the analysis already made &mdash; nothing was contested &mdash; and the entry does not second-guess it into a discussion. No id, no spawn, no cost.</p>
-  <p>Each run settles exactly one id, and it settles the question written under that heading rather than a neighbouring one that looks more interesting. Its record is named for that id &mdash; <code>decision-&lt;id&gt;.md</code> &mdash; which is the only fixed thing about the file. The name carries control flow: it says which question a record answers, and it makes a record that was never written visible, because the ids in the analysis minus the files on disk is the work still outstanding.</p>
+  <p>Each run settles exactly one id, and it settles the question written under that heading rather than a neighbouring one that looks more interesting. Its record is named for that id &mdash; <code>decision-&lt;id&gt;.md</code> &mdash; which is the only fixed thing about the file. The name carries control flow: it says which question a record answers, and it makes a record that was never written visible, because the ids in the analysis minus the files on disk is the work still outstanding. A question that ran and was <em>sent back</em> leaves a second name &mdash; <code>returned-&lt;id&gt;.md</code> &mdash; so the directory tells apart three states that would otherwise look alike: settled, returned, and never started. That one is a reject tag rather than a record: it carries no evidence of its own, and ANALYZE deletes it once it has acted.</p>
 </section>
 
 <section>
@@ -268,7 +268,7 @@ footer{
 
   <figure>
     <div class="scroller">
-      <svg viewBox="0 0 920 700" role="img" aria-label="The main session invokes discuss once per id and runs three rounds against three unnamed seats: a Codex seat, a Gemini seat, and a fresh-context Claude seat of its own family. Round one sends the question and its cited material and the seats cannot see each other. Round two relays every answer to the other seats through the main session, returning one composite answer and a separate list of what could not be settled. Round three attacks the composite from four separate angles, held by readers who argued none of it. A close-out finding either says the premise is wrong, which returns the work to analyze, or says the answer can be better, which re-enters at round one because the question has changed. The record is written only when a pass changes nothing.">
+      <svg viewBox="0 0 920 700" role="img" aria-label="The main session invokes discuss once per id and runs three rounds against three unnamed seats: a Codex seat, a Gemini seat, and a fresh-context Claude seat of its own family. Round one sends the question and its cited material and the seats cannot see each other. Round two relays every answer to the other seats through the main session, returning one composite answer and a separate list of what could not be settled. Round three attacks the composite from four separate angles, held by readers who argued none of it. A close-out finding either says the premise is wrong, which writes a returned-id file and returns the work to analyze, or says the answer can be better, which re-enters at round one because the question has changed. The record is written only when a pass changes nothing.">
         <defs>
           <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -374,7 +374,7 @@ footer{
 
         <!-- premise wrong: all the way back to analyze -->
         <path class="flow-stop" d="M292,582 L240,582 L240,48 L224,48" marker-end="url(#ar-s)"/>
-        <text class="t-stop" x="292" y="598">the premise is wrong &rarr; back to ANALYZE; no polish repairs it</text>
+        <text class="t-stop" x="292" y="598">the premise is wrong &rarr; returned-&lt;id&gt;.md, back to ANALYZE</text>
 
         <!-- can be better: back to round one -->
         <path class="flow-accent" d="M676,626 L890,626 L890,74 L488,74 L488,96" marker-end="url(#ar-a)"/>
@@ -386,7 +386,7 @@ footer{
         <text class="t-sub" x="292" y="684">nothing changes &rarr; decision-&lt;id&gt;.md, naming who produced what</text>
       </svg>
     </div>
-    <figcaption>Round &#9312; carries the question and nothing else, and the seats have no peer address, so independence is a property of the wiring. Round &#9313; lets each seat see the others &mdash; but through the main session, not over an edge between them. Round &#9314; attacks the composite from four angles kept deliberately apart. The loop at the bottom is the stage&rsquo;s own ReAct: only a finding about the premise leaves the stage.</figcaption>
+    <figcaption>Round &#9312; carries the question and nothing else, and the seats have no peer address, so independence is a property of the wiring. Round &#9313; lets each seat see the others &mdash; but through the main session, not over an edge between them. Round &#9314; attacks the composite from four angles kept deliberately apart. The loop at the bottom is the stage&rsquo;s own ReAct: only a finding about the premise leaves the stage, and it leaves a <code>returned-&lt;id&gt;.md</code> behind &mdash; without it, a question that was argued and sent back is byte-identical on disk to one nobody ever started.</figcaption>
   </figure>
 
   <div class="col">

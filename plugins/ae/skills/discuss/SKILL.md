@@ -138,7 +138,11 @@ question was posed wrong sends you back to it, not forward.
 **A close-out finding is not a verdict either.** Sort what it returns by one question — **does
 it say the premise is wrong, or does it say the answer can be better?** A premise that does not
 hold ends the loop here and goes back to ANALYZE; no amount of further polish repairs a question
-that was malformed or already settled. **Everything else re-enters at round one.** A finding
+that was malformed or already settled. **Write `<feature-dir>/returned-<id>.md` before you
+leave** — which premise failed, where the findings that found it are, and what ANALYZE must
+re-decide. Without it the id is byte-identical to one that never ran, and whoever resumes cannot
+tell a question that was argued and sent back from one nobody has started.
+**Everything else re-enters at round one.** A finding
 that survives has changed what is being asked, and the changed question earns the same
 independent answering the first one got; closing out again over a composite no seat has seen
 uncorrelated tests the new version more weakly than the old one was tested. Stop when a pass
