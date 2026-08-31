@@ -33,16 +33,40 @@ Source: Claude Code source analysis (Discussion 021, 2026-04-04).
 | `description` | string | — | Description shown in agent selection (required) |
 | `tools` | string[] | — | Tool whitelist. Supports `*` wildcard |
 | `disallowedTools` | string[] | — | Tool denylist (applied after whitelist) |
-| `skills` | string[] | — | Skills preloaded into agent context |
+| `skills` | string[] | — | Documented as preloading the **full skill content**, not only the description. **Measured on a plugin agent: it did not.** A spawn with `skills: [ae:discuss]` reported only the one-line description every skill gets anyway. Likely stripped for plugin agents like the fields below; untested for project/user agents. Do not rely on it here |
 | `model` | string | inherit | Model override |
-| `effort` | string/int | default | Reasoning effort |
+| `effort` | string | inherit | Effort while this subagent is active; overrides the session level. `low`, `medium`, `high`, `xhigh`, `max` — availability depends on the model. Not rendered into the agent's own context, so an agent cannot report what it was given |
 | `maxTurns` | int | unlimited | Maximum execution turns. Prevents runaway agents |
 | `background` | boolean | false | Default to background execution |
 | `isolation` | string | — | `worktree` (git worktree) or `remote` |
 | `initialPrompt` | string | — | Prefix injected into first user turn (slash commands work) |
 | `memory` | string | — | Persistent memory scope: `user`, `project`, or `local` |
 | `color` | string | — | Display color in team UI |
-| `omitClaudeMd` | boolean | false | Skip loading CLAUDE.md into agent context (~1000 tokens saved) |
+
+### There is no per-agent way to keep CLAUDE.md out
+
+An agent definition cannot decline the instruction files. A subagent receives every level of the
+CLAUDE.md hierarchy the main conversation loads — `~/.claude/CLAUDE.md`, project rules,
+`CLAUDE.local.md`, managed policy — and **only the built-in `Explore` and `Plan` agents skip it**.
+The same is true of the parent session's git snapshot, which `Explore` and `Plan` also skip and
+which `includeGitInstructions: false` disables session-wide.
+
+The only exclusion mechanism is `claudeMdExcludes` in settings, which filters by path for the whole
+session rather than per agent.
+
+**`omitClaudeMd` is not effective for plugin agents, and is not in the published field list.**
+It was listed in this table and is set in seven agent definitions here. What is established: the
+key exists in the Claude Code binary, so the code knows the name; it appears in no published list
+of supported frontmatter fields; and a plugin agent that sets it still received the whole CLAUDE.md
+hierarchy, verified by spawning one and asking what it had been given.
+
+What is **not** established: whether it works for project or user agents. This repository's agents
+are all plugin agents, and plugin agents already have fields stripped silently — see the section
+below. That is the likeliest explanation and it is untested. Removed from the table above because
+setting it here does nothing; do not re-add it without a spawn that demonstrates an effect.
+
+Source: `https://code.claude.com/docs/en/sub-agents.md`, "What loads at startup" and the
+frontmatter table; `https://code.claude.com/docs/en/memory.md` for `claudeMdExcludes`.
 
 ### Fields Silently Ignored for Plugin Agents (Security Boundary)
 
@@ -50,8 +74,13 @@ Plugin agents **cannot** set:
 - `permissionMode` — only built-in and project agents
 - `hooks` — per-agent hooks restricted to built-in/project
 - `mcpServers` — inline MCP server declarations restricted
+- `skills` — **measured, not documented**: a plugin agent setting `skills` received only the
+  one-line description every skill gets regardless. Whether it is stripped here specifically, or
+  simply does not do what its description says, was not separable by that probe
 
-These fields are stripped without error during plugin agent loading.
+These fields are stripped without error during plugin agent loading. **That silence is the hazard**
+— a field that does nothing looks identical to a field that works, which is how `omitClaudeMd`
+survived in seven definitions and in this table. Measure a field on a spawn before trusting it.
 
 ## plugin.json Fields
 
