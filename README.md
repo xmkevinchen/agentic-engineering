@@ -171,8 +171,10 @@ description: "Reviews code for security vulnerabilities and auth bypass"
 You are a security specialist. Focus on OWASP Top 10 and injection vectors.
 ```
 
-See the [Agent Authoring Guide](docs/agent-authoring.md) for how a stage picks a role, which
-frontmatter fields actually do something, and two worked examples.
+That is a Claude Code feature, not an AE one — AE has no registry to add it to. What is AE's
+is what happens next: when a stage needs fresh eyes it picks among the roles the session offers
+by **reading their descriptions**, so the description is the only thing that decides whether
+yours gets chosen; and where a project role and an AE role both fit, the project role wins.
 
 ## Project Configuration
 

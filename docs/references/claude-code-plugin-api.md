@@ -64,6 +64,13 @@ which `includeGitInstructions: false` disables session-wide.
 The only exclusion mechanism is `claudeMdExcludes` in settings, which filters by path for the whole
 session rather than per agent.
 
+**`vibe` is not a field at all.** It is a convention of an external agent collection that
+arrived with a vendored definition, was classified as tolerated on import, and was then copied
+onto thirteen definitions as if it were a pattern. Measured 2026-08-31 by spawning a seat and
+asking it to report its own context verbatim: **no line beginning `vibe:` appears anywhere in
+it.** Deleted from every definition; `test-discuss-loop-contract.sh` fails if one returns.
+`emoji`, from the same collection, went with it.
+
 **`omitClaudeMd` is not effective for plugin agents, and is not in the published field list.**
 It was listed in this table and was once set in seven agent definitions here; all seven were
 cleaned up, and a suite check now asserts that no definition sets it. What is established: the

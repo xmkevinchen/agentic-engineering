@@ -87,7 +87,6 @@ Everything that lands in the repository — code comments, commit messages, skil
 
 - [docs/rebuild.md](docs/rebuild.md) — why AE was rebuilt, what the minimum is, and the roadmap
 - [docs/quickstart.md](docs/quickstart.md) — getting started
-- [docs/agent-authoring.md](docs/agent-authoring.md) — authoring custom agents
 - [docs/references/](docs/references/) — design rationale, plugin API, prompt patterns, AE↔CC contract surface
 
 Contributors actively running the AE-on-AE workflow can additionally maintain a local-only `CLAUDE.local.md` for AE-internal process detail (project-management model, feature directory layout, frontmatter schemas, autonomy boundary). That file is gitignored and never ships.
