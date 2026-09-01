@@ -201,7 +201,14 @@ likely to be reversed, what single change would improve it most, and which of it
 surplus and should be argued out of it. Together those are its gains and its costs, which is
 what has to be weighed before it is written down. **The angles stay separate**, because a
 reader who has answered the first question is anchored for the rest — the same reason exchange
-one runs blind. Whoever does this argued none of it, and that is the whole qualification: by
+one runs blind. **At least one angle is also given the seat files, `pass-N/question.md` and the
+material the analysis cited, and records `given_seat_file_paths: true` in its own file.** A
+close-out reads only what you point it at, so an angle holding the composite alone can weigh what
+the composite says and never what it left out — and what it left out is the one failure a reader is
+better placed to catch than its author. This is not an extra: where the party that composes also
+writes the record, it is the only check on the composite from outside, and an angle that was never
+equipped leaves the criterion unexamined rather than met. Both framing errors in this stage's own
+history were in the question and the bundle, not the composite, which is why those go too. Whoever does this argued none of it, and that is the whole qualification: by
 now the composite is what you are about to write down, so this is the last round in which your
 own premises can still be attacked.
 

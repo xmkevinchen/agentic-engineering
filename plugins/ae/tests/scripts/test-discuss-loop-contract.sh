@@ -409,6 +409,23 @@ if discuss is not None:
             "plugins/ae/skills/discuss/SKILL.md: a dropped point and a point nobody made are "
             "indistinguishable without one")
 
+# --- F-098 AC3: one close-out angle is equipped to audit the composite against its sources --
+#
+# A close-out reads only what the caller points at. Pointed at the composite alone it cannot
+# see what the composite left out, which is the one failure it is best placed to catch. Under
+# an arrangement where the composer also writes the record, this is the only external check.
+
+if discuss is not None:
+    legs = ("seat files" in discuss.lower()
+            and "given_seat_file_paths" in discuss
+            and "question.md" in discuss)
+    if legs:
+        ok("one close-out angle is given the seat files, the question and the bundle, and says so")
+    else:
+        bad("no close-out angle is given the seat files",
+            "plugins/ae/skills/discuss/SKILL.md: an angle pointed only at the composite cannot "
+            "see a point the composite dropped")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
