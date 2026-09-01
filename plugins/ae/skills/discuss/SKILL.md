@@ -214,7 +214,31 @@ That has happened: four close-out files were written against a composite that wa
 seconds after the last of them landed, and not one of them records which version it read — which is
 why the digest is the rule and the citation is not. A correction you owe after the spawn is an **erratum in the record**,
 not an edit to the artifact under attack — re-signing is cheap and a silently moved target is not.
-`check-composite.py` reports the mismatch.
+
+**Run the check, here, before you spawn round three.** `check-composite.py` ships beside this
+skill, at `scripts/check-composite.py` under the plugin root — in a checkout of AE itself that
+is `plugins/ae/scripts/`, and in an installed copy it is under the installed plugin. Locate it
+once and reuse the path:
+
+```sh
+python3 <plugin-root>/scripts/check-composite.py <feature-dir>/discuss-<id>/pass-N/round-2/composite.md
+```
+
+**If you cannot find it, say so in the record and mark those criteria unchecked.** Do not
+substitute your own reading of the composite for the check and call it passed — an author
+re-reading their own composite is the one reader who cannot see what it left out.
+
+Exit 0 and spawn. Non-zero and it prints, line by line, what to fix first: a point with no
+disposition, a `chosen` or `survived` point citing a file that does not exist, a `FROZEN`
+digest that no longer matches what it names, a seat file that never says which agent held it,
+a bare `round-N/` with no `pass-N/` wrapper. Fix and re-run — none of that needs asking anyone.
+**Run it again after the record is written**, because the composite is what the record rests on
+and the two must still agree.
+
+It reads the four criteria mechanically and says so where it cannot: whether a seat's claim
+reached the composite *with a stated reason* is not something it decides, and a word-presence
+check there would report green on a composite that dropped a rebuttal — which is the one failure
+that question exists to catch. That one stays yours.
 
 **A seat that could not answer still leaves a file at its own path**, written by you and saying so
 — which backend, which model, what failed. That file is not a seat's answer and says it is not:
