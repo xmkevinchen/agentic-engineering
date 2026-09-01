@@ -379,6 +379,21 @@ if google_seat is not None:
             "plugins/ae/agents/workflow/gemini-proxy.md: granted but never fetched: "
             f"{sorted(granted - fetched) or '(none)'}")
 
+# --- F-098 AC1: the composite is frozen, and something can tell that it was not ------------
+#
+# A composite was edited after all four close-out readers had attacked it, and the record then
+# disagreed with every finding written against it. Nothing detected that. The rule needs a leg
+# that writes the evidence down at the moment of the spawn, or it is a rule with no witness.
+
+discuss = read("plugins/ae/skills/discuss/SKILL.md")
+if discuss is not None:
+    if "frozen" in discuss.lower() and "round-3/FROZEN" in discuss:
+        ok("the discuss stage freezes the composite and records its digest at the spawn")
+    else:
+        bad("the discuss stage never freezes the composite",
+            "plugins/ae/skills/discuss/SKILL.md: a composite that can change after the round "
+            "that attacks it makes every finding cite a version that no longer exists")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)

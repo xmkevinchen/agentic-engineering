@@ -172,6 +172,14 @@ is the one most easily left in the conversation, because you wrote it and you ca
 Written by you rather than by a seat, which is why it is named here rather than left to the rule
 above.
 
+**The composite is frozen when round three is spawned, and you write `round-3/FROZEN` holding its
+sha256 at that moment.** Round three attacks what it was given; without the digest, a composite
+edited afterwards leaves every finding citing a version that no longer exists, and nothing can tell.
+That has happened: four close-out files carrying `attacks: round-2/composite.md` against a composite
+rewritten three minutes later. A correction you owe after the spawn is an **erratum in the record**,
+not an edit to the artifact under attack — re-signing is cheap and a silently moved target is not.
+`check-composite.py` reports the mismatch.
+
 **A seat that could not answer still leaves a file at its own path**, written by you and saying so
 — which backend, which model, what failed. That file is not a seat's answer and says it is not:
 what it prevents is a silent gap, where a seat that failed and a seat nobody asked look identical,
