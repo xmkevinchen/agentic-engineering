@@ -172,6 +172,14 @@ is the one most easily left in the conversation, because you wrote it and you ca
 Written by you rather than by a seat, which is why it is named here rather than left to the rule
 above.
 
+**Each material point is marked `survived`, `dropped`, `unresolved` or `chosen`**, and a `chosen`
+point names a reason someone other than you could check. The first three are judgements about the
+round, and a reader holding the seat files can test every one of them. `chosen` is not — it is where
+two answers both survived and you picked, and nothing in the seat files can check it. Written
+unmarked they read alike, in your voice, under your authorship, and the one the reader most needs to
+challenge is the one that looks most like a finding. `check-composite.py` reports a point carrying
+no mark, and a `chosen` that cites nothing.
+
 **Every material point in the composite carries a disposition and a source path** — it survived,
 or it was dropped and the reason is stated. A point raised in round one that no round-two seat
 attacked appears nowhere in the round-two files, so a composite assembled from the corrections alone

@@ -426,6 +426,21 @@ if discuss is not None:
             "plugins/ae/skills/discuss/SKILL.md: an angle pointed only at the composite cannot "
             "see a point the composite dropped")
 
+# --- F-098 AC4: which judgements were survival, and which were choice --------------------
+#
+# A composite reports what survived the round and what the composer chose, in one voice, under
+# one authorship. The reader cannot separate them, and the second kind is the one nothing in the
+# seat files can check. Marking them is what makes the distinction legible.
+
+if discuss is not None:
+    marks = all(f"`{m}`" in discuss for m in ("survived", "dropped", "unresolved", "chosen"))
+    if marks and "check-composite.py" in discuss:
+        ok("the composite marks each point survived, dropped, unresolved or chosen")
+    else:
+        bad("the composite never distinguishes what survived from what was chosen",
+            "plugins/ae/skills/discuss/SKILL.md: both are written in one voice by one party, and "
+            "only one of them can be checked against the seat files")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
