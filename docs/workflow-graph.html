@@ -93,7 +93,7 @@
 
   <div class="board">
     <figure>
-      <svg viewBox="0 0 620 782" role="img" aria-label="Vertical flow: intent enters ANALYZE, which may exit if the premise fails; then optional DISCUSS, which leaves a returned-id file and sends the question back to ANALYZE if the question's own premise fails or the analysis cited too little; then PLAN, then a human-confirms gate, then WORK, then REVIEW, then a human-signs gate, then done. Review returns findings to WORK, and a criterion change returns to ANALYZE through the human.">
+      <svg viewBox="0 0 620 782" role="img" aria-label="Vertical flow: intent enters ANALYZE, which may exit if the premise fails; then optional DISCUSS, which leaves a returned-id file and sends the question back to ANALYZE if the question's own premise fails or the analysis cited too little; then a human-confirms gate, then PLAN, then WORK, then REVIEW, then a human-signs gate, then done. Review returns findings to WORK, and a criterion change returns to ANALYZE through the human.">
         <defs>
           <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
@@ -128,16 +128,16 @@
 
         <line x1="230" y1="238" x2="230" y2="274" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
 
-        <rect x="110" y="282" width="240" height="60" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" rx="2"/>
-        <text x="126" y="307" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">3 · PLAN</text>
-        <text x="126" y="326" font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--gate)">/ae:plan</text>
+        <rect x="88" y="282" width="284" height="34" fill="var(--gate-wash)" stroke="var(--gate)" stroke-width="1.8" rx="2"/>
+        <text x="230" y="304" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13.5" font-weight="700" letter-spacing=".06em" fill="var(--gate)">HUMAN CONFIRMS THE CRITERIA</text>
 
-        <line x1="230" y1="342" x2="230" y2="366" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+        <line x1="230" y1="316" x2="230" y2="348" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
 
-        <rect x="88" y="374" width="284" height="34" fill="var(--gate-wash)" stroke="var(--gate)" stroke-width="1.8" rx="2"/>
-        <text x="230" y="396" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13.5" font-weight="700" letter-spacing=".06em" fill="var(--gate)">HUMAN CONFIRMS THE CRITERIA</text>
+        <rect x="110" y="356" width="240" height="60" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" rx="2"/>
+        <text x="126" y="381" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">3 · PLAN</text>
+        <text x="126" y="400" font-family="IBM Plex Mono, monospace" font-size="13" fill="var(--gate)">/ae:plan</text>
 
-        <line x1="230" y1="408" x2="230" y2="440" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
+        <line x1="230" y1="416" x2="230" y2="440" stroke="currentColor" stroke-width="1.4" marker-end="url(#a)"/>
 
         <rect x="110" y="448" width="240" height="60" fill="var(--panel)" stroke="currentColor" stroke-width="1.4" rx="2"/>
         <text x="126" y="473" font-family="Archivo, sans-serif" font-size="16.5" font-weight="600" fill="currentColor">4 · WORK</text>
@@ -175,7 +175,7 @@
       <section class="st">
         <div class="num">01</div>
         <div>
-          <h2>Analyze <span class="skill">/ae:analyze</span> <span class="lines">38 lines</span></h2>
+          <h2>Analyze <span class="skill">/ae:analyze</span> <span class="lines">146 lines</span></h2>
           <p>Establish that the problem is real and settle what <b>done</b> means, before any solution exists.</p>
           <div class="rows">
             <div class="k">delivers</div>
@@ -193,7 +193,7 @@
       <section class="st">
         <div class="num">02</div>
         <div>
-          <h2>Discuss <span class="skill">/ae:discuss</span> <span class="lines">52 lines</span> <span class="opt">optional</span></h2>
+          <h2>Discuss <span class="skill">/ae:discuss</span> <span class="lines">351 lines</span> <span class="opt">optional</span></h2>
           <p>Settle one decision where two defensible options lead to <b>materially different work</b>. Nothing contested → skip it; a discussion held as ceremony costs a cycle and decides nothing.</p>
           <div class="rows">
             <div class="k">delivers</div>
@@ -209,17 +209,17 @@
       <section class="st">
         <div class="num">03</div>
         <div>
-          <h2>Plan <span class="skill">/ae:plan</span> <span class="lines">45 lines</span></h2>
-          <p>Decide the method. <b>The criteria themselves are not yours to change</b> — they arrive word for word from the analysis.</p>
+          <h2>Plan <span class="skill">/ae:plan</span> <span class="lines">39 lines</span></h2>
+          <p>Decide the method. <b>The criteria themselves are not yours to change</b> — they arrive already signed, and the plan cites them by id rather than restating them.</p>
           <div class="rows">
             <div class="k">delivers</div>
             <div class="v"><code>&lt;feature-dir&gt;/plan.md</code></div>
             <div class="k">must hold</div>
             <div class="v">A dependency-ordered stack where each step is one commit that closes on itself. Coverage runs both ways: every criterion served, no step building what no criterion asks for. No criterion rests on a check nobody has seen fail.</div>
             <div class="k gate-row">gate</div>
-            <div class="v" style="border-left:2px solid var(--gate);padding-left:11px;background:var(--gate-wash)">Present the criteria first — that is the thing being confirmed. The step cut is advisory context. <b>Work does not start without it.</b></div>
+            <div class="v" style="border-left:2px solid var(--gate);padding-left:11px;background:var(--gate-wash)">Immediately <b>before</b> this stage. Present the criteria — that is the thing being confirmed — together with the questions the analysis named and how each was settled. <b>Planning does not start without it.</b></div>
             <div class="k refuse">refused for</div>
-            <div class="v refuse"><ul><li>a step that names no check to turn red</li><li>a criterion whose text differs from the analysis</li></ul></div>
+            <div class="v refuse"><ul><li>a step that names no check to turn red</li><li>a step that serves no criterion</li></ul></div>
           </div>
         </div>
       </section>

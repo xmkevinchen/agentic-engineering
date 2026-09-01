@@ -1,9 +1,20 @@
 # AE 1.0 foundation freeze — implementation record
 
-> F-083 / WP-P0.1. Records the concrete implementation choices behind the five
-> foundational mechanisms and points at the executable corpus that holds them.
+> **Status: historical.** Records the implementation choices behind five
+> foundational mechanisms of a v1 that was archived. The corpus it describes
+> (`plugins/ae/tests/foundation/`) still exists and its freeze test still runs,
+> so the *facts* below — digests, file layout, error codes — remain accurate.
+> **What is no longer live is every forward-looking sentence in it.** Where the
+> text assigns work to a later phase ("P1 is expected to promote `lib/` into
+> `plugins/ae/runtime/`", "is P1's job when it wires a real consumer", "P1 owns
+> the first production Gate vertical slice"), **that phase was never built and
+> is not queued.** `plugins/ae/runtime/` does not exist and creating it is not
+> current work. See [`../../../../docs/rebuild.md`](../../../../docs/rebuild.md).
+>
+> Records the concrete implementation choices behind the five foundational
+> mechanisms and points at the executable corpus that holds them.
 
-This document is **not** a second authority. `docs/references/finalized/`
+This document is **not** a second authority. `docs/history/finalized/`
 is the archived v1 specification; every section below cites the clause it
 implements and records only what the specification leaves to the implementer:
 exact versions, file formats, build order, error codes, and ownership. Where a

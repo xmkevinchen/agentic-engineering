@@ -2,9 +2,9 @@
 
 Current model and effort assignments for all AE skills and agents.
 
-**CC model baseline (2026-06):** `opus` resolves to **Opus 4.8** — the current Claude Code default, whose **default effort is high**. The effort ladder is `minimal | low | medium | high | xhigh`; **`xhigh`** (`/effort xhigh`) is reserved for the single **hardest verify/judge stage** (`ae:review`, the verdict gate). Fast mode (~2× cost for ~2.5× speed) is opt-in per run, not a default here. `inherit` = use the session/parent model + effort.
+**CC model baseline:** `opus` resolves to whichever Opus the installed Claude Code treats as default; measured 2026-06 it was Opus 4.8, whose **default effort is high**. Re-check before relying on the resolution. The effort ladder is `minimal | low | medium | high | xhigh`; **`xhigh`** (`/effort xhigh`) is reserved for the single **hardest verify/judge stage** (`ae:review`, the verdict gate). Fast mode (~2× cost for ~2.5× speed) is opt-in per run, not a default here. `inherit` = use the session/parent model + effort.
 
-## Skills (TL model + effort)
+## Skills (model + effort)
 
 Read from each `SKILL.md` frontmatter. A blank cell means the field is not declared, so the
 session's own model or effort is used.
@@ -36,24 +36,25 @@ session's own model or effort is used.
 | doodlestein-scope-reducer | sonnet | medium | Scope reduction (single question) |
 | minimal-change-engineer | — | — | Minimum-viable diffs; refuses scope creep |
 | code-reviewer | haiku | low | General code review (lightweight) |
-| codex-proxy | sonnet | low | Codex MCP relay (haiku→sonnet: haiku held parameter-level MUSTs 1 run in 3) |
-| gemini-proxy | haiku | low | Gemini MCP relay (stays haiku: no parameter-level per-call MUSTs on that surface) |
+| codex-proxy | sonnet | low | OpenAI seat; drives the `codex exec` subprocess (haiku→sonnet: haiku held parameter-level MUSTs 1 run in 3) |
+| discuss-seat | opus | — | Same-family seat for the discuss stage's first two rounds |
+| gemini-proxy | haiku | low | Google seat, over the bundled MCP server (stays haiku: no parameter-level per-call MUSTs on that surface) |
 | openai-compat-proxy | sonnet | low | Any OpenAI-compatible backend, endpoint and family supplied per call |
 
 ## Override Hierarchy
 
-### Skill model (TL)
-SKILL.md `model:` → overrides TL mainLoopModel for entire skill execution (verified: `SkillTool.ts:810-821`). Persists across Agent Teams wake/sleep. Scoped per-invocation (does not bleed into next user prompt).
+### Skill model
+SKILL.md `model:` → overrides the session's main-loop model for the whole skill execution (verified: `SkillTool.ts:810-821`). Scoped per-invocation; it does not bleed into the next user prompt.
 
 ### Agent model (subagents)
 Priority (highest wins):
 1. `CLAUDE_CODE_SUBAGENT_MODEL` env var
 2. `Agent()` inline `model:` parameter
 3. Agent frontmatter `model:` field
-4. `inherit` (default — uses parent/TL model)
+4. `inherit` (default — uses the parent session's model)
 
 ### User override
-Users can override with `CLAUDE_CODE_SUBAGENT_MODEL` env var (agents) or pipeline.yml config (planned: BL-019).
+Users can override with the `CLAUDE_CODE_SUBAGENT_MODEL` env var. There is no `pipeline.yml` key for this, and none is planned.
 
 ### Cost-gate (parameter-level permission, CC v2.1.178+)
 `Agent(model:…)` permission rules cap which model a subagent may use — e.g. `deniedTools: ["Agent(model:opus)"]` blocks opus subagents to force cheaper sonnet/haiku on mechanical stages. Scope: **Claude-family subagents only** — it does NOT govern non-Claude / local model backends reached via MCP (those are controlled at the MCP server layer).

@@ -69,10 +69,10 @@ Everything that lands in the repository — code comments, commit messages, skil
 
 - **Self-bootstrapping** — AE develops AE. All changes to this plugin go through the AE pipeline (discuss→plan→work→review). This is the default working mode, not a special case.
   Bootstrapping is what makes this repository's edit loop unlike an ordinary project's: elsewhere you edit code that a test then runs, here you edit the instructions the running agent is made of. Two consequences, both silent when ignored — **within a session**, nothing reaches the agent until `/reload-plugins` (see *Run before deciding* below); **across sessions**, this repo loads the plugin from its own working tree (`.claude/settings.json`), so a new session reads the current files with no version bump, while a marketplace install anywhere else stays pinned to the version it was installed at until that version is bumped and the plugin updated.
-- **Project-agnostic** — skills and agents read project context from CLAUDE.md and pipeline.yml
-- **Extensible** — projects define their own agents (developers, code reviewers) in pipeline.yml
+- **Project-agnostic** — skills and agents read project context from CLAUDE.md
+- **Extensible** — projects define their own roles as `.claude/agents/*.md`, which the host
+  discovers; a project role is preferred over an AE one when both fit
 - **Cross-family by default** — Codex is mandatory baseline, Gemini is optional add-on
-- **Agent Teams** — parallel multi-agent workflows with structured communication protocols
 - **Run before deciding** — new skills or significant skill changes must be followed by at least one real execution before the next discussion or plan cycle. That execution needs `/reload-plugins` first: skill bodies and agent definitions are read once at session start, so `Skill` returns the old text and a new agent is `not found`, with no warning either way — the call succeeds and the content looks normal. **Reload is a snapshot, not a subscription:** it loads what is on disk at that instant, so every further edit needs its own reload. Two rounds of edits, two reloads.
 
 ## Agent Definition Principles
@@ -85,6 +85,7 @@ Everything that lands in the repository — code comments, commit messages, skil
 
 ## Further reading
 
+- [docs/rebuild.md](docs/rebuild.md) — why AE was rebuilt, what the minimum is, and the roadmap
 - [docs/quickstart.md](docs/quickstart.md) — getting started
 - [docs/agent-authoring.md](docs/agent-authoring.md) — authoring custom agents
 - [docs/references/](docs/references/) — design rationale, plugin API, prompt patterns, AE↔CC contract surface

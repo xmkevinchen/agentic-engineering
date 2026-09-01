@@ -29,9 +29,9 @@ Every dependency below is classified into one of four failure modes. The class d
 | 4 | `userConfig` mechanism (plugin.json `userConfig` block) | `silent-degrade` | Gemini MCP server model selection — `gemini_flash_model` / `gemini_pro_model` are *intended* to map to `CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL` / `CLAUDE_PLUGIN_OPTION_GEMINI_PRO_MODEL` at MCP startup. **Measured 2026-08-16 (F-082): an option the user never configured exports nothing, even though `plugin.json` declares a default for it.** Both variables are unset and the server runs on its own hardcoded fallbacks; whether a *configured* option materialises is untested. So the `silent-degrade` classification is right for the wrong reason — it degrades because the variable never arrives, not because the option is optional. | If removed: hard-code default models in `plugins/ae/mcp-servers/gemini/src/index.ts`, lose user customization. Acceptable degradation (default models still work — that is in fact the current state). **Do not reference a `${CLAUDE_PLUGIN_OPTION_*}` from a manifest `env` block**: those are validated at install time and an unresolved one rejects the whole server, so a declared-only default takes the server down instead of supplying its value. Read the option in-process with a fallback, as both bundled servers now do. |
 | 5 | `mcpServers.*.env` passthrough (plugin.json `mcpServers.gemini.env`) | `silent-degrade` (becomes `fast-fail` on first MCP call when env unbound) | Gemini MCP server credential binding — `"env": {"GEMINI_API_KEY": "${GEMINI_API_KEY}"}` block injects host env var into the MCP server process at startup | If removed: require user to export `GEMINI_API_KEY` directly to the shell that spawns CC (lose declarative env binding); document migration in plugin-level CLAUDE.md. Two-stage failure: declarative bind silently fails at MCP startup (no user signal); first MCP call surfaces `gemini-proxy unavailable` error (visible). |
 | 6 | `CLAUDE_PLUGIN_ROOT` env var | `fast-fail` | plugin.json `mcpServers.gemini.command` uses `${CLAUDE_PLUGIN_ROOT}` to locate the committed bundle it execs directly (`node "${CLAUDE_PLUGIN_ROOT}/mcp-servers/gemini/dist/index.mjs"`) | If renamed: plugin install fails fast with a visible "command not found" / "no such directory" error. User can self-diagnose and patch plugin.json. Low-severity failure mode. |
-| 7 | `outputStyles` plugin.json field | `silent-degrade` | `plugins/ae/.claude-plugin/plugin.json:33` registers `output-styles/ae-structured.md` and `output-styles/ae-compact.md` as user-selectable output style options | If removed: registered output style names disappear from `/output-style` menu; user falls back to CC's default styles. No skill breakage (output styles are presentation-layer only). Mitigation: vendor styles into project-level `.claude/output-styles/` per user if AE-level registration breaks. |
+| 7 | `outputStyles` plugin.json field | `silent-degrade` | `plugins/ae/.claude-plugin/plugin.json:51` registers `output-styles/ae-structured.md` and `output-styles/ae-compact.md` as user-selectable output style options | If removed: registered output style names disappear from `/output-style` menu; user falls back to CC's default styles. No skill breakage (output styles are presentation-layer only). Mitigation: vendor styles into project-level `.claude/output-styles/` per user if AE-level registration breaks. |
 | 8 | Plugin agent namespace prefix (`ae:` resolution) | `hard` | All 18 built-in agents in `plugins/ae/agents/{review,research,workflow,engineering}/` rely on CC resolving plugin agent IDs with `ae:` namespace prefix (e.g., `ae:review:architecture-reviewer`) for collision avoidance with project agents | If removed: agent name collisions with user's `.claude/agents/` cannot be deterministically resolved; AE built-in agents become unaddressable via `subagent_type:`. No fallback short of bundling AE as a non-plugin (deep refactor). Hard dependency on CC plugin-agent namespace resolution. |
-| 9 | `ToolSearch` (deferred-tool schema lookup) | `silent-degrade` (fail-open) | Proxy agents fetch their own deferred backend tools before acting (`codex-proxy`, `gemini-proxy`, `openai-compat-proxy`) | If `ToolSearch` is unavailable, a proxy cannot load its backend tools and takes the unavailable path — it reports and stops rather than answering from its own reasoning. Visible, not silent: the run loses that family's coverage and says so. |
+| 9 | `ToolSearch` (deferred-tool schema lookup) | `silent-degrade` (fail-open) | The two MCP-backed proxy agents fetch their own deferred backend tools before acting (`gemini-proxy`, `openai-compat-proxy`). **`codex-proxy` no longer depends on this**: since 0.15.0 it runs its backend as a subprocess through `plugins/ae/scripts/codex-seat.sh` and reaches no MCP tool at all | If `ToolSearch` is unavailable, a proxy cannot load its backend tools and takes the unavailable path — it reports and stops rather than answering from its own reasoning. Visible, not silent: the run loses that family's coverage and says so. |
 
 ## Hook enforcement and design surface
 
@@ -106,30 +106,36 @@ CI reproducibility check (`git diff --exit-code -- dist/` after clean rebuild) i
 
 ### Harness toolchain scripts (the green-loop layer)
 
-Deterministic shell scripts under `plugins/ae/scripts/` (no CC-platform dependency beyond `sh`/`awk`/`jq`; each is exercised by `ae-run-tests.sh`):
+Scripts under `plugins/ae/scripts/`. **Two qualifications the earlier wording got wrong**: the
+layer is not pure shell — `check-composite.py` and `read-family-table.py` are Python 3, which is
+therefore a runtime dependency of the composite check and the family-table reader; and coverage
+is partial — `check-composite.py` is exercised by `test-composite-contract.sh`,
+`check-cross-family.sh` by `test-cross-family-probe-parsing.sh`, and
+`check-skill-frontmatter.sh` by its own test, while `codex-seat.sh` and `read-family-table.py`
+are exercised by nothing:
 
 | Script | Role |
 |---|---|
-| `verify-contract.sh` | jq-assertion runner for `verify_by: contract` ACs (exit 0 = all pass) |
+| `verify-contract.sh` | jq-assertion runner (exit 0 = all pass). **No skill declares `verify_by: contract` any more** — the field survives in no SKILL.md and no template, so nothing routes work to this runner today |
 
 ## Decommissioned dependencies (historical)
 
 Dependencies AE no longer relies on, preserved here for archaeology:
 
-- **`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, `TeamCreate` / `SendMessage` / `TeamDelete`, `Task*`, and `run_in_background: true`** — the Agent Teams surface. The stage skills spawn ordinary subagents and synthesize in the session; no skill creates a team, so none of these is load-bearing any more. The proxy agents still carry team-era wording in places, which is a documentation debt rather than a live dependency.
+- **`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, `TeamCreate` / `SendMessage` / `TeamDelete`, `Task*`, and `run_in_background: true`** — the Agent Teams surface. The stage skills spawn ordinary subagents and synthesize in the session; no skill creates a team, so none of these is load-bearing any more. Team-era wording has been cleared from the agent definitions, including the `SendMessage`-to-a-`challenger` routing that six of them carried; nothing in the plugin now addresses a team, a lead or a teammate.
 - **`@include` directive in skill markdown** — previously used by `ae:agent-teams` cast block resolution to pull in shared protocol fragments. Decoupled in 2026-04 (a v0.9.x-cycle design challenge): content is now inlined into each consuming SKILL.md. No current dependency on `@include`; listed here only so future archaeology need not re-derive that this WAS once a dependency.
 
 ## Format reversal note
 
-This document uses Markdown as the canonical format for v0.10.x. Markdown is human-optimized and unsuitable for programmatic consumption.
+This document's canonical format is Markdown. Markdown is human-optimized and unsuitable for programmatic consumption.
 
 **Reversal trigger** (explicit, enforceable): when ANY of the following lands in a single PR/plan:
 
 1. A skill or agent reads `cc-plugin-contract.md` programmatically (regex, JSON parsing, structured field access).
 2. A consumer claims the dependency table as a parseable contract (any code that depends on the table structure rather than human-readable content).
-3. A v0.11.x schema discipline change introduces CI grep drift detection against this document.
+3. A CI grep drift-detection check is introduced against this document.
 
-→ The PR/plan landing the consumer MUST rotate canonical form to YAML at `docs/references/cc-plugin-contract.yaml` in the same PR, and update this document's pointer to "Canonical form: cc-plugin-contract.yaml; this `.md` is a derived/human-readable view." The 12-row 4-column table structure (Dependency | Failure class | Used by | Mitigation) is designed to translate cleanly into a YAML schema; rotation cost is manual transcription (manageable for 12 rows; ≤ 1 contributor-hour). The decision to rotate is **deferred until first downstream consumer exists** — premature YAML now would build infrastructure with no caller.
+→ The PR/plan landing the consumer MUST rotate canonical form to YAML at `docs/references/cc-plugin-contract.yaml` in the same PR, and update this document's pointer to "Canonical form: cc-plugin-contract.yaml; this `.md` is a derived/human-readable view." The 9-row 4-column table structure (Dependency | Failure class | Used by | Mitigation) is designed to translate cleanly into a YAML schema; rotation cost is manual transcription (manageable at this size; ≤ 1 contributor-hour). The decision to rotate is **deferred until first downstream consumer exists** — premature YAML now would build infrastructure with no caller.
 
 If you are reading this document and about to add a programmatic consumer, this is the trigger. Do NOT add the consumer without also rotating the canonical form in the same PR (or filing a backlog item with explicit dependency for a follow-up PR before the consumer ships).
 
@@ -141,14 +147,14 @@ When AE adds a new CC dependency, append a row to the **Live dependencies** tabl
 
 - changes in `plugins/ae/.claude-plugin/plugin.json` (new field, new MCP server config, new hooks block)
 - new `${...}` env var usage in plugin code (e.g., `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_CODE_EXPERIMENTAL_*}`)
-- new MCP tool calls in skills/agents (e.g., new `Team*` / `Task*` / `Subagent*` invocations beyond the current 12-tool surface)
+- new MCP tool calls in skills/agents. The current surface is the bundled servers only: five `mcp__plugin_ae_gemini__*` tools and six `mcp__plugin_ae_openai-compat__*` tools, named in the two proxy definitions. `Team*` and `Task*` are not called anywhere
 - new CC env var reads in skill SKILL.md or agent .md prose text (e.g., new `CLAUDE_CODE_*` env var name appearing in instructions)
 
 If a new CC dependency surface is detected and not yet documented here, raise a finding.
 
-**Reader-side trigger** (when CC changes a dep AE already uses): monitor CC release notes at https://github.com/anthropics/claude-code/releases on each CC release. Flag any change to `plugin.json` fields used by AE (current set: `name`, `version`, `commands`, `skills`, `agents`, `mcpServers`, `hooks`, `outputStyles`, `userConfig`, `dependencies`), MCP tool naming conventions (`TeamCreate`, `Task*`, etc.), experimental env vars (`CLAUDE_CODE_EXPERIMENTAL_*`), or `Agent` API parameter set. Automated detection is deferred to v0.11.x (BL candidate).
+**Reader-side trigger** (when CC changes a dep AE already uses): monitor CC release notes at https://github.com/anthropics/claude-code/releases on each CC release. Flag any change to `plugin.json` fields used by AE (the manifest actually declares: `name`, `version`, `description`, `author`, `repository`, `license`, `keywords`, `userConfig`, `outputStyles`, `mcpServers`, `hooks` — note it declares no `commands`, `skills`, `agents` or `dependencies` keys, since those directories are discovered by convention), MCP tool naming conventions, experimental env vars (`CLAUDE_CODE_EXPERIMENTAL_*`), or `Agent` API parameter set. Automated detection is deferred; no consumer needs it yet.
 
-**Empirical-class deps require last-verified annotation**: rows classified as `empirical` MUST carry an inline `(re-verified: YYYY-MM-DD, CC version: <X>)` annotation in the Failure class cell (see rows 5 + 6 above as the reference pattern). When re-verifying, update the inline annotation in the table cell AND the corresponding BL evidence section.
+**Empirical-class deps require last-verified annotation**: rows classified as `empirical` MUST carry an inline `(re-verified: YYYY-MM-DD, CC version: <X>)` annotation in the Failure class cell (see rows 2 + 3 above, the two `empirical` rows, as the reference pattern). When re-verifying, update the inline annotation in the table cell and the corresponding evidence section below.
 
 **Severity triage based on failure-class** (the new row's class determines the finding severity):
 
@@ -159,6 +165,6 @@ If a new CC dependency surface is detected and not yet documented here, raise a 
 | `empirical` | **P2** — works today but missing re-verification cadence |
 | `fast-fail` | **P3** — auto-discoverable on next install |
 
-CI grep validation of this document (machine-readable drift detection between dep enumeration here vs actual codebase usage) is deferred to v0.11.x schema discipline expansion. Until then, manual update via the reviewer trigger above is the contract.
+CI grep validation of this document (machine-readable drift detection between the dependency list here and actual codebase usage) is deferred. Until then, manual update via the reviewer trigger above is the contract.
 
-**Observability gap (v0.10.x known limit)**: this document is a contract artifact without an active observability surface — no error budget per class, no alerting on cadence miss, no automated drift detection. Acceptable for self-use scope; downstream consumers (e.g., AE-on-AE self-review) should be aware that the contract's authority is human-discipline-enforced, not machine-verified. Reliability / observability hook addition is deferred to v0.11.x.
+**Observability gap (known limit)**: this document is a contract artifact without an active observability surface — no error budget per class, no alerting on cadence miss, no automated drift detection. Acceptable for self-use scope; downstream consumers (e.g., AE-on-AE self-review) should be aware that the contract's authority is human-discipline-enforced, not machine-verified. Reliability and observability hooks are deferred.

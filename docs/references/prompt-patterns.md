@@ -1,22 +1,34 @@
 # AE Prompt Patterns Reference
 
-Canonical prompt-writing patterns for AE builtin agents — extracted from agency-agents (`../agency-agents/`) and adapted to AE operational style. This is a **human-facing consistency reference** for agent authors and reviewers; it is NOT runtime-binding (LLMs do not load this file at spawn time).
+> **Status: current, with one pattern withdrawn.** This describes the prompt
+> structure AE's own agents under `plugins/ae/agents/` are actually written in.
+> It is **not runtime-loaded** — agent prompts are self-contained at spawn time —
+> so it is a consistency reference for whoever edits those files, and nothing
+> reads it at runtime.
+>
+> Two cautions before you build on it:
+>
+> - **The Vibe pattern is withdrawn.** The field it prescribes was measured to
+>   reach nothing (see below). It is still set on 13 definitions and queued for
+>   removal.
+> - **These definitions are queued for an overhaul.** Several still carry
+>   sections written against a coordination layer that has changed underneath
+>   them. Match the surrounding file when making a small edit; do not treat the
+>   patterns here as a reason to keep a section a rewrite would drop.
 
-**Audience**: agent authors writing or modifying files under `plugins/ae/agents/`; reviewers checking F-016 capability injection.
+**Audience**: whoever writes or modifies a file under `plugins/ae/agents/`.
 
-**Scope**: 7 patterns (capability primitives) + 5 anti-patterns (don't copy) + maintenance discipline.
+**Origin**: extracted from an external agent collection and adapted; the
+comparisons below quote that collection by path (`../agency-agents/…`), which is
+not part of this repository.
 
-## Maintenance Note
+## Maintenance
 
-This reference exists in dual form: the canonical patterns described here AND embedded copies in 13 agent prompts. **Drift risk is real**: when an agent prompt updates a pattern's structure (e.g., changes Identity block from 4 anchors to 5), this reference may not be updated synchronously. Audit checklist before publishing pattern changes:
-
-1. Update this reference first (single source for cross-agent consistency).
-2. Update each agent prompt that embeds the pattern (the 13 affected agents are enumerated row-by-row in the Quick Reference table at the end of this doc; rows marked "already has" / "intentional minimal" are excluded from the 13-count).
-3. Note any deviation in agent's own prompt (e.g., "Identity block uses 5 anchors instead of 4 because [reason]").
-
-This reference is **not runtime-loaded**. Agent prompts must remain self-contained for spawn-time use. Treat divergence between this doc and agent prompts as tech debt to track, not as a runtime correctness issue.
-
----
+The patterns exist in dual form: described here, and embedded in the agent
+prompts themselves. **Drift is the normal state, not an anomaly** — the prompt is
+what runs, so when the two disagree, the prompt is right and this file is behind.
+Update this file when you change a pattern's shape across several agents; do not
+update several agents to match this file.
 
 ## Patterns
 
@@ -48,33 +60,25 @@ This reference is **not runtime-loaded**. Agent prompts must remain self-contain
 
 ---
 
-### Pattern: Vibe
+### Pattern: Vibe — **withdrawn**
 
-**Form**: frontmatter `vibe:` field, 8-15 words, character anchor that sets tone before body is read.
+**Form was**: a frontmatter `vibe:` field, 8–15 words, setting tone before the
+body is read.
 
-**agency-agents example** (`../agency-agents/engineering/engineering-code-reviewer.md`):
+**Why it is withdrawn.** Measured 2026-08-31: `vibe:` appears in no published
+list of supported frontmatter fields, nothing in this repository reads it, and a
+seat spawned from a fresh session and asked to report its own context verbatim
+had **no line beginning `vibe:` anywhere in it**. It reaches nothing. Two
+neighbouring fields failed the same way and have already been removed —
+`omitClaudeMd` (not a supported field) and `skills` (delivered only the one-line
+description every skill gets anyway).
 
-```yaml
-vibe: Reviews code like a mentor, not a gatekeeper. Every comment teaches something.
-```
+It is still set on **13 of 18** definitions. Each holds one sentence of real
+intent, so the removal is a rewrite of where that sentence lives, not a deletion
+of thirteen lines — which is why it is queued rather than done.
 
-**AE-adapted version** (4 reviewers, distinct tone per domain):
-
-```yaml
-# security-reviewer.md
-vibe: Trust nothing. Verify boundaries. Name the threat model.
-
-# performance-reviewer.md
-vibe: Measure first, optimize second. Big-O over micro-tweaks.
-
-# architecture-reviewer.md
-vibe: Modules with reason. Coupling with intent. Reversibility wins.
-
-# architect.md
-vibe: Trade-offs over best practices. Name what you're giving up.
-```
-
-**Why it matters**: one-line tone anchor in frontmatter sets disposition before body is read; cheaper than a paragraph of personality prose.
+**What to do instead**: if the disposition matters, write it into the body,
+where the agent will actually read it.
 
 ---
 
@@ -237,12 +241,13 @@ Line 42: User input is interpolated directly into the query.
 
 **Form**: reviewer output table has THREE structural elements: `Severity` column (P1/P2/P3 enum) + `Why it matters` (Rationale) column + agent-level nit cap statement (e.g., "at most 5 P3 findings; report count if more").
 
-**Trigger**: CLAUDE.md `## TL Autonomy Boundary` defines auto-skip rules:
-- "**P3 auto-skip** — P3 findings in code review: skip without asking user"
-- "**P2-style auto-skip** — P2 style/naming findings: skip without asking user"
-- "**Review findings triage** — only P1 and P2-logic/security require user disposition"
-
-These rules are TL-level and **assume reviewer agents emit per-finding priority + rationale**. Without per-finding severity, TL cannot precisely auto-skip; without rationale, TL cannot distinguish P2-style from P2-logic. This pattern is the agent-side prerequisite for TL Autonomy auto-skip to actually work.
+**Why the three elements together**: whoever receives the findings decides what
+needs a person and what does not. Without per-finding severity that triage cannot
+be precise; without the rationale it cannot separate a style objection from a
+logic defect at the same severity. The pattern is the agent-side prerequisite for
+any triage rule at all — including the disposition requirement every AE stage
+carries, that a finding ends fixed, rejected with a reason, or deferred with a
+named condition.
 
 **AE-adapted version** (reviewer output table format):
 
@@ -326,16 +331,26 @@ You have access to: gh CLI, git, npm, yarn, pnpm, brew, asdf, nvm, docker, kubec
 
 ---
 
-## Quick Reference: Which patterns for which agent type
+## Quick Reference: which patterns each surviving agent carries
 
-> **"extend existing"** in the cells below = build on the agent's pre-existing section rather than overwriting; preserve domain-specific entries at higher priority than the generic patterns documented in this reference. For agents not yet carrying that section, add the generic pattern as the baseline.
+Read as a description of the tree as it stands, not as a prescription for a new
+agent. `—` means the pattern is absent, which is often deliberate.
 
-| Agent type | Identity | Vibe | Critical Rules | Decision matrix | ADR template | Worked examples | Severity+Rationale+nit cap |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Research (archaeologist / standards-expert / dependency-analyst) | ✓ | ✓ | ✓ | — | — | ✓ | — |
-| Reviewer (code / security / performance / architecture / qa) | ✓ | ✓ | extend existing | architecture only | architecture optional | ✓ (× 2 for security/perf) | ✓ |
-| Architect | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| Cross-family proxy (codex / gemini) | ✓ | ✓ | extend existing | — | — | ✓ | — |
-| Workflow (challenger / qa / test-lead) | ✓ (test-lead only) | ✓ | extend existing | — | — | ✓ | qa only |
-| Doodlestein (× 3) | — (intentional minimal) | — | already has | — | — | — | — |
-| minimal-change-engineer (vendored) | already has | already has | already has | — | — | already has | — |
+| Agent | Identity | Critical Rules | Decision matrix | ADR | Worked examples | Severity + rationale + nit cap |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| `archaeologist` · `standards-expert` · `dependency-analyst` | ✓ | ✓ | — | — | ✓ | — |
+| `code-reviewer` · `security-reviewer` · `performance-reviewer` | ✓ | — | — | — | ✓ | ✓ |
+| `architecture-reviewer` | ✓ | — | ✓ (`Angle / Look For / Skip When`) | — | ✓ | ✓ |
+| `architect` | ✓ | ✓ | — | ✓ | ✓ | — |
+| `qa` | ✓ | ✓ | — | — | ✓ | ✓ |
+| `minimal-change-engineer` | ✓ *(see below)* | ✓ | — | — | ✓ (❌/✅ pairs) | — |
+| `doodlestein-scope-reducer` | ✓ | — | — | — | — | — |
+| `discuss-seat` · the other three `doodlestein-*` · the three proxies | — | — | — | — | — | — |
+
+**`minimal-change-engineer`'s identity block is the anti-pattern.** Its `## 🧠 Your
+Identity & Memory` and `## 🔄 Learning & Memory` sections are Anti-pattern 1
+above, verbatim — "**Memory**: You remember every bug introduced by an 'innocent'
+refactor". That file is vendored body-verbatim on purpose, so the ✓ records what
+is there, not what to copy. Do not use it as the model for a new agent.
+
+The `Vibe` column was here and is gone; see the withdrawal above.

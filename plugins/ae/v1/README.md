@@ -1,5 +1,15 @@
 # The Phase 1 Kernel
 
+> **Status: archived, not live.** This Kernel was built, proven, and never put on
+> the workflow path: no skill, agent, template or hook reaches it, and the work to
+> give it an entry point was abandoned partway. **Its own suite still runs** —
+> `test-v1-kernel.sh` is part of the standard test pass — so the code is exercised
+> even though nothing consults it to decide anything. Do not delete this directory
+> without first accounting for that suite. It is preserved at tag `v1-kernel-archive`
+> and kept in the tree, to be reopened only on a named observed event. Everything
+> below is accurate about what was built — it is not a description of what runs
+> today. See [`../../../docs/rebuild.md`](../../../docs/rebuild.md) §1.4.
+
 **On the two things called v1.** This directory is `plugins/ae/v1/`, and the Contract
 that governs it calls this slice V1 with later slices V2 through V5. The AE plugin also
 has a v1 release, which is a different thing on a different clock. Everything here says

@@ -1,122 +1,87 @@
 # Agent Authoring Guide
 
-Add your own agents to ae. Project agents are auto-discovered and preferred over built-in agents when roles match.
+How to add a role of your own that an AE stage can spawn.
 
-## Minimum Viable Agent
+## The minimum
 
-Create a file at `.claude/agents/security-auditor.md`:
+Create `.claude/agents/security-auditor.md` in your project:
 
 ```markdown
 ---
 name: security-auditor
-description: "Reviews code for security vulnerabilities and auth bypass"
+description: "Reviews code for security vulnerabilities, auth bypass, and injection vectors"
 ---
 
 You are a security specialist. Focus on OWASP Top 10, authentication flows,
-and injection vectors. Cite specific file:line evidence for all findings.
+and injection vectors. Cite specific file:line evidence for every finding.
 ```
 
-That's it. ae discovers it automatically and includes it in review teams.
+That is the whole contract. Claude Code discovers the file; nothing in AE has to
+be told about it.
 
-## How It Works
+## How a stage reaches it
 
-1. **Discovery**: ae scans `.claude/agents/*.md` at runtime
-2. **Role inference**: ae reads your agent's `description` to infer its role:
-   - Keywords like "review", "audit", "security" → **reviewer** (joins review teams)
-   - Keywords like "implement", "build", "develop" → **developer** (joins work teams)
-   - Keywords like "expert", "specialist", "domain" → **domain-expert** (joins analysis/discussion teams)
-3. **Precedence**: your project agent is preferred over ae's built-in agent when both match the same role
+**Claude Code does the discovery, not AE.** The host loads `.claude/agents/*.md`
+in your project and makes each one spawnable by its `name`. AE has no registry,
+no scan and no role-inference table — there is nothing to register with.
 
-## Frontmatter Reference
+**A stage picks a role by reading descriptions, and casts it at spawn time.** When
+a stage needs fresh eyes or an independent judgment, it chooses among the roles
+the session offers — AE's own, under `plugins/ae/agents/`, and yours — by reading
+what each `description` says it is for, then tells the spawned agent its role,
+what to read, and the one question it must answer. **Where a project role and an
+AE role both fit, the project role is preferred**; that rule lives in
+[`plugins/ae/agents/CLAUDE.md`](../plugins/ae/agents/CLAUDE.md).
 
-### Required
+Two consequences for how you write the file:
 
-| Field | Description |
-|-------|-------------|
-| `name` | Agent identifier. Must match filename (without `.md`) |
-| `description` | What this agent does. Used for role inference — include role keywords |
+- **The `description` is load-bearing.** It is the only thing read when choosing.
+  "Reviews Python code for type safety and mypy compliance" gets picked for the
+  right work; "Checks code" does not get picked at all.
+- **The body is instructions, not identity.** It is read by the spawned agent,
+  after the spawn prompt has already told it what job it is doing here.
 
-### Optional
+## Frontmatter
 
-| Field | Description | Default |
-|-------|-------------|---------|
-| `model` | Model override: `opus`, `sonnet`, `haiku` | Inherits from parent |
-| `effort` | Reasoning effort: `high`, `medium`, `low` | `medium` |
-| `color` | Display color in Agent Teams UI | Auto-assigned |
-| `maxTurns` | Auto-stop after N turns | No limit |
-| `tools` | Restrict available tools (list) | All tools |
-| `skills` | Pre-load skills (list) | None |
+The authoritative field list — including which fields a *plugin* agent may not
+set — is [`references/claude-code-plugin-api.md`](references/claude-code-plugin-api.md).
+In practice a project agent needs `name`, `description`, and often `tools`,
+`model` and `effort`.
 
-See the full [Agent Contract Specification (local-only `docs/decisions/037-agent-contract.md`, untracked by convention) for details.
+Three fields deserve a warning, because a field that does nothing looks exactly
+like a field that works:
 
-## Role Taxonomy
+| Field | What was measured |
+|---|---|
+| `skills` | Documented as preloading a skill's full content. A plugin agent that set it received only the one-line description every skill gets anyway. Untested for project agents; do not rely on it. |
+| `omitClaudeMd` | Not a supported field. A plugin agent that set it still received the whole CLAUDE.md hierarchy. Removed from AE's own definitions. |
+| `vibe` | Appears in no published field list, is read by nothing, and was measured absent from a spawned agent's context. Still present on 13 of AE's own definitions and queued for removal. |
 
-| Role | When to use | Team slot |
-|------|------------|-----------|
-| **reviewer** | Your agent checks code quality, security, performance, or compliance | ae:review |
-| **developer** | Your agent writes or modifies code | ae:work |
-| **domain-expert** | Your agent has specialized knowledge (API design, ML, etc.) | ae:analyze, ae:discuss |
+## Keep it small
 
-An agent can match multiple roles. When ambiguous, ae prefers: reviewer → developer → domain-expert.
+AE's own convention, and a good default for yours: **one role per agent** — an
+agent that both reviews and implements is confusing, so make two — and **under
+~100 lines**. Past that, reviewer reliability degrades and spawn-time context is
+spent on prose the agent did not need.
 
-## Examples
+Two worked examples ship with the plugin:
+[`security-auditor.md`](../plugins/ae/templates/examples/security-auditor.md) and
+[`api-expert.md`](../plugins/ae/templates/examples/api-expert.md), alongside
+[`agent-template.md`](../plugins/ae/templates/agent-template.md).
 
-### Security Auditor (reviewer)
+## Check that it exists
 
-```markdown
----
-name: security-auditor
-description: "Reviews code for security vulnerabilities, authentication bypass, and injection vectors"
-model: sonnet
-effort: high
-color: red
----
-
-You are a security specialist focused on application security.
-
-When reviewing code:
-- Check OWASP Top 10 categories systematically
-- Focus on authentication flows, session management, and token lifecycle
-- Look for injection vectors (SQL, XSS, command injection, path traversal)
-- Verify secrets management (no hardcoded credentials, proper env var usage)
-- Cite specific file:line evidence for all findings
-```
-
-### API Expert (domain-expert)
-
-```markdown
----
-name: api-expert
-description: "Domain expert in API design, REST conventions, and backend architecture"
-model: sonnet
-effort: medium
-color: cyan
----
-
-You are an API design specialist. Evaluate API contract consistency,
-backwards compatibility, error handling, and performance implications.
-```
-
-Both examples are available as templates in `plugins/ae/templates/examples/`.
-
-## Testing Your Agent
-
-Claude Code discovers agents itself. Ask for yours by name in any session and see whether it
-is spawnable:
+The host resolves agents by name. Ask for yours directly in any session:
 
 ```
 Use the security-auditor agent to review the authentication module
 ```
 
-If it doesn't appear:
+If it does not appear:
 
-1. Check the filename matches the `name` field — the host resolves by filename stem
-2. Check the `description` contains role keywords
-3. Ensure the file is in `.claude/agents/` (not a subdirectory)
+1. the `name` field must match the filename stem;
+2. restart the session — agent definitions are read once at session start.
 
-## Tips
-
-- **Keep descriptions specific** — "Reviews Python code for type safety and mypy compliance" is better than "Checks code"
-- **One role per agent** — an agent that reviews AND implements is confusing. Make two agents.
-- **Spawn it once by name** — verify discovery before relying on it in `/ae:review` or `/ae:work`
-- **Start minimal** — add `model`, `effort`, `tools` later as you tune performance
+One further precedence fact worth knowing: a project agent whose `name` matches
+an AE one **replaces** it outright, rather than sitting beside it. That is the
+supported way to swap out a built-in role.

@@ -10,8 +10,8 @@
 
 ## Hook enforcement semantics
 
-Dependencies #5 and #6 above establish that plugin-level hooks *register and
-fire*. This section is the separate question of **how much a firing hook can
+Dependencies #2 and #3 in [`cc-plugin-contract.md`](cc-plugin-contract.md)
+establish that plugin-level hooks *register and fire*. This section is the separate question of **how much a firing hook can
 refuse** — the property AE must know before placing any control on one.
 
 **Measured 2026-08-28 against CC 2.1.247**, non-interactive mode, foreground
@@ -35,8 +35,10 @@ success.
 
 - **Only `PreToolUse` exit 2 and `TaskCompleted` exit 2 refuse anything.** A
   validator that errors or exceeds its timeout permits the call, so a hook is a
-  detector, not a gate. Anything that must fail closed belongs in the Kernel,
-  which recomputes from durable records.
+  detector, not a gate. Anything that must fail closed belongs somewhere a hook
+  is not: an executable check the stage runs and a human reads, or one of the two
+  human gates. It does **not** belong in the archived Kernel — that corpus is
+  reachable from nothing (see [`../rebuild.md`](../rebuild.md) §1.4).
 - **`PostToolUse` is not a rollback.** The side effect has already happened and
   the following turn may ignore the reason.
 - **`SubagentStop` gives an interception point, not a router.** A refusal makes

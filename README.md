@@ -51,10 +51,10 @@ See the [Quickstart Guide](docs/quickstart.md) for a full walkthrough.
            ▼
       [2 DISCUSS] ─── only if a decision is genuinely contested
            │
-           ▼
+           ▼  ← HUMAN CONFIRMS the acceptance criteria
        3 PLAN
            │
-           ▼  ← HUMAN CONFIRMS the acceptance criteria
+           ▼
        4 WORK ◄──────────┐
            │             │ findings needing rework
            ▼             │
@@ -80,7 +80,7 @@ with the return edges and refusal conditions drawn in.
 | `/ae:go` | **The entry.** Runs a work item through every stage in turn. |
 | `/ae:analyze` | Stage 1 — is the problem real, and what does *done* mean? Creates the feature directory. |
 | `/ae:discuss` | Stage 2 (conditional) — settle one contested decision into a record the plan can consume. |
-| `/ae:plan` | Stage 3 — copy the criteria, cut dependency-ordered steps, freeze the goal. |
+| `/ae:plan` | Stage 3 — cut dependency-ordered steps against the signed criteria, and name the check each step turns red. |
 | `/ae:work` | Stage 4 — check red, implement, check green, commit. One step, one commit. |
 | `/ae:review` | Stage 5 — judge the work against the frozen criteria. The completion gate. |
 
@@ -89,8 +89,8 @@ Invoke a single stage directly when you are resuming or redoing one part; otherw
 
 ## Agents
 
-17 specialized agents in four groups. `/ae:go` and the stage skills spawn them; you can also
-ask for one by name in any session.
+18 agent roles in four directories. `/ae:go` and the stage skills spawn them by reading what
+each one says it is for; you can also ask for one by name in any session.
 
 ### Review Agents — the quality gate
 | Agent | Focus |
@@ -112,8 +112,9 @@ ask for one by name in any session.
 |-------|-------|
 | `architect` | Step decomposition, parallel execution strategy |
 | `qa` | Post-step code review + cross-family validation |
-| `codex-proxy` | Routes requests to Codex (OpenAI) via MCP |
-| `gemini-proxy` | Routes requests to Gemini (Google) via MCP |
+| `discuss-seat` | The same-family seat in the discuss stage's first two rounds |
+| `codex-proxy` | The OpenAI seat — drives the `codex exec` CLI as a subprocess it owns |
+| `gemini-proxy` | The Google seat, over the bundled MCP server |
 | `openai-compat-proxy` | Any OpenAI-compatible backend — endpoint, model and family per call |
 
 ### Engineering Agents — the implementer
@@ -131,12 +132,14 @@ ask for one by name in any session.
 
 ## Cross-Family Architecture
 
-No single model catches everything. ae reaches other families through MCP:
+No single model catches everything, and the reason is documented rather than assumed: models
+systematically rate their own family's output higher
+([the research](docs/references/cross-family-rationale.md)). ae reaches other families two ways:
 
 | Family | Channel | Role |
 |--------|---------|------|
 | Claude | Built-in | Primary development and orchestration |
-| Codex (OpenAI) | `codex` MCP server (external CLI) | Cross-family baseline |
+| Codex (OpenAI) | `codex exec` subprocess (external CLI) | Cross-family baseline |
 | Gemini (Google) | Bundled MCP server | Targeted review and analysis |
 | Anything OpenAI-compatible | Bundled MCP server | A local or hosted backend on the generic seat |
 
@@ -168,12 +171,12 @@ description: "Reviews code for security vulnerabilities and auth bypass"
 You are a security specialist. Focus on OWASP Top 10 and injection vectors.
 ```
 
-See the [Agent Authoring Guide](docs/agent-authoring.md) for the full contract, role
-taxonomy, and examples.
+See the [Agent Authoring Guide](docs/agent-authoring.md) for how a stage picks a role, which
+frontmatter fields actually do something, and two worked examples.
 
 ## Project Configuration
 
-`.claude/pipeline.yml` is optional. Two things read it:
+`.claude/pipeline.yml` is optional. **One thing reads it automatically** — the session-start probe, which checks the `cross_family` seats. `test.command` is a convention: the place to write down what this project's check is called, so a person or a stage can look it up. Nothing runs it for you.
 
 ```yaml
 test:
@@ -201,13 +204,17 @@ plugins/ae/
     engineering/                  #   1 implementer
   scripts/                        # Session-start probe, its reader, the Codex seat runner, the test runner
   mcp-servers/                    # Bundled Gemini + OpenAI-compatible servers
-  v1/                             # The Phase 1 Kernel, against its own frozen Contract
+  v1/                             # ARCHIVED Kernel — nothing on the workflow path calls it;
+                                  #   its own suite still runs. See docs/rebuild.md §1.4
   tests/                          # The deterministic suite
   templates/pipeline.template.yml
 ```
 
-The research, cross-review, and decisions that produced the v1.0 design are
-preserved in the [AE v1.0 design history](docs/history/ae-v1-design-history/README.md).
+**Why it looks like this.** ae used to be 24 skills and 8,481 lines of process prose. A
+controlled experiment showed a 182-line workflow reproducing the same results on the same work,
+so the prose was deleted down to 779 lines. The evidence, what survived, and what is still
+missing are in [docs/rebuild.md](docs/rebuild.md); the design that preceded the delete is
+preserved under [docs/history/](docs/history/README.md).
 
 ## License
 

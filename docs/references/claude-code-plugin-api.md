@@ -1,8 +1,18 @@
 # Claude Code Plugin API Reference
 
-Stable API reference for AE plugin development. Covers frontmatter fields, feature flags, security boundaries, and platform capabilities available to plugins.
+Host API reference for AE plugin development: frontmatter fields, feature flags, security
+boundaries, and platform capabilities available to plugins.
 
-Source: Claude Code source analysis (Discussion 021, 2026-04-04).
+> **Two things to hold while reading.** First, **this describes the host, not AE.** A
+> capability documented here is one Claude Code offers — not one AE uses. The sections on the
+> team system and on teammate-only tools are the clearest case: AE creates no teams and calls
+> none of those tools, so they are background on the platform, never a description of this
+> plugin's surface. What AE actually depends on is
+> [`cc-plugin-contract.md`](cc-plugin-contract.md).
+>
+> Second, **the host drifts.** Rows carry their own measurement dates where one was taken;
+> anything undated comes from a 2026-04-04 source reading and should be re-verified before it
+> is made load-bearing.
 
 ---
 
@@ -55,7 +65,8 @@ The only exclusion mechanism is `claudeMdExcludes` in settings, which filters by
 session rather than per agent.
 
 **`omitClaudeMd` is not effective for plugin agents, and is not in the published field list.**
-It was listed in this table and is set in seven agent definitions here. What is established: the
+It was listed in this table and was once set in seven agent definitions here; all seven were
+cleaned up, and a suite check now asserts that no definition sets it. What is established: the
 key exists in the Claude Code binary, so the code knows the name; it appears in no published list
 of supported frontmatter fields; and a plugin agent that sets it still received the whole CLAUDE.md
 hierarchy, verified by spawning one and asking what it had been given.
@@ -102,9 +113,18 @@ survived in seven definitions and in this table. Measure a field on a spawn befo
 
 ### userConfig Mechanism
 
-User sets values at plugin install time. Values become environment variables:
-- Config key `cross_family_primary` → `CLAUDE_PLUGIN_OPTION_CROSS_FAMILY_PRIMARY`
-- Accessible by hooks, MCP servers, and agent prompts at runtime
+User sets values at plugin install time. Values are *documented* to become environment
+variables:
+- Config key `gemini_flash_model` → `CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL`
+- Documented as accessible to hooks, MCP servers, and agent prompts at runtime
+
+**Measured 2026-08-16, and it does not hold for a default.** An option the user never
+configured exports nothing, even though `plugin.json` declares a default for it; both
+bundled servers therefore read the option in-process with their own fallback. Whether a
+*configured* option materialises is untested. Do not build on the declared default, and
+never reference a `${CLAUDE_PLUGIN_OPTION_*}` from a manifest `env` block — those are
+validated at install time and an unresolved one rejects the whole server. See
+[`cc-plugin-contract.md`](cc-plugin-contract.md) dependency #4.
 
 ## Hook System
 
@@ -177,7 +197,7 @@ Same-name `agentType` at higher priority fully replaces the lower. Projects can 
 
 | Variable | Description | AE Relevance |
 |----------|-------------|--------------|
-| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | Enable Agent Teams | **Required** for 10/17 AE skills |
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | Enable Agent Teams | **None.** AE creates no teams: the stage skills spawn ordinary subagents and synthesize in the session. It was once required by ten skills, all since removed |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | Per-API-call max tokens | High |
 | `CLAUDE_CODE_SUBAGENT_MODEL` | Global subagent model override | Medium (prefer per-agent `model`) |
 | `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | Disable auto memory writes | High (worktree isolation) |
@@ -189,10 +209,10 @@ Same-name `agentType` at higher priority fully replaces the lower. Projects can 
 
 | Gate | Default | Impact on AE |
 |------|---------|--------------|
-| `tengu_amber_flint` | true | Agent Teams kill-switch — if disabled, 10/17 AE skills fail |
+| `tengu_amber_flint` | true | Agent Teams kill-switch — no longer reaches AE, which creates no teams |
 | `tengu_slim_subagent_claudemd` | true | Subagents receive slimmed CLAUDE.md — AE rules may be trimmed |
 
-## Team System
+## Team System *(host capability — AE creates no teams and uses none of this)*
 
 - Team config: `~/.claude/teams/{team_name}/config.json`
 - Mailbox: `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` (file-backed + lockfile)
@@ -219,7 +239,7 @@ Skills exceeding 5K tokens are truncated after compaction. Critical instructions
 
 Exceeding → content persisted to disk, model sees first 2000 bytes as preview.
 
-## Teammate-Only Tools
+## Teammate-Only Tools *(host capability — AE spawns no teammates)*
 
 These tools are exclusively available to agents spawned as teammates (via TeamCreate):
 `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate`, `SendMessage`
