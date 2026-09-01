@@ -172,6 +172,13 @@ is the one most easily left in the conversation, because you wrote it and you ca
 Written by you rather than by a seat, which is why it is named here rather than left to the rule
 above.
 
+**Every material point in the composite carries a disposition and a source path** — it survived,
+or it was dropped and the reason is stated. A point raised in round one that no round-two seat
+attacked appears nowhere in the round-two files, so a composite assembled from the corrections alone
+cannot even see it; you read both rounds. A rebuttal that simply stops appearing is not a judgement
+the reader can weigh, it is one they cannot know was made — and the composite is where that goes
+wrong, because you wrote it and every point you dropped still feels answered.
+
 **The composite is frozen when round three is spawned, and you write `round-3/FROZEN` holding its
 sha256 at that moment.** Round three attacks what it was given; without the digest, a composite
 edited afterwards leaves every finding citing a version that no longer exists, and nothing can tell.

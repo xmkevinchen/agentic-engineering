@@ -394,6 +394,21 @@ if discuss is not None:
             "plugins/ae/skills/discuss/SKILL.md: a composite that can change after the round "
             "that attacks it makes every finding cite a version that no longer exists")
 
+# --- F-098 AC2: a point a seat made does not get to just vanish ---------------------------
+#
+# Twice in one discussion a composite dropped a seat's rebuttal to its own load-bearing claim,
+# with no disposition and no reason. Both times a reader caught it; neither time the composer.
+# This asserts the obligation is written down. Whether a given composite obeys it is judged, not
+# parsed — a word-presence check would pass the two composites that violated it.
+
+if discuss is not None:
+    if "disposition" in discuss.lower() and "source path" in discuss.lower():
+        ok("the composite owes every material point a disposition and a source path")
+    else:
+        bad("the composite owes no disposition for a point it drops",
+            "plugins/ae/skills/discuss/SKILL.md: a dropped point and a point nobody made are "
+            "indistinguishable without one")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
