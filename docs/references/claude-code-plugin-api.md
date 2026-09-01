@@ -68,7 +68,7 @@ session rather than per agent.
 arrived with a vendored definition, was classified as tolerated on import, and was then copied
 onto thirteen definitions as if it were a pattern. Measured 2026-08-31 by spawning a seat and
 asking it to report its own context verbatim: **no line beginning `vibe:` appears anywhere in
-it.** Deleted from every definition; `test-discuss-loop-contract.sh` fails if one returns.
+it.** Deleted from every definition.
 `emoji`, from the same collection, went with it.
 
 **`omitClaudeMd` is not effective for plugin agents, and is not in the published field list.**

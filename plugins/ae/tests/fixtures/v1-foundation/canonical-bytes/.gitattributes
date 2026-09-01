@@ -1,6 +1,0 @@
-# These fixtures are byte corpora, not text. Several encode exactly the things a
-# text filter would "fix": CRLF terminators, trailing whitespace, blank lines at
-# EOF, invalid UTF-8, and a BOM. Marking them binary keeps Git from normalizing
-# them and keeps `git diff --check` from reporting the defects they deliberately
-# contain.
-*.bin binary

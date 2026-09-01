@@ -96,8 +96,10 @@ Its §3.2 — *native teams first; cross-family bridge only for the remaining ga
 
 ## 6. The implementation record
 
-**[`../../plugins/ae/docs/references/v1-foundation-freeze.md`](../../../plugins/ae/docs/references/v1-foundation-freeze.md)**
-— the WP-P0.1 freeze record.
+There was a freeze record under `plugins/ae/docs/references/`, describing the five
+frozen foundation mechanisms and the corpus that held them. Both are deleted: the
+corpus was 8,000 lines guarding a Kernel that was itself archived, and the record
+assigned work to phases that were never built. Git history holds both.
 
 It is neither history nor a second authority: it documents what the executable
 corpus under `plugins/ae/tests/foundation/` actually does, including a section

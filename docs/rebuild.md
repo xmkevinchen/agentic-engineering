@@ -84,6 +84,14 @@ one question supplied in the prompt.
    planted defect bit through a script that actually runs. The workflow's job was
    to put the model in front of them.
 
+   **A qualification this repository had to learn about itself.** That finding is
+   about checks *in the project being worked on*. AE's own suite was mostly not
+   that: of sixteen scripts, most read a `SKILL.md` and asserted a sentence was
+   present, and the largest block — 8,000 lines of frozen corpus and 90 fixtures —
+   guarded the archived Kernel. A scan proving the words are on disk is not
+   evidence that anything obeyed them, and it turns every rewording into
+   maintenance. Those are gone; see §4, Phase A, for what replaced them.
+
 **Honest limits (unknowns, not conclusions).** n = 3, all with known answers.
 Genuinely exploratory work — the shape AE ultimately serves — was **not** tested.
 The experiment consumed this repository's existing check infrastructure; in a
@@ -308,11 +316,21 @@ Ordered by dependency, not by appeal. Each phase names what unblocks the next.
 
 ### Phase A — run what was never run *(prerequisite for everything after it)*
 
-Run `plan`, `work` and `review` closed-book in fresh sessions, at least twice
-each, and fix what falls out. **Unblocks:** any change to the working loop.
-**Why first:** §3.1 and §3.2 — the one stage that got this treatment was changed
-substantially by it, and the placement rule from §3.2 can only be applied to
-stages whose real failures are known.
+Run `plan`, `work` and `review` closed-book, at least twice each, and fix what
+falls out.
+
+**Closed-book means: a fresh session, given only the skill file and the work
+item, with no hint about the rules it is supposed to follow — driven by a second
+session that watches what it does and writes down where it went wrong.** That
+pairing is the evaluation method, and it is the one that has actually produced
+findings: six such runs of the discuss stage yielded five genuine defects and two
+rule ambiguities, against zero from any scan over the same files. It also costs
+far less than it sounds for these three stages — no seat rounds.
+
+**Unblocks:** any change to the working loop. **Why first:** §3.1 and §3.2 — the
+one stage that got this treatment was changed substantially by it, and the
+placement rule from §3.2 can only be applied to stages whose real failures are
+known.
 
 ### Phase B — the re-entry contract on disk
 

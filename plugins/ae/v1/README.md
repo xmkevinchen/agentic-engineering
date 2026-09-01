@@ -82,10 +82,11 @@ So: `v1/`, with no release manifest, no launcher, and no code that derives "whic
 release is active" from its own location. Phase 1 has no release concept and reports
 `unavailable` where the settled design would have required a qualified one.
 
-Four modules are **copied** from `tests/foundation/lib/`, not moved:
-`canonical-json`, `errors`, `fs-noreplace`, `freeze`. The frozen corpus keeps its
-copies and keeps passing. Consolidating now would be the upfront horizontal build
-the plan forbids; a later slice may do it once both have real consumers.
+Four modules — `canonical-json`, `errors`, `fs-noreplace`, `freeze` — were
+**copied** here from a frozen foundation corpus under `tests/foundation/`, rather
+than moved, so that both could pass independently while a later slice consolidated
+them. That slice was never built and the corpus has since been deleted, so these
+are simply this directory's own modules now.
 
 ## Four things worth knowing before reading the code
 
