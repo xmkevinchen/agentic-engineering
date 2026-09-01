@@ -427,8 +427,8 @@ far less than it sounds for these three stages — no seat rounds.
 
 These three are not merely untested, they are undeveloped (§3.1) — so expect the
 runs to produce work, not a verdict. **Unblocks:** any change to the working loop,
-including Phase D — and it is what would license either of the two items demoted
-below, if either turns out to matter. **Why first:** §3.1 and §3.2 — the one stage that got this
+including Phase D — and it is what would license the independent round described
+below, if the runs show criteria arriving unargued are worse. **Why first:** §3.1 and §3.2 — the one stage that got this
 treatment was changed substantially by it, and the placement rule from §3.2 can
 only be applied to stages whose real failures are known.
 
@@ -512,24 +512,63 @@ but the burden should sit on keeping, not on cutting.
 agent runs in its own session at all. Deciding the roster before that is deciding
 against a moving target.
 
-### Not phases — two things that were on this list and should not have been
+### A better way to reach another model family — probably no path
 
-**The relay guarantee for the remaining seats (§3.7)** is a fact to record, not a
-project. The OpenAI seat can back a turn with a file it did not write; the other
-two cannot, and one of them has no receipt mechanism to build on at all. The
-disposition that costs nothing is the honest one: **a record naming a seat with no
-independent artifact says so**, and a reader discounts it accordingly. Building
-receipts for backends that do not emit them is work with no observed defect behind
-it.
+Not a phase, because the expected answer is that there is no route to find. It is
+recorded so the next person does not spend the search again.
 
-**A non-author reader for `acceptance.md` (§3.5)** was listed as a phase, and it
-proposes adding a round — which is the move §1.1 describes as the origin of
-everything this rebuild had to remove. The criteria already reach a non-author:
-the human who signs them. What the observation establishes is that nobody has
-*argued* with them, which is a weaker claim than it first reads as. **If plans are
-repeatedly built against criteria that turn out wrong, Phase A will show it**, and
-then there is an observed defect to answer. Until then this is a stage added on a
-hunch, and the burden sits on adding.
+**The constraint is structural: every cross-family answer arrives through an agent
+that relays it, and a relaying agent can produce a complete, well-formed answer
+without ever calling the backend.** That has happened here — a seat skipped the
+step that loads its backend tools, never called Gemini, and returned a full
+cross-family review under the Google label. Nothing downstream could tell.
+
+Everything tried sits somewhere on that same line:
+
+- **A bundled MCP server** puts the transport under our control and leaves the
+  relay exactly where it was: the proxy agent still speaks for the backend.
+- **A subprocess the seat owns** — the current OpenAI path — is the best available,
+  and only because the CLI writes a rollout file the seat did not author, so a
+  claim can be checked against something. That is a property of that one vendor's
+  CLI, not a technique that generalises. Gemini emits nothing comparable.
+- **The vendor's own plugin for this host** was examined and cannot serve as a
+  backend at all: it ships slash commands and a subagent, no MCP surface, and a
+  subagent cannot invoke a slash command or nest another subagent.
+- **The host** offers no primitive for it. Another family is not a participant it
+  knows about; it is something an agent shells out to.
+
+**So the honest disposition is to stop looking for a better call, and to make the
+weakness legible instead**: a record naming a seat that has no artifact
+independent of its relay says so, and the reader discounts it. Reopen only if a
+backend ships something a relay cannot forge, or the host gains a first-class
+notion of a foreign model.
+
+### An independent round before a human signs — the shape is right, the gap is narrow
+
+The proposal is not a reader for one file. It is the general rule that **nothing
+reaches a human signature without a party that did not produce it having looked**.
+Stated that way it is already the workflow's own ground rule, and it already holds
+in two of the three places it should:
+
+| Signature point | Non-author looks first? |
+|---|---|
+| the plan, before work | **yes** — one reader checks it against the criteria |
+| completion, at the second gate | **yes** — review is fresh eyes by definition |
+| **the criteria, at the first gate** | **only when `discuss` ran** |
+
+So the gap is not "acceptance.md has no reader" — it is narrower and better shaped
+than that. When the analysis names a contested question, the seats argue and the
+criteria get attacked on the way through. **When it names none, nothing
+independent touches them before the human signs.** The entry already surfaces that
+case to the person — it requires showing "the analysis named no questions" as the
+judgement most worth disagreeing with — but showing it puts the whole weight on
+the one reader who has the least context on how it was derived.
+
+**Still held behind Phase A**, for one reason: this predicts that criteria arriving
+unargued are worse. The closed-book runs are where that either shows up or does
+not, and a round added before the evidence is a round added on a hunch. What
+changed is the size of the thing being proposed — a reader for the skipped-discuss
+case, not a stage.
 
 ### Standing, not phased
 
