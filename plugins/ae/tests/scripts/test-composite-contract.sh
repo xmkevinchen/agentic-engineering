@@ -85,6 +85,16 @@ else
   bad "a host-loaded filename passed" "$out"
 fi
 
+# The skill has required the agent id, model and grant per seat since the previous feature. It was
+# never once written down, across two features, while a liveness assertion for the rule stayed
+# green — the assertion checks the skill still says it, which is not the same as anyone doing it.
+out=$(python3 "$CHECK" "$FIX/unidentified/pass-1/round-2/composite.md" 2>&1)
+if [ $? -ne 0 ] && echo "$out" | grep -qi "agent"; then
+  ok "a seat file that never says what held the seat is reported"
+else
+  bad "a seat of unknown provenance passed" "$out"
+fi
+
 # A bare round-N/ with no pass-N/ wrapper leaves a directory whose passes cannot be counted —
 # and the loop's two-pass bound is counted from exactly there, so a layout that cannot be counted
 # is a bound that cannot fire. Two of four fresh sessions left a handed-over flat layout in place.

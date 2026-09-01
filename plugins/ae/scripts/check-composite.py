@@ -17,7 +17,7 @@ What it decides, and what it does not:
        angle recorded that it held the seat-file paths. AC3 is unmet by default without the
        latter: a criterion nobody was equipped to check is unexamined, not satisfied.
 
-  It also reports a bare round-N/ with no pass-N/ wrapper, and a seat file named what the host
+  It also reports a seat file that never says which agent held it, a bare round-N/ with no pass-N/ wrapper, and a seat file named what the host
   loads as instructions, which is not one of the
   four criteria but breaks the property round one exists to buy.
 
@@ -128,6 +128,23 @@ def check(path):
         if recorded != actual:
             problems.append(f"{path}: content changed after round three was spawned — "
                             f"FROZEN records sha256 {recorded[:16]}…, file is {actual[:16]}…")
+
+    # --- a seat says what held it ------------------------------------------------------------
+    # An answer's weight depends on what produced it, and a seat cannot see its own agent type, so
+    # the caller writes it. The skill has required this for two features and it was written down in
+    # neither — while a liveness assertion for the rule stayed green the whole time, because it
+    # checks that the skill still says it, not that anyone did it.
+    for round_dir in ("round-1", "round-2"):
+        for seat in sorted((path.parent.parent / round_dir).glob("*.md")):
+            if seat.name in ("composite.md", "MAPPING.md"):
+                continue
+            head = seat.read_text()[:1200]
+            missing = [k for k in ("agent:", "grant:") if f"\n{k}" not in head]
+            if missing:
+                problems.append(f"{seat}: never says what held the seat "
+                                f"({', '.join(m.rstrip(':') for m in missing)} absent) — an "
+                                f"answer's weight depends on what produced it, and a seat cannot "
+                                f"see its own agent type")
 
     # --- the pass is countable -------------------------------------------------------------
     # The loop's two-pass bound is counted off completed pass-N/ directories on disk. A bare
