@@ -132,3 +132,11 @@ nothing is indistinguishable from a seat nobody asked.
 The model is not optional and not decorative. A backend can fall back a tier silently, and a
 seat's answer is worth what produced it — so report the model the rollout shows, not the one
 you asked for.
+
+**Read it, or write `not exposed`. Never infer it.** The MCP response does not carry a model, so
+the only real source is `~/.codex/sessions/<date>/rollout-*.jsonl`; open it. A name you reasoned
+your way to is worse than an empty slot, because the slot invites a question and the name ends
+one. This has already cost: a proxy reported `gpt-5.2-codex` and `gpt-5.1-codex` with its own
+caveat that it had not checked the rollout, and those names — which are not models that exist —
+were then carried as fact through a composite, a handoff, and two later features. The rollout
+said `gpt-5.6-terra`. `not exposed` would have been true, and nothing would have been built on it.
