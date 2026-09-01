@@ -1,5 +1,12 @@
 # 业界 Agent 模式对照
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 为 AE 1.0 做的模式研究 · 2026-08-22
 > 每条按：**出处 / 结论 / 与 AE 的关系 / 可能操作**。
 > 名词不进入 AE 词汇表——这份是查证用的，不是要 AE 改称呼。

@@ -1,5 +1,12 @@
 # 规范 · Runner（ae-run，盲仪器①）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 上层设计见 `../design.md` §13。runner 是唯一执行 `command` proof 并写
 > `command_result` 的路径——agent 直接跑命令产生的任何输出都不是证据。
 > 它知道怎么执行一个 argv 并记录，永远不知道命令的意思（宪法）。

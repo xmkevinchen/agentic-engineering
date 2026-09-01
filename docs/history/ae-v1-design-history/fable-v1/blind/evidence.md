@@ -1,5 +1,12 @@
 # 证据 → 设计决策映射
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 规则：每条先给**观察**（何时、何处、如何复核），再给它**钉住的设计元素**。
 > 一条证据钉不住任何设计的，删掉了；一个设计找不到证据的，写进了 design 的"待验证"而非本表。
 > 除 E9 文献外，全部为 2026-08-22 本 session 实测或亲读。

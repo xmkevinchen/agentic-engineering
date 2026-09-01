@@ -1,27 +1,29 @@
 ---
 title: "PRD: AE v1"
-status: draft
+status: history
 created: 2026-08-28
 target: ae@1.0.0
 ---
 
 # AE v1 — product requirements
 
-> **Status amendment (2026-08-28).** Two parts of this document are overtaken
-> by recorded decisions. **G-02** (the Kernel is reachable — "the highest-value
-> work in v1") is superseded: the signed kernel-disposition decision (2026-08-28, an exploratory run of the minimal workflow) archived the Kernel as
-> proven-but-unconsumed, and F-088 is abandoned at 2 of 5 steps. **§6's fence**
-> is being executed as a factoring — core kept, satellites extracted, prose
-> deleted — per [`../v1/x-experiment.md`](../x-experiment.md). The users,
-> jobs, and remaining goals stand.
-
-
-> **AE v1 is not released.** This document states what v1 is *for*, who it
-> serves, and which shipped capabilities are deliberately outside it. It holds
-> no design or implementation authority: where it appears to contradict
-> [`design.md`](../history/v1/design.md) or
-> [`implementation-plan.md`](../history/v1/implementation-plan.md) about what v1 *is* or
-> how it is *built*, those are current and this document is wrong.
+> **Status: history (moved here 2026-09-01).** This was the product-requirements
+> draft written before the delete. It is retained as the record of who the
+> product was for and which quality goals it set; it has **no authority over
+> anything current**. Three of its load-bearing parts are overtaken:
+>
+> - **G-02** ("the Kernel is reachable", called the highest-value work in v1) —
+>   superseded. The Kernel was archived by a signed decision as
+>   proven-but-unconsumed, and the entry-point work was abandoned partway.
+> - **§6's capability fence** — executed. The core was kept, the satellites
+>   extracted, the prose deleted; six skills remain where the table counts 24.
+> - **§8's counters** — their baselines (8,457 lines, a 2,329-character line)
+>   are pre-delete numbers. The current values are in
+>   [`../rebuild.md`](../rebuild.md) §4.
+>
+> The users and jobs in §3, the non-goals in §7, and the reserved decisions in
+> §10 are the parts still worth reading. The current account of what AE is and
+> where it is going is [`../rebuild.md`](../rebuild.md).
 
 ## What this document is
 
@@ -29,10 +31,10 @@ The `docs/v1/` set answers four questions and left a fifth without a home:
 
 | Document | Question it answers |
 |---|---|
-| [`design.md`](../history/v1/design.md) | What is AE v1, and what does the Kernel guarantee? |
-| [`implementation-plan.md`](../history/v1/implementation-plan.md) | How does it get built, in what order? |
-| [`acceptance.md`](../history/v1/acceptance.md) | What would have to be true to call v1 released? |
-| [`mechanism-disposition.md`](../history/v1/mechanism-disposition.md) | Which older *mechanisms* are kept, simplified, deferred, or removed? |
+| [`design.md`](v1/design.md) | What is AE v1, and what does the Kernel guarantee? |
+| [`implementation-plan.md`](v1/implementation-plan.md) | How does it get built, in what order? |
+| [`acceptance.md`](v1/acceptance.md) | What would have to be true to call v1 released? |
+| [`mechanism-disposition.md`](v1/mechanism-disposition.md) | Which older *mechanisms* are kept, simplified, deferred, or removed? |
 | **this document** | **Who is v1 for, what job does it do for them, and which shipped capabilities are deliberately outside it?** |
 
 Three things had no home before this file, and each is a product decision rather
@@ -217,7 +219,7 @@ independent completion evidence and must not be displayed as such.
 
 ## 5. Scope of the v1 release
 
-Release criteria are [`acceptance.md` §1](../history/v1/acceptance.md#1-release-criteria)
+Release criteria are [`acceptance.md` §1](v1/acceptance.md#1-release-criteria)
 and are not restated here. This document adds no release criterion; it constrains
 what may be *worked on* before them.
 
@@ -250,7 +252,7 @@ and nothing in this table authorizes deleting a shipped skill.
 ## 7. Non-goals
 
 Architecture non-goals and the product limits a user should expect are
-[`design.md` §11](../history/v1/design.md#11-non-goals-and-deferred-work) and are not
+[`design.md` §11](v1/design.md#11-non-goals-and-deferred-work) and are not
 restated. What follows is the capability level, which §11 does not reach. v1 will
 not:
 
@@ -317,7 +319,7 @@ them where those words exist.
 | 2 | AC-2's shortfall — nothing establishes that a command *read* the files a Contract names. Waived for v1; the criterion is to be rewritten against experience | `F-086` shortfalls decision |
 | 3 | AC-5's shortfall — identity at the root is a string, not a principal. Accepted as stated while the Kernel runs in the Owner's own session | `F-086` shortfalls decision |
 | 4 | Whether review cost is counted by rounds or by wall-clock per round | BL-218 #2 — recommendation recorded, not decided |
-| 5 | Remaining items | [`acceptance.md` §7](../history/v1/acceptance.md#7-open-items-for-the-human) |
+| 5 | Remaining items | [`acceptance.md` §7](v1/acceptance.md#7-open-items-for-the-human) |
 
 Decisions 2 and 3 are recorded here because they bound what v1 may claim, not
 because this document reopens them.

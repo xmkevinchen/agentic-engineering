@@ -1,5 +1,12 @@
 # 交叉评审：fable-v1 对照 finalized/
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 评审协议：fable-v1 四件（README/design/evidence/plan）在**不读 finalized/ 的前提下**先行写完，
 > 之后才通读 finalized/ 七件全文（README、philosophy、source-evaluation、design、
 > acceptance-and-evaluation、implementation-plan、migration-map；design 以盘上当前版本为准，

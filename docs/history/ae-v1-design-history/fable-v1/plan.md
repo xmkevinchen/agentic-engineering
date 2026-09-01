@@ -1,5 +1,12 @@
 # 落地计划 v2（合流版）P0–P5
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 盲写版存档于 `blind/plan.md`。本版吸收 finalized 实施计划的三件事——shadow 纪律、
 > finalize 事务、按保护对象删除——同时坚持盲写版的核心判断：**规范是团队尺寸的，
 > 操作者是一个人**。解法不是砍规范，是把规范当目标不变量，把执行排成单人纵向切片，

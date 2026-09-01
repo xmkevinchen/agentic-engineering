@@ -3,10 +3,7 @@
 > **Status: historical (2026-08-28).** These criteria defined a release that
 > will not ship in this shape; the Kernel they gate is archived by its signed
 > decision record. Retained as the record of what "released" was going to mean.
-> See [`x-experiment.md`](../../x-experiment.md).
-
-> **Status:** current. States the minimum for calling AE v1 released. Nothing
-> here is satisfied yet, and this document does not claim otherwise.
+> See [`rebuild.md`](../../rebuild.md).
 
 The previous release gate was G0–G7, eight false-pass fixtures, seventeen host
 failure arms, six dogfood classes, a full qualification catalog, a rollout lock,
@@ -250,7 +247,7 @@ These need a decision and are not resolvable from the code or the handoff.
 | 1b | ~~Decide what to do about the unwritable X2b exemption.~~ **Decided 2026-08-25:** delete it. X1 and X2b are required and **V3 becomes a release prerequisite**. The alternatives were to define a closed dispatch universe — which is the deferred active-release qualification pulled back into v1 — or to drop cross-family from the v1 Kernel while the skills keep using it, which is the two-truths problem v1 exists to remove. | Resolved. v1 is larger again, and the release is correspondingly later. |
 | 2 | **F-084/F-085 were untracked to restore the gitignore guard** (`80cff4b`); the files stay on disk and on their source branch. Confirm that is the disposition you want, rather than keeping them tracked and relaxing the guard. | The consolidation chose the policy-conformant option to keep the suite green; reversing it is the user's call. |
 | 3 | **F-082 duplicate identity across the live/done inventory.** Carried forward, still unresolved, from the earlier plan's open blockers. | It is a data-disposition decision. It no longer blocks anything in v1, because rollout is deferred. |
-| 4 | **Whether the archived `finalized/**` specification should stay in `docs/`** now that it is a design input rather than the plan. | It is 3,159 lines of archived normative prose. Keeping it is defensible; so is moving it beside the other design history. |
+| 4 | ~~**Whether the archived `finalized/**` specification should stay in `docs/`.**~~ **Executed 2026-09-01:** moved to `docs/history/finalized/`, beside the other design history, after it was established that nothing pins its old path. | Resolved. Not an open question. |
 | 5 | **Whether v1 ships as `0.15.x` or `1.0.0`** of the `ae` plugin (currently `0.14.2`). | The name "AE v1" and the plugin's semver are not the same thing, and conflating them would be a release claim. |
 
 **None of items 2–5 blocks V1.** Two are tidying (4, 5), one is a confirmation of

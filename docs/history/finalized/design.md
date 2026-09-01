@@ -1,5 +1,10 @@
 # AE 1.0 最终设计：Executable Proof Loop
 
+> **状态：历史。** 本文件是 2026-08-23 冻结的 AE 1.0 规范的一部分，其核心前提——完成由确定性 Gate 判定、Agent Teams 作为执行策略、`ae-gate` 为真值来源——已被后来的删除推翻。保留它是为了记录当时**为什么**这样设计，以及那条路线的代价。**它对任何当前工作没有规范效力。**
+> 当前状态见 [`../../rebuild.md`](../../rebuild.md)，本目录的说明见 [`README.md`](README.md)。
+>
+> 下文的 Executable Proof Loop、四类对象、Gate reducer 与 authority 边界都**没有**在今天的树里运行：Kernel 建成后无人调用，已归档在 tag `v1-kernel-archive`。
+
 > 规范性设计 · Claude Code 首发实现 · 2026-08-22
 
 ## 1. 产品承诺

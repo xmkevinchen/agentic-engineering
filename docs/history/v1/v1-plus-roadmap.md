@@ -4,7 +4,8 @@
 >
 > **Authority:** none
 >
-> **AE 1.0 baseline:** **RELEASE-BLOCKER:** bind the exact accepted release digest
+> **AE 1.0 baseline:** the release this was written against never shipped, so the
+> baseline it would have bound is not a task — it is a blank that stayed blank
 >
 > **External research snapshot:** 2026-08-24
 

@@ -29,7 +29,7 @@ Statuses used below: `merged`, `referenced`, `superseded`, `deferred`,
 | Original goal | Define AE v1 from the user's side (design and limitations, usage guide, acceptance dossier) and set out the v1+ roadmap including a Loom distributed execution/control plane. |
 | Retained insight | The product definition and the trust-boundary language; the invariant set; "coordination plane is not truth plane"; **native Agent Teams first, cross-family bridge only for the remaining gap** (roadmap §3.2); the admission model that has no ambiguous `planned` state; and the rule that a roadmap item may not satisfy or waive a v1 requirement. |
 | Status | `merged` |
-| Destination | Product definition, trust boundary, and role/handoff material → [`design.md`](design.md) §§1–2, 4, 8. Release criteria → [`acceptance.md`](acceptance.md). The three pre-acceptance documents are retained verbatim under [`superseded/`](superseded/). The roadmap stays current *as a non-normative roadmap* at [`v1-plus-roadmap.md`](v1-plus-roadmap.md). |
+| Destination | Product definition, trust boundary, and role/handoff material → [`design.md`](design.md) §§1–2, 4, 8. Release criteria → [`acceptance.md`](acceptance.md). The three pre-acceptance documents are retained verbatim under [`superseded/`](superseded/). The roadmap was retained at that time *as a non-normative roadmap* at [`v1-plus-roadmap.md`](v1-plus-roadmap.md); it is history now and nothing on it is queued. |
 | Reason | Its user-facing framing is the best statement of what AE v1 is for. Its as-built documents describe the larger v1 that this consolidation narrows, so they become historical rather than current. |
 
 ### `docs/ae-v1-preacceptance` @ `eeb9142`
@@ -95,7 +95,7 @@ document is the authority on their disposition, not their frontmatter.
 
 | Goal | Where it came from | Status | Why |
 |---|---|---|---|
-| `docs/references/finalized/**` as the sole current v1 specification | Design freeze, 2026-08-23 | `superseded` | Demoted to normative design input and audit record. [`design.md`](design.md) and [`implementation-plan.md`](implementation-plan.md) are the current pair. Its bytes are unchanged; its README now states the change. |
+| `docs/history/finalized/**` as the sole current v1 specification | Design freeze, 2026-08-23 | `superseded` | Demoted to normative design input and audit record; [`design.md`](design.md) and [`implementation-plan.md`](implementation-plan.md) took over at the time, and are themselves archived now. Its bytes are unchanged; its README now states the change. |
 | The P0.2–P0.10 / P1–P6 phase plan | `finalized/implementation-plan.md` | `superseded` | Replanned item by item in [`implementation-plan.md` §3](implementation-plan.md#3-replan-of-the-old-p0p6-packages). |
 | F-084 Contract Formation Phase (as a specification amendment with its own object family) | `feature/ae-v1-contract-formation` | `absorbed_and_replanned` | Problem retained in [`design.md` §7](design.md#7-contract-formation); mechanism collapsed to one shared basis. |
 | F-085 formation-aware skills (seven work packages joined to the old milestones) | `feature/ae-v1-contract-formation` | `absorbed_and_replanned` | The milestones it attached to no longer exist. Formation behavior arrives with the slice that needs it. |
@@ -108,6 +108,6 @@ document is the authority on their disposition, not their frontmatter.
 - No worktree was removed. `/Users/ckai/Projects/ae-v1-plus-plan` still holds
   `feature/ae-v1-plus-loom-plan`.
 - No design history was deleted. `docs/ae-v1-design-history/**` and
-  `docs/references/finalized/**` are intact.
+  `docs/history/finalized/**` are intact.
 - No production runtime or test code changed in this consolidation.
 - Nothing was pushed to any remote.

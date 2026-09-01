@@ -4,20 +4,20 @@
 > The v1 it describes was designed, built to 531 passing assertions, and then
 > **archived by its own signed decision record** — proven, unconsumed, and
 > reopened only on named observed events. The built artifact is preserved at
-> tag `v1-kernel-archive`; the account of why is
-> [`x-experiment.md`](../../x-experiment.md), whose instrument is reproduced verbatim
-> in [`x-workflow.md`](../../x-workflow.md).
+> tag `v1-kernel-archive`; the current account of why is
+> [`rebuild.md`](../../rebuild.md), and the instrument that replaced this
+> design is reproduced verbatim in [`x-workflow.md`](../x-workflow.md).
 >
 > The former rule — that `design.md` and `implementation-plan.md` override
 > anything that contradicts them — is **revoked**. Where this directory
 > conflicts with the post-delete workflow, this directory is the history.
 
-## The living document
+## Where the current account lives
 
-| Document | Question it answers |
-|---|---|
-| [`x-experiment.md`](../../x-experiment.md) | What did the minimal-workflow experiment establish, and why does deletion precede the rewrite? |
-| [`x-workflow.md`](../../x-workflow.md) | The exact 182-line instrument the four benchmark runs executed. |
+Nothing in this directory is current. [`rebuild.md`](../../rebuild.md) carries
+what the minimal-workflow experiment established, what replaced this design, and
+what remains to be done; [`x-workflow.md`](../x-workflow.md), beside this
+directory, is the 182-line instrument those benchmark runs executed.
 
 ## The historical set
 

@@ -2,7 +2,7 @@
 
 > **Status: evidence record (2026-08-28).** This is the exact skill the four
 > benchmark runs executed (`/x:work` from the local plugin at ~/Projects/x,
-> commit a032d11), reproduced verbatim so [`x-experiment.md`](x-experiment.md)'s
+> commit a032d11), reproduced verbatim so [`../rebuild.md`](../rebuild.md)'s
 > claims about "the 182-line workflow" resolve to bytes in this repository.
 > It is the seed of the post-delete unified entry (`ae:go`), not itself a
 > shipped skill.

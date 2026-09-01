@@ -1,5 +1,9 @@
 # AE plugin — dogfood feedback from Loom F-023 (targeting v0.12.x)
 
+> **Status: historical.** A dogfood report against ae 0.12, kept as evidence of
+> what that version cost its user. Most of the surfaces it names were removed by
+> the delete. **It is a record, not a task list.** See [`rebuild.md`](../rebuild.md).
+
 > Source: a full `/ae:work → /ae:review → pre-merge integration review` cycle run by
 > Claude Code while self-hosting AE on the Loom project (Rust). All items below are
 > backed by what actually happened in this run, not speculation.

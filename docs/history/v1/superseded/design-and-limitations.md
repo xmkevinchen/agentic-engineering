@@ -1,5 +1,10 @@
 # AE v1 design and limitations
 
+> **Status: superseded.** Part of the pre-acceptance documentation set for the
+> v1 Kernel, which was built, proven, never called, and then archived at tag
+> `v1-kernel-archive`. It describes a component no current path reaches.
+> **Do not follow it as instructions.** See [`rebuild.md`](../../../rebuild.md).
+
 > **Pre-acceptance as-built draft.** Normative statements in this document
 > describe the frozen AE 1.0 target. Claims about the released implementation
 > remain provisional until their `RELEASE-BLOCKER` records are filled from

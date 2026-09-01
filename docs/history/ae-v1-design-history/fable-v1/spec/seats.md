@@ -1,5 +1,12 @@
 # 规范 · 席位、判官与见证（ae.seat.v1 / ae.judge.v1 / correlator）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 上层设计见 `../design.md` §6。本文钉：席位合同全字段、判决 schema、coverage 席
 > 的策略与输出、**backend 关联算法（逐后端具体来源）**、降级语义、档位序。
 > 证据锚：E1（自述≠见证）、E2（投放层才是失效点）、E3（档位与密度）、E4（宿主

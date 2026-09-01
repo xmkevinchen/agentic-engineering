@@ -1,5 +1,12 @@
 # 落地计划 P0–P5
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 约束：个人项目，单人，兼职节奏。因此每期 0.5–2 天；期末三件套缺一不可：
 > **可运行物**（真实文件，真实路径）、**可证伪出口**（一个能失败的测试，多为故障注入）、
 > **删除清单**（精简是逐期兑现的，不是最后一期的愿望）。

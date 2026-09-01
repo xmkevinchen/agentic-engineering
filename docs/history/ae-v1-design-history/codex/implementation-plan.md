@@ -1,5 +1,12 @@
 # AE v1 实施计划
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 目标：在当前 Claude Code 插件中落地“可执行证明闭环”。
 > 约束：不做 Codex 原生移植、不抽象跨 runtime Core、不修改现有 `.ae/1.0` 材料。
 > 工作量标记：S = 单一小改动；M = 一个可独立 dogfood 的 feature；L = 多个 feature 或需迁移。

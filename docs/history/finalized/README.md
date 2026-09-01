@@ -1,14 +1,21 @@
 # AE 1.0 Finalized
 
-> **Status: no longer the current plan.** This was the sole v1 specification when
-> it was frozen on 2026-08-23. It is now a normative design input and audit
-> record. The current pair is [`docs/v1/design.md`](../../history/v1/design.md) and
-> [`docs/v1/implementation-plan.md`](../../history/v1/implementation-plan.md); where they
-> disagree with this specification, they are current, and each difference is
-> recorded in
-> [`docs/v1/mechanism-disposition.md`](../../history/v1/mechanism-disposition.md).
+> **Status: historical — no authority over anything.** This was the sole v1
+> specification when it was frozen on 2026-08-23. Its central premises — that
+> completion is decided by a deterministic Gate, that Agent Teams is the
+> execution strategy, that a local `ae-gate` holds the truth — were all
+> overturned by the delete that followed. Nothing here governs current work.
 >
-> The specification documents in this directory are unchanged. Read the original
+> It was first demoted to "design input" in favour of [`../v1/design.md`](../v1/design.md)
+> and [`../v1/implementation-plan.md`](../v1/implementation-plan.md), with the
+> differences recorded in [`../v1/mechanism-disposition.md`](../v1/mechanism-disposition.md).
+> **Those two are history as well now** — that override rule was revoked, see
+> [`../v1/README.md`](../v1/README.md). The current account is
+> [`../../rebuild.md`](../../rebuild.md).
+>
+> Why it is kept: it is the most complete record of the design the rebuild was
+> measured against, and of what that route cost. The specification documents are
+> byte-unchanged apart from a status banner added to each. Read the original
 > framing below as it stood at the freeze.
 
 > 唯一规范 · Claude Code 首发实现 · 2026-08-23
@@ -33,7 +40,7 @@ retry / re-plan / amendment / human / finalize
 
 ## 规范权威
 
-`finalized/` 是设计定稿时的唯一 v1 规范；相邻的 `../claude/`、`../codex/` 与补充方案 [`../fable-v1/`](../../history/ae-v1-design-history/fable-v1/) 只是来源/审计档案。
+`finalized/` 是设计定稿时的唯一 v1 规范；相邻的 `../claude/`、`../codex/` 与补充方案 [`../fable-v1/`](../ae-v1-design-history/fable-v1/) 只是来源/审计档案。
 
 发生冲突时按以下顺序解释：
 

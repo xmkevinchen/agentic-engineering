@@ -1,5 +1,12 @@
 # 现仓改线图（fable 侧勘定）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 与 finalized `migration-map.md` 互补：那份是"现状事实与接缝"，本份是**逐文件处置
 > 判决**。诚实标记：〔读〕＝本 session 亲读过内容；〔构〕＝按名称与引用关系推断，
 > P5 过堂时须先读后判。处置动词：keep / rewire / merge / delete / audit。

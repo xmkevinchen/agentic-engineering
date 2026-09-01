@@ -1,9 +1,15 @@
-> **RETIRED 2026-07-04 by F-070** — superseded by the F-069 project knowledge graph
+> **RETIRED 2026-07-04 by F-070** — superseded by the project knowledge graph
 > (frontmatter edges + layered index + locate-step). Kept for design history only.
+>
+> **The successor is gone too.** The knowledge graph and its skill were removed by
+> the delete; no current path reads or writes a knowledge base. So neither this
+> integration nor its replacement exists. Kept because a suite test pins this
+> path, and as the record of a direction that was tried twice.
+> See [`../../rebuild.md`](../../rebuild.md).
 
 ---
 title: "PRD: Mengdie Integration Across AE Pipeline"
-status: draft
+status: retired
 created: 2026-04-05
 target: ae@0.8.0
 ---

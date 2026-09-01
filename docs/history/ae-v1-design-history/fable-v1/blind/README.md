@@ -1,5 +1,12 @@
 # AE v1 —— Fable 独立答卷
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 2026-08-22。写作协议即验证协议：本目录在**不读 `.ae/1.0/finalized/`** 的前提下，
 > 从用户三目标与本 session 实测失效独立重推。写完 design / evidence / plan 之后
 > 才读 finalized/ 并写 cross-review.md。收敛处是双向印证，分歧处是评审发现。

@@ -3,17 +3,18 @@
 > **Status: historical (2026-08-28).** This graph describes the archived
 > Kernel's loop (tag `v1-kernel-archive`). Every node remains implemented and
 > none is reachable — which is no longer a gap to close but the archived state.
-> See [`x-experiment.md`](../../x-experiment.md).
-
-> **Status: current.** Companion to [`design.md`](design.md). It expands §8's
-> roles and handoffs into the whole graph: every node, what each owes the next,
-> and every edge that goes backwards. Where it appears to contradict `design.md`
-> about what v1 *is*, `design.md` is current and this document is wrong.
+> It was written as a companion to [`design.md`](design.md), expanding its §8
+> roles and handoffs into the whole graph; both are history now, and the current
+> account is [`rebuild.md`](../../rebuild.md).
+>
+> It quotes `plugins/ae/handover.md`, a file the delete removed after folding the
+> one rule it alone carried into the entry skill. The quoted rule is reproduced
+> below; the file is in git history.
 
 `design.md` §8.2 draws the handoffs that must close as a chain with one loop.
 That chain is true and is not the whole graph: the return paths live in §10's
 prose, the stage-level rings live in
-[`handover.md`](../../../plugins/ae/handover.md), and nothing has drawn them
+`handover.md`, and nothing has drawn them
 together. This document is that drawing.
 
 **Why it exists before the entry point is built.** An entry point is a way in to
@@ -123,7 +124,7 @@ would fail on a correct run.
 
 ## 3. How to read a node contract
 
-Following [`handover.md`](../../../plugins/ae/handover.md)'s rule, which this
+Following `handover.md`'s rule, which this
 document applies to Kernel nodes rather than to pipeline stages:
 
 > **A handover contract is not what a stage produces, it is what the next stage
@@ -298,7 +299,7 @@ operation, so it means forming a successor Contract.
 
 ### The stage-level rings are the same edges, seen from the skills
 
-[`handover.md`](../../../plugins/ae/handover.md) states when work leaves a ring:
+`handover.md` states when work leaves a ring:
 `work ⇄ review` holds while the fix changes what the code does; it escalates to
 plan when the decomposition cannot close; it escalates to analyze when the
 criterion cannot be met however the work is divided, or the premise's citation

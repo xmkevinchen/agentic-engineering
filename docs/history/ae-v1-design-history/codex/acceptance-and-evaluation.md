@@ -1,5 +1,12 @@
 # AE v1 验收与评估计划
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 目的：证明“可执行证明闭环”真实参与了完成判断，而不是又多了一套自描述文档。
 
 ## 1. 验收原则

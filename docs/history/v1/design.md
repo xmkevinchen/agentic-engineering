@@ -1,20 +1,12 @@
 # AE v1 — consolidated design
 
 > **Status: historical (2026-08-28).** This design was built, proven, and then
-> archived by its own decision record — see [`x-experiment.md`](../../x-experiment.md)
+> archived by its own decision record — see [`rebuild.md`](../../rebuild.md)
 > for why, tag `v1-kernel-archive` for the built artifact, and the working
 > discussion `002-ae-shape` for the measurements. It is retained as the record
 > of what was designed and what that cost, not as guidance. Where it conflicts
 > with the post-delete workflow, it is not merely outdated — it is the
 > counter-example the rewrite was measured against.
-
-> **Status:** current design source for AE v1. Not a release announcement, not
-> an acceptance record, and not evidence that any part of v1 is implemented.
->
-> Supersedes the per-branch design authorities listed in
-> [`branch-disposition.md`](branch-disposition.md). The archived specification
-> under [`../references/finalized/`](../../references/finalized/) is a design input
-> and audit record from here on, not the current plan.
 
 ## 1. What AE v1 is
 

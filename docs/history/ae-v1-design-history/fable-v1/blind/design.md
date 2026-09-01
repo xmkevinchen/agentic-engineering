@@ -1,5 +1,12 @@
 # AE v1 设计 —— 可执行的证明闭环
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 哲学层见 `../../claude/philosophy.md`（五条款＋棘轮，已定稿，不重写）。
 > 本文是它的机器化：五条款压缩为**三问两律**——Q1 契约、Q2 证据与门、Q3 知识，
 > L1 自证不算数、L2 只紧不松；"Agents 管执行"即自由域声明。同一哲学，两种投影。

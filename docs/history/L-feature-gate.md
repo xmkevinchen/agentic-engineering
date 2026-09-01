@@ -1,11 +1,19 @@
 ---
 title: "L-feature gate policy"
-type: policy
+type: history
 created: 2026-05-21
 followup_bl: "BL-092-l-gate-mechanical (v0.11.x mechanical /ae:roadmap enforcement)"
 ---
 
 # L-feature gate policy
+
+> **Status: historical.** This gate is not in force and nothing consults it. It
+> hooked into `/ae:roadmap`, a project-management skill the delete removed, and
+> it reads state out of a feature `index.md` frontmatter schema the current
+> workflow does not write. Retained as the record of one attempt to bound
+> concurrent-feature risk with a calendar rule — including the honest note below
+> that the two-week window was a heuristic, not a derivation. **Do not apply the
+> MUST below to any current work.** See [`../rebuild.md`](../rebuild.md).
 
 ## Rationale
 

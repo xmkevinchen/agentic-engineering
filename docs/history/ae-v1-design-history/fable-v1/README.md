@@ -1,5 +1,12 @@
 # AE v1 —— Fable 方案（合流版）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 2026-08-22。两个阶段，两种性质：
 > **盲写版**（存档于 `blind/`，勿改）——不读 finalized/ 独立推导，作为收敛证明的证据；
 > **合流版**（本目录当前四件）——按 `cross-review.md` 逐条裁决后吸收 finalized/ 与

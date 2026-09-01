@@ -1,5 +1,14 @@
 # 当前 AE → 1.0 迁移地图
 
+> **状态：历史快照。** 这里的「当前 AE」指 2026-08-23 的插件 0.14.2，不是今天的树。
+> 它描述的迁移目标——由确定性 Gate 判定完成、Agent Teams 作为执行策略——已被删除
+> 推翻；本文所诊断的多数表面已随之移除。保留它是因为它记录了那些表面当时**为什么**
+> 是问题。当前状态见 [`../../rebuild.md`](../../rebuild.md)。
+>
+> 文中若干 `code span` 原为链接，指向大删除移除的文件（`collect-ac-evidence.py`、
+> `dashboard/SKILL.md`、`next/SKILL.md`、`agent-teams/SKILL.md`、
+> `check-agent-teams.sh`）。链接已去掉，名字保留——它们在 git 历史里。
+
 > 事实快照：2026-08-23 · 当前插件 0.14.2 · 本机 Claude Code 2.1.231
 
 本文件描述现状与修改面，不为旧行为赋予目标规范权威。宿主行为会漂移，实施时必须重新运行 P0 capability matrix。
@@ -105,7 +114,7 @@ F-082 的 frozen goal 仍含 AC10，而最终 review 声称该 AC 经用户决�
 
 ### 3.2 Collector 失败但 review 仍 pass
 
-[`collect-ac-evidence.py`](../../../plugins/ae/scripts/collect-ac-evidence.py)：
+`collect-ac-evidence.py`：
 
 - `KNOWN_PARSERS` 硬编码三类；
 - Markdown 反引号未形成可靠 argv；
@@ -119,7 +128,7 @@ F-082 的 frozen goal 仍含 AC10，而最终 review 声称该 AC 经用户决�
 
 - [`work/SKILL.md`](../../../plugins/ae/skills/work/SKILL.md) 内嵌 auto-pass 与 `LOOP_ITER/LOOP_FINDINGS`；
 - [`review/SKILL.md`](../../../plugins/ae/skills/review/SKILL.md) 写 verdict 并直接归档；
-- [`dashboard/SKILL.md`](../../../plugins/ae/skills/dashboard/SKILL.md) 与 [`next/SKILL.md`](../../../plugins/ae/skills/next/SKILL.md) 分别重新解释完成态。
+- `dashboard/SKILL.md` 与 `next/SKILL.md` 分别重新解释完成态。
 
 Pure reducer 与 reader cutover 是核心迁移，不是额外抽象。
 
@@ -135,9 +144,9 @@ Pure reducer 与 reader cutover 是核心迁移，不是额外抽象。
 - 一个 session 一个隐式 Team；resume 不恢复 in-process teammates；Task 状态可滞后；
 - `TeamCreate/TeamDelete` 自 v2.1.178 起不存在；`team_name` accepted-but-ignored。
 
-当前仓库一方面已写“session implicit team/自动清理”，另一方面仍在 [`agent-teams/SKILL.md`](../../../plugins/ae/skills/agent-teams/SKILL.md) 与 [`cc-plugin-contract.md`](../../../docs/references/cc-plugin-contract.md) 保留 `TeamDelete`/live tool 语义。
+当前仓库一方面已写“session implicit team/自动清理”，另一方面仍在 `agent-teams/SKILL.md` 与 [`cc-plugin-contract.md`](../../../docs/references/cc-plugin-contract.md) 保留 `TeamDelete`/live tool 语义。
 
-[`check-agent-teams.sh`](../../../plugins/ae/scripts/check-agent-teams.sh) 还把环境变量任意非空值视为 enabled，可能将 `0` 误判为开启。
+`check-agent-teams.sh` 还把环境变量任意非空值视为 enabled，可能将 `0` 误判为开启。
 
 迁移结论：
 

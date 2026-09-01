@@ -1,5 +1,12 @@
 # AE 1.0 设计
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 草案 · 当前版本 0.14.2 · 2026-08-22
 > 根：[`philosophy.md`](philosophy.md)。本文只写**机制**——哲学不重复。
 > 主干来源：`../codex/`（只读来源，不再并行维护）。主干细节引它，不复述。

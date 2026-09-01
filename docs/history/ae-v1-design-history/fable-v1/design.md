@@ -1,5 +1,12 @@
 # AE v1 设计（合流版）—— 可执行的证明闭环
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 版本说明：盲写版存档于 `blind/`（独立推导记录，勿改）。本版按 `cross-review.md`
 > 的逐条裁决更新：吸收 finalized/ 八项、codex/ 一项，自修四处（XR-1/2/3/4），
 > 保留我方独有的七件。哲学层不变：`../claude/philosophy.md`。

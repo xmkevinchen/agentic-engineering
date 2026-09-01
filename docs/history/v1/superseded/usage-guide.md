@@ -1,5 +1,10 @@
 # Using AE v1 correctly
 
+> **Status: superseded.** Part of the pre-acceptance documentation set for the
+> v1 Kernel, which was built, proven, never called, and then archived at tag
+> `v1-kernel-archive`. It describes a component no current path reaches.
+> **Do not follow it as instructions.** See [`rebuild.md`](../../../rebuild.md).
+
 > **Pre-acceptance draft.** This guide describes the intended AE v1 user
 > contract. Exact installation steps, command syntax, supported Claude Code
 > modes, and recovery wrappers must be verified against the accepted release

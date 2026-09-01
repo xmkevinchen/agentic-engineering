@@ -1,5 +1,10 @@
 # AE 1.0 pre-acceptance evidence dossier
 
+> **Status: superseded.** Part of the pre-acceptance documentation set for the
+> v1 Kernel, which was built, proven, never called, and then archived at tag
+> `v1-kernel-archive`. It describes a component no current path reaches.
+> **Do not follow it as instructions.** See [`rebuild.md`](../../../rebuild.md).
+
 > **Pre-acceptance index.** This document is not a Gate, waiver, release
 > verdict, or acceptance receipt. A `PASS` label in the eventual generated view
 > must be copied from a canonical result reference; this Markdown file cannot

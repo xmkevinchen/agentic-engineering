@@ -1,5 +1,12 @@
 # AE 1.0 · 证据附录
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 基线 v0.14.2 · 2026-08-22
 > 本文件只放事实与出处，不做主张。主张在 `design.md`。
 > 未经本仓实测的引用（业界调研）单独标在 §5。

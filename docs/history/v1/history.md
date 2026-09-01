@@ -10,7 +10,7 @@ and how to read it.
 
 ## 1. The archived specification
 
-**[`../references/finalized/`](../../references/finalized/)** — the AE 1.0
+**[`../finalized/`](../finalized/)** — the AE 1.0
 specification as frozen on 2026-08-23.
 
 | Document | What it holds |
@@ -22,12 +22,12 @@ specification as frozen on 2026-08-23.
 | `migration-map.md` | Implementation facts as of 2026-08-22 |
 | `source-evaluation.md` | Why each source proposal was inherited, corrected, or dropped |
 
-**Its status changed.** It was the sole current v1 specification. It is now a
-**normative design input and audit record**: the reasoning behind the invariants
-and the authority model, retained in full. Where it and the consolidated design
-disagree, the consolidated design is current — because the disagreement is
-deliberate and recorded in
-[`mechanism-disposition.md`](mechanism-disposition.md).
+**Its status changed twice.** It was the sole current v1 specification. It was
+then demoted to a **design input and audit record**, and where it and the
+consolidated design disagreed, the consolidated design superseded it — the
+disagreements are recorded in
+[`mechanism-disposition.md`](mechanism-disposition.md). **That consolidated
+design is itself history now.** Neither is current; both are records.
 
 Its bytes are unchanged. Its README carries a status note pointing here.
 
@@ -80,14 +80,15 @@ what AE cannot promise. Both survive in the consolidated design.
 
 ## 5. The v1+ roadmap
 
-**[`v1-plus-roadmap.md`](v1-plus-roadmap.md)** — still current, still
-non-normative, still holding zero authority.
+**[`v1-plus-roadmap.md`](v1-plus-roadmap.md)** — history, and non-normative even
+when it was written.
 
-It is not history: it is the live list of candidate directions (portable
-runtime, native Codex frontend, Loom control plane, GitHub/OpenHands adapters,
-multi-writer execution) with an admission model that has no ambiguous `planned`
-state. Nothing in it is a v1 requirement, gate, or waiver, and nothing in it may
-become a v1 blocker.
+It listed candidate directions past a 1.0 that never shipped in that shape
+(portable runtime, native Codex frontend, Loom control plane, GitHub/OpenHands
+adapters, multi-writer execution). **It is not a live roadmap and nothing on it
+is queued.** The current ordered work is
+[`rebuild.md`](../../rebuild.md) §4. What is worth keeping from this file is its
+admission model — no ambiguous `planned` state — not its contents.
 
 Its §3.2 — *native teams first; cross-family bridge only for the remaining gap*
 — is the reasoning behind [`design.md` §4](design.md#4-the-workflow-harness) and
@@ -150,7 +151,7 @@ Someone who needs the whole story, in order:
 3. [`mechanism-disposition.md`](mechanism-disposition.md) — what was dropped and why
 4. [`branch-disposition.md`](branch-disposition.md) — where each branch went
 5. [`superseded/design-and-limitations.md`](superseded/design-and-limitations.md) — the larger v1, for contrast
-6. [`../references/finalized/design.md`](../../references/finalized/design.md) — the full frozen reasoning
+6. [`../finalized/design.md`](../finalized/design.md) — the full frozen reasoning
 7. `docs/ae-v1-implementation-thinking` @ `8d8b1cc` — how the bootstrap phase reasoned
 
 Steps 1–3 are enough to work on AE. Steps 4–7 are for understanding why it looks

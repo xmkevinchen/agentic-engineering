@@ -1,5 +1,12 @@
 # 规范 · 账本与门（ae.event.v1 / 归约代数）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 上层设计见 `../design.md` §4–§5。本文钉：事件类全集与逐类 payload、链与追加规则、
 > attempt 模型、六谓词求值定义、逐 closure 归约表、状态优先序、F8 配对算法、
 > finalize 崩溃表。术语修正一处：`superseded` 是**事件/修订级的可采信标签**，

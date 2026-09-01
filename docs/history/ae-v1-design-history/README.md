@@ -1,10 +1,13 @@
 # AE v1.0 设计史档案
 
-> **Status note (2026-08-24 consolidation).** `docs/references/finalized/` is no
-> longer the current v1 plan. It is now a normative design input and audit
-> record; the current design and implementation plan live in
-> [`docs/v1/`](../v1/). This archive's own status is unchanged — it never held
-> specification authority. See [`docs/v1/history.md`](../v1/history.md).
+> **Status: historical, and so is everything it points at.** Nothing in this
+> archive ever held specification authority — these are source proposals. The
+> frozen specification they fed ([`../finalized/`](../finalized/)) was demoted to
+> a design input in 2026-08-24, in favour of the consolidated design under
+> [`../v1/`](../v1/) — **and that consolidated design has since been archived
+> too**. No document in either place is current. The current account is
+> [`../../rebuild.md`](../../rebuild.md); the reading order is
+> [`../README.md`](../README.md).
 
 > 设计定稿：2026-08-23 · 入库归档：2026-08-24 · 原路径：`.ae/1.0/`
 
@@ -12,8 +15,8 @@
 
 ## 阅读顺序
 
-1. 先读 [`docs/references/finalized/README.md`](../../references/finalized/README.md)，了解定稿结论与文档权威顺序；
-2. 再读 [`docs/references/finalized/source-evaluation.md`](../../references/finalized/source-evaluation.md)，了解各来源被采纳、修正或拒绝的原因；
+1. 先读 [`docs/history/finalized/README.md`](../finalized/README.md)，了解定稿结论与文档权威顺序；
+2. 再读 [`docs/history/finalized/source-evaluation.md`](../finalized/source-evaluation.md)，了解各来源被采纳、修正或拒绝的原因；
 3. 需要追溯原始论证时，再进入 `claude/`、`codex/` 与 `fable-v1/`。
 
 ## 档案构成
@@ -23,7 +26,7 @@
 | [`claude/`](./claude/) | Claude/CC 原始研究、实测与方案 | 否，仅作来源与审计记录 |
 | [`codex/`](./codex/) | Codex 原始设计、实施计划与 Patterns 研究 | 否，仅作来源与审计记录 |
 | [`fable-v1/`](./fable-v1/) | 盲写方案、合流方案与最后一次 cross-review | 否，仅作补充来源与审计记录 |
-| [`docs/references/finalized/`](../../references/finalized/) | 各方经事实核对与冲突裁决后的 AE 1.0 设计定稿 | **否** — 定稿时为唯一规范，现已降级为设计输入与审计记录；当前计划见 [`docs/v1/`](../v1/) |
+| [`docs/history/finalized/`](../finalized/) | 各方经事实核对与冲突裁决后的 AE 1.0 设计定稿 | **否** — 定稿时为唯一规范，现已降级为设计输入与审计记录；随后接替它的 [`../v1/`](../v1/) 也已归档，两者都不是当前计划。当前状态见 [`../../rebuild.md`](../../rebuild.md) |
 
 `claude/`、`codex/` 与 `fable-v1/` 保留原始表述，不再并行演进。除归档入口和相对链接修复外，来源材料不作追溯性改写。
 

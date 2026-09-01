@@ -1,5 +1,12 @@
 # 规范 · 契约（ae.contract.v1）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../../rebuild.md).
+
 > 上层设计见 `../design.md` §2。本文钉字段级语义。凡与 finalized 收敛处从简；
 > 展开的都是本方案的差异字段（falsifier / red_at_freeze / count_rule / 预算）
 > 与 finalized 尚未定义的部分（地板生命周期、视图生成规则）。

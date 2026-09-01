@@ -1,5 +1,12 @@
 # 当前 AE 实现地图（供 v1 设计使用）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 这份地图描述当前仓库实际实现，不把愿景材料当作代码事实。
 > 它只回答“v1 从哪里改、哪些基础可复用、哪些保证目前只是约定”。
 

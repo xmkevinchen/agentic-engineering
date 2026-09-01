@@ -1,5 +1,12 @@
 # 假过样本库规格（F1–F8 ＋ 冻结期样本）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 验收第一原则：先证明假过被拦，再证明真过能走。每条 fixture 三要素：注入 /
 > **唯一预期**（"A 或 B 均可"即 fixture 不合格）/ 关死它的机制。证据锚指向
 > `evidence.md`。F1–F7 与 finalized 对齐（预期按本方案六态表述），F8 为本方案新增。

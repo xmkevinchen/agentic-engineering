@@ -1,5 +1,12 @@
 # AE v1 设计文档：可执行证明闭环
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 这是 Codex 基于当前 AE 实现独立提出的 v1 设计。
 > v1 的宿主是 Claude Code；v2 才讨论 Codex 移植和跨 runtime 架构。
 

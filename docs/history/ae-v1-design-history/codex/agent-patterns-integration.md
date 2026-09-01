@@ -1,5 +1,12 @@
 # AE v1 Agent Patterns 分层集成设计（Claude Code）
 
+> **Status: historical — a source proposal, not a plan.** This is one of the
+> independent proposals written before AE v1's design was consolidated. It was
+> never the specification, and the specification it fed into has itself since
+> been archived. **Nothing here has authority over current work.** The set and
+> how each source was judged: [`README.md`](../README.md). The current account of what AE
+> is and where it is going: [`rebuild.md`](../../../rebuild.md).
+
 > 状态：Codex 独立研究与设计补充，不修改或替代 `../claude/patterns.md`、`../claude/*` 及本目录已有文档
 > 基线：AE `0.14.2`，Claude Code 当前公开能力，2026-08-22
 > 版本边界：v1 只讨论如何先在 Claude Code 上实现；Codex 原生移植与跨 runtime 抽象留给 v2
