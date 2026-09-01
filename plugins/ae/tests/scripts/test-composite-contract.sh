@@ -75,6 +75,16 @@ else
   bad "AC1: the freeze violation was not reported" "$out"
 fi
 
+# A seat file named what the host loads as instructions turns that seat's answer into a directive
+# for every later agent reading the directory, and round one stops being blind. Nothing in the
+# artifact shows it — the file is a well-formed seat answer under an allowed-looking name.
+out=$(python3 "$CHECK" "$FIX/host-collision/round-2/composite.md" 2>&1)
+if [ $? -ne 0 ] && echo "$out" | grep -qi "instructions"; then
+  ok "a seat file named what the host loads as instructions is reported"
+else
+  bad "a host-loaded filename passed" "$out"
+fi
+
 # AC1 — round three was spawned but no digest was ever recorded. A freeze nobody wrote down is
 # not a freeze: the composite could then be edited freely and the check would report nothing.
 out=$(python3 "$CHECK" "$FIX/unfrozen/round-2/composite.md" 2>&1)

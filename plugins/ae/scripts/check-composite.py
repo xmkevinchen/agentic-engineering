@@ -17,6 +17,9 @@ What it decides, and what it does not:
        angle recorded that it held the seat-file paths. AC3 is unmet by default without the
        latter: a criterion nobody was equipped to check is unexamined, not satisfied.
 
+  It also reports a seat file named what the host loads as instructions, which is not one of the
+  four criteria but breaks the property round one exists to buy.
+
   AC2 is absent on purpose. Its falsifier asks whether a seat's claim reached the composite with
   a stated reason. Nothing here decides that, and a word-presence check would report green on a
   composite that dropped a rebuttal — which is the failure AC2 exists to catch.
@@ -28,6 +31,8 @@ import re
 import sys
 
 MARKS = ("survived", "dropped", "unresolved", "chosen")
+# names a coding host reads as directory-scoped instructions rather than as data
+HOST_INSTRUCTION_FILES = {"claude.md", "agents.md", "gemini.md"}
 LIST_ITEM = re.compile(r"^(?:[-*+]|\d+\.)\s+\S")
 MARK_IN = re.compile(r"`(" + "|".join(MARKS) + r")`")
 # something a reader can open: a path with an extension, optionally with a line cite
@@ -122,6 +127,17 @@ def check(path):
         if recorded != actual:
             problems.append(f"{path}: content changed after round three was spawned — "
                             f"FROZEN records sha256 {recorded[:16]}…, file is {actual[:16]}…")
+
+    # --- the blind round stays blind -------------------------------------------------------
+    # A seat file named what the host reads as instructions is loaded into every later agent whose
+    # work reaches that directory, as a directive it cannot decline. The seat's answer then travels
+    # as an instruction and round one is no longer blind. Measured on this filesystem: `claude.md`
+    # and `CLAUDE.md` return one inode.
+    for stray in sorted(path.parent.parent.rglob("*.md")):
+        if stray.name.lower() in HOST_INSTRUCTION_FILES:
+            problems.append(f"{stray}: named what the host loads as instructions — this seat's "
+                            f"answer reaches later agents as a directive they cannot decline, and "
+                            f"the blind round is no longer blind")
 
     # --- AC3 -----------------------------------------------------------------------------
     round_three = path.parent.parent / "round-3"

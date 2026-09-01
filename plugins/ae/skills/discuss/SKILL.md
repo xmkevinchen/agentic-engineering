@@ -135,12 +135,21 @@ the shortest backend session behind it — which can be dead before it is used, 
     ...
 ```
 
-`<seat>` is the family the seat answers for — `codex.md`, `gemini.md`, `claude.md`, and a seat
-fronting some other backend named for its family the same way — and `<angle>` is the angle it
-took: `adversarial.md`, `regret.md`, `strategic.md`, `scope-reducer.md`, held by
+`<seat>` is the family the seat answers for — `openai.md`, `google.md`, `anthropic.md`, and a
+seat fronting some other backend named for its family the same way — and `<angle>` is the angle
+it took: `adversarial.md`, `regret.md`, `strategic.md`, `scope-reducer.md`, held by
 `ae:workflow:doodlestein-adversarial`, `-regret`, `-strategic` and `-scope-reducer`. Fixed
 names, because a resuming run has to tell a seat that did not answer from a seat whose file it
 cannot find, and neither can be read off a directory whose naming was invented per run.
+
+**The family, never the product** — and this is a correctness rule, not a taste one. A seat file
+named `claude.md` **is** `CLAUDE.md` on a case-insensitive filesystem, which is what the host
+reads as instructions for every agent whose work reaches that directory. Measured: both spellings
+returned one inode. The effect is that a seat's answer arrives in the next agent's context as a
+directive it cannot decline — so round one stops being blind, silently, and the stage goes on
+reporting several parties while counting one twice. Nothing in the artifacts shows it; the file is
+a well-formed seat answer under the name the layout asked for. Avoid any name a host loads on
+sight, `AGENTS.md` included.
 
 **Every pass, including the first, writes under `pass-N/`.** There is never a bare `round-N/`
 directly under `discuss-<id>/`: a round that does not say which pass it belonged to leaves a

@@ -445,6 +445,28 @@ if discuss is not None:
             "plugins/ae/skills/discuss/SKILL.md: both are written in one voice by one party, and "
             "only one of them can be checked against the seat files")
 
+# --- F-098 T1: a seat file must not be named what the host loads as instructions -----------
+#
+# The host reads CLAUDE.md in a directory as instructions for any agent whose work reaches that
+# directory, and the filesystem here is case-insensitive, so a seat file named claude.md IS
+# CLAUDE.md. A seat's answer then arrives in the next agent's context as a directive it cannot
+# decline, and round one stops being blind — the one property the first exchange exists to buy.
+# Measured: `stat -f %i` returned one inode for both spellings.
+
+HOST_LOADS = {"claude.md", "agents.md"}
+
+if discuss is not None:
+    layout = discuss[discuss.find("`<seat>` is the family"):][:600] if "`<seat>` is the family" in discuss else ""
+    named = set(re.findall(r"`([A-Za-z0-9_-]+\.md)`", layout))
+    collisions = {n for n in named if n.lower() in HOST_LOADS}
+    if layout and not collisions:
+        ok("no seat filename collides with a file the host loads as instructions")
+    else:
+        bad("a seat file is named what the host loads as instructions",
+            f"plugins/ae/skills/discuss/SKILL.md: {sorted(collisions) or 'seat naming paragraph not found'}"
+            " — the seat's answer is injected into later agents as a directive, and round one is "
+            "no longer blind")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
