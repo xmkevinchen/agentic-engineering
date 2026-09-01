@@ -20,7 +20,7 @@ against a composite that is correct.
   gloss is the whole reason.
 - `survived` — the opening line carries the mark but the source path arrives later,
   after the sentence finishes wrapping.
-  Source: `round-1/codex.md:34`.
+  Source: `round-1/openai.md:34`.
 
 ## What could not be settled
 

@@ -17,3 +17,4 @@ round: 2
 
 1. `unresolved` — whether one composer alone is enough.
 2. `dropped` — the delivery objection, measured false in `round-1/anthropic.md:210`.
+- `survived` — a point whose source does not exist (`round-1/nowhere.md:12`).

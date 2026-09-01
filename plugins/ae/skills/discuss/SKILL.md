@@ -195,6 +195,12 @@ both survived and you picked, and nothing in the seat files can settle it. `unre
 neither: a question nobody raised has no seat file to point at. Unmarked, all four read alike in
 your voice, and the one a reader most needs to challenge is the one that looks most like a finding.
 
+**A point is a top-level item; a nested item belongs to the point above it and takes its mark.**
+Written out because the wording does not settle it on its own, and a rule that reads two ways is
+one two careful readers will split on. Marking each sub-bullet separately buys the reader no
+distinction it did not already have and costs it the one it needs — if a sub-point really carries
+a different disposition from its parent, it is not a sub-point.
+
 **You read both rounds' seat files, not the corrections alone.** A point raised in round one that no
 round-two seat attacked appears nowhere in the round-two files, so a composite assembled from the
 corrections cannot even see it. A rebuttal that simply stops appearing is not a judgement the reader

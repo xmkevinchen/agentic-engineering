@@ -85,6 +85,16 @@ else
   bad "a host-loaded filename passed" "$out"
 fi
 
+# A citation that resolves to nothing is untraceable in the way AC3 cares about, and "looks like
+# a path" was all the checker asked for. Cheap and deterministic, so there was no reason to leave
+# it to judgement.
+out=$(python3 "$CHECK" "$FIX/dead-cite/pass-1/round-2/composite.md" 2>&1)
+if [ $? -ne 0 ] && echo "$out" | grep -qi "resolves to no file"; then
+  ok "a citation pointing at nothing is reported"
+else
+  bad "a dead citation passed" "$out"
+fi
+
 # The skill has required the agent id, model and grant per seat since the previous feature. It was
 # never once written down, across two features, while a liveness assertion for the rule stayed
 # green — the assertion checks the skill still says it, which is not the same as anyone doing it.

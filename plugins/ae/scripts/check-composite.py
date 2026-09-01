@@ -17,7 +17,8 @@ What it decides, and what it does not:
        angle recorded that it held the seat-file paths. AC3 is unmet by default without the
        latter: a criterion nobody was equipped to check is unexamined, not satisfied.
 
-  It also reports a seat file that never says which agent held it, a bare round-N/ with no pass-N/ wrapper, and a seat file named what the host
+  It also reports a citation resolving to no file, a seat file that never says which agent held
+  it, a bare round-N/ with no pass-N/ wrapper, and a seat file named what the host
   loads as instructions, which is not one of the
   four criteria but breaks the property round one exists to buy.
 
@@ -128,6 +129,23 @@ def check(path):
         if recorded != actual:
             problems.append(f"{path}: content changed after round three was spawned — "
                             f"FROZEN records sha256 {recorded[:16]}…, file is {actual[:16]}…")
+
+    # --- a citation resolves to something ------------------------------------------------------
+    # AC3 asks that a characterisation be traceable to a seat file that says it. A citation that
+    # resolves to no file is not traceable, and "looks like a path" was the whole test before.
+    # Only citations carrying a directory are resolved: a bare `SKILL.md:66` names no location and
+    # guessing one would invent findings.
+    repo = pathlib.Path(__file__).resolve().parents[3]
+    for number, item in points:
+        for cite in set(CITATION.findall(item)):
+            target = cite.split(":", 1)[0]
+            if "/" not in target:
+                continue
+            if (path.parent.parent / target).exists() or (repo / target).exists():
+                continue
+            if (path.parent / target).exists():
+                continue
+            problems.append(f"{path}:{number}: cites `{cite}`, which resolves to no file")
 
     # --- a seat says what held it ------------------------------------------------------------
     # An answer's weight depends on what produced it, and a seat cannot see its own agent type, so
