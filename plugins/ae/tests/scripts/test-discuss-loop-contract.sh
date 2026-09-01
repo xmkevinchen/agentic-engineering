@@ -402,10 +402,14 @@ if discuss is not None:
 # parsed — a word-presence check would pass the two composites that violated it.
 
 if discuss is not None:
-    if "disposition" in discuss.lower() and "source path" in discuss.lower():
-        ok("the composite owes every material point a disposition and a source path")
+    # Two legs, both load-bearing: a dropped point owes a reason, and the composer reads round
+    # one as well as round two — a point no round-two seat attacked exists only in round one.
+    owes_reason = "`dropped` point" in discuss and "states why" in discuss
+    reads_both = "both rounds' seat files" in discuss
+    if owes_reason and reads_both:
+        ok("a dropped point owes a reason, and the composer reads both rounds")
     else:
-        bad("the composite owes no disposition for a point it drops",
+        bad("the composite owes no reason for a point it drops",
             "plugins/ae/skills/discuss/SKILL.md: a dropped point and a point nobody made are "
             "indistinguishable without one")
 

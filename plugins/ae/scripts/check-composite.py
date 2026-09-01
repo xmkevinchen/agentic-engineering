@@ -9,12 +9,13 @@ What it decides, and what it does not:
   AC4  every material point carries one of the four dispositions, and a `chosen` point cites
        something a reader can open. A material point is a list item at indent 0, outside code
        fences and block quotes, under a heading. Nested items belong to the point above them.
-  AC1  when round-3/FROZEN sits beside the composite, its digest still matches. FROZEN is
-       written when round three is spawned, so a mismatch means the artifact under attack is
-       not the artifact of record.
-  AC3  when a sibling round-3/ exists, at least one angle recorded that it held the seat-file
-       paths. AC3 is unmet by default without that: a criterion nobody was equipped to check is
-       unexamined, not satisfied.
+  AC1  a spawned round three owes a digest, and it still matches. FROZEN is written when round
+       three is spawned, so a mismatch means the artifact under attack is not the artifact of
+       record — and a missing FROZEN means nothing can tell either way, which is unmet rather
+       than passed.
+  AC3  every `survived` or `dropped` point cites a source a reader can open, and at least one
+       angle recorded that it held the seat-file paths. AC3 is unmet by default without the
+       latter: a criterion nobody was equipped to check is unexamined, not satisfied.
 
   AC2 is absent on purpose. Its falsifier asks whether a seat's claim reached the composite with
   a stated reason. Nothing here decides that, and a word-presence check would report green on a
@@ -96,11 +97,25 @@ def check(path):
                         f"({'/'.join(MARKS)}): {line.strip().splitlines()[0][:72]}")
     for number, line in points:
         found = MARK_IN.search(line)
-        if found and found.group(1) == "chosen" and not CITATION.search(line):
+        if not found:
+            continue
+        mark = found.group(1)
+        # `survived` and `dropped` characterise what a seat said, so each owes the file that said
+        # it. `chosen` owes a reason someone else can check. `unresolved` owes neither: a question
+        # nobody raised has no seat file to point at.
+        if mark in ("survived", "dropped") and not CITATION.search(line):
+            problems.append(f"{path}:{number}: `{mark}` cites no source a reader can open: "
+                            f"{line.strip().splitlines()[0][:72]}")
+        if mark == "chosen" and not CITATION.search(line):
             problems.append(f"{path}:{number}: `chosen` names no reason a reader can check: "
                             f"{line.strip().splitlines()[0][:72]}")
     # --- AC1 -----------------------------------------------------------------------------
     frozen = path.parent.parent / "round-3" / "FROZEN"
+    round_three_dir = path.parent.parent / "round-3"
+    if round_three_dir.is_dir() and not frozen.is_file():
+        problems.append(f"{path}: round three was spawned and no FROZEN records the digest — "
+                        f"a freeze nobody wrote down cannot be checked, so AC1 is unmet by "
+                        f"default rather than passed")
     if frozen.is_file():
         recorded = frozen.read_text().split()[0] if frozen.read_text().split() else ""
         actual = hashlib.sha256(path.read_bytes()).hexdigest()

@@ -172,26 +172,25 @@ is the one most easily left in the conversation, because you wrote it and you ca
 Written by you rather than by a seat, which is why it is named here rather than left to the rule
 above.
 
-**Each material point is marked `survived`, `dropped`, `unresolved` or `chosen`**, and a `chosen`
-point names a reason someone other than you could check. The first three are judgements about the
-round, and a reader holding the seat files can test every one of them. `chosen` is not — it is where
-two answers both survived and you picked, and nothing in the seat files can check it. Written
-unmarked they read alike, in your voice, under your authorship, and the one the reader most needs to
-challenge is the one that looks most like a finding. `check-composite.py` reports a point carrying
-no mark, and a `chosen` that cites nothing.
+**Each material point is marked `survived`, `dropped`, `unresolved` or `chosen`.** `survived` and
+`dropped` characterise what a seat said, so each names the file that said it, and a `dropped` point
+states why. `chosen` names a reason someone other than you could check — it is where two answers
+both survived and you picked, and nothing in the seat files can settle it. `unresolved` owes
+neither: a question nobody raised has no seat file to point at. Unmarked, all four read alike in
+your voice, and the one a reader most needs to challenge is the one that looks most like a finding.
 
-**Every material point in the composite carries a disposition and a source path** — it survived,
-or it was dropped and the reason is stated. A point raised in round one that no round-two seat
-attacked appears nowhere in the round-two files, so a composite assembled from the corrections alone
-cannot even see it; you read both rounds. A rebuttal that simply stops appearing is not a judgement
-the reader can weigh, it is one they cannot know was made — and the composite is where that goes
-wrong, because you wrote it and every point you dropped still feels answered.
+**You read both rounds' seat files, not the corrections alone.** A point raised in round one that no
+round-two seat attacked appears nowhere in the round-two files, so a composite assembled from the
+corrections cannot even see it. A rebuttal that simply stops appearing is not a judgement the reader
+can weigh, it is one they cannot know was made — and the composite is where that goes wrong, because
+you wrote it and every point you dropped still feels answered.
 
 **The composite is frozen when round three is spawned, and you write `round-3/FROZEN` holding its
 sha256 at that moment.** Round three attacks what it was given; without the digest, a composite
 edited afterwards leaves every finding citing a version that no longer exists, and nothing can tell.
-That has happened: four close-out files carrying `attacks: round-2/composite.md` against a composite
-rewritten three minutes later. A correction you owe after the spawn is an **erratum in the record**,
+That has happened: four close-out files were written against a composite that was edited seventeen
+seconds after the last of them landed, and not one of them records which version it read — which is
+why the digest is the rule and the citation is not. A correction you owe after the spawn is an **erratum in the record**,
 not an edit to the artifact under attack — re-signing is cheap and a silently moved target is not.
 `check-composite.py` reports the mismatch.
 

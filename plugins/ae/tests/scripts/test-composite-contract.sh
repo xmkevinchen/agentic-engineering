@@ -75,6 +75,25 @@ else
   bad "AC1: the freeze violation was not reported" "$out"
 fi
 
+# AC1 — round three was spawned but no digest was ever recorded. A freeze nobody wrote down is
+# not a freeze: the composite could then be edited freely and the check would report nothing.
+out=$(python3 "$CHECK" "$FIX/unfrozen/round-2/composite.md" 2>&1)
+if [ $? -ne 0 ] && echo "$out" | grep -qi "FROZEN"; then
+  ok "AC1: a spawned round three with no recorded digest is reported"
+else
+  bad "AC1: a missing FROZEN passed silently" "$out"
+fi
+
+# AC3 — a point characterising what the round established, citing no source. AC3's falsifier is
+# "differs from what the seat files say about it, OR that cites no source"; the second half needs
+# a check of its own.
+out=$(python3 "$CHECK" "$FIX/uncited/round-2/composite.md" 2>&1)
+if [ $? -ne 0 ] && echo "$out" | grep -qi "cites no source"; then
+  ok "AC3: a survived point citing no seat file is reported"
+else
+  bad "AC3: an uncited characterisation passed" "$out"
+fi
+
 # AC3 (mechanical half) — no close-out angle held the seat-file paths.
 out=$(python3 "$CHECK" "$FIX/unwitnessed/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "given_seat_file_paths"; then
