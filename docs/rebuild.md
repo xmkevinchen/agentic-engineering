@@ -338,7 +338,14 @@ honored for the plan (a reader who did not write it) and for the delivered work
 (review is fresh eyes). It is skipped for `acceptance.md` — written by the
 analysis, then signed. That file is the standard everything downstream is judged
 against, and the signature freezes it. It is the highest-leverage artifact in the
-workflow and the only one that reaches a human unargued-with.
+workflow and the only one that reaches a human unargued-with — when `discuss` runs,
+the seats attack the criteria on the way through; when it names no question,
+nothing does.
+
+**The disposition is not to add a reader**, and §4 records why: a check that misses
+something is a defect in that check, not a licence for another one in front of it.
+If criteria reach the human wrong, the repair is in the analysis stage that
+produced them.
 
 ### 3.6 The agent definitions describe a world that moved
 
@@ -426,9 +433,7 @@ rule ambiguities, against zero from any scan over the same files. It also costs
 far less than it sounds for these three stages — no seat rounds.
 
 These three are not merely untested, they are undeveloped (§3.1) — so expect the
-runs to produce work, not a verdict. **Unblocks:** any change to the working loop,
-including Phase D — and it is what would license the independent round described
-below, if the runs show criteria arriving unargued are worse. **Why first:** §3.1 and §3.2 — the one stage that got this
+runs to produce work, not a verdict. **Unblocks:** any change to the working loop, including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
 treatment was changed substantially by it, and the placement rule from §3.2 can
 only be applied to stages whose real failures are known.
 
@@ -543,32 +548,35 @@ independent of its relay says so, and the reader discounts it. Reopen only if a
 backend ships something a relay cannot forge, or the host gains a first-class
 notion of a foreign model.
 
-### An independent round before a human signs — the shape is right, the gap is narrow
+### An independent round before a human signs — rejected
 
-The proposal is not a reader for one file. It is the general rule that **nothing
-reaches a human signature without a party that did not produce it having looked**.
-Stated that way it is already the workflow's own ground rule, and it already holds
-in two of the three places it should:
+Recorded because the reasoning generalises, not because the item is pending.
 
-| Signature point | Non-author looks first? |
-|---|---|
-| the plan, before work | **yes** — one reader checks it against the criteria |
-| completion, at the second gate | **yes** — review is fresh eyes by definition |
-| **the criteria, at the first gate** | **only when `discuss` ran** |
+The proposal was that nothing should reach a human signature without a party that
+did not produce it having looked. That rule already holds at two of the three
+signature points — a reader checks the plan against the criteria, and review is
+fresh eyes by definition — and the gap is the third: when the analysis names no
+contested question, nothing independent touches the criteria before the human
+signs them.
 
-So the gap is not "acceptance.md has no reader" — it is narrower and better shaped
-than that. When the analysis names a contested question, the seats argue and the
-criteria get attacked on the way through. **When it names none, nothing
-independent touches them before the human signs.** The entry already surfaces that
-case to the person — it requires showing "the analysis named no questions" as the
-judgement most worth disagreeing with — but showing it puts the whole weight on
-the one reader who has the least context on how it was derived.
+**It is still rejected, on the rule that answers this whole class of proposal:**
 
-**Still held behind Phase A**, for one reason: this predicts that criteria arriving
-unargued are worse. The closed-book runs are where that either shows up or does
-not, and a round added before the evidence is a round added on a hunch. What
-changed is the size of the thing being proposed — a reader for the skipped-discuss
-case, not a stage.
+> **A check that misses something is a defect in that check. It is not a licence
+> to add another check in front of it.**
+
+If criteria are reaching the human wrong, the thing to repair is whatever should
+have caught it — the analysis stage's own premise work, or the reader the plan
+stage already has. Adding a round because an existing round is weak is how a
+process acquires layers, each one justified by the weakness of the last, and §1.1
+is the record of where that arrives.
+
+Two things make this instance weaker still. **The observation came from reading
+the files, not from a run** — under the working rule that evidence comes from a
+stage executed by a session that did not write it, an inspection finding proposing
+a new stage is the least-supported kind of proposal there is. And **the current
+flow is already at its minimum**: two human stops and five stages, which is what
+the experiment behind this rebuild measured as sufficient. Something added to that
+has to beat a measured baseline, not merely sound prudent.
 
 ### Standing, not phased
 
