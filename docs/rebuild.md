@@ -7,28 +7,46 @@
 
 ## The one-sentence version
 
-AE had grown to 24 skills and 8,457 lines of process prose; a controlled
-experiment showed that a **182-line** workflow reproduced the same results on the
-same work, so the prose was deleted down to **779 lines**, and everything that
-wants back in has to earn its place against measurement rather than against the
-memory of why it was once added.
+AE had become bloated, ceremonial, and in places self-contradictory: what the
+process cost had passed what it caught, so the core workflow was kept and
+everything around it was rebuilt from the floor rather than patched.
 
 The everyday analogy: the plugin had turned into a body of **case law** — one
 rule per past incident, 98% of it never repeated — rather than a **program**. Case
-law is only load-bearing if someone reads it at the moment of decision. The
-experiment tested whether anyone did.
+law is only load-bearing if someone reads it at the moment of decision. A
+controlled experiment tested whether anyone did, and a **182-line** workflow
+reproduced the same results on the same work. The prose went from 8,457 lines to
+**779**.
+
+**Two things this document is not.** It is not a report on finished work — §3
+lists eight things known to be missing, and three of the five stages have never
+been run by a session that did not write them. And it is not a claim that the
+minimum has been found; what §2 describes is a first cut at one, still untested.
 
 ---
 
 ## 1 · Why the rebuild happened
 
-Four measurements, in the order they landed. Each is an observed fact with its
+Five findings, in the order they landed. Each is an observed fact with its
 method stated; the conclusions drawn from them are marked as such.
 
 ### 1.1 The prose grew faster than the control it bought
 
 **Plain-language version.** Every incident produced a written rule, and rules
 were never retired, so the instruction layer grew monotonically.
+
+**What produced it, which matters more than the number.** AE was developed with
+AE, by agents. That loop has one direction: a review round returns findings, and
+the cheapest disposition for a finding about behaviour is to *write a rule about
+it*. Nothing in the loop ever proposed deleting one. So each pass added prose,
+each addition made the next pass more expensive to run, and the whole thing was
+experienced as diligence. **This is why patching could not fix it, and why
+patching with AE least of all** — applied to itself, the process's own output is
+more process. The same effect is reproducible on demand: a multi-agent review of
+this repository run on 2026-09-01 returned roughly forty findings, and the first
+disposition reached for on nearly every one of them was to add or amend a
+document. Most of them should have been deletions, and became deletions only when
+a person said so.
 
 **Observed.** 24 skills, 8,457 lines — the peak reachable in git history, and the
 figure every counter in §4 is measured against — against 141 structural controls (69 typed
@@ -38,7 +56,37 @@ logic. The single densest line in the review skill was 2,329 characters.
 
 **The open question it raised.** Is that mass load-bearing, or scaffolding?
 
-### 1.2 The process cost more than the work it governed
+### 1.2 The instructions had begun to contradict each other
+
+**Plain-language version.** With enough rules written at enough different times,
+some of them disagree — and nothing notices, because prose does not fail to
+compile.
+
+**Observed**, all of it found in a single pass over the tree on 2026-09-01:
+
+- The workflow's **one hard human gate was drawn in two different places**. The
+  entry skill puts it before PLAN and says "planning does not start without it";
+  the README, the quickstart and the published stage graph all put it after PLAN.
+  Following the diagrams meant planning against unsigned criteria — the exact
+  thing the gate exists to prevent.
+- **Three design documents carried two status banners each**, stacked: one saying
+  "historical, archived", the next saying "current design source" or "current
+  implementation plan".
+- A frontmatter key was classified **"AE reads and ignores, never stripped on
+  import"** by the agent contract, and two days later prescribed as a pattern and
+  copied onto thirteen definitions. Neither statement revoked the other; the
+  second simply never consulted the first.
+- The session-start hook told **every user, every session** that a coordination
+  layer was required, months after the last skill that used it was deleted.
+- A checker implementing the stage's own falsifiers was **named in the stage's
+  prose but never invoked by it** — its only executor was its own test.
+
+**Why this is a category of its own.** Each of these reads as correct in
+isolation. Contradiction is only visible to someone holding two places at once,
+which is precisely what nobody does at 8,457 lines — and what no reviewer,
+human or agent, was asked to do.
+
+### 1.3 The process cost more than the work it governed
 
 **Observed.** On one real slice, forming the paperwork took **209.7 minutes**
 against **3.7 minutes** of work, and the slice consumed **36 review rounds**. The
@@ -49,7 +97,7 @@ first real runs landed — but the prose surface did not shrink.
 make the product unusable, and it is the counter-argument to every proposal that
 answers a problem by adding a stage or a rule.
 
-### 1.3 The controlled experiment: 182 lines reproduced the results
+### 1.4 The controlled experiment: 182 lines reproduced the results
 
 **Method.** A separate plugin with **one** entry command and a **182-line**
 workflow — five stages (analyze → optional discuss → plan → work → review), six
@@ -99,7 +147,7 @@ repository without such checks the same 182 lines would have less to bite with.
 The baseline is historical run data, not a same-item head-to-head. And the runs
 were observed, not unobserved.
 
-### 1.4 A programmed rule nothing calls is not a rule
+### 1.5 A programmed rule nothing calls is not a rule
 
 **Plain-language version.** The strictest part of AE was built, proven, and then
 never wired to anything.
@@ -128,7 +176,7 @@ in the first place. **The working tree no longer carries it. Tag
 rule at all are the same thing to a user. This is now the first question asked of
 any proposed mechanism: *what loads it?*
 
-### 1.5 The host enforces less than a workflow needs
+### 1.6 The host enforces less than a workflow needs
 
 Measured against Claude Code 2.1.247, non-interactive, foreground subagents,
 plugin-level command hooks. The full table and its method live in
@@ -146,11 +194,17 @@ or rules. Under these semantics that buys cost without control.
 
 ---
 
-## 2 · What the minimum is
+## 2 · What the minimum currently is
 
-The delete was executed as a **factoring**, not a purge: the core contracted, the
-satellites left, and the prose that described coordination went with the
+The delete was executed as a **factoring**, not a purge: the core workflow was
+kept, the satellites left, and the prose that described coordination went with the
 coordination.
+
+**Read this section as a position, not a result.** Nothing here establishes that
+779 lines is the right number, that the six skills are the right six, or that what
+survived survived on merit rather than on nobody having questioned it yet. Several
+things that looked load-bearing all year turned out to be reachable from nothing
+at all once the question *what loads this?* was asked of them one by one.
 
 ### 2.1 What is in the tree today
 
@@ -400,6 +454,13 @@ the closed-book runs first.
   any of them load-bearing.
 - **This is not a 1.0.** The version gate is evidence that the loop holds on work
   nobody knew the answer to in advance — not a branch name and not a line count.
+- **The rebuild is not finished, and the shrinking is not the finish.** Deleting
+  what nothing reached was the cheap half. The half that decides whether any of
+  this was worth doing is §4 Phase A: running the stages that have never been run.
+- **Nothing here should be patched into shape.** Where this document or the
+  workflow is wrong, the repair is to cut and re-derive, not to add a rule
+  covering the case — and least of all by running AE over AE to produce that rule.
+  §1.1 is the record of where that ends.
 
 ---
 

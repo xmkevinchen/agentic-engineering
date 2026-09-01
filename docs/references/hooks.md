@@ -38,7 +38,7 @@ success.
   detector, not a gate. Anything that must fail closed belongs somewhere a hook
   is not: an executable check the stage runs and a human reads, or one of the two
   human gates. It does **not** belong in the archived Kernel — that corpus is
-  reachable from nothing (see [`../rebuild.md`](../rebuild.md) §1.4).
+  reachable from nothing (see [`../rebuild.md`](../rebuild.md) §1.5).
 - **`PostToolUse` is not a rollback.** The side effect has already happened and
   the following turn may ignore the reason.
 - **`SubagentStop` gives an interception point, not a router.** A refusal makes
