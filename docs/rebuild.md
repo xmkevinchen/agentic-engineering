@@ -269,23 +269,26 @@ have had no such treatment. §3.1 is the direct consequence.
 Each item below was **observed**, not predicted. They are the input to the
 roadmap in §4.
 
-### 3.1 Three of the five stages have never been run closed-book
+### 3.1 Three of the five stages are cut to the floor and undeveloped
 
-**Plain-language version.** A skill is evaluated by having a session that did not
-write it execute it from the file alone. Only one stage has had that.
+**Plain-language version.** `plan`, `work` and `review` were reduced during the
+delete and have not been worked on since. They are not finished stages that
+happen to be untested — they are a floor nobody has built back up on evidence.
 
-**Observed.** `discuss` was run six times by fresh sessions given nothing but the
-skill. Those runs produced five genuine defects and two rule ambiguities.
-`plan` (39), `work` (58) and `review` (48) — 145 lines together — have no
-contract test and have never been run this way.
+**Observed.** `discuss` went through three rounds of real development after the
+delete and was run six times by fresh sessions given nothing but the skill; those
+runs produced five genuine defects and two rule ambiguities, and the stage is 351
+lines. `plan` (39), `work` (58) and `review` (48) — 145 lines together — received
+the floor cut and nothing after it, and have never been executed by a session
+that did not write them.
 
 **Next step.** Take feature directories that already hold an analysis and signed
 criteria, open fresh sessions, and run `plan` and `review` twice each with no
 hints beyond the skill file. Cost is far below a discuss run: no seat rounds.
 
 **Purpose.** There is no reason to believe the untested three are cleaner than
-the tested one. Hardening the loop before running them is hardening an untested
-foundation.
+the tested one — the difference in line count measures attention, not economy.
+Hardening the loop before running them is hardening an untested foundation.
 
 ### 3.2 A rule off the execution path is not followed
 
@@ -372,6 +375,39 @@ remote", which is a statement about *which* remote.
 
 ---
 
+### 3.9 The shape the evaluation method depends on is itself unvalidated
+
+**Plain-language version.** The method adopted for developing this plugin — a
+controller session directing a run in a separate session and watching it — has
+never been put through a deliberate test. It is being relied on before it has
+been shown to work.
+
+**Observed.** One discuss pass has been driven this way, in a background session
+watched from another, and it completed: two seat rounds, a composite, four
+close-out readers, a handoff, no intervention, and the write boundary held. What
+also happened is the part worth keeping: **all three of the watching session's
+monitoring checks were broken**, and in the same way. A liveness probe used a
+command that requires a terminal, so it always failed and reported the run dead on
+the first loop. A completion probe watched for a file that appeared, vanished and
+reappeared. And an earlier monitor was still running when a second was started, so
+two of them reported the same events.
+
+**The rule that falls out.** Silence and success are indistinguishable, and so are
+"the condition did not happen" and "my probe cannot see it". **Before arming a
+monitor, make its condition fire once on purpose. A condition that cannot be made
+to fire is not a monitor.**
+
+**What is still unknown.** Whether a stage confined to its own context can still
+spawn the seats it needs; what the controller owes the run and what it must not
+do; and how a run that stops halfway appears on disk to whoever picks it up
+(§3.3). Those three decide whether stages can be split across sessions at all.
+
+**Purpose.** This is not a nice-to-have on the roadmap: every other phase is now
+evaluated through this shape, so a fault in it is a fault in the evidence for
+everything else.
+
+---
+
 ## 4 · The roadmap
 
 Ordered by dependency, not by appeal. Each phase names what unblocks the next.
@@ -389,34 +425,99 @@ findings: six such runs of the discuss stage yielded five genuine defects and tw
 rule ambiguities, against zero from any scan over the same files. It also costs
 far less than it sounds for these three stages — no seat rounds.
 
-**Unblocks:** any change to the working loop. **Why first:** §3.1 and §3.2 — the
-one stage that got this treatment was changed substantially by it, and the
-placement rule from §3.2 can only be applied to stages whose real failures are
-known.
+These three are not merely untested, they are undeveloped (§3.1) — so expect the
+runs to produce work, not a verdict. **Unblocks:** any change to the working loop,
+including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
+treatment was changed substantially by it, and the placement rule from §3.2 can
+only be applied to stages whose real failures are known.
 
-### Phase B — the re-entry contract on disk
+### Phase B — make the controller, the monitor and the executing session a tested shape
+
+Phase A runs inside this shape, and the shape has never been deliberately tested
+(§3.9). Three things to settle, in this order, because each is cheap and gates the
+next: **a monitor is armed only after its condition has been made to fire on
+purpose**; the controller's contract is written down — what it owes a run, and
+what it must never do while one is in flight; and it is established whether a
+stage confined to its own context can still spawn the seats it needs, since that
+one experiment decides whether stages can be split across sessions at all.
+
+**Before building any of it, compare against the host's own version.** A
+controller directing workers in separate contexts, with a channel back, *is* Agent
+Teams in principle — the coordination layer this rebuild deleted. Rebuilding it by
+hand under a new name, at the same cost and with fewer measurements behind it,
+is the obvious way for this phase to go wrong. What the host already provides:
+addressable agents, mailboxes on disk, an idle notification, and shared task
+state. What is already recorded against it: `TeamCreate` and `TeamDelete` stopped
+existing several host versions ago and `team_name` is accepted-but-ignored; only
+the main conversation may subscribe to an idle notice, so a worker cannot wait on
+another worker; and on one occasion two named teammates finished and their
+results reached nobody, which is the opposite of the documented behaviour. What
+was deleted was never the host mechanism — it was the *protocol prose* AE had
+grown around it. So the question this phase answers is which parts of the shape
+the host already does, and what the remainder actually is.
+
+**One data point exists.** The shape was exercised in this repository on
+2026-09-01: five workers spawned from one controlling session, each with a role,
+a reading list and one question, reporting back through the host's own channel.
+All five delivered and their findings were acted on. The single mechanical limit
+hit was a result-size cap that silently truncated the longer reports, which was
+only visible because the controller noticed the reports ended mid-sentence and
+asked again — an instance of the §3.9 rule, arriving from the other side.
+
+**Why second, not first:** Phase A can be driven by hand while this is being
+settled, and doing so is how its faults surface. Running it *before* Phase A would
+be building a rig with nothing to put in it.
+
+### Phase C — the re-entry contract on disk
 
 Give the feature directory enough structure that a fresh session can state
 position, next step and trustworthiness (§3.3). Includes the loop counter that
-currently lives only in conversation. **Unblocks:** running any stage in its own
-session or in the background; also makes §3.4 detectable, because an invoked
-stage and a reconstructed one would leave different traces.
+currently lives only in conversation. **Depends on B**, whose split-session
+question is what makes disk the only channel. **Unblocks:** running any stage in
+its own session or in the background; also makes §3.4 detectable, because an
+invoked stage and a reconstructed one would leave different traces.
 
-### Phase C — the agent definitions
+### Phase D — the harness loop between plan, work and review
 
-The dead frontmatter fields are gone; what remains is to decide whether the four
-close-out readers belong anywhere besides the discuss stage, and to bring the
-definitions back in line with the host behavior they assume (§3.6).
-**Depends on:** nothing;
-**scheduled after B** only because B changes what a stage hands its agents.
+Only after A. The three stages hand work to each other and take it back —
+review returns defects to work, an unmeetable criterion goes back through
+analyze — and that circulation has never been tuned against a real run, because
+there has never been one. **Whatever Phase A turns up will change what this
+should be**, which is the whole reason it sits here rather than earlier: tuning a
+loop over three stages nobody has executed is tuning against a guess.
 
-### Phase D — extend the relay guarantee
+### Phase E — re-examine whether the 18 agent definitions should exist
+
+Last, and the question is not how to repair them. It is how many of them there
+should be, and the answer may be far fewer.
+
+**The evidence pointing that way is already in §1.4.** Across the three benchmark
+runs the whole experiment spawned four agents, all of them *generic* subagents
+given a role, a reading list and one question in the prompt. The specialised
+definitions were consulted once and passed over: casting the role at spawn time
+sufficed. Meanwhile the definitions have been the single richest source of
+defects found by inspection — dead routing to a role that does not exist,
+instructions to wait for a message that cannot arrive, descriptions naming a
+coordination layer that is gone, three frontmatter keys that reached nothing.
+
+**So the question to put to each one is not "is it correct?" but "what does this
+definition do that a role named in the spawn prompt would not?"** Where the answer
+is nothing, the definition is a file to maintain in exchange for a habit.
+Something is likely to survive that question — the cross-family seats carry real
+backend mechanics, and the close-out readers are deliberately designed prompts —
+but the burden should sit on keeping, not on cutting.
+
+**Depends on:** A and B, which change what a stage hands an agent and whether an
+agent runs in its own session at all. Deciding the roster before that is deciding
+against a moving target.
+
+### Phase F — extend the relay guarantee
 
 Give the remaining seats an artifact independent of the relaying agent, or state
 plainly in the record that they have none (§3.7). Compare against the vendor's
 own runtime for the same CLI before writing more of our own.
 
-### Phase E — the criteria get a reader
+### Phase G — the criteria get a reader
 
 Put a non-author reader in front of `acceptance.md` before the signature (§3.5).
 Held behind A because the human gate's real failure modes should be observed in
