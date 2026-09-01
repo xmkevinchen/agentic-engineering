@@ -26,6 +26,5 @@ What the suite covers:
 | Discuss composite | `test-composite-contract.sh` — drives `scripts/check-composite.py` over the fixtures under `../fixtures/composite/`, one directory per way a round can be malformed, and requires it to refuse each |
 | Cross-family | `test-cross-family-probe-parsing.sh` — the session-start probe reads the family table correctly |
 | MCP servers | `test-f080-bundle-contract.sh` (the committed bundle starts with no `node_modules`), `test-openai-compat-per-endpoint-key.sh` (the bridge sends the credential the caller named and no other), `test-findings-format-compliance.sh`, `test-manifest-single-source.sh` |
-| Archived Kernel | `test-v1-kernel.sh` — runs `plugins/ae/v1/`'s own suite. The Kernel is archived and on no workflow path; this is the only thing that executes it |
 
 The `.mjs` files are helpers invoked by the scripts beside them, not standalone tests.

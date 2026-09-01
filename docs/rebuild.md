@@ -104,7 +104,7 @@ were observed, not unobserved.
 **Plain-language version.** The strictest part of AE was built, proven, and then
 never wired to anything.
 
-**Observed.** `plugins/ae/v1/` holds a deterministic Kernel: 25 frozen record
+**Observed.** The tree held a deterministic Kernel under `plugins/ae/v1/`: 25 frozen record
 kinds, four persisted objects, an append-only ledger, a Gate whose vocabulary
 separates `passed` from `pending` from `unavailable`, and a completion path that
 refuses with a distinct named code for each way an acceptance can be unearned.
@@ -117,9 +117,14 @@ or hook, and no script except its own test suite, which `ae-run-tests.sh` still
 runs on every pass. So the code executes; it just never decides anything. Its own
 entry-point work was abandoned partway.
 
-**Decision taken.** Archived, not deleted — proven, unconsumed, reopened only on
-named observed events. The built artifact is preserved at tag
-`v1-kernel-archive`, and the code is still in the tree at `plugins/ae/v1/`.
+**Decision taken.** Archived — proven, unconsumed, reopened only on named observed
+events. It stayed in the tree for a while after that, with its own suite still
+running on every test pass. That was the archive misunderstood: a tag is already a
+frozen, known-good point, so re-proving 10,838 unreachable lines on every unrelated
+commit established nothing — while the standing green tick made a subsystem nobody
+could reach read as a live part of the project, which is how it survived the delete
+in the first place. **The working tree no longer carries it. Tag
+`v1-kernel-archive` does**, complete, and that tag is the resurrection point.
 
 **The lesson that generalizes.** A programmed rule with no entry point and no
 rule at all are the same thing to a user. This is now the first question asked of
@@ -377,7 +382,7 @@ the closed-book runs first.
 
 | Deferred | Unfreezes when |
 |---|---|
-| The Kernel (`plugins/ae/v1/`, tag `v1-kernel-archive`) | A named observed event requires it — an acceptance that was wrongly granted, or a second party that can call AE's completion path. Not before. |
+| The Kernel — `git checkout v1-kernel-archive`, which holds it whole | A named observed event requires it — an acceptance that was wrongly granted, or a second party that can call AE's completion path. Not before. |
 | Project-management surfaces | Never inside this scope; they belong to a separate plugin if wanted at all. |
 | A knowledge graph | Never within this scope. No path to acceptance may depend on it. |
 | A machine interface for external agents | Out of scope. Named so its absence is a decision rather than an omission. |

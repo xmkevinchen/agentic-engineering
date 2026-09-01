@@ -206,13 +206,11 @@ plugins/ae/
     engineering/                  #   1 implementer
   scripts/                        # Session-start probe, its reader, the Codex seat runner, the test runner
   mcp-servers/                    # Bundled Gemini + OpenAI-compatible servers
-  v1/                             # ARCHIVED Kernel — nothing on the workflow path calls it;
-                                  #   its own suite still runs. See docs/rebuild.md §1.4
   tests/                          # The deterministic suite
   templates/pipeline.template.yml
 ```
 
-**Why it looks like this.** ae used to be 24 skills and 8,481 lines of process prose. A
+**Why it looks like this.** ae used to be 24 skills and 8,457 lines of process prose. A
 controlled experiment showed a 182-line workflow reproducing the same results on the same work,
 so the prose was deleted down to 779 lines. The evidence, what survived, and what is still
 missing are in [docs/rebuild.md](docs/rebuild.md); the design that preceded the delete is
