@@ -221,6 +221,13 @@ not an edit to the artifact under attack — re-signing is cheap and a silently 
 what it prevents is a silent gap, where a seat that failed and a seat nobody asked look identical,
 and the record then reports a challenge that never happened.
 
+**The same holds for an angle that was never asked.** A completed pass is four angle files, and the
+pass count is what ends a loop nobody is watching — so three absences that look like three losses
+corrupt the one number the bound reads. Write the file, say the angle was not run and what it
+leaves unexamined. Two fresh sessions carrying this stage derived that rule from the seat one and
+wrote the files unprompted, which is a good sign about the reasoning and no substitute for saying
+it: the next session may derive something else.
+
 **The record stays at `<feature-dir>/decision-<id>.md`, outside that directory.** What sits under
 `discuss-<id>/` is how the answer was reached; the record is the answer.
 

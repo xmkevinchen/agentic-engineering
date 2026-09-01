@@ -467,6 +467,21 @@ if discuss is not None:
             " — the seat's answer is injected into later agents as a directive, and round one is "
             "no longer blind")
 
+# --- F-098: an angle nobody asked and an angle that failed must not look alike --------------
+#
+# The rule exists for seats and stopped there. A completed pass is defined as four angle files, so
+# a round three that ran one leaves three absences that are indistinguishable from losses — and the
+# pass count, which is what ends an unattended loop, is read off exactly that. Two fresh sessions
+# derived the rule and wrote the files unprompted; deriving it is not the same as it being written.
+
+if discuss is not None:
+    if "angle that was never asked" in discuss:
+        ok("an angle nobody asked leaves a file saying so, as a seat does")
+    else:
+        bad("only seats owe an absence file; angles do not",
+            "plugins/ae/skills/discuss/SKILL.md: three missing angle files and three lost ones "
+            "read the same, and the pass count is taken from that directory")
+
 print()
 print(f"  {len(passed)} passed, {len(failed)} failed")
 sys.exit(1 if failed else 0)
