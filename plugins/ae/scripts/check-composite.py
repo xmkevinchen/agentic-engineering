@@ -34,23 +34,50 @@ CITATION = re.compile(r"[\w./-]+\.\w+(?::\d+)?")
 
 
 def material_points(text):
-    """Yield (line_number, line) for each top-level list item outside fences and quotes."""
+    """Yield (line_number, whole_item) for each top-level list item outside fences and quotes.
+
+    An item is its opening line plus every continuation line under it — a wrapped sentence, an
+    indented sub-point, a quoted line. A point's mark and its citation land wherever the prose
+    put them, and a check that read only the opening line would report a violation against a
+    composite that obeys the rule. Observed doing exactly that before this was fixed.
+    """
     body = re.sub(r"\A---\n.*?\n---\n", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.S)
     in_fence = False
     seen_heading = False
+    start, collected = None, []
+
+    def flush():
+        if start is not None:
+            return [(start, "\n".join(collected))]
+        return []
+
     for number, line in enumerate(body.splitlines(), start=1):
         if line.lstrip().startswith("```"):
             in_fence = not in_fence
+            yield from flush()
+            start, collected = None, []
             continue
         if in_fence:
             continue
         if line.startswith("#"):
+            yield from flush()
+            start, collected = None, []
             seen_heading = True
             continue
-        if not seen_heading or line.startswith(">"):
+        if not seen_heading:
             continue
         if LIST_ITEM.match(line):
-            yield number, line
+            yield from flush()
+            start, collected = number, [line]
+            continue
+        if start is not None:
+            # a continuation belongs to the item above it; an unindented run of prose ends it
+            if line.strip() == "" or line.startswith((" ", "\t", ">")):
+                collected.append(line)
+            else:
+                yield from flush()
+                start, collected = None, []
+    yield from flush()
 
 
 def check(path):
@@ -66,12 +93,12 @@ def check(path):
     unmarked = [(n, l) for n, l in points if not MARK_IN.search(l)]
     for number, line in unmarked:
         problems.append(f"{path}:{number}: material point carries no mark "
-                        f"({'/'.join(MARKS)}): {line.strip()[:72]}")
+                        f"({'/'.join(MARKS)}): {line.strip().splitlines()[0][:72]}")
     for number, line in points:
         found = MARK_IN.search(line)
         if found and found.group(1) == "chosen" and not CITATION.search(line):
             problems.append(f"{path}:{number}: `chosen` names no reason a reader can check: "
-                            f"{line.strip()[:72]}")
+                            f"{line.strip().splitlines()[0][:72]}")
     # --- AC1 -----------------------------------------------------------------------------
     frozen = path.parent.parent / "round-3" / "FROZEN"
     if frozen.is_file():

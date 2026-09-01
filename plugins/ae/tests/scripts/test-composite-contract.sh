@@ -50,6 +50,15 @@ else
   bad "the clean fixture does not pass" "$(python3 "$CHECK" "$FIX/clean/round-2/composite.md" 2>&1)"
 fi
 
+# A point whose mark or citation sits on a continuation line still obeys the rule. Reading only
+# the line an item opens with reported violations against a correct composite — observed on a real
+# run, not imagined.
+if python3 "$CHECK" "$FIX/wrapped/round-2/composite.md" >/dev/null 2>&1; then
+  ok "a point that wraps is read whole, mark and citation wherever the prose put them"
+else
+  bad "a wrapped point is judged on its opening line alone" "$(python3 "$CHECK" "$FIX/wrapped/round-2/composite.md" 2>&1)"
+fi
+
 # AC4 — a material point with no disposition.
 out=$(python3 "$CHECK" "$FIX/unmarked/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "mark"; then
