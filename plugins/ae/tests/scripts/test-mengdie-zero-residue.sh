@@ -42,17 +42,15 @@ else
   notok "knowledge-capture-protocol.md deleted"
 fi
 
-# (d) PRD archived: old path absent, archive path present with retirement header
-if [ ! -f "$REPO/docs/prd/mengdie-integration.md" ]; then
-  ok "old PRD path absent"
+# (d) the PRD is gone from docs/ entirely — both the live path and the archive path it
+# was first moved to. The archive was kept while the integration's replacement still
+# existed; that replacement was deleted too, so the document described a direction that
+# had been abandoned twice. Git history holds it.
+if [ ! -f "$REPO/docs/prd/mengdie-integration.md" ] && \
+   [ ! -f "$REPO/docs/prd/archive/mengdie-integration.md" ]; then
+  ok "no PRD for the retired integration under docs/"
 else
-  notok "old PRD path absent"
-fi
-if [ -f "$REPO/docs/prd/archive/mengdie-integration.md" ] && \
-   grep -qi 'retired' "$REPO/docs/prd/archive/mengdie-integration.md"; then
-  ok "archived PRD present with retirement header"
-else
-  notok "archived PRD present with retirement header"
+  notok "no PRD for the retired integration under docs/"
 fi
 
 echo "1..$((pass + fail))"

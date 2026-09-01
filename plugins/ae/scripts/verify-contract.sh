@@ -13,7 +13,7 @@
 # Exit: 0 = all assertions pass | 1 = a violation | 2 = usage / IO / missing-jq error.
 #
 # NOT a test-seam: this is a standalone script invoked at the test.command/fixture
-# level — never embedded in a SKILL.md prompt path (Mengdie f5ad527d).
+# level — never embedded in a SKILL.md prompt path.
 
 if [ $# -ne 2 ]; then echo "usage: verify-contract.sh <spec.jq> <sample.json>" >&2; exit 2; fi
 spec=$1

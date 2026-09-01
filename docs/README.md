@@ -43,10 +43,9 @@ specification, the archived v1 design set (tag `v1-kernel-archive`), the
 pre-delete product requirements, the experiment's instrument, and the
 spec-formation record.
 
-One historical item stays outside `history/` because a suite test pins its path:
-[`prd/archive/`](prd/archive/). The frozen 1.0 specification used to be the
-second such exception, under `references/finalized/`; the pin turned out not to
-exist — the frozen corpus cites those files by content hash and by bare name,
-never by a path under `docs/` — so it now lives at
-[`history/finalized/`](history/finalized/README.md) with the rest of the
-history.
+Nothing historical now sits outside `history/`. Two things used to. The frozen
+1.0 specification was held under `references/finalized/` on the grounds that a
+mechanical reference pinned its path; it did not, so it moved to
+[`history/finalized/`](history/finalized/README.md). A retired feature PRD was
+held under `prd/archive/` because a suite test really did pin it; the test now
+asserts the document's **absence** instead, and the document is deleted.
