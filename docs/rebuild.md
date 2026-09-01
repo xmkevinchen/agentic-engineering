@@ -42,7 +42,10 @@ it*. Nothing in the loop ever proposed deleting one. So each pass added prose,
 each addition made the next pass more expensive to run, and the whole thing was
 experienced as diligence. **This is why patching could not fix it, and why
 patching with AE least of all** — applied to itself, the process's own output is
-more process. The same effect is reproducible on demand: a multi-agent review of
+more process. Note what this does *not* say: developing AE with AE is still the
+working mode. What had to change is where the evidence comes from — a stage run
+closed-book by a session that did not write it, watched, rather than a pipeline
+pass returning findings that become rules. The same effect is reproducible on demand: a multi-agent review of
 this repository run on 2026-09-01 returned roughly forty findings, and the first
 disposition reached for on nearly every one of them was to add or amend a
 document. Most of them should have been deletions, and became deletions only when
