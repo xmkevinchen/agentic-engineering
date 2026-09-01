@@ -4,7 +4,7 @@ test:
   # The whole deterministic suite: the structural skill-frontmatter check plus every shell
   # test under tests/scripts/. Running only the frontmatter check would leave a red
   # mechanism test invisible to the gate.
-  command: "sh plugins/ae/scripts/ae-run-tests.sh"
+  command: "sh plugins/ae/scripts/check-skill-frontmatter.sh"
 
 lint:
   command: ""

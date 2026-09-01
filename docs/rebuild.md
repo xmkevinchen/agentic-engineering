@@ -112,10 +112,8 @@ Its suite runs into the hundreds of assertions; a mutation script fails when a
 planted defect survives, and a deletion sweep removes every refusal in turn and
 reports the ones the suite does not notice. It reached a real acceptance twice.
 
-And **nothing on the workflow path ever called it** — no skill, agent, template
-or hook, and no script except its own test suite, which `ae-run-tests.sh` still
-runs on every pass. So the code executes; it just never decides anything. Its own
-entry-point work was abandoned partway.
+And **nothing ever called it** — no skill, agent, template, hook or script, except
+its own test suite. Its entry-point work was abandoned partway.
 
 **Decision taken.** Archived — proven, unconsumed, reopened only on named observed
 events. It stayed in the tree for a while after that, with its own suite still
@@ -173,8 +171,10 @@ The six:
 | [`work`](../plugins/ae/skills/work/SKILL.md) | 58 | One step, one commit, every check seen failing first. |
 | [`review`](../plugins/ae/skills/review/SKILL.md) | 48 | Judges the delivered work against the frozen criteria. The completion gate. |
 
-Alongside them: 18 agent definitions, two bundled MCP servers, a session-start
-probe, and the executable check scripts under `plugins/ae/tests/scripts/`.
+Alongside them: 18 agent definitions, two bundled MCP servers, and five scripts
+under `plugins/ae/scripts/` — every one of which now has a live caller: the
+session-start probe and its family-table reader, the Codex seat runner, the
+composite check the discuss stage runs, and the skill-frontmatter check.
 
 ### 2.2 What was kept, and on what grounds
 

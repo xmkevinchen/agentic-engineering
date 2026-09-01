@@ -206,7 +206,6 @@ plugins/ae/
     engineering/                  #   1 implementer
   scripts/                        # Session-start probe, its reader, the Codex seat runner, the test runner
   mcp-servers/                    # Bundled Gemini + OpenAI-compatible servers
-  tests/                          # The deterministic suite
   templates/pipeline.template.yml
 ```
 

@@ -116,7 +116,6 @@ are exercised by nothing:
 
 | Script | Role |
 |---|---|
-| `verify-contract.sh` | jq-assertion runner (exit 0 = all pass). **No skill declares `verify_by: contract` any more** — the field survives in no SKILL.md and no template, so nothing routes work to this runner today |
 
 ## Decommissioned dependencies (historical)
 

@@ -58,7 +58,7 @@ Everything that lands in the repository — code comments, commit messages, skil
 - **Code comments** state a constraint the code can't show; never where a finding came from. Review bookkeeping is noise the moment it merges.
 - **Commit messages** describe what the change did and why. **The test is resolvability: every identifier, file and fact a message names must be findable by someone who has only this repository.** `.ae/` is gitignored, so a criterion id (`AC3`), a feature or backlog id (`F-099`, `BL-247`), or a path under `.ae/` resolves to nothing for that reader — state the substance instead of the pointer. Review bookkeeping fails the same test from the other side: reviewer names, finding counts, severities and iteration counts describe the conversation, not the work, and no file records them. What a message *may* name is anything the repository holds — a path, a symbol, a measured number, a behaviour a reader can go and check.
 - **Skill/agent prose** may keep a terse provenance cite (`F-NNN`, `Plan NNN`, `BL-NNN` — see Internal terminology above); reviewer attribution goes.
-- Enforced by `plugins/ae/tests/scripts/test-jargon-tripwire.sh` (part of the standard suite); functional cross-family references (proxy agents, track names, family selection) are exempt.
+- Nothing enforces this mechanically. It is a writing rule, checked by whoever reads the diff; functional cross-family references (proxy agents, track names, family selection) are not violations of it.
 
 ## Git
 
