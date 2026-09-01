@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.15.0 (2026-09-01)
+
+### The OpenAI seat calls the Codex CLI directly, and its receipt now claims only what a file can back — F-099
+
+The seat reached Codex through `codex mcp-server`. Upstream has withdrawn that transport in favour of the app server and a Claude Code plugin of its own; on this project it had also hung once for 47 minutes with no error, no timeout and no way for the seat to give up, and it carried no model in its response — which is how two model names that do not exist were reported by a proxy and then carried as fact through four later artifacts.
+
+**Breaking.** The `codex` entry is gone from `mcpServers`, so `mcp__plugin_ae_codex__codex` and `mcp__plugin_ae_codex__codex-reply` no longer exist. If you named either in the `tools:` frontmatter of your own agent, add the server back to your own `.mcp.json` — the vendor keeps the subcommand documented for existing integrations:
+
+```json
+"codex": { "command": "codex", "args": ["mcp-server"] }
+```
+
+There is no replacement tool name to point at. The vendor's own Claude Code plugin ships no MCP server at all — it is slash commands and a subagent over an experimental app-server protocol, none of which a subagent like this seat can reach.
+
+- **The seat runs `codex exec` as a subprocess, through `scripts/codex-seat.sh`.** Four things are silently wrong when that call is assembled by hand, so the script pins them: the `exec` subcommand (plain `codex` forwards to the interactive CLI and ignores `--sandbox`), `--sandbox read-only`, a bound enforced by its own watchdog rather than `timeout`, which is not present on every machine — and `< /dev/null`, because `codex exec` reads stdin to EOF *even when the prompt is an argument*. An inherited open stdin hangs the call with no error, and piped stdin is appended to the prompt as a `<stdin>` block, which is a silent edit to a question the seat is forbidden to add to.
+- **A receipt is refused rather than guessed.** The script exits non-zero, saying which gate failed, when the bound fires, when no thread id appears, when stdout carries an error item, when no rollout resolves the thread, when the rollout says the call did not go through `codex exec`, or when the effort in force disagrees with the effort asked for.
+- **The field is `model_requested`, and the name is exact.** `turn_context.model` records what the CLI *asked for*, written at turn start — a call naming a model that does not exist still writes it there and answers nothing. No artifact on disk says which model *served* a response. What does catch a substitution is stdout, which the seat owns now that it owns the subprocess: Codex compares the server's reported model against the requested one and emits a reroute event on any divergence, and that event is never written to the rollout. So the seat refuses to certify a turn whose stdout carries an error item at all, rather than matching wording that changes without notice.
+- **The backend has a shell.** Under `--sandbox read-only` it reads the repository and runs commands, so it verifies what it cites instead of asking the proxy to. `codex exec resume` is not used and should not be: it has no `--sandbox` flag, does not inherit the session's, and silently escalates to `workspace-write`.
+- **The two-exchange continuation is gone**, along with `codex-reply`. `/ae:discuss` retired cross-round session lifetime some time ago — rounds spawn fresh and hand work forward on disk — so the seat documented an exchange the stage no longer performs.
+- **`docs/cross-family-review.md` is deleted rather than rewritten.** Nothing linked to it; its own header claimed agents referenced it instead of hardcoding tool names, while both proxies hardcoded; it omitted the `openai-compat` seat entirely; and every Codex invocation in it reached the withdrawn transport. The tool tables it duplicated live in the proxy definitions, which is where they were being read from anyway.
+
+What this does **not** close, stated because the gap is narrower than it looks. The fault this fixes had two authors: a relay that invented a quotation, and a backend that wrote a wrong line number for a file it could open. Moving to a subprocess the seat owns addresses the first and does nothing about the second — the backend miscited a file under the new transport too. Nothing in the workflow currently notices a seat citing `file:line` for text that is not there. And this is retired for the OpenAI seat only: `gemini-proxy` and `openai-compat-proxy` carry the same relay contract with no artifact independent of the relaying agent, which is undocumented and untested rather than measured to be sound.
+
+Contributors: agent definitions and the MCP manifest are read at session start, so a restart is required after upgrading before the seat picks up the new path. A rollout stamped `originator: codex_exec` is how you tell the new path ran; `codex_cli_rs` means it did not.
+
 ## 0.14.2 (2026-08-14)
 
 ### The Gemini bridge stops installing packages at session start, and a cross-family verdict now has to show its work — F-080

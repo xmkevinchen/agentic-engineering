@@ -28,7 +28,7 @@ plugins/ae/             # The actual plugin
 │   └── ...
 ├── agents/             # Subagents (ae:workflow:architect, etc.)
 │   ├── review/ research/ workflow/ engineering/
-├── scripts/            # The session-start probe, its reader, and the test runner
+├── scripts/            # The session-start probe, its reader, the Codex seat runner, the test runner
 ├── mcp-servers/        # Bundled MCP servers (Gemini, OpenAI-compatible)
 ├── v1/                 # The Phase 1 Kernel, built against its own frozen Contract
 └── templates/          # pipeline.yml template

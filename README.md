@@ -199,7 +199,7 @@ plugins/ae/
     research/                     #   3 research agents
     workflow/                     #   10 workflow agents (incl. proxies + Doodlestein)
     engineering/                  #   1 implementer
-  scripts/                        # Session-start probe, its reader, the test runner
+  scripts/                        # Session-start probe, its reader, the Codex seat runner, the test runner
   mcp-servers/                    # Bundled Gemini + OpenAI-compatible servers
   v1/                             # The Phase 1 Kernel, against its own frozen Contract
   tests/                          # The deterministic suite

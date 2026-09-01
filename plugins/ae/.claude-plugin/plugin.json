@@ -1,6 +1,6 @@
 {
   "name": "ae",
-  "version": "0.14.2",
+  "version": "0.15.0",
   "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
   "author": {
     "name": "ckai"
@@ -53,12 +53,6 @@
     "./output-styles/ae-compact.md"
   ],
   "mcpServers": {
-    "codex": {
-      "command": "codex",
-      "args": [
-        "mcp-server"
-      ]
-    },
     "gemini": {
       "command": "bash",
       "args": [

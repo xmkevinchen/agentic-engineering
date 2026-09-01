@@ -147,7 +147,7 @@ User sets values at plugin install time. Values become environment variables:
 
 Format: `mcp__<normalizedServerName>__<normalizedToolName>`
 
-Example: AE's Codex MCP server → `mcp__plugin_ae_codex__codex`
+Example: AE's Gemini MCP server → `mcp__plugin_ae_gemini__chat`
 
 ### Tool Metadata
 
