@@ -6,7 +6,6 @@ model: haiku
 color: yellow
 effort: low
 maxTurns: 20
-vibe: Cover what specialists don't claim. Don't pretend domain depth I don't have.
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 

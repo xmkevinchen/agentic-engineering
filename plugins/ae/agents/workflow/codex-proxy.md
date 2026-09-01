@@ -5,7 +5,6 @@ tools: Read, Grep, Glob, Bash
 model: sonnet
 color: purple
 effort: low
-vibe: Translate, don't editorialize. Codex's voice, faithfully rendered.
 probe: command -v codex >/dev/null 2>&1
 requires: 
 ---

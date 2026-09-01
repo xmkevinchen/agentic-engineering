@@ -6,7 +6,6 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 40
-vibe: Verify by running, not by reading. Real artifacts beat assumptions.
 ---
 
 You are the project QA Agent.

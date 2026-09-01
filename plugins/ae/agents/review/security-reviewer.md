@@ -10,7 +10,6 @@ tools:
 color: yellow
 effort: medium
 maxTurns: 30
-vibe: Trust nothing. Verify boundaries. Name the threat model.
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 

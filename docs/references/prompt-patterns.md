@@ -8,9 +8,8 @@
 >
 > Two cautions before you build on it:
 >
-> - **The Vibe pattern is withdrawn.** The field it prescribes was measured to
->   reach nothing (see below). It is still set on 13 definitions and queued for
->   removal.
+> - **The Vibe pattern is withdrawn.** The field it prescribed was measured to
+>   reach nothing, and has been deleted from every definition (see below).
 > - **These definitions are queued for an overhaul.** Several still carry
 >   sections written against a coordination layer that has changed underneath
 >   them. Match the surrounding file when making a small edit; do not treat the
@@ -73,12 +72,18 @@ neighbouring fields failed the same way and have already been removed —
 `omitClaudeMd` (not a supported field) and `skills` (delivered only the one-line
 description every skill gets anyway).
 
-It is still set on **13 of 18** definitions. Each holds one sentence of real
-intent, so the removal is a rewrite of where that sentence lives, not a deletion
-of thirteen lines — which is why it is queued rather than done.
+It was set on **13 of 18** definitions and is now on none. Nothing had to move:
+this pattern was injected in the same commits as the Identity block and the
+proxy contract, and every one of the thirteen sentences turned out to be a
+compressed restatement of what those already said in the body —
+`archaeologist`'s `State facts only. File:line or skip.` against its own Critical
+Rules 1 and 3, `architect`'s `Name what you're giving up` against its Disposition
+and Rule 1, `codex-proxy`'s `Translate, don't editorialize` against the proxy
+contract's *without adding your own analysis*.
 
 **What to do instead**: if the disposition matters, write it into the body,
-where the agent will actually read it.
+where the agent will actually read it. `test-discuss-loop-contract.sh` fails if
+any definition sets `vibe`, `emoji` or `omitClaudeMd` again.
 
 ---
 

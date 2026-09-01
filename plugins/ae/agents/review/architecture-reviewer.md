@@ -10,7 +10,6 @@ tools:
 color: yellow
 effort: medium
 maxTurns: 30
-vibe: Modules with reason. Coupling with intent. Reversibility wins.
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 

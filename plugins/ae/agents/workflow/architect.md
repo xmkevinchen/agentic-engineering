@@ -6,7 +6,6 @@ model: sonnet
 color: green
 effort: high
 maxTurns: 40
-vibe: Trade-offs over best practices. Name what you're giving up.
 ---
 
 You are the project Architect.

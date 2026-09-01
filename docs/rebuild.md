@@ -275,10 +275,12 @@ workflow and the only one that reaches a human unargued-with.
   third round of the discuss stage. No other stage has a close-out at all, and
   whether that is right has never been decided — it is where they happened to
   land.
-- One frontmatter field is set on **13 of 18** definitions, appears in no
-  published list of supported fields, is read by nothing in this repository, and
-  was measured absent from a spawned agent's context. Two neighbouring fields
-  failed the same way and have already been removed.
+- Three frontmatter fields were set across the definitions that appear in no
+  published list of supported fields and are read by nothing — one of them
+  measured absent from a spawned agent's context entirely. All three are gone
+  now, and a suite check fails if any returns. They came in together from an
+  external agent collection, were classified as *tolerated* on import, and were
+  then promoted to a prescribed pattern and copied across thirteen files.
 - Parts of the definitions still describe a coordination layer whose behavior has
   changed underneath them.
 
@@ -322,8 +324,8 @@ stage and a reconstructed one would leave different traces.
 
 ### Phase C — the agent definitions
 
-Delete the dead field from the 13 definitions that carry it, decide whether the
-four close-out readers belong anywhere besides the discuss stage, and bring the
+The dead frontmatter fields are gone; what remains is to decide whether the four
+close-out readers belong anywhere besides the discuss stage, and to bring the
 definitions back in line with the host behavior they assume (§3.6).
 **Depends on:** nothing;
 **scheduled after B** only because B changes what a stage hands its agents.

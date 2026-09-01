@@ -55,7 +55,7 @@ like a field that works:
 |---|---|
 | `skills` | Documented as preloading a skill's full content. A plugin agent that set it received only the one-line description every skill gets anyway. Untested for project agents; do not rely on it. |
 | `omitClaudeMd` | Not a supported field. A plugin agent that set it still received the whole CLAUDE.md hierarchy. Removed from AE's own definitions. |
-| `vibe` | Appears in no published field list, is read by nothing, and was measured absent from a spawned agent's context. Still present on 13 of AE's own definitions and queued for removal. |
+| `vibe` | Appears in no published field list, is read by nothing, and was measured absent from a spawned agent's context. It was set on 13 of AE's own definitions and has been removed from all of them. |
 
 ## Keep it small
 

@@ -330,22 +330,27 @@ if discuss is not None:
 
 # --- F-097: nothing is configured that does nothing ---------------------------------------
 #
-# `omitClaudeMd` is not effective for plugin agents and is not in the published field list
-# (`docs/references/claude-code-plugin-api.md:57`). A field that has been read by nothing for
-# months is worse than absent: it reads as a setting somebody chose, and the next reader budgets
-# for a cost it does not remove. Repo-wide rather than over one file, because a criterion about
-# what a definition sets is not met by keeping the newest definition clean.
+# None of these keys is in the published field list (`docs/references/claude-code-plugin-api.md`),
+# and each was measured to reach nothing: `omitClaudeMd` did not keep CLAUDE.md out of a plugin
+# agent's context, and `vibe` did not appear anywhere in a spawned agent's context at all.
+# `emoji` came in with a vendored definition alongside `vibe`, from the same external collection.
+# A field that has been read by nothing for months is worse than absent: it reads as a setting
+# somebody chose, and the next maintainer, seeing the intent stated there, does not restate it in
+# the body — which is the only place the agent would actually read it. Repo-wide rather than over
+# one file, because a criterion about what a definition sets is not met by keeping the newest
+# definition clean.
 
+DEAD_FIELDS = ("omitClaudeMd:", "vibe:", "emoji:")
 inert = []
 for path in sorted((REPO / "plugins/ae/agents").rglob("*.md")):
     for line in frontmatter(path.read_text()).splitlines():
-        if line.startswith("omitClaudeMd:"):
+        if line.startswith(DEAD_FIELDS):
             inert.append(f"{path.relative_to(REPO)}: {line.strip()}")
 if inert:
-    bad("a definition sets omitClaudeMd, which the host does not read",
+    bad("a definition sets a frontmatter key the host does not read",
         "; ".join(inert))
 else:
-    ok("no definition sets omitClaudeMd, a field measured to do nothing")
+    ok("no definition sets a frontmatter key measured to do nothing")
 
 # --- F-097: what a seat is given matches what it is asked to do ---------------------------
 #

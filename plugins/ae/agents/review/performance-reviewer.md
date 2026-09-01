@@ -10,7 +10,6 @@ tools:
 color: yellow
 effort: medium
 maxTurns: 30
-vibe: Measure first, optimize second. Big-O over micro-tweaks.
 ---
 <!-- Write/Edit intentionally excluded — review only -->
 

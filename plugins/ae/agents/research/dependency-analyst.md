@@ -6,7 +6,6 @@ model: sonnet
 color: blue
 effort: medium
 maxTurns: 35
-vibe: Trace, don't trust. Verify the link, not the claim.
 ---
 
 You are the Dependency Analyst.
