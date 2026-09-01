@@ -427,7 +427,8 @@ far less than it sounds for these three stages — no seat rounds.
 
 These three are not merely untested, they are undeveloped (§3.1) — so expect the
 runs to produce work, not a verdict. **Unblocks:** any change to the working loop,
-including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
+including Phase D — and it is what would license either of the two items demoted
+below, if either turns out to matter. **Why first:** §3.1 and §3.2 — the one stage that got this
 treatment was changed substantially by it, and the placement rule from §3.2 can
 only be applied to stages whose real failures are known.
 
@@ -511,17 +512,24 @@ but the burden should sit on keeping, not on cutting.
 agent runs in its own session at all. Deciding the roster before that is deciding
 against a moving target.
 
-### Phase F — extend the relay guarantee
+### Not phases — two things that were on this list and should not have been
 
-Give the remaining seats an artifact independent of the relaying agent, or state
-plainly in the record that they have none (§3.7). Compare against the vendor's
-own runtime for the same CLI before writing more of our own.
+**The relay guarantee for the remaining seats (§3.7)** is a fact to record, not a
+project. The OpenAI seat can back a turn with a file it did not write; the other
+two cannot, and one of them has no receipt mechanism to build on at all. The
+disposition that costs nothing is the honest one: **a record naming a seat with no
+independent artifact says so**, and a reader discounts it accordingly. Building
+receipts for backends that do not emit them is work with no observed defect behind
+it.
 
-### Phase G — the criteria get a reader
-
-Put a non-author reader in front of `acceptance.md` before the signature (§3.5).
-Held behind A because the human gate's real failure modes should be observed in
-the closed-book runs first.
+**A non-author reader for `acceptance.md` (§3.5)** was listed as a phase, and it
+proposes adding a round — which is the move §1.1 describes as the origin of
+everything this rebuild had to remove. The criteria already reach a non-author:
+the human who signs them. What the observation establishes is that nobody has
+*argued* with them, which is a weaker claim than it first reads as. **If plans are
+repeatedly built against criteria that turn out wrong, Phase A will show it**, and
+then there is an observed defect to answer. Until then this is a stage added on a
+hunch, and the burden sits on adding.
 
 ### Standing, not phased
 
