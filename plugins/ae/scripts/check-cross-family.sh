@@ -98,18 +98,6 @@ run_probe() { # $1 = probe string; returns probe's status, or 124 if it hit the 
   return "$rc"
 }
 
-# Agent Teams flag — not family-specific, so it stays here.
-SETTINGS_FILE="$HOME/.claude/settings.json"
-AGENT_TEAMS=false
-if [ -f "$SETTINGS_FILE" ]; then
-  if command -v jq &>/dev/null; then
-    [ -n "$(jq -r '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS // empty' "$SETTINGS_FILE" 2>/dev/null)" ] && AGENT_TEAMS=true
-  elif grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS' "$SETTINGS_FILE" 2>/dev/null; then
-    AGENT_TEAMS=true
-  fi
-fi
-[ "$AGENT_TEAMS" = false ] && ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }")
-
 if [ -n "$PIPELINE" ] && [ -f "$READER" ] && command -v python3 &>/dev/null; then
   entries="$(python3 "$READER" "$PIPELINE" --enabled-only 2>/dev/null)"
   while IFS= read -r e; do

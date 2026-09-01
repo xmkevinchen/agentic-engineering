@@ -13,8 +13,7 @@
     "code-review",
     "cross-family",
     "multi-agent",
-    "workflow-automation",
-    "agent-teams"
+    "workflow-automation"
   ],
   "userConfig": {
     "gemini_flash_model": {

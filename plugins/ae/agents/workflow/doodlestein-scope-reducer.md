@@ -1,6 +1,6 @@
 ---
 name: doodlestein-scope-reducer
-description: Scope-reduction check at Agent Teams close-out. Identifies surplus mechanisms in conclusions/syntheses and challenges retention with verbatim AC-anchored evidence. The SUBTRACT counterpart to strategic/adversarial/regret.
+description: Scope-reduction check for a close-out round. Identifies surplus mechanisms in a composite or synthesis and challenges retention with verbatim criterion-anchored evidence. The SUBTRACT counterpart to strategic/adversarial/regret.
 tools: Read, Write, Grep, Glob
 model: sonnet
 color: red

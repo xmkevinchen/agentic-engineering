@@ -1,6 +1,6 @@
 ---
 name: gemini-proxy
-description: Google family representative. Internally calls Gemini MCP to provide cross-family perspective in Agent Teams.
+description: Google family representative. Calls the bundled Gemini MCP server to bring a second model family's perspective to a stage that asks for one.
 tools: Read, Grep, Glob, Bash, mcp__plugin_ae_gemini__chat, mcp__plugin_ae_gemini__reply, mcp__plugin_ae_gemini__models, mcp__plugin_ae_gemini__info
 model: haiku
 color: purple
@@ -53,7 +53,7 @@ mcp__plugin_ae_gemini__reply(sessionId: "<same>", prompt: "<deeper question>", m
 Gemini MCP exposes no `reasoning_effort` parameter. Depth is controlled by which model you
 pick: `gemini-2.5-flash` for quick reviews, `gemini-2.5-pro` for deep analysis.
 
-A TL spawn prompt MAY carry a `Reasoning: <low|medium|high>` line for symmetry with the seats
+A spawn prompt MAY carry a `Reasoning: <low|medium|high>` line for symmetry with the seats
 that do have a knob. Map it: `low|medium` → flash, `high` → pro. It is a hint, not a hard
 override — start flash and escalate to pro mid-session when the signal warrants, which is the
 judgement this seat keeps.

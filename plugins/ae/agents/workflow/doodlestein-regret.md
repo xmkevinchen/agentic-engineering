@@ -1,6 +1,6 @@
 ---
 name: doodlestein-regret
-description: Regret prediction check at Agent Teams close-out. Identifies which decision is most likely to be reversed.
+description: Regret prediction check for a close-out round. Identifies which decision is most likely to be reversed.
 tools: Read, Write, Grep, Glob
 model: sonnet
 color: red

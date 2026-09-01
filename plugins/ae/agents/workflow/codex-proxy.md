@@ -1,6 +1,6 @@
 ---
 name: codex-proxy
-description: OpenAI family representative. Internally drives the Codex CLI to provide cross-family perspective in Agent Teams.
+description: OpenAI family representative. Drives the Codex CLI as a subprocess to bring a second model family's perspective to a stage that asks for one.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 color: purple
@@ -101,8 +101,9 @@ exhausts proxy turn budgets on context-heavy tasks. Per-call `-c model_reasoning
 fix, and it is observable afterwards: the rollout's `turn_context` records the effort that was
 actually in force.
 
-TL picks the level: `low` for lookups and format checks, `medium` for a standard review pass,
-`high` for deep architecture deliberation or security-critical analysis.
+**The caller picks the level** and passes it in: `low` for lookups and format checks, `medium`
+for a standard review pass, `high` for deep architecture deliberation or security-critical
+analysis. Absent an instruction, use `medium` and say in your reply which level you ran at.
 
 ## The bound
 

@@ -1,6 +1,6 @@
 ---
 name: doodlestein-adversarial
-description: Fresh-eyes blunder check at Agent Teams close-out. Reads team output and looks for mistakes, oversights, and blind spots.
+description: Fresh-eyes blunder check for a close-out round. Reads the output of the rounds before it and looks for mistakes, oversights, and blind spots.
 tools: Read, Write, Grep, Glob
 model: sonnet
 color: red

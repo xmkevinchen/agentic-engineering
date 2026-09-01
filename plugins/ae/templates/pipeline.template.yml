@@ -1,14 +1,18 @@
 # .claude/pipeline.yml — Agentic Engineering project config
 #
-# Only two things read this file today:
-#   - the SessionStart hook (`scripts/check-cross-family.sh`), which probes every entry
-#     under `cross_family:` and warns about the ones that are configured but unreachable;
-#   - `test.command`, by convention, as the command a stage runs to turn a check red.
+# ONE thing reads this file automatically: the SessionStart hook
+# (`scripts/check-cross-family.sh`), which probes every entry under `cross_family:` and
+# warns about the ones that are configured but unreachable.
+#
+# `test`, `lint` and `typecheck` below are read by NOTHING. They are a convention — the
+# place a person or an agent looks up what this project's checks are called. Filling them
+# in does not cause any stage to run them, and no stage prompts you for them; a stage asks
+# you for a command when it needs one, or you tell it.
 #
 # Feature artifacts live under `.ae/features/{active,done,abandoned}/F-NNN-<slug>/`.
 # That layout is fixed, not configured here, and `.ae/` is gitignored at the project root.
 
-# --- Test, Lint & Typecheck ---
+# --- Test, Lint & Typecheck (convention only — nothing reads these) ---
 test:
   command: ""              # e.g., "just check", "npm test", "cargo test"
 
