@@ -44,23 +44,23 @@ if [ ! -f "$CHECK" ]; then
 fi
 
 # A fixture that obeys every rule must pass, or every failure below proves nothing.
-if python3 "$CHECK" "$FIX/clean/round-2/composite.md" >/dev/null 2>&1; then
+if python3 "$CHECK" "$FIX/clean/pass-1/round-2/composite.md" >/dev/null 2>&1; then
   ok "a composite obeying every rule exits 0"
 else
-  bad "the clean fixture does not pass" "$(python3 "$CHECK" "$FIX/clean/round-2/composite.md" 2>&1)"
+  bad "the clean fixture does not pass" "$(python3 "$CHECK" "$FIX/clean/pass-1/round-2/composite.md" 2>&1)"
 fi
 
 # A point whose mark or citation sits on a continuation line still obeys the rule. Reading only
 # the line an item opens with reported violations against a correct composite — observed on a real
 # run, not imagined.
-if python3 "$CHECK" "$FIX/wrapped/round-2/composite.md" >/dev/null 2>&1; then
+if python3 "$CHECK" "$FIX/wrapped/pass-1/round-2/composite.md" >/dev/null 2>&1; then
   ok "a point that wraps is read whole, mark and citation wherever the prose put them"
 else
-  bad "a wrapped point is judged on its opening line alone" "$(python3 "$CHECK" "$FIX/wrapped/round-2/composite.md" 2>&1)"
+  bad "a wrapped point is judged on its opening line alone" "$(python3 "$CHECK" "$FIX/wrapped/pass-1/round-2/composite.md" 2>&1)"
 fi
 
 # AC4 — a material point with no disposition.
-out=$(python3 "$CHECK" "$FIX/unmarked/round-2/composite.md" 2>&1)
+out=$(python3 "$CHECK" "$FIX/unmarked/pass-1/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "mark"; then
   ok "AC4: an unmarked material point is reported"
 else
@@ -68,7 +68,7 @@ else
 fi
 
 # AC1 — content changed after the round that attacks it was spawned.
-out=$(python3 "$CHECK" "$FIX/stale-freeze/round-2/composite.md" 2>&1)
+out=$(python3 "$CHECK" "$FIX/stale-freeze/pass-1/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "frozen\|sha256"; then
   ok "AC1: a composite edited after round three was spawned is reported"
 else
@@ -78,16 +78,26 @@ fi
 # A seat file named what the host loads as instructions turns that seat's answer into a directive
 # for every later agent reading the directory, and round one stops being blind. Nothing in the
 # artifact shows it — the file is a well-formed seat answer under an allowed-looking name.
-out=$(python3 "$CHECK" "$FIX/host-collision/round-2/composite.md" 2>&1)
+out=$(python3 "$CHECK" "$FIX/host-collision/pass-1/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "instructions"; then
   ok "a seat file named what the host loads as instructions is reported"
 else
   bad "a host-loaded filename passed" "$out"
 fi
 
+# A bare round-N/ with no pass-N/ wrapper leaves a directory whose passes cannot be counted —
+# and the loop's two-pass bound is counted from exactly there, so a layout that cannot be counted
+# is a bound that cannot fire. Two of four fresh sessions left a handed-over flat layout in place.
+out=$(python3 "$CHECK" "$FIX/flat-layout/round-2/composite.md" 2>&1)
+if [ $? -ne 0 ] && echo "$out" | grep -qi "pass"; then
+  ok "a bare round-N/ with no pass-N/ wrapper is reported"
+else
+  bad "a layout whose passes cannot be counted passed" "$out"
+fi
+
 # AC1 — round three was spawned but no digest was ever recorded. A freeze nobody wrote down is
 # not a freeze: the composite could then be edited freely and the check would report nothing.
-out=$(python3 "$CHECK" "$FIX/unfrozen/round-2/composite.md" 2>&1)
+out=$(python3 "$CHECK" "$FIX/unfrozen/pass-1/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "FROZEN"; then
   ok "AC1: a spawned round three with no recorded digest is reported"
 else
@@ -97,7 +107,7 @@ fi
 # AC3 — a point characterising what the round established, citing no source. AC3's falsifier is
 # "differs from what the seat files say about it, OR that cites no source"; the second half needs
 # a check of its own.
-out=$(python3 "$CHECK" "$FIX/uncited/round-2/composite.md" 2>&1)
+out=$(python3 "$CHECK" "$FIX/uncited/pass-1/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "cites no source"; then
   ok "AC3: a survived point citing no seat file is reported"
 else
@@ -105,7 +115,7 @@ else
 fi
 
 # AC3 (mechanical half) — no close-out angle held the seat-file paths.
-out=$(python3 "$CHECK" "$FIX/unwitnessed/round-2/composite.md" 2>&1)
+out=$(python3 "$CHECK" "$FIX/unwitnessed/pass-1/round-2/composite.md" 2>&1)
 if [ $? -ne 0 ] && echo "$out" | grep -qi "given_seat_file_paths"; then
   ok "AC3: a composite no angle was equipped to audit is reported"
 else

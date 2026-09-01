@@ -155,6 +155,13 @@ sight, `AGENTS.md` included.
 directly under `discuss-<id>/`: a round that does not say which pass it belonged to leaves a
 directory that cannot be counted, and the loop's bound is counted from exactly here.
 
+**Handed a bare `round-N/`, move it under `pass-1/` before you add to it, and say in the record
+that you did.** Four fresh sessions were given one; two restructured and two left it, each with a
+defensible reason, which is how you can tell the rule had not been written down. Leaving it is the
+worse half: the run then produces a pass nothing can count, and it is the count that ends a loop
+no human is watching. The files move; their contents do not, and a digest already taken still
+matches because it is taken over the file, not its path.
+
 You give a seat two things: **the path it writes**, and **the paths it reads**. It writes its own
 file. You do not author it and you do not paraphrase it into a summary that then travels in its
 place — a summary standing in for the thing summarised is how a round's evidence quietly becomes

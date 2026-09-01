@@ -17,7 +17,8 @@ What it decides, and what it does not:
        angle recorded that it held the seat-file paths. AC3 is unmet by default without the
        latter: a criterion nobody was equipped to check is unexamined, not satisfied.
 
-  It also reports a seat file named what the host loads as instructions, which is not one of the
+  It also reports a bare round-N/ with no pass-N/ wrapper, and a seat file named what the host
+  loads as instructions, which is not one of the
   four criteria but breaks the property round one exists to buy.
 
   AC2 is absent on purpose. Its falsifier asks whether a seat's claim reached the composite with
@@ -127,6 +128,16 @@ def check(path):
         if recorded != actual:
             problems.append(f"{path}: content changed after round three was spawned — "
                             f"FROZEN records sha256 {recorded[:16]}…, file is {actual[:16]}…")
+
+    # --- the pass is countable -------------------------------------------------------------
+    # The loop's two-pass bound is counted off completed pass-N/ directories on disk. A bare
+    # round-N/ with no pass-N/ wrapper leaves a directory whose passes cannot be counted, so the
+    # bound cannot fire — and that bound is the only thing ending a loop that re-enters itself
+    # with no human in the path.
+    if path.parent.parent.name and not path.parent.parent.name.startswith("pass-"):
+        problems.append(f"{path}: sits under '{path.parent.parent.name}/', not a pass-N/ — a bare "
+                        f"round-N/ leaves a directory whose passes cannot be counted, and the "
+                        f"loop's bound is counted from exactly there")
 
     # --- the blind round stays blind -------------------------------------------------------
     # A seat file named what the host reads as instructions is loaded into every later agent whose
