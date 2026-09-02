@@ -14,9 +14,15 @@ Decide how the work is cut into steps and how each criterion will be verified. T
 Input: `<feature-dir>/acceptance.md`, `<feature-dir>/analysis.md`, and any decision records in that directory.
 Deliverable: `<feature-dir>/plan.md`.
 
+## Check the input before planning against it
+
+**Read `acceptance.md` first and refuse it when a criterion has no falsifier and no judgement mark, or when the evidence an answer rests on no longer holds.** Both are the entry's admission checks, and the entry applies them — but this stage is reachable directly, so arriving that way there is nothing between a malformed analysis and a plan built on it. Name what failed and send it back to analyze through the human. A criterion carrying neither a falsifier nor a judgement mark is one nobody can be held to; a criterion resting on a file that has since moved or gone is one that was signed against a tree that no longer exists.
+
 ## Send it back rather than plan around it
 
 A criterion that cannot be planned against at all goes back to analyze, through the human — it is signed, so nobody else can move it. Name the id and what could not be planned. Planning against a standard you had to invent is how the standard drifts toward whatever gets built.
+
+Returning one criterion does not stop the others: plan the ones that can be planned, and say in the plan which were returned and what would unblock each.
 
 ## What must be true of the plan
 
