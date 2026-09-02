@@ -279,8 +279,22 @@ happen to be untested — they are a floor nobody has built back up on evidence.
 delete and was run six times by fresh sessions given nothing but the skill; those
 runs produced five genuine defects and two rule ambiguities, and the stage is 351
 lines. `plan` (39), `work` (58) and `review` (48) — 145 lines together — received
-the floor cut and nothing after it, and have never been executed by a session
-that did not write them.
+the floor cut and nothing after it.
+
+**`plan` has since been run, three times.** The contract held on every run: criteria
+cited by id and not restated, a verification named per criterion with judgement used
+honestly where nothing could be automated, dependency-ordered steps each naming what
+they serve and which check turns red, coverage stated both ways, existing checks run
+rather than assumed, and the non-author reader round performed. Every `file:line`
+citation across three plans landed on the text it claimed, and no run wrote outside
+its feature directory. What the runs found is in `plan/SKILL.md`'s history; the one
+defect that earned a change was that **the stage had no admission check of its own**.
+Reached through the entry, a malformed analysis is refused at step 1. Reached
+directly — which the skill's own argument hint invites — nothing refused it, and a
+run was handed a criterion carrying neither a falsifier nor a judgement mark. It
+handled that correctly, which was the problem: nothing in the file made it.
+
+**`work` and `review` remain unrun.**
 
 **Next step.** Take feature directories that already hold an analysis and signed
 criteria, open fresh sessions, and run `plan` and `review` twice each with no
@@ -404,6 +418,24 @@ two of them reported the same events.
 monitor, make its condition fire once on purpose. A condition that cannot be made
 to fire is not a monitor.**
 
+**One property of the shape is now measured.** The loop *edit a skill → reload →
+re-run the same input → compare* discriminates: the same feature directory run
+before and after a six-line change to `plan/SKILL.md` produced a materially
+different artifact, leading with a section the earlier one did not have, and
+returning a second criterion the earlier run had accepted. One edit and one run
+established it.
+
+**What the same experiment established about the harness, which is not obvious and
+is silent when ignored.** A runner in a separate context receives a *snapshot* of
+the skill text, taken at session start or at the last `/reload-plugins` — not the
+file on disk. `/reload-plugins` refreshes it for runners started afterwards. **It
+does not refresh `CLAUDE.md`, which stays frozen at session start with no in-session
+remedy.** Both halves were measured by asking runners to report exact strings whose
+presence on disk had been established first; neither was assumed. The consequence
+is that a run comparing before and after an edit silently tests the old version
+unless a reload sits between them, and the run succeeds and reads normally either
+way.
+
 **What is still unknown.** Whether a stage confined to its own context can still
 spawn the seats it needs; what the controller owes the run and what it must not
 do; and how a run that stops halfway appears on disk to whoever picks it up
@@ -433,7 +465,8 @@ rule ambiguities, against zero from any scan over the same files. It also costs
 far less than it sounds for these three stages — no seat rounds.
 
 These three are not merely untested, they are undeveloped (§3.1) — so expect the
-runs to produce work, not a verdict. **Unblocks:** any change to the working loop, including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
+runs to produce work, not a verdict. **`plan` is done: three runs, one earned
+change.** `work` and `review` are next. **Unblocks:** any change to the working loop, including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
 treatment was changed substantially by it, and the placement rule from §3.2 can
 only be applied to stages whose real failures are known.
 
