@@ -59,8 +59,14 @@ edit it out of the second.
   declining silently: the plan named it, this stage is where it came due, and a verification
   that disappears between the stage that named it and the stage that never learned it was
   owed is a criterion nobody checked.
-- **A criterion nothing can check is recorded as unchecked.** Never invent a substitute
-  check, and never report such a criterion satisfied.
+- **A criterion this stage cannot check is recorded, and which of two states it is in
+  decides where it goes.** *No method exists* — the criterion is defective, and it goes
+  back to analysis through the human, since a signed criterion is not yours to move.
+  *A method exists and a precondition of the world is absent* — the run has to happen
+  somewhere this stage is not, or after something that has not happened yet. That one is
+  **blocked, not unchecked**: say what exactly would unblock it, which is what the entry's
+  blocked-on-a-missing-capability rule already requires and what the word "unchecked"
+  quietly drops. Never invent a substitute check, and never report either kind satisfied.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
   review finding it answers. Anything else is reverted, or the reason it belongs is
   recorded.
