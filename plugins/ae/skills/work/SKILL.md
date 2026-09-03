@@ -53,6 +53,12 @@ edit it out of the second.
   taken over this log. A session that hits the same red three times and writes it up once
   shows one on disk and holds three in its head, which puts the bound back in the place it
   was moved out of.
+- **A verification the plan names and this stage does not perform is recorded with whose
+  it is.** Declining one can be right — the reader who judges the work belongs to review,
+  and settling it here would be the author signing off their own work. What is not right is
+  declining silently: the plan named it, this stage is where it came due, and a verification
+  that disappears between the stage that named it and the stage that never learned it was
+  owed is a criterion nobody checked.
 - **A criterion nothing can check is recorded as unchecked.** Never invent a substitute
   check, and never report such a criterion satisfied.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
