@@ -22,6 +22,7 @@
 | [`references/cc-plugin-contract.md`](references/cc-plugin-contract.md) | Host dependencies and mitigations. |
 | [`references/claude-code-plugin-api.md`](references/claude-code-plugin-api.md) | Host API facts. |
 | [`references/cross-family-rationale.md`](references/cross-family-rationale.md) | Why cross-family review exists; the capability is kept. |
+| [`references/agent-framework-map.md`](references/agent-framework-map.md) | AE's parts in general agent-framework vocabulary, and the three places the analogy breaks. |
 
 ## Removed with what they documented
 
