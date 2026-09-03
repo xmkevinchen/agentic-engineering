@@ -65,6 +65,12 @@ edit it out of the second.
   learning something — then record what changed and why. That needs no permission. Only
   a change to what a criterion *means* does, and that one goes back to analysis through
   the human.
+- **A claim the plan makes about the repository, found false, is corrected in `plan.md`.**
+  Not only noted in the log — a plan is written by reading and executed by doing, so this
+  is the defect a plan is most likely to carry, and the log is not where the next reader
+  meets it. Record the correction here and make it there. This covers a plan that misread
+  the tree and a plan whose claim was true when written and is not now; both arrive the
+  same way and neither is a criterion change.
 
 ## Refused by review when
 
