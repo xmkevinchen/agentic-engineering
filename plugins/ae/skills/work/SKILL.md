@@ -83,6 +83,12 @@ edit it out of the second.
   meets it. Record the correction here and make it there. This covers a plan that misread
   the tree and a plan whose claim was true when written and is not now; both arrive the
   same way and neither is a criterion change.
+  **Unless the false claim is the criterion's own words**, carried into the plan. Then the
+  plan is not where it gets fixed: editing it would make the plan misquote what was signed,
+  and leaving it leaves the plan asserting something false. What is wrong is the criterion,
+  which rests on a premise that does not hold — that goes back to analysis through the human,
+  by the route above. Say in `plan.md` that the row has no subject, so the next reader is not
+  the one who discovers it.
 
 ## Refused by review when
 
