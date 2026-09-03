@@ -88,6 +88,13 @@ Then read `<feature-dir>/review.md`. Implementation defects go back to step 4 �
 loop, needing nobody's permission. A finding that would change what a criterion *means* goes
 back to step 1, and only through the human.
 
+**Before sending it back, count.** The same check failing the same way three times ends the
+loop: re-cut the step, or conclude the criterion is unmeetable and take it back to step 1.
+**Count over what `log.md` records, for the feature, across every session that has worked
+it** — never over what this session remembers. The count that lives in a session is reset by
+an ordinary resume, and a loop nobody is watching is exactly the one whose bound must survive
+the watcher leaving.
+
 **→ HUMAN SIGNS.** Show what changed, what was verified and how, every finding's
 disposition, and what was not checked. Done means the human signed — not tests green, not a
 pass verdict. A gate the executed party can open is not a gate.
@@ -120,11 +127,10 @@ what a criterion *means* needs the human.
 
 - **A check refuses your input** — read what it expected against what it saw, fix, retry. Do
   not ask the human about mechanical refusals.
-- **Same failure three times** — the same check failing the same way, in the ordinary WORK
-  and REVIEW loop, counted within the session running it. Stop repeating: either re-cut the
-  step, or conclude the criterion is unmeetable and take it back to ANALYZE. The count exists
-  because that loop is unattended — nothing else is watching it repeat. A loop that waits on a
-  human is not this one: it advances only when they answer, and they can see they were asked.
+- **Same failure three times** — the bound is at step 5, where the loop is actually taken,
+  and it is counted off `log.md`. The count exists because that loop is unattended: nothing
+  else is watching it repeat. A loop that waits on a human is not this one — it advances only
+  when they answer, and they can see they were asked.
 - **Several rounds each fixing something real, and the work does not shrink** — the trigger
   is the rate, not the failures, and every round looks fine from inside. Stop and ask what is
   *generating* these, then cut along that axis. That is a re-division, still inside the loop —

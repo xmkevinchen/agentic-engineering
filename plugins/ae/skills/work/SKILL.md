@@ -48,6 +48,11 @@ edit it out of the second.
   that was run and what it said when it failed; for a criterion that is judged rather
   than run, where the thing to be judged lives. Review must be able to re-run or
   re-judge every criterion from the files alone.
+- **Every occurrence of a check failing is recorded, not the first one per criterion.**
+  The same check failing the same way three times is what ends the loop, and the count is
+  taken over this log. A session that hits the same red three times and writes it up once
+  shows one on disk and holds three in its head, which puts the bound back in the place it
+  was moved out of.
 - **A criterion nothing can check is recorded as unchecked.** Never invent a substitute
   check, and never report such a criterion satisfied.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
