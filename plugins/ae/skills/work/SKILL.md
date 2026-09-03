@@ -24,6 +24,19 @@ turn red, send the plan back rather than inventing the missing check.
 
 Commits on the branch, and a working log at `<feature-dir>/log.md`.
 
+**The log is structured by pass.** The first pass under its own heading, and every pass after
+it under its own, opening with what sent the work back — the findings, as `review.md` states
+them. **A pass that supersedes an earlier pass's result says so at the earlier claim**, not
+only in the later pass. This file is a record, so a superseded green stays in it; a reader who
+can attribute both claims still cannot tell which is true, and sixty lines is enough to hide
+the correction.
+
+**Two kinds of file sit in the feature directory and take opposite treatment.** `analysis.md`,
+`acceptance.md`, `plan.md` and `review.md` hold what is true now and are edited in place — so
+every statement in them belongs to the current pass, and none of them carries a pass marker.
+`log.md` holds what happened. Do not go looking for pass history in the first kind, and do not
+edit it out of the second.
+
 ## What must be true of it
 
 - **One step, one commit.** The message says what changed and why, and the project's
