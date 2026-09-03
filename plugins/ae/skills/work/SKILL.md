@@ -33,9 +33,10 @@ the correction.
 
 **Two kinds of file sit in the feature directory and take opposite treatment.** `analysis.md`,
 `acceptance.md`, `plan.md` and `review.md` hold what is true now and are edited in place — so
-every statement in them belongs to the current pass, and none of them carries a pass marker.
-`log.md` holds what happened. Do not go looking for pass history in the first kind, and do not
-edit it out of the second.
+every statement in them belongs to the current pass, and **none of them carries pass history**.
+Saying which pass produced the current state is not history and is not excluded: it dates the
+value, it does not accumulate earlier ones beside it. `log.md` holds what happened. Do not go
+looking for superseded values in the first kind, and do not edit them out of the second.
 
 ## What must be true of it
 
