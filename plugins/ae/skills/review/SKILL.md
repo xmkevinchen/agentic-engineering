@@ -37,6 +37,8 @@ The verdict is established by a reader who did not write the work: a fresh-conte
 
 `<feature-dir>/review.md`. It says pass or fail where that can be read without reading the body, then gives the evidence: each criterion's verdict, every finding with its disposition, and what was not checked. If the conversation were lost, the human could sign from this file alone.
 
+**It names the pass it judges, and it is rewritten rather than appended to.** This file holds the current verdict; the history of passes is in `log.md`. A second pass appended below the first leaves two standing verdicts with nothing saying which is live — and the one that goes stale is the one a reader meets first. Re-judging is cheap; a verdict that has to be dated against the commits to be understood is not.
+
 Implementation defects go back to WORK — the ordinary loop, needing nobody's permission. A finding that would change what a criterion *means* goes back to ANALYZE via the human, because the criteria are what was confirmed.
 
 ## The human signs
