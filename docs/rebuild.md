@@ -16,7 +16,7 @@ rule per past incident, 98% of it never repeated — rather than a **program**. 
 law is only load-bearing if someone reads it at the moment of decision. A
 controlled experiment tested whether anyone did, and a **182-line** workflow
 reproduced the same results on the same work. The prose went from 8,457 lines to
-**779**.
+**779** at the delete, and stands at **886** today — see the counter in §4 for why it rose.
 
 **Two things this document is not.** It is not a report on finished work — §3
 lists eight things known to be missing, and three of the five stages have never
@@ -214,19 +214,19 @@ at all once the question *what loads this?* was asked of them one by one.
 | | Before | Now |
 |---|---|---|
 | Skills | 24 | **6** |
-| Lines of skill prose | 8,457 | **779** |
-| Longest single line in a skill | 2,329 chars | **411 chars** |
+| Lines of skill prose | 8,457 | **886** |
+| Longest single line in a skill | 2,329 chars | **633 chars** |
 
 The six:
 
-| Skill | Lines | What it is |
-|---|---|---|
-| [`go`](../plugins/ae/skills/go/SKILL.md) | 137 | The entry. The stage order, the rules every stage obeys, and the two human stops. It invokes the stage skills rather than restating them. |
-| [`analyze`](../plugins/ae/skills/analyze/SKILL.md) | 146 | Is the problem real, and what does *done* mean? Creates the feature directory, the analysis and the acceptance criteria. |
-| [`discuss`](../plugins/ae/skills/discuss/SKILL.md) | 351 | Settles one contested decision into a record the plan can consume, using seats from more than one model family. |
-| [`plan`](../plugins/ae/skills/plan/SKILL.md) | 39 | Cuts dependency-ordered steps against criteria already signed, and names the check each step turns red. |
-| [`work`](../plugins/ae/skills/work/SKILL.md) | 58 | One step, one commit, every check seen failing first. |
-| [`review`](../plugins/ae/skills/review/SKILL.md) | 48 | Judges the delivered work against the frozen criteria. The completion gate. |
+| Skill | What it is |
+|---|---|
+| [`go`](../plugins/ae/skills/go/SKILL.md) | The entry. The stage order, the rules every stage obeys, and the two human stops. It invokes the stage skills rather than restating them. |
+| [`analyze`](../plugins/ae/skills/analyze/SKILL.md) | Is the problem real, and what does *done* mean? Creates the feature directory, the analysis and the acceptance criteria. |
+| [`discuss`](../plugins/ae/skills/discuss/SKILL.md) | Settles one contested decision into a record the plan can consume, using seats from more than one model family. |
+| [`plan`](../plugins/ae/skills/plan/SKILL.md) | Cuts dependency-ordered steps against criteria already signed, and names the check each step turns red. |
+| [`work`](../plugins/ae/skills/work/SKILL.md) | One step, one commit, every check seen failing first. |
+| [`review`](../plugins/ae/skills/review/SKILL.md) | Judges the delivered work against the frozen criteria. The completion gate. |
 
 Alongside them: 18 agent definitions, two bundled MCP servers, and five scripts
 under `plugins/ae/scripts/` — every one of which now has a live caller: the
@@ -256,7 +256,7 @@ when something real hits it again**.
 
 ### 2.4 The asymmetry worth noticing
 
-`discuss` is 351 of the 779 lines — **45% of all remaining prose in one stage**.
+`discuss` is 381 of the 886 lines — **43% of all remaining prose in one stage**.
 That is not an oversight, and it is not a virtue either. It is the only stage
 that has been run repeatedly by sessions that did not write it, and every one of
 those runs added something. The other three working stages total 145 lines and
@@ -597,6 +597,15 @@ has to beat a measured baseline, not merely sound prudent.
 | Goal | Counter | At the delete | Target |
 |---|---|---|---|
 | The prose surface shrinks | Total lines across `plugins/ae/skills/*/SKILL.md` | 779 (from 8,457) | falling, or a stated reason |
+
+**The first counter has risen, and this is the stated reason it asks for.** 779 at the delete,
+**886** on 2026-09-04. Almost all of it is one stage: `work` went 58 → 101 carrying the rules
+that make an iteration between work and review leave a trace on disk — the loop's count taken
+off `log.md` rather than held in a session, a superseded result marked where the earlier claim
+stands, a plan claim found false corrected in the plan rather than only the log. Each was
+written after a closed-book run failed without it. **That is the bargain this counter exists to
+make visible, not to forbid** — but it is now the largest single stage after `discuss`, and the
+next thing that grows it should be asked what it replaces.
 | No rule is unreadable | Longest single line in any `SKILL.md` | 411 (from 2,329) | falling |
 | A person waits for a signature, never a repair | Times the process pulled a person in to finish work it did not finish | — | zero |
 
