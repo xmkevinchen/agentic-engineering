@@ -1,6 +1,6 @@
 ---
 name: analyze
-description: "End with the problem named, done defined, and evidence behind both. Writes the feature directory, its analysis.md, and the acceptance criteria the human signs."
+description: "Work out what the problem is and what would count as done, with evidence behind both. Creates the feature directory, the analysis, and the acceptance criteria the human signs."
 argument-hint: "<BL-NNN> | <F-NNN-slug, to resume a blocked one> | <feature description>"
 user-invocable: true
 effort: high
@@ -8,9 +8,8 @@ effort: high
 
 # /ae:analyze — name the problem, and define what done means
 
-**What is written here is what everything downstream is judged against.** Discussion may still
-move a criterion — that is what it is for, and the criteria are not signed until after it.
-Once the human confirms them, nothing moves one except a return through the human.
+Work out what the problem is, and what would count as done. Everything the later stages do is
+judged against what you write here.
 
 ## Input
 
@@ -123,6 +122,10 @@ people read prose.
 the thing the human signs, and because it is the entire input to the fresh eyes that later
 judge whether the work met it: anything about how the conclusion was reached would stop them
 being fresh.
+
+These criteria are not frozen when you write them. Discussion can still change one, which is
+what discussion is for. The human confirms the file after that. From then on, changing a
+criterion means coming back to this stage, through the human.
 
 Each criterion carries an id later stages cite, the property that must hold, and the falsifier
 — what you would observe if the property did NOT hold. A criterion with no falsifier is a
