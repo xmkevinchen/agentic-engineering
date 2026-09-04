@@ -10,12 +10,18 @@ user-invocable: true
 # /ae:discuss — settle one contested decision
 
 Settle one decision where two defensible options lead to materially different work, so the
-plan does not have to guess which one was meant. Nothing contested → skip the stage; a
-discussion held as ceremony costs a cycle and decides nothing.
+plan does not have to guess which one was meant.
 
-**Input:** the analysis, and one id from its `discuss:` list. You settle the question under that heading, not a neighbouring one you find more interesting.
+**Nothing contested → skip the stage.** A discussion held as ceremony costs a cycle and
+decides nothing.
 
-**Deliverable:** one decision record at `<feature-dir>/decision-<id>.md`, named for the
+## Input
+
+The analysis, and one id from its `discuss:` list. You settle the question under that heading, not a neighbouring one you find more interesting.
+
+## Deliverable
+
+One decision record at `<feature-dir>/decision-<id>.md`, named for the
 `discuss:` id this run settles. The name is the only fixed thing about the file, and it is
 fixed because it carries control flow: it is how a later stage tells which question a record
 answers, and how a record that was never written becomes visible, since the ids in the analysis

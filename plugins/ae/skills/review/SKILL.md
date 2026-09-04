@@ -7,7 +7,7 @@ effort: xhigh
 user-invocable: true
 ---
 
-# /ae:review
+# /ae:review — judge the work against the signed criteria
 
 Judge the delivered work against the acceptance criteria the human confirmed. Nothing else.
 
@@ -16,6 +16,14 @@ Judge the delivered work against the acceptance criteria the human confirmed. No
 `$ARGUMENTS` is the plan path; `<feature-dir>` is its parent directory. Empty → ask which feature to review.
 
 What you judge is the feature's whole change — everything committed since the feature started, not the last commit — read against the plan, the working log, and the criteria. The criteria are the ones the human signed in `acceptance.md`, and that file is where they are read from.
+
+## Deliverable
+
+`<feature-dir>/review.md`. It says pass or fail where that can be read without reading the body, then gives the evidence: each criterion's verdict, every finding with its disposition, and what was not checked. If the conversation were lost, the human could sign from this file alone.
+
+**It names the pass it judges, and it is rewritten rather than appended to.** This file holds the current verdict; the history of passes is in `log.md`. A second pass appended below the first leaves two standing verdicts with nothing saying which is live — and the one that goes stale is the one a reader meets first. Re-judging is cheap; a verdict that has to be dated against the commits to be understood is not.
+
+Implementation defects go back to WORK — the ordinary loop, needing nobody's permission. A finding that would change what a criterion *means* goes back to ANALYZE via the human, because the criteria are what was confirmed.
 
 ## Fresh eyes
 
@@ -34,14 +42,6 @@ The verdict is established by a reader who did not write the work: a fresh-conte
 - **Every finding carries a severity and an explicit disposition** — fixed, rejected with a reason, or deferred with a named condition. A finding that disappears is a process failure, and a severity class collapsed into one summary sentence is not a disposition.
 - **Findings that keep arriving without the set shrinking mean the partition is wrong.** Report what is generating them as one finding, not the instances as many.
 - **Nothing is reported that traces to neither a criterion nor a check that could turn red** — a preferred alternative, a restatement of what the code does, a pre-existing defect this change did not touch.
-
-## Deliverable
-
-`<feature-dir>/review.md`. It says pass or fail where that can be read without reading the body, then gives the evidence: each criterion's verdict, every finding with its disposition, and what was not checked. If the conversation were lost, the human could sign from this file alone.
-
-**It names the pass it judges, and it is rewritten rather than appended to.** This file holds the current verdict; the history of passes is in `log.md`. A second pass appended below the first leaves two standing verdicts with nothing saying which is live — and the one that goes stale is the one a reader meets first. Re-judging is cheap; a verdict that has to be dated against the commits to be understood is not.
-
-Implementation defects go back to WORK — the ordinary loop, needing nobody's permission. A finding that would change what a criterion *means* goes back to ANALYZE via the human, because the criteria are what was confirmed.
 
 ## The human signs
 

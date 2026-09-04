@@ -6,10 +6,21 @@ user-invocable: true
 effort: high
 ---
 
-# /ae:analyze — what is the problem, and what would count as done?
+# /ae:analyze — name the problem, and define what done means
 
-Input: the work item — **$ARGUMENTS**, free text, a `BL-NNN`, or a path to a file describing
+**What is written here is what everything downstream is judged against.** Discussion may still
+move a criterion — that is what it is for, and the criteria are not signed until after it.
+Once the human confirms them, nothing moves one except a return through the human.
+
+## Input
+
+The work item — **$ARGUMENTS**, free text, a `BL-NNN`, or a path to a file describing
 it — and the repository. Read the repository yourself before writing anything.
+
+## Deliverable
+
+A feature directory holding `analysis.md` and `acceptance.md`. What each must contain, and
+how the directory is named, is under *What each file must contain*.
 
 ## When this stage is over
 
@@ -58,7 +69,7 @@ yours only once looking has established the material is not there. But between a
 inventing a premise, ask. An analysis standing on an invented premise costs four stages to
 find out about; another question costs a message.
 
-## What it delivers
+## What each file must contain
 
 A feature directory `.ae/features/active/F-NNN-<slug>/` — `F-NNN` an id no feature has ever
 held, retired ids never reused — holding two files.
