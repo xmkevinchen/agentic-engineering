@@ -1,6 +1,6 @@
 ---
 name: analyze
-description: "Stage 1 — end with the problem named, done defined, and evidence behind both. Writes the feature directory, its analysis.md, and the acceptance criteria the human signs."
+description: "End with the problem named, done defined, and evidence behind both. Writes the feature directory, its analysis.md, and the acceptance criteria the human signs."
 argument-hint: "<BL-NNN> | <F-NNN-slug, to resume a blocked one> | <feature description>"
 user-invocable: true
 effort: high

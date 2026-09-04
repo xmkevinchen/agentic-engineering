@@ -1,6 +1,6 @@
 ---
 name: go
-description: Run a work item through the whole workflow — analyze, discuss, plan, work, review. The human confirms the acceptance criteria once they stop moving, and signs completion. Invokes each stage's skill in turn. The argument is the work item itself, a path to a file describing it, or an existing F-NNN to resume.
+description: "Run a work item through the whole workflow — analyze, discuss, plan, work, review. The human confirms the acceptance criteria once they stop moving, and signs completion. Invokes each stage's skill in turn. The argument is the work item itself, a path to a file describing it, or an existing F-NNN to resume."
 user-invocable: true
 ---
 
