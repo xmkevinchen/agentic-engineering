@@ -142,9 +142,12 @@ text and changes nothing.** Anything else is not one — another heading level, 
 word, a round you can plainly see in the prose — however certain you are the author meant it
 as a pass.
 
-**A log holding none of them is not countable, and you say so rather than reporting zero.** A
-log written before they were required does not have them, and a feature that went round three
-times then reads as none. Say the count cannot be taken, and use the rate bound below instead.
+**A log holding none of them is not countable, and you say so rather than reporting zero.** Not
+the first number — the count. The second number stays readable and is not an answer on its own,
+because a return already taken and a return about to be made are not distinguishable once the
+log cannot be read. A log written before they were required does not have them, and a feature
+that went round three times then reads as none. Say the count cannot be taken, and use the rate
+bound below instead.
 
 **This count cannot tell a loop that is converging from one that is stuck.** Three returns
 that each fixed something real count the same as three that changed nothing. What tells
