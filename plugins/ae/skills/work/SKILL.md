@@ -1,6 +1,7 @@
 ---
 name: work
-description: "Execute the plan one step per commit, leaving on disk the evidence that each criterion's check can fail."
+description: "Execute the plan one step per commit, leaving on disk the evidence that each
+criterion's check can fail."
 argument-hint: "<plan file path>"
 user-invocable: true
 effort: high
@@ -13,7 +14,8 @@ check can actually fail.
 
 ## Input
 
-The plan at **$ARGUMENTS** and the signed criteria in `<feature-dir>/acceptance.md`; `<feature-dir>` is the
+The plan at **$ARGUMENTS** and the signed criteria in `<feature-dir>/acceptance.md`;
+`<feature-dir>` is the
 plan's parent directory. Reread the plan from disk at the start of every step — never from
 memory, which compaction drops without saying so.
 
@@ -27,8 +29,9 @@ Commits on the branch, and a working log at `<feature-dir>/log.md`.
 **The log is structured by pass, and a pass heading reads `## Pass N`.** The first pass under
 its own heading, and every pass after it under its own, opening with what sent the work back —
 the findings, as `review.md` states them. The form is fixed so a reader can find a pass, not
-because anything counts these headings; what the loop's bound counts is the `returned-N.md`
-files. **A pass that supersedes an earlier pass's result says so at the earlier claim**, not
+because anything counts these headings; what the loop's bound counts is the files in
+`<feature-dir>/returns/`. **A pass that supersedes an earlier pass's result says so at the
+earlier claim**, not
 only in the later pass. This file is a record, so a superseded green stays in it; a reader who
 can attribute both claims still cannot tell which is true, and sixty lines is enough to hide
 the correction.
@@ -52,8 +55,8 @@ looking for superseded values in the first kind, and do not edit them out of the
   than run, where the thing to be judged lives. Review must be able to re-run or
   re-judge every criterion from the files alone.
 - **Every occurrence of a check failing is recorded, not the first one per criterion.**
-  The loop's bound is not counted over these — it counts the `review-return-N.md` files review
-  leaves behind. What needs them is the
+  The loop's bound is not counted over these — it counts the files review leaves in
+  `<feature-dir>/returns/`. What needs them is the
   judged bound beside it, which triggers on whether the work *shrinks*: a session that hits
   the same red four times and writes it up once reads as convergence it did not have.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
