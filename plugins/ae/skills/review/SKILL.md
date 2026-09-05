@@ -32,6 +32,13 @@ what it is a verdict on does not.
 
 Name in the file which pass this verdict judges. Rewrite the file each pass; do not append to it. Two verdicts standing in one file with nothing saying which is live is the thing this forbids. The history of passes goes in `log.md`, not here.
 
+**A return leaves a file.** When you send findings back to WORK, write
+`<feature-dir>/returned-N.md` — N the next number after the ones already there — holding the
+findings that go back and the disposition of every finding this pass raised, including the ones
+you rejected or deferred. These files are what the entry's bound counts, and they are the only
+place a rejected or deferred finding survives: this file is rewritten each pass, and a rewrite
+would otherwise take the finding with it. They are never edited afterwards.
+
 Send implementation defects back to WORK yourself. Do not route one through the human, and do not make reopening that loop anyone's call. Send a finding that would change what a criterion *means* back to ANALYZE, through the human — those are the criteria that were confirmed, and only that route reaches them.
 
 ## Fresh eyes

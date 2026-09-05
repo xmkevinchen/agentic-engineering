@@ -26,10 +26,9 @@ Commits on the branch, and a working log at `<feature-dir>/log.md`.
 
 **The log is structured by pass, and a pass heading reads `## Pass N`.** The first pass under
 its own heading, and every pass after it under its own, opening with what sent the work back —
-the findings, as `review.md` states them. The form is fixed rather than left to taste because
-the loop's bound counts these headings: a pass headed any other way is one the count cannot
-see, and the reader is left choosing between reading the log as uncountable and reading it as
-two. **A pass that supersedes an earlier pass's result says so at the earlier claim**, not
+the findings, as `review.md` states them. The form is fixed so a reader can find a pass, not
+because anything counts these headings; what the loop's bound counts is the `returned-N.md`
+files. **A pass that supersedes an earlier pass's result says so at the earlier claim**, not
 only in the later pass. This file is a record, so a superseded green stays in it; a reader who
 can attribute both claims still cannot tell which is true, and sixty lines is enough to hide
 the correction.
@@ -53,8 +52,8 @@ looking for superseded values in the first kind, and do not edit them out of the
   than run, where the thing to be judged lives. Review must be able to re-run or
   re-judge every criterion from the files alone.
 - **Every occurrence of a check failing is recorded, not the first one per criterion.**
-  The loop's bound is not counted over these — it counts returns from review, off this
-  file's pass headings and the standing verdict in `review.md`. What needs them is the
+  The loop's bound is not counted over these — it counts the `returned-N.md` files review
+  leaves behind. What needs them is the
   judged bound beside it, which triggers on whether the work *shrinks*: a session that hits
   the same red four times and writes it up once reads as convergence it did not have.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the

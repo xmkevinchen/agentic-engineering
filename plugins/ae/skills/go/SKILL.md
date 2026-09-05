@@ -116,36 +116,18 @@ back to step 1, and only through the human.
 ### Before sending it back, count
 
 **Before sending it back, count the returns — including the one you are about to make.** A
-return is review handing findings back to work. The third return ends the loop: re-cut the
-step, or conclude the criterion is unmeetable and take it back to step 1.
+return is review handing findings back to work, and each one leaves a file: review writes
+`<feature-dir>/returned-N.md` at the moment it sends findings back. The third return ends the
+loop: re-cut the step, or conclude the criterion is unmeetable and take it back to step 1.
 
-**Count over the feature's files, never over what this session remembers.** The count that
-lives in a session is reset by an ordinary resume, and a loop nobody is watching is exactly
-the one whose bound must survive the watcher leaving. It is two numbers added:
+**Count the files, never what this session remembers.** `returned-1.md`, `returned-2.md`, and so
+on — the count is how many exist, and the one you are about to write is the next number. The
+count that lives in a session is reset by an ordinary resume, and a loop nobody is watching is
+exactly the one whose bound must survive the watcher leaving.
 
-- one for each pass in `log.md` whose opening names the review findings that sent the work
-  back;
-- plus one if `review.md`'s standing verdict is a fail and `log.md` holds no pass later than
-  the pass of work that verdict says it judges.
-
-Nothing else adds to it. Not how many criteria one verdict failed, not how many checks went
-red inside a pass, not a red the work found and fixed before review saw it, not a pass the
-controller sent back at step 3 or 4, and not a pass a human opened. A section that is not
-under a pass heading adds nothing whatever it describes, and an opening that names some of
-the findings that came back is a pass like any other — the count is of returns, so naming
-one is naming the return. A verdict whose findings
-all go back to step 1 through the human leaves this loop rather than re-entering it; the
-count starts again from zero at the next signed criteria.
-
-**A pass heading is a line beginning `## Pass ` and a number. What follows the number is free
-text and changes nothing.** Anything else is not one — another heading level, another opening
-word, a round you can plainly see in the prose — however certain you are the author meant it
-as a pass.
-
-**A log holding none of them is not countable, and you say so rather than reporting zero.** Not
-the first number — the count, whatever the second number reads. A log written before they were
-required does not have them, and a feature that went round three times then reads as none. Say
-the count cannot be taken, and use the rate bound below instead.
+A feature that has none of these files has taken no returns this bound can see. That is the
+honest answer for a feature worked before the files existed, and it starts from zero rather
+than pretending to a history nothing recorded.
 
 **This count cannot tell a loop that is converging from one that is stuck.** Three returns
 that each fixed something real count the same as three that changed nothing. What tells
