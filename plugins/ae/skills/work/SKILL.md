@@ -50,10 +50,10 @@ looking for superseded values in the first kind, and do not edit them out of the
   than run, where the thing to be judged lives. Review must be able to re-run or
   re-judge every criterion from the files alone.
 - **Every occurrence of a check failing is recorded, not the first one per criterion.**
-  The same check failing the same way three times is what ends the loop, and the count is
-  taken over this log. A session that hits the same red three times and writes it up once
-  shows one on disk and holds three in its head, which puts the bound back in the place it
-  was moved out of.
+  The loop's bound is not counted over these — it counts returns from review, off this
+  file's pass headings and the standing verdict in `review.md`. What needs them is the
+  judged bound beside it, which triggers on whether the work *shrinks*: a session that hits
+  the same red four times and writes it up once reads as convergence it did not have.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
   review finding it answers. Anything else is reverted, or the reason it belongs is
   recorded.
