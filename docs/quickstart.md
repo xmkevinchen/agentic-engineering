@@ -105,7 +105,8 @@ family is unreachable — you lose that family's coverage, and the run says so.
 
 ### A stage keeps refusing the same input
 
-Read what the check expected against what it saw, and fix that. What ends the loop is
-the third **return** — review handing findings back to work, counted off the feature's own
-files. At the third, stop repeating: either re-cut the step, or take the criterion back to
-ANALYZE as unmeetable.
+Read what the check expected against what it saw, and fix that. What ends the loop is **one
+thing that will not close** — an item a review has sent back on three returns running. At the
+third, stop repeating: either re-cut the step, or take the criterion back to ANALYZE as
+unmeetable. A round that raises new problems and closes the old ones is not that, and does not
+count against you.

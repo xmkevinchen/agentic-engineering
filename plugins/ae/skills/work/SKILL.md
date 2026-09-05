@@ -57,8 +57,8 @@ looking for superseded values in the first kind, and do not edit them out of the
   than run, where the thing to be judged lives. Review must be able to re-run or
   re-judge every criterion from the files alone.
 - **Every occurrence of a check failing is recorded, not the first one per criterion.**
-  The loop's bound is not counted over these — it counts the files review leaves in
-  `<feature-dir>/returns/`. What needs them is the
+  The loop's bound is not counted over these — it counts how many consecutive returns have
+  carried the same open item. What needs them is the
   judged bound beside it, which triggers on whether the work *shrinks*: a session that hits
   the same red four times and writes it up once reads as convergence it did not have.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the

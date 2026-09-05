@@ -192,9 +192,11 @@ what a criterion *means* needs the human.
 
 - **A check refuses your input** — read what it expected against what it saw, fix, retry. Do
   not ask the human about mechanical refusals.
-- **The third return** — a return is review handing findings back to work; the bound is at
-  step 5, where the loop is actually taken, and it is counted off the files review leaves in
-  `<feature-dir>/returns/`, by the rule stated there. The count exists because that loop is
+- **One item, three returns running** — the bound is at step 5, where the loop is actually
+  taken, and what it counts is how many consecutive returns have carried the same item, by the
+  rule stated there. It reads identities, not how many rounds happened, so it is blind to the
+  trouble that keeps closing under one name and reopening under another — the bullet below is
+  what sees that, and it fires first. The count exists because that loop is
   unattended: nothing else is
   watching it repeat, so what ends it cannot be a judgement the loop makes about itself. It
   counts returns and nothing inside them, so it cannot tell converging from stuck — the
