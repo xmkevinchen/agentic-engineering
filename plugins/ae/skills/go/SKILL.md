@@ -128,6 +128,17 @@ the one whose bound must survive the watcher leaving. It is two numbers added:
 - plus one if `review.md`'s standing verdict is a fail and `log.md` holds no pass later than
   the pass of work that verdict says it judges.
 
+Nothing else adds to it. Not how many criteria one verdict failed, not how many checks went
+red inside a pass, not a red the work found and fixed before review saw it, not a pass the
+controller sent back at step 3 or 4, and not a pass a human opened. A verdict whose findings
+all go back to step 1 through the human leaves this loop rather than re-entering it; the
+count starts again from zero at the next signed criteria.
+
+**A log with no `## Pass N` headings is not countable, and you say so rather than reporting
+zero.** The headings are what the count reads; a log written before they were required does
+not have them, and a feature that went round three times then reads as none. Say the count
+cannot be taken, and use the rate bound below instead.
+
 ### → HUMAN SIGNS completion
 
 **→ HUMAN SIGNS.** Show what changed, what was verified and how, every finding's
