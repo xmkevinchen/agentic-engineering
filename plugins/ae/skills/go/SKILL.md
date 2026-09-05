@@ -89,6 +89,9 @@ not after.
 ### → HUMAN CONFIRMS the criteria
 
 The criteria have stopped moving; this is where they are confirmed.
+**If the feature directory holds any `returned-N.md`, move them into `<feature-dir>/returned/`
+once the human confirms** — those returns were taken against criteria that are no longer the
+ones signed, and the bound counts returns against the criteria in force.
 Present `acceptance.md` — that is the thing being confirmed. Show alongside it the questions
 the analysis named and how each was settled, and, when it named none, that it named none:
 that judgement is the one most worth disagreeing with, and it is invisible unless shown.
@@ -128,6 +131,13 @@ exactly the one whose bound must survive the watcher leaving.
 A feature that has none of these files has taken no returns this bound can see. That is the
 honest answer for a feature worked before the files existed, and it starts from zero rather
 than pretending to a history nothing recorded.
+
+**Re-signed criteria start a new loop, and the files move rather than go.** When the human
+confirms `acceptance.md` again — after a criterion changed, or after this bound sent the work
+back to step 1 — move every `returned-N.md` into `<feature-dir>/returned/` before planning
+starts. The count is the files at the top of the feature directory, so it is zero again; the
+ones underneath stay readable, and the next numbering starts from one. Without this a feature
+that took the bound's own exit would come back already at three and stop before it worked.
 
 **This count cannot tell a loop that is converging from one that is stuck.** Three returns
 that each fixed something real count the same as three that changed nothing. What tells
