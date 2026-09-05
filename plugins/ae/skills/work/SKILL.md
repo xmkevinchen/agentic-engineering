@@ -31,8 +31,9 @@ Commits on the branch, and a working log at `<feature-dir>/log.md`.
 **The log is structured by pass, and a pass heading reads `## Pass N`.** The first pass under
 its own heading, and every pass after it under its own, opening with what sent the work back —
 the findings, as `review.md` states them. The form is fixed so a reader can find a pass, not
-because anything counts these headings; what the loop's bound counts is the files in
-`<feature-dir>/returns/`. **A pass that supersedes an earlier pass's result says so at the
+because anything counts these headings; what the loop's bound counts is how many consecutive
+returns have carried the same open item. **A pass that supersedes an earlier pass's result says
+so at the
 earlier claim**, not
 only in the later pass. This file is a record, so a superseded green stays in it; a reader who
 can attribute both claims still cannot tell which is true, and sixty lines is enough to hide
