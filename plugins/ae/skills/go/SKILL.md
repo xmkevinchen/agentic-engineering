@@ -89,7 +89,7 @@ not after.
 ### → HUMAN CONFIRMS the criteria
 
 The criteria have stopped moving; this is where they are confirmed.
-**If the feature directory holds any `return-N.md`, move them into `<feature-dir>/returns/`
+**If the feature directory holds any `review-return-N.md`, move them into `<feature-dir>/returns/`
 once the human confirms** — those returns were taken against criteria that are no longer the
 ones signed, and the bound counts returns against the criteria in force.
 Present `acceptance.md` — that is the thing being confirmed. Show alongside it the questions
@@ -120,10 +120,10 @@ back to step 1, and only through the human.
 
 **Before sending it back, count the returns — including the one you are about to make.** A
 return is review handing findings back to work, and each one leaves a file: review writes
-`<feature-dir>/return-N.md` at the moment it sends findings back. The third return ends the
+`<feature-dir>/review-return-N.md` at the moment it sends findings back. The third return ends the
 loop: re-cut the step, or conclude the criterion is unmeetable and take it back to step 1.
 
-**Count the files, never what this session remembers.** `return-1.md`, `return-2.md`, and so
+**Count the files, never what this session remembers.** `review-return-1.md`, `review-return-2.md`, and so
 on — the count is how many exist, and the one you are about to write is the next number. The
 count that lives in a session is reset by an ordinary resume, and a loop nobody is watching is
 exactly the one whose bound must survive the watcher leaving.
@@ -134,7 +134,7 @@ than pretending to a history nothing recorded.
 
 **Re-signed criteria start a new loop, and the files move rather than go.** When the human
 confirms `acceptance.md` again — after a criterion changed, or after this bound sent the work
-back to step 1 — move every `return-N.md` into `<feature-dir>/returns/` before planning
+back to step 1 — move every `review-return-N.md` into `<feature-dir>/returns/` before planning
 starts. The count is the files at the top of the feature directory, so it is zero again; the
 ones underneath stay readable, and the next numbering starts from one. Without this a feature
 that took the bound's own exit would come back already at three and stop before it worked.
@@ -180,7 +180,7 @@ what a criterion *means* needs the human.
 - **A check refuses your input** — read what it expected against what it saw, fix, retry. Do
   not ask the human about mechanical refusals.
 - **The third return** — a return is review handing findings back to work; the bound is at
-  step 5, where the loop is actually taken, and it is counted off the `return-N.md` files
+  step 5, where the loop is actually taken, and it is counted off the `review-return-N.md` files
   review leaves, by the rule stated there. The count exists because that loop is unattended: nothing else is
   watching it repeat, so what ends it cannot be a judgement the loop makes about itself. It
   counts returns and nothing inside them, so it cannot tell converging from stuck — the

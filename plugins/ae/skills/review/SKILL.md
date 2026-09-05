@@ -33,10 +33,11 @@ what it is a verdict on does not.
 Name in the file which pass this verdict judges. Rewrite the file each pass; do not append to it. Two verdicts standing in one file with nothing saying which is live is the thing this forbids. The history of passes goes in `log.md`, not here.
 
 **A return leaves a file.** When you send findings back to WORK, write
-`<feature-dir>/return-N.md` — N the next number after the ones already there — holding the
+`<feature-dir>/review-return-N.md` — N the next number after the ones already there — holding the
 findings that go back and the disposition of every finding this pass raised, including the ones
-you rejected or deferred. The name is `return-`, not `returned-`, so these never collide with the
-`returned-<id>.md` a discussion leaves when it sends a question back to ANALYZE. These files are
+you rejected or deferred. The name carries the stage that wrote it, so it never collides with the
+`returned-<id>.md` a discussion leaves in the same directory when it sends a question back to
+ANALYZE — a one-letter difference would not have been enough. These files are
 what the entry's bound counts, and they are the only place a rejected or deferred finding
 survives: this file is rewritten each pass, and a rewrite
 would otherwise take the finding with it. They are never edited afterwards.
