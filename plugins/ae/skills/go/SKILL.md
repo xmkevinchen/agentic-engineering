@@ -179,9 +179,12 @@ what a criterion *means* needs the human.
 
 - **A check refuses your input** — read what it expected against what it saw, fix, retry. Do
   not ask the human about mechanical refusals.
-- **Same failure three times** — the bound is at step 5, where the loop is actually taken,
-  and it is counted off `log.md`. The count exists because that loop is unattended: nothing
-  else is watching it repeat. A loop that waits on a human is not this one — it advances only
+- **The third return** — a return is review handing findings back to work; the bound is at
+  step 5, where the loop is actually taken, and it is counted off `log.md` and `review.md` by
+  the rule stated there. The count exists because that loop is unattended: nothing else is
+  watching it repeat, so what ends it cannot be a judgement the loop makes about itself. It
+  counts returns and nothing inside them, so it cannot tell converging from stuck — the
+  bullet below is what does. A loop that waits on a human is not this one — it advances only
   when they answer, and they can see they were asked.
 - **Several rounds each fixing something real, and the work does not shrink** — the trigger
   is the rate, not the failures, and every round looks fine from inside. Stop and ask what is
