@@ -137,7 +137,9 @@ count starts again from zero at the next signed criteria.
 **A log with no `## Pass N` headings is not countable, and you say so rather than reporting
 zero.** The headings are what the count reads; a log written before they were required does
 not have them, and a feature that went round three times then reads as none. Say the count
-cannot be taken, and use the rate bound below instead.
+cannot be taken, and use the rate bound below instead. **Nothing stands in for a heading** — a
+round you can plainly see in the prose is still not a pass the count can read, and finding one
+is a reason to say the log is uncountable rather than a reason to count it.
 
 **This count cannot tell a loop that is converging from one that is stuck.** Three returns
 that each fixed something real count the same as three that changed nothing. What tells
