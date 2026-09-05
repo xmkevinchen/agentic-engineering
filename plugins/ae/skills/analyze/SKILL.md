@@ -13,8 +13,12 @@ judged against what you write here.
 
 ## Input
 
-The work item — **$ARGUMENTS**, free text, a `BL-NNN`, or a path to a file describing
-it — and the repository. Read the repository yourself before writing anything.
+The work item — **$ARGUMENTS**, free text, a `BL-NNN`, an `F-NNN-<slug>`, or a path to a file
+describing it — and the repository. Read the repository yourself before writing anything.
+
+**An `F-NNN-<slug>` is a resume, not a new item.** Open that directory and carry on from what it
+already holds: take up what `blocked_by:` is waiting on, and act on any `returned-<id>.md` it
+contains. Allocate no new id.
 
 ## Deliverable
 
@@ -51,31 +55,39 @@ Ask who can close the gap. There are three answers and no fourth.
   the three questions again. Ask, get, re-ask — loop here until they hold, or until one of the
   endings below turns out to apply instead.
 
+That third route is the one that gets abused, because asking is cheaper than looking: it is
+yours only once looking has established the material is not there. But between asking and
+inventing a premise, ask. An analysis standing on an invented premise costs four stages to
+find out about; another question costs a message.
+
+### While you are waiting on the human
+
 Write the directory and `analysis.md` on the first pass through that loop, holding what you
 have and, for each thing you are waiting on, three things: **what is missing, why it is
-nowhere you can reach, and what having it would let you settle.** That is the load-bearing
-part. `blocked_by:` only marks that the analysis is mid-loop, and a marker nobody can act on
-is not a request. The middle clause is also where this route polices itself: a blocker whose
-"why" thins out once written down was something to go and look at.
+nowhere you can reach, and what having it would let you settle.** Those three go in the body.
+`blocked_by:` carries the id and one line, marking that the analysis is mid-loop; it is not
+itself the request.
+
+The middle clause is where this route polices itself: a blocker whose "why" thins out once
+written down was something to go and look at.
 
 None of that is a provisional answer, it is the true state — and it buys the human an `F-NNN`
 to come back to, so the next round is `/ae:go F-NNN-<slug>` rather than the original request
 pasted again. `acceptance.md` waits: there is no point stating what done means for a problem
 you cannot yet state.
 
-That third route is the one that gets abused, because asking is cheaper than looking: it is
-yours only once looking has established the material is not there. But between asking and
-inventing a premise, ask. An analysis standing on an invented premise costs four stages to
-find out about; another question costs a message.
-
 ## What each file must contain
+
+### The feature directory
 
 A feature directory `.ae/features/active/F-NNN-<slug>/` — `F-NNN` an id no feature has ever
 held, retired ids never reused — holding two files.
 
-**`analysis.md`** — what the problem is, what that rests on, each question left for
-discussion and what makes it unsettleable by evidence, and, while it is blocked, what it is
-waiting on. Its frontmatter carries ids, not text:
+### `analysis.md`
+
+What the problem is, what that rests on, each question left for discussion and what makes it
+unsettleable by evidence, and, while it is blocked, what it is waiting on. Its frontmatter
+carries ids, not text:
 
 ```yaml
 ---
@@ -89,8 +101,10 @@ blocked_by:
 
 Every id has a section in the body, headed by that line and as long as it needs to be. The
 line is how the list reads at a glance — at the gate where the human decides whether to argue
-with it — and the section is where the thing is actually said. Nothing here is one line
-because a field made it one line.
+with it. The section is where the thing is actually said, and the field's one-line shape never
+sets how long it runs.
+
+### The `discuss:` list
 
 An empty `discuss:` means no discussion, and that is a judgement with a reason behind it, not
 a silence. Each entry is a question whose two answers lead to materially different work, and
@@ -99,11 +113,14 @@ One you settled and then saw past: done is clear, and two routes to it both stan
 second is not a gap — it is what a finished analysis can see, and what a plan written alone
 would decide silently and leave no record of.
 
+### A question sent back
+
 A `returned-<id>.md` in the directory is a discussion that ran and sent the question back — the
 file says why, and there are two reasons it can give: the question's own premise did not hold, or
 it cited material the seats needed and the analysis did not have. The first means the question was
-not worth asking as posed; the second means it was, and you owe it more to stand on. Re-decide it — dissolve the id, or **pose it again under a new
-id, since question ids, like `F-NNN`, are never reused** — and **delete the file**: it says the
+not worth asking as posed; the second means it was, and you owe it more to stand on. Re-decide
+it — dissolve the id, or **pose it again under a new id, since question ids, like `F-NNN`, are
+never reused** — and **delete the file**: it says the
 question is currently sent back, and once you have acted that is no longer true. It carries no
 evidence of its own, so nothing is lost with it.
 
@@ -112,16 +129,19 @@ run, and those directories survive the return — they hold the findings that se
 Re-posing under the same id would hand the next discussion a count that is already spent, so its
 bound would fire before it had argued anything, and the record would have no objection to carry.
 
+### Why only these two are fields
+
 The ids are what the runner acts on without reading prose: `discuss:` says how many times
 `/ae:discuss` runs and which section each run opens, and a `blocked_by:` still holding ids
 says this analysis is mid-loop rather than finished. Control flow is what earns a field.
 Nothing else here earns one — a criterion's property and falsifier are read by people, and
 people read prose.
 
-**`acceptance.md`** — what done means, and nothing else. It is a separate file because it is
-the thing the human signs, and because it is the entire input to the fresh eyes that later
-judge whether the work met it: anything about how the conclusion was reached would stop them
-being fresh.
+### `acceptance.md`
+
+What done means, and nothing else. It is a separate file because it is the thing the human
+signs, and because it is the entire input to the fresh eyes that later judge whether the work
+met it: anything about how the conclusion was reached would stop them being fresh.
 
 These criteria are not frozen when you write them. Discussion can still change one, which is
 what discussion is for. The human confirms the file after that. From then on, changing a
@@ -131,14 +151,18 @@ Each criterion carries an id later stages cite, the property that must hold, and
 — what you would observe if the property did NOT hold. A criterion with no falsifier is a
 wish: find one, or mark it judgement and leave it to a human.
 
-**Both are written in the vocabulary of the thing being built, never the toolchain.** "Every
-test passes — unit, integration, end-to-end" is a criterion; "`pytest -q` and `jest --ci` exit
+### Written in the domain's words, never the toolchain's
+
+**Both files use the vocabulary of the thing being built, never the toolchain's.** "Every test passes — unit,
+integration, end-to-end" is a criterion; "`pytest -q` and `jest --ci` exit
 zero" is a method, and methods belong to the plan. The test is whether the criterion survives
 replacing the tools: one that names pytest dies with pytest, and whatever it was really
 asserting was never written down. This is the ordinary discipline of acceptance criteria —
 observable behaviour in the domain's own words, whatever notation you reach for — and what
 makes it load-bearing here is who reads this file. The human signs it, and fresh eyes later
 judge the work against it. Neither should have to know the toolchain to do their job.
+
+### The falsifier is not always a test
 
 The falsifier is the load-bearing part and it is not always a test. A document is read against
 the thing it describes, never against another document. A data invariant is a stated mismatch
