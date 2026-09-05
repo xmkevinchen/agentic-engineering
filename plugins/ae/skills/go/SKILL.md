@@ -200,3 +200,16 @@ what a criterion *means* needs the human.
   under one name and reopens under another — the bullet below is what sees that, and it fires
   first. A loop that waits on a human is not this one — it advances only when they answer, and
   they can see they were asked.
+- **Several rounds each fixing something real, and the work does not shrink** — the trigger is
+  the rate, not the failures: real to the round that found it, which is why every round looks
+  fine from inside, and whether it was real is what the next round keeps re-opening. This is
+  the shape the count above is blind to, and it fires earlier and on softer evidence. Stop and
+  ask what is *generating* these, then cut along that axis. That is a re-division, still inside
+  the loop — not an escalation. Only a criterion that cannot be met however the work is divided
+  leaves it.
+- **Blocked on a missing capability** — record it as blocked with what exactly would unblock
+  it; finish everything else; report at the end. Do not invent a substitute check and call it
+  passed.
+- **Only stop and wait for the human when** a criterion must change, a signature point is
+  reached, or proceeding under any assumption would make the work worthless. Everything else:
+  decide, note the decision, continue.
