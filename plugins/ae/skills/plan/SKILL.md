@@ -24,13 +24,17 @@ directory.
 
 ## Check the input before planning against it
 
-**Read `acceptance.md` first and refuse it when a criterion has no falsifier and no judgement
-mark, or when the evidence an answer rests on no longer holds.** Both are the entry's admission
-checks, and the entry applies them — but this stage is reachable directly, so arriving that way
-there is nothing between a malformed analysis and a plan built on it. Name what failed and send
-it back to analyze through the human. A criterion carrying neither a falsifier nor a judgement
-mark is one nobody can be held to; a criterion resting on a file that has since moved or gone
-is one that was signed against a tree that no longer exists.
+**Read `acceptance.md` first, and refuse it on either of two counts:**
+
+- a criterion has no falsifier and no judgement mark — nobody can be held to it;
+- the evidence an answer rests on no longer holds — a criterion resting on a file that has since
+  moved or gone was signed against a tree that no longer exists.
+
+Name what failed, and send it back to analyze through the human.
+
+Both are the entry's admission checks and the entry applies them, but this stage is reachable
+directly: arriving that way, there is nothing between a malformed analysis and a plan built on
+it.
 
 ## Send it back rather than plan around it
 
