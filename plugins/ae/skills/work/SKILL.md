@@ -68,10 +68,11 @@ looking for superseded values in the first kind, and do not edit them out of the
   with the condition that will resolve it. That covers both kinds: the ones this stage turns
   up as it goes, and the ones that arrived open on a return. A finding that just disappears
   is a process failure.
-- **The log says, item by item, what this pass did with each one it was handed.** Not that it
-  addressed the list — which ones, and what happened to each. A pass that engaged an item and
-  a pass that never looked at it are otherwise the same on disk, and the entry's bound counts
-  how many rounds an item has been open.
+- **The log says, item by item, what this pass did with each one it was handed** — naming each
+  by the identity the return gave it, not by describing it again. Not that it addressed the
+  list: which ones, and what happened to each. A pass that engaged an item and a pass that
+  never looked at it are otherwise the same on disk, and a reader who has to match your prose
+  to a return's prose is doing the judgement the identities exist to remove.
 - **The plan tracks reality.** Merge steps, split one that will not close, reorder after
   learning something — then record what changed and why. That needs no permission. Only
   a change to what a criterion *means* does, and that one goes back to analysis through
