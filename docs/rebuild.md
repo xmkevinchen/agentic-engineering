@@ -446,6 +446,16 @@ runs to produce work, not a verdict. **`plan` and `review` are run; `work` is ne
 treatment was changed substantially by it, and the placement rule from §3.2 can
 only be applied to stages whose real failures are known.
 
+**The `work` run carries a second job, and it decides how it must be staged.**
+Every measurement behind §3.2 — zero of twelve for a distant rule, six of six for
+rules inside the acting paragraph — was taken with the text handed to a session as
+a **file**. Whether placement behaves the same way when the same words arrive as a
+**loaded skill** is untested, and §3.2 is now the basis for where rules get
+written. So this run is not a session handed `work/SKILL.md`: it is this tree
+becoming the loaded plugin, `/reload-plugins`, then one real `/ae:go` whose work
+stage goes round twice. Splitting it into two runs would spend the same setup
+twice and answer neither question better.
+
 ### Phase B — make the controller, the monitor and the executing session a tested shape
 
 Phase A runs inside this shape, and the shape has never been deliberately tested
