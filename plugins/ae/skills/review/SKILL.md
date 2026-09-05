@@ -62,8 +62,8 @@ are about the same thing is doing the judgement this list exists to remove.
 
 **Walk every return that still has an open item, not only the last one.** **An item stays open
 until a return says it is closed** — a return that does not mention it has not closed it and does
-not break its run, so the count is how many returns have stood since it was raised with none of
-them closing it. Omission would otherwise be the one way an item outlives the bound meant to catch
+not break its run, and the count is how many returns have carried it — counting the one that
+raised it, so an item raised on return 1 and still open on return 3 stands at three. Omission would otherwise be the one way an item outlives the bound meant to catch
 it. The natural failure is not malice: a review
 organises around what it found, and an earlier item survives only where it happens to fit that
 shape. Three items were sent back on one real return and none of their identities appears in the
