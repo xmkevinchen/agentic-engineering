@@ -37,12 +37,16 @@ what it is a verdict on does not.
 
 Name in the file which pass this verdict judges. Rewrite the file each pass; do not append to
 it. Two verdicts standing in one file with nothing saying which is live is the thing this
-forbids. The history of passes goes in `log.md`, not here.
+forbids. The history of *passes* — which pass said what, and why a later one superseded it —
+goes in `log.md`, not here. A rejected or deferred finding's own record does not: it lives in
+`review/returns/`, below, whether or not this pass also sends anything back to WORK.
 
-**A return leaves a file, and the file is a list.** Write one whenever you finish with items still
-open — sending them back to WORK, re-cutting at the bound, or taking a criterion to the human as
-unmeetable. The route changes what happens next and not what is on the list, and a pass that ends
-the loop is the one whose items most need to survive it. Write the
+**A return leaves a file, and the file is a list.** Write one whenever you finish with items
+still open, or with a finding you are rejecting or deferring rather than fixing — sending
+something back to WORK, re-cutting at the bound, taking a criterion to the human as unmeetable,
+and rejecting or deferring a finding are the four things that write one. The route changes what
+happens next and not what is on the list, and a pass that ends the loop is the one whose items
+most need to survive it. Write the
 next numbered file in `<feature-dir>/review/returns/` — `1.md` if the directory is empty,
 otherwise one
 past the highest. The stage is the namespace: these sit under `review/`, so
@@ -50,8 +54,18 @@ nothing here can collide with what another stage leaves in the same feature dire
 has to be got right to keep them apart. These files are never edited afterwards, and they
 are the only place a rejected or deferred finding survives a rewrite of this one.
 
-**Every item on that list carries three things: an identity, what failed, and why it does not meet
-the criterion.** The identity is `N.k` — the return's number and the item's place on it, so
+**A rejected or deferred item is closed on the return that raises it.** It carries the same
+identity as any other item, and it is closed the moment it is written — a rejection closes with
+its reason, a deferral closes with the named condition that would reopen it. It is not handed to
+WORK and it does not wait for a later return to close it: "an item stays open until a return
+says it is closed," below, and this is that return saying so on arrival. A deferral reopens only
+when a later pass observes its named condition and says so — at which point it is a new finding,
+not this one revived.
+
+**Every item on that list carries three things: an identity, what was found, and the
+disposition** — still open, naming what failed and why it does not meet the criterion, or
+closed, naming the rejection's reason or the deferral's reopening condition. The identity is
+`N.k` — the return's number and the item's place on it, so
 `3.2` is the second item raised on the third return: a token a later file repeats exactly, not a
 phrase someone has to recognise. The reason is what the next round is judged against, so it is
 written for a reader who was not here — not "the check is too narrow" but what it missed and how

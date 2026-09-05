@@ -122,10 +122,10 @@ back to step 1, and only through the human.
 
 ### Before sending it back, count
 
-**Before sending it back, count — and what you count is an item, not a return.** A return is
-review handing findings back to work, and it leaves a numbered file in
-`<feature-dir>/review/returns/`
-listing the items that failed, each with an identity. **An item open on three returns
+**Before sending it back, count — and what you count is an item still open, not a return.** A
+return leaves a numbered file in `<feature-dir>/review/returns/` listing the items review found,
+each with an identity: some still open — handed back to work — and some closed on arrival,
+rejected or deferred rather than sent back. **An item open on three returns
 ends the loop:** re-cut the step, or conclude the criterion is unmeetable and take it back
 to step 1.
 
