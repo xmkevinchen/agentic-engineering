@@ -137,14 +137,14 @@ one is naming the return. A verdict whose findings
 all go back to step 1 through the human leaves this loop rather than re-entering it; the
 count starts again from zero at the next signed criteria.
 
-**A log with no `## Pass N` headings is not countable, and you say so rather than reporting
-zero.** You are reading whatever is on disk, not what the log's author was told to write: a
-heading at any other level, or worded any other way, is not one of these, and a log whose
-rounds are headed some other way is uncountable rather than partially countable. The headings are what the count reads; a log written before they were required does
-not have them, and a feature that went round three times then reads as none. Say the count
-cannot be taken, and use the rate bound below instead. **Nothing stands in for a heading** — a
-round you can plainly see in the prose is still not a pass the count can read, and finding one
-is a reason to say the log is uncountable rather than a reason to count it.
+**A pass heading is a line beginning `## Pass ` and a number. What follows the number is free
+text and changes nothing.** Anything else is not one — another heading level, another opening
+word, a round you can plainly see in the prose — however certain you are the author meant it
+as a pass.
+
+**A log holding none of them is not countable, and you say so rather than reporting zero.** A
+log written before they were required does not have them, and a feature that went round three
+times then reads as none. Say the count cannot be taken, and use the rate bound below instead.
 
 **This count cannot tell a loop that is converging from one that is stuck.** Three returns
 that each fixed something real count the same as three that changed nothing. What tells
