@@ -122,35 +122,41 @@ back to step 1, and only through the human.
 
 ### Before sending it back, count
 
-**Before sending it back, count the returns — including the one you are about to make.** A
-return is review handing findings back to work, and each one leaves a file: review writes the
-next numbered file into `<feature-dir>/returns/` at the moment it sends findings back. The third
-return ends the loop: re-cut the step, or conclude the criterion is unmeetable and take it back
+**Before sending it back, count — and what you count is an item, not a return.** A return is
+review handing findings back to work, and it leaves a numbered file in `<feature-dir>/returns/`
+listing the items that failed, each with an identity. **An item still open on three consecutive
+returns ends the loop:** re-cut the step, or conclude the criterion is unmeetable and take it back
 to step 1.
 
-**Count the files, never what this session remembers.** `returns/1.md`, `returns/2.md`, and so on
-— the count is how many sit directly in that directory, and the one you are about to write is the
-next number. The
-count that lives in a session is reset by an ordinary resume, and a loop nobody is watching is
-exactly the one whose bound must survive the watcher leaving.
+**Count over the files, never over what this session remembers.** For each item still open, count
+back through `returns/` and see how many consecutive returns have carried it. The count that lives
+in a session is reset by an ordinary resume, and a loop nobody is watching is exactly the one whose
+bound must survive the watcher leaving.
 
-A feature that has none of these files has taken no returns this bound can see. That is the
-honest answer for a feature worked before the files existed, and it starts from zero rather
-than pretending to a history nothing recorded.
+A feature with no `returns/` has taken no returns this bound can see. That is the honest answer for
+one worked before the files existed, and it starts from zero rather than pretending to a history
+nothing recorded.
 
-**Re-signed criteria start a new loop, and the files move rather than go.** When the human
-confirms `acceptance.md` again — after a criterion changed, or after this bound sent the work
-back to step 1 — move them into the next free `<feature-dir>/returns/superseded-N/` before
-planning starts. The count is the files directly in `returns/`, so it is zero again; the ones
-underneath stay readable, each earlier loop in its own numbered directory, and the next
-numbering starts from one. Without this a feature
-that took the bound's own exit would come back already at three and stop before it worked.
+**Re-signed criteria start a new loop, and the files move rather than go.** When the human confirms
+`acceptance.md` again, move everything in `returns/` into the next free
+`<feature-dir>/returns/superseded-N/` before planning starts. Items open against criteria that were
+then rewritten are not open against the ones now signed, so their counts do not carry.
 
-**This count cannot tell a loop that is converging from one that is stuck.** Three returns
-that each fixed something real count the same as three that changed nothing. What tells
-those apart is the rate bound under *When things go wrong* — several rounds each fixing
-something real while the work does not shrink — and it fires earlier, on softer evidence.
-Read it first. This one is the backstop for when nobody does.
+**Three shapes, and only one of them is this count's.**
+
+- **One item that will not close.** Three consecutive returns carrying it, and this count ends the
+  loop. That is what it is for.
+- **Items that close while the same trouble comes back wearing a new one.** Every item resolved,
+  every round raising fresh ones from the same source. This count never fires — each item's run is
+  one — and the rate bound under *When things go wrong* is what catches it, because that is exactly
+  its trigger: several rounds each fixing something real while the work does not shrink. **Read it
+  first.** It fires earlier and on softer evidence, and it is the one that sees a pattern this
+  count is blind to by construction.
+- **Genuinely new work each round, converging.** Neither fires, and neither should.
+
+**The rate bound reads the record, not the count** — including `returns/superseded-N/`, where a
+re-signature puts the evidence that a pattern has been running longer than the current loop. A
+feature that has circled through two signatures reads as zero here and reads as itself there.
 
 ### → HUMAN SIGNS completion
 
