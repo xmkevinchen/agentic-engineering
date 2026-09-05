@@ -54,20 +54,6 @@ looking for superseded values in the first kind, and do not edit them out of the
   taken over this log. A session that hits the same red three times and writes it up once
   shows one on disk and holds three in its head, which puts the bound back in the place it
   was moved out of.
-- **A verification the plan names and this stage does not perform is recorded with whose
-  it is.** Declining one can be right — the reader who judges the work belongs to review,
-  and settling it here would be the author signing off their own work. What is not right is
-  declining silently: the plan named it, this stage is where it came due, and a verification
-  that disappears between the stage that named it and the stage that never learned it was
-  owed is a criterion nobody checked.
-- **A criterion this stage cannot check is recorded, and which of two states it is in
-  decides where it goes.** *No method exists* — the criterion is defective, and it goes
-  back to analysis through the human, since a signed criterion is not yours to move.
-  *A method exists and a precondition of the world is absent* — the run has to happen
-  somewhere this stage is not, or after something that has not happened yet. That one is
-  **blocked, not unchecked**: say what exactly would unblock it, which is what the entry's
-  blocked-on-a-missing-capability rule already requires and what the word "unchecked"
-  quietly drops. Never invent a substitute check, and never report either kind satisfied.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
   review finding it answers. Anything else is reverted, or the reason it belongs is
   recorded.
@@ -78,18 +64,47 @@ looking for superseded values in the first kind, and do not edit them out of the
   learning something — then record what changed and why. That needs no permission. Only
   a change to what a criterion *means* does, and that one goes back to analysis through
   the human.
-- **A claim the plan makes about the repository, found false, is corrected in `plan.md`.**
-  Not only noted in the log — a plan is written by reading and executed by doing, so this
-  is the defect a plan is most likely to carry, and the log is not where the next reader
-  meets it. Record the correction here and make it there. This covers a plan that misread
-  the tree and a plan whose claim was true when written and is not now; both arrive the
-  same way and neither is a criterion change.
-  **Unless the false claim is the criterion's own words**, carried into the plan. Then the
-  plan is not where it gets fixed: editing it would make the plan misquote what was signed,
-  and leaving it leaves the plan asserting something false. What is wrong is the criterion,
-  which rests on a premise that does not hold — that goes back to analysis through the human,
-  by the route above. Say in `plan.md` that the row has no subject, so the next reader is not
-  the one who discovers it.
+
+Three more hold. Each has a section below.
+
+### A verification the plan named that this stage does not perform
+
+**Record it, and record whose it is.**
+
+Declining one can be right: the reader who judges the work belongs to review, and settling it
+here would be the author signing off their own work. What is not right is declining silently:
+the plan named it, this stage is where it came due, and a verification that disappears between
+the stage that named it and the stage that never learned it was owed is a criterion nobody
+checked.
+
+### A criterion this stage cannot check
+
+**Record it, and route it by which of two states it is in.**
+
+**No method exists** — the criterion is defective. It goes back to analysis through the human,
+since a signed criterion is not yours to move.
+
+**A method exists and a precondition of the world is absent** — the run has to happen somewhere
+this stage is not, or after something that has not happened yet. That one is **blocked, not
+unchecked**: say what exactly would unblock it. That is what the entry's
+blocked-on-a-missing-capability rule already requires, and what the word "unchecked" quietly
+drops.
+
+Never invent a substitute check, and never report either kind satisfied.
+
+### A claim the plan makes about the repository, found false
+
+**Correct it in `plan.md`, not only in the log.** A plan is written by reading and executed
+by doing, so this is the defect a plan is most likely to carry, and the log is not where the
+next reader meets it. Record the correction here and make it there. This covers a plan that
+misread the tree and a plan whose claim was true when written and is not now; both arrive the
+same way and neither is a criterion change.
+
+**Unless the false claim is the criterion's own words**, carried into the plan. Then the plan is
+not where it gets fixed: editing it would make the plan misquote what was signed, and leaving it
+leaves the plan asserting something false. What is wrong is the criterion, which rests on a
+premise that does not hold — that goes back to analysis through the human, by the route above.
+Say in `plan.md` that the row has no subject, so the next reader is not the one who discovers it.
 
 ## Refused by review when
 
