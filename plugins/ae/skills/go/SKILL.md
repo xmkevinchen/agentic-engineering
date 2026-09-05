@@ -92,10 +92,10 @@ not after.
 ### → HUMAN CONFIRMS the criteria
 
 The criteria have stopped moving; this is where they are confirmed.
-**If `<feature-dir>/returns/` holds any numbered file, move them into the next free
-`<feature-dir>/returns/superseded-N/` once the human confirms** — the items on those returns were
-raised against criteria that are no longer the ones signed, and the bound counts against the
-criteria in force.
+**If any item is still open, go down the list with the human as they confirm** — each one is
+either closed here, because the criterion it failed is no longer the one signed, or it stays open
+and keeps the count it has. An item that is still a problem against the criteria now in force does
+not stop being one because a different criterion changed.
 Present `acceptance.md` — that is the thing being confirmed. Show alongside it the questions
 the analysis named and how each was settled, and, when it named none, that it named none:
 that judgement is the one most worth disagreeing with, and it is invisible unless shown.
@@ -137,10 +137,16 @@ A feature with no `returns/` has taken no returns this bound can see. That is th
 one worked before the files existed, and it starts from zero rather than pretending to a history
 nothing recorded.
 
-**Re-signed criteria start a new loop, and the files move rather than go.** When the human confirms
-`acceptance.md` again, move everything in `returns/` into the next free
-`<feature-dir>/returns/superseded-N/` before planning starts. Items open against criteria that were
-then rewritten are not open against the ones now signed, so their counts do not carry.
+**Re-signed criteria do not reset anything on their own.** The count is not a thing kept beside
+the items; it is what the items on `returns/` say. So when the human confirms `acceptance.md`
+again, nothing moves and nothing is renumbered — each open item is closed at the gate or carried,
+and a carried item keeps every return it has stood on. `returns/` is one sequence for the life of
+the feature, which is why `N.k` never collides and why nothing has to decide where numbering
+restarts.
+
+The reason not to zero them: an item that is still a problem against the criteria now in force has
+not stopped being one because some other criterion changed. Zeroing loses exactly the item worth
+keeping.
 
 **Three shapes, and only one of them is this count's.**
 
@@ -154,9 +160,9 @@ then rewritten are not open against the ones now signed, so their counts do not 
   count is blind to by construction.
 - **Genuinely new work each round, converging.** Neither fires, and neither should.
 
-**The rate bound reads the record, not the count** — including `returns/superseded-N/`, where a
-re-signature puts the evidence that a pattern has been running longer than the current loop. A
-feature that has circled through two signatures reads as zero here and reads as itself there.
+**The rate bound reads the record, not the count** — every return the feature has, including the
+ones whose items were closed at a confirmation gate. A pattern that has run through two signatures
+is invisible to a count of open items and plain in the files.
 
 ### → HUMAN SIGNS completion
 

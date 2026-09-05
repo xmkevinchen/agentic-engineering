@@ -598,18 +598,13 @@ has to beat a measured baseline, not merely sound prudent.
 | Goal | Counter | At the delete | Target |
 |---|---|---|---|
 | The prose surface shrinks | Total lines across `plugins/ae/skills/*/SKILL.md` | 779 (from 8,457) | falling, or a stated reason |
-
-**The first counter has risen, and this is the stated reason it asks for.** 779 at the delete,
-**1148** on 2026-09-05. Almost all of it is one stage: `work` went 58 → 130 carrying the rules
-that make an iteration between work and review leave a trace on disk — the loop's count taken
-off the return files a review leaves in `<feature-dir>/returns/` rather than held in a session,
-a superseded result marked where the earlier claim stands, a plan claim found false corrected in
-the plan rather than only the log. Each was
-written after a closed-book run failed without it. **That is the bargain this counter exists to
-make visible, not to forbid** — but it is now the largest single stage after `discuss`, and the
-next thing that grows it should be asked what it replaces.
 | No rule is unreadable | Longest single line in any `SKILL.md` | 411 (from 2,329) | falling |
 | A person waits for a signature, never a repair | Times the process pulled a person in to finish work it did not finish | — | zero |
+
+**The first counter has risen, and the stated reason is the one this document already gives.** The
+rules that make a loop between work and review leave a trace on disk were each written after a
+closed-book run failed without them. That is the bargain the counter exists to make visible rather
+than to forbid — and the next thing that grows it should be asked what it replaces.
 
 ### Deferred, with the condition that would unfreeze each
 

@@ -39,7 +39,10 @@ Name in the file which pass this verdict judges. Rewrite the file each pass; do 
 it. Two verdicts standing in one file with nothing saying which is live is the thing this
 forbids. The history of passes goes in `log.md`, not here.
 
-**A return leaves a file, and the file is a list.** When you send findings back to WORK, write the
+**A return leaves a file, and the file is a list.** Write one whenever you finish with items still
+open — sending them back to WORK, re-cutting at the bound, or taking a criterion to the human as
+unmeetable. The route changes what happens next and not what is on the list, and a pass that ends
+the loop is the one whose items most need to survive it. Write the
 next numbered file in `<feature-dir>/returns/` — `1.md` if the directory is empty, otherwise one
 past the highest. The directory is the namespace, so nothing here can collide with the
 `returned-<id>.md` a discussion leaves beside it. These files are never edited afterwards, and they
