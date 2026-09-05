@@ -193,24 +193,10 @@ what a criterion *means* needs the human.
 - **A check refuses your input** — read what it expected against what it saw, fix, retry. Do
   not ask the human about mechanical refusals.
 - **One item, three returns running** — the bound is at step 5, where the loop is actually
-  taken, and what it counts is how many consecutive returns have carried the same item, by the
-  rule stated there. It reads identities, not how many rounds happened, so it is blind to the
-  trouble that keeps closing under one name and reopening under another — the bullet below is
-  what sees that, and it fires first. The count exists because that loop is
-  unattended: nothing else is
+  taken, and what it counts is how many consecutive returns have carried the same open item,
+  by the rule stated there. The count exists because that loop is unattended: nothing else is
   watching it repeat, so what ends it cannot be a judgement the loop makes about itself. It
-  counts returns and nothing inside them, so it cannot tell converging from stuck — the
-  bullet below is what does. A loop that waits on a human is not this one — it advances only
-  when they answer, and they can see they were asked.
-- **Several rounds each fixing something real, and the work does not shrink** — real to the
-  round that found it, which is why every round looks fine from inside; whether it was real
-  is what the next round keeps re-opening. The trigger is the rate, not the failures. Stop and
-  ask what is
-  *generating* these, then cut along that axis. That is a re-division, still inside the loop —
-  not an escalation. Only a criterion that cannot be met however the work is divided leaves it.
-- **Blocked on a missing capability** — record it as blocked with what exactly would unblock
-  it; finish everything else; report at the end. Do not invent a substitute check and call it
-  passed.
-- **Only stop and wait for the human when** a criterion must change, a signature point is
-  reached, or proceeding under any assumption would make the work worthless. Everything else:
-  decide, note the decision, continue.
+  reads identities and never what an item says, so it is blind to the trouble that closes
+  under one name and reopens under another — the bullet below is what sees that, and it fires
+  first. A loop that waits on a human is not this one — it advances only when they answer, and
+  they can see they were asked.
