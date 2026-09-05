@@ -32,14 +32,24 @@ what it is a verdict on does not.
 
 Name in the file which pass this verdict judges. Rewrite the file each pass; do not append to it. Two verdicts standing in one file with nothing saying which is live is the thing this forbids. The history of passes goes in `log.md`, not here.
 
-**A return leaves a file.** When you send findings back to WORK, write
-the next numbered file in `<feature-dir>/returns/` — `1.md` if the directory is empty, otherwise
-one past the highest — holding the findings that go back and the disposition of every finding this
-pass raised, including the ones you rejected or deferred. The directory is the namespace, so
-nothing here can collide with the `returned-<id>.md` a discussion leaves beside it. These files are
-what the entry's bound counts, and they are the only place a rejected or deferred finding
-survives: this file is rewritten each pass, and a rewrite
-would otherwise take the finding with it. They are never edited afterwards.
+**A return leaves a file, and the file is a list.** When you send findings back to WORK, write the
+next numbered file in `<feature-dir>/returns/` — `1.md` if the directory is empty, otherwise one
+past the highest. The directory is the namespace, so nothing here can collide with the
+`returned-<id>.md` a discussion leaves beside it. These files are never edited afterwards, and they
+are the only place a rejected or deferred finding survives a rewrite of this one.
+
+**Every item on that list carries three things: an identity, what failed, and why it does not meet
+the criterion.** The reason is what the next round is judged against, so it is written for a reader
+who was not here — not "the check is too narrow" but what it missed and how you know. **An item
+that names something missing rather than something wrong says what would close it**, because the
+absence of a thing is not an observation anyone can make: "no rule covers a second reset" closes on
+a stated rule, and until you say which, nobody can tell whether it was answered.
+
+**An item's identity never changes once raised.** If a later round decides two items are really
+one, it says so and both keep their own identities and their own counts; if one is really two, it
+raises new items beside it and the original stays open until the work that closes it is done.
+Restating an item under a new identity resets what the entry's bound counts, and nothing on disk
+would tell that from a refinement.
 
 Send implementation defects back to WORK yourself. Do not route one through the human, and do not make reopening that loop anyone's call. Send a finding that would change what a criterion *means* back to ANALYZE, through the human — those are the criteria that were confirmed, and only that route reaches them.
 
