@@ -139,6 +139,12 @@ zero.** The headings are what the count reads; a log written before they were re
 not have them, and a feature that went round three times then reads as none. Say the count
 cannot be taken, and use the rate bound below instead.
 
+**This count cannot tell a loop that is converging from one that is stuck.** Three returns
+that each fixed something real count the same as three that changed nothing. What tells
+those apart is the rate bound under *When things go wrong* — several rounds each fixing
+something real while the work does not shrink — and it fires earlier, on softer evidence.
+Read it first. This one is the backstop for when nobody does.
+
 ### → HUMAN SIGNS completion
 
 **→ HUMAN SIGNS.** Show what changed, what was verified and how, every finding's
