@@ -162,6 +162,29 @@ observable behaviour in the domain's own words, whatever notation you reach for 
 makes it load-bearing here is who reads this file. The human signs it, and fresh eyes later
 judge the work against it. Neither should have to know the toolchain to do their job.
 
+### Say when and then, not the name of a property
+
+**A criterion describes a situation and what happens in it.** *When* someone does this, *then* that
+is what they get. It is the shape a person can act on and a person can check, and it is the shape
+every acceptance criterion outside this repository is written in.
+
+What to avoid is the abstract naming of a property — "the workflow states the unit once", "the
+record is self-describing", "the boundary is well-formed". Those read as if they say something and
+a reader cannot begin: the nouns are invented here, so before judging anything they have to work
+out what a *unit* is, what counts as *once*, what *self-describing* would look like. Compare:
+
+> **No second answer to "what is counted".** Every place that says what the loop's bound counts
+> says the same thing. *Falsifier:* two readers follow two different lines of the workflow and
+> reach different counts for the same feature.
+
+Same property, and now someone who has never seen this project knows what to do on the first
+reading.
+
+**The test, and it is quick.** Read the criterion to someone who does not know the feature and ask
+what they would go and look at. If they have to ask what one of your nouns means, the criterion is
+not written yet. **Every noun in a criterion is either one the reader already has, or defined on
+the line that uses it.**
+
 ### The falsifier is not always a test
 
 The falsifier is the load-bearing part and it is not always a test. A document is read against
