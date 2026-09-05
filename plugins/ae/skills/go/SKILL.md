@@ -130,7 +130,10 @@ the one whose bound must survive the watcher leaving. It is two numbers added:
 
 Nothing else adds to it. Not how many criteria one verdict failed, not how many checks went
 red inside a pass, not a red the work found and fixed before review saw it, not a pass the
-controller sent back at step 3 or 4, and not a pass a human opened. A verdict whose findings
+controller sent back at step 3 or 4, and not a pass a human opened. A section that is not
+under a pass heading adds nothing whatever it describes, and an opening that names some of
+the findings that came back is a pass like any other — the count is of returns, so naming
+one is naming the return. A verdict whose findings
 all go back to step 1 through the human leaves this loop rather than re-entering it; the
 count starts again from zero at the next signed criteria.
 
