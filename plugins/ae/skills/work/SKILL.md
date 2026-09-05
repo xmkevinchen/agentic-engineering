@@ -14,10 +14,12 @@ check can actually fail.
 
 ## Input
 
-The plan at **$ARGUMENTS** and the signed criteria in `<feature-dir>/acceptance.md`;
-`<feature-dir>` is the
-plan's parent directory. Reread the plan from disk at the start of every step — never from
-memory, which compaction drops without saying so.
+Three things. The plan at **$ARGUMENTS**; the signed criteria in `<feature-dir>/acceptance.md`,
+`<feature-dir>` being the plan's parent directory; and, when `<feature-dir>/returns/` holds
+anything, **the items still open on those returns** — that is what a review sent back, and it is
+the third thing this pass is working from rather than a file you may or may not go and read.
+Reread all three from disk at the start of every step — never from memory, which compaction
+drops without saying so.
 
 Do not execute criteria the human has not confirmed. If a step names nothing that would
 turn red, send the plan back rather than inventing the missing check.
@@ -62,9 +64,14 @@ looking for superseded values in the first kind, and do not edit them out of the
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
   review finding it answers. Anything else is reverted, or the reason it belongs is
   recorded.
-- **Every finding raised along the way ends somewhere visible** — fixed, rejected with
-  the reason, or deferred with the condition that will resolve it. A finding that just
-  disappears is a process failure.
+- **Every finding ends somewhere visible** — fixed, rejected with the reason, or deferred
+  with the condition that will resolve it. That covers both kinds: the ones this stage turns
+  up as it goes, and the ones that arrived open on a return. A finding that just disappears
+  is a process failure.
+- **The log says, item by item, what this pass did with each one it was handed.** Not that it
+  addressed the list — which ones, and what happened to each. A pass that engaged an item and
+  a pass that never looked at it are otherwise the same on disk, and the entry's bound counts
+  how many rounds an item has been open.
 - **The plan tracks reality.** Merge steps, split one that will not close, reorder after
   learning something — then record what changed and why. That needs no permission. Only
   a change to what a criterion *means* does, and that one goes back to analysis through
