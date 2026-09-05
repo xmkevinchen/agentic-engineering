@@ -43,9 +43,11 @@ forbids. The history of passes goes in `log.md`, not here.
 open — sending them back to WORK, re-cutting at the bound, or taking a criterion to the human as
 unmeetable. The route changes what happens next and not what is on the list, and a pass that ends
 the loop is the one whose items most need to survive it. Write the
-next numbered file in `<feature-dir>/returns/` — `1.md` if the directory is empty, otherwise one
-past the highest. The directory is the namespace, so nothing here can collide with the
-`returned-<id>.md` a discussion leaves beside it. These files are never edited afterwards, and they
+next numbered file in `<feature-dir>/review/returns/` — `1.md` if the directory is empty,
+otherwise one
+past the highest. The stage is the namespace: these sit under `review/`, so
+nothing here can collide with what another stage leaves in the same feature directory, and no name
+has to be got right to keep them apart. These files are never edited afterwards, and they
 are the only place a rejected or deferred finding survives a rewrite of this one.
 
 **Every item on that list carries three things: an identity, what failed, and why it does not meet
@@ -66,7 +68,8 @@ are about the same thing is doing the judgement this list exists to remove.
 **Walk every return that still has an open item, not only the last one.** **An item stays open
 until a return says it is closed** — a return that does not mention it has not closed it and does
 not break its run, and the count is how many returns have carried it — counting the one that
-raised it, so an item raised on return 1 and still open on return 3 stands at three. Omission would otherwise be the one way an item outlives the bound meant to catch
+raised it, so an item raised on return 1 and still open on return 3 stands at three. Omission
+would otherwise be the one way an item outlives the bound meant to catch
 it. The natural failure is not malice: a review
 organises around what it found, and an earlier item survives only where it happens to fit that
 shape. Three items were sent back on one real return and none of their identities appears in the

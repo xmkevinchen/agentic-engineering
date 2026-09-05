@@ -123,24 +123,28 @@ back to step 1, and only through the human.
 ### Before sending it back, count
 
 **Before sending it back, count — and what you count is an item, not a return.** A return is
-review handing findings back to work, and it leaves a numbered file in `<feature-dir>/returns/`
+review handing findings back to work, and it leaves a numbered file in
+`<feature-dir>/review/returns/`
 listing the items that failed, each with an identity. **An item still open on three consecutive
 returns ends the loop:** re-cut the step, or conclude the criterion is unmeetable and take it back
 to step 1.
 
 **Count over the files, never over what this session remembers.** For each item still open, count
-back through `returns/` and see how many consecutive returns have carried it. The count that lives
+back through `review/returns/` and see how many consecutive returns have carried it. The count
+that lives
 in a session is reset by an ordinary resume, and a loop nobody is watching is exactly the one whose
 bound must survive the watcher leaving.
 
-A feature with no `returns/` has taken no returns this bound can see. That is the honest answer for
+A feature with no `review/returns/` has taken no returns this bound can see. That is the honest
+answer for
 one worked before the files existed, and it starts from zero rather than pretending to a history
 nothing recorded.
 
 **Re-signed criteria do not reset anything on their own.** The count is not a thing kept beside
-the items; it is what the items on `returns/` say. So when the human confirms `acceptance.md`
+the items; it is what the items on `review/returns/` say. So when the human confirms `acceptance.md`
 again, nothing moves and nothing is renumbered — each open item is closed at the gate or carried,
-and a carried item keeps every return it has stood on. `returns/` is one sequence for the life of
+and a carried item keeps every return it has stood on. `review/returns/` is one sequence for the
+life of
 the feature, which is why `N.k` never collides and why nothing has to decide where numbering
 restarts.
 

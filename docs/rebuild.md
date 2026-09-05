@@ -487,7 +487,7 @@ be building a rig with nothing to put in it.
 
 Give the feature directory enough structure that a fresh session can state
 position, next step and trustworthiness (§3.3). The loop counter is done: it is
-the items on the return files in `<feature-dir>/returns/`, and no longer lives
+the items on the return files in `<feature-dir>/review/returns/`, and no longer lives
 in conversation. **Depends on B**, whose split-session
 question is what makes disk the only channel. **Unblocks:** running any stage in
 its own session or in the background; also makes §3.4 detectable, because an

@@ -15,7 +15,7 @@ check can actually fail.
 ## Input
 
 Three things. The plan at **$ARGUMENTS**; the signed criteria in `<feature-dir>/acceptance.md`,
-`<feature-dir>` being the plan's parent directory; and, when `<feature-dir>/returns/` holds
+`<feature-dir>` being the plan's parent directory; and, when `<feature-dir>/review/returns/` holds
 anything, **the items still open on those returns** — that is what a review sent back, and it is
 the third thing this pass is working from rather than a file you may or may not go and read.
 Reread all three from disk at the start of every step — never from memory, which compaction
