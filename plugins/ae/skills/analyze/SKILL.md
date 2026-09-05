@@ -173,12 +173,14 @@ record is self-describing", "the boundary is well-formed". Those read as if they
 a reader cannot begin: the nouns are invented here, so before judging anything they have to work
 out what a *unit* is, what counts as *once*, what *self-describing* would look like. Compare:
 
-> **No second answer to "what is counted".** Every place that says what the loop's bound counts
-> says the same thing. *Falsifier:* two readers follow two different lines of the workflow and
-> reach different counts for the same feature.
+> **When two readers count the same feature's returns, they reach the same number.** Every line of
+> the workflow that says what the bound counts yields that one number. *Falsifier:* two readers
+> follow two different lines of the workflow and reach different counts for the same feature.
 
 Same property, and now someone who has never seen this project knows what to do on the first
-reading.
+reading. **The heading takes the shape too, because it is the part that gets quoted.** *"No second
+answer to 'what is counted'"* names a property, and a criterion whose body says when and then while
+its heading names a property is half written.
 
 **The test, and it is quick.** Read the criterion to someone who does not know the feature and ask
 what they would go and look at. If they have to ask what one of your nouns means, the criterion is
