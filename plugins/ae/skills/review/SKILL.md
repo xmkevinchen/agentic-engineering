@@ -13,40 +13,53 @@ Judge the delivered work against the acceptance criteria the human confirmed. No
 
 ## Input
 
-`$ARGUMENTS` is the plan path; `<feature-dir>` is its parent directory. Empty → ask which feature to review.
+`$ARGUMENTS` is the plan path; `<feature-dir>` is its parent directory. If empty, ask which feature to review.
 
-What you judge is the feature's whole change — everything committed since the feature started, not the last commit — read against the plan, the working log, and the criteria. The criteria are the ones the human signed in `acceptance.md`, and that file is where they are read from.
+Judge the feature's whole change: everything committed since the feature started, not just the last commit. Read it against the plan, the working log, and the criteria. The criteria are the ones the human signed, and `acceptance.md` is where you read them from — not the plan's restatement of them and not the log's.
 
 ## Deliverable
 
-`<feature-dir>/review.md`. It says pass or fail where that can be read without reading the body, then gives the evidence: each criterion's verdict, every finding with its disposition, and what was not checked. If the conversation were lost, the human could sign from this file alone.
+`<feature-dir>/review.md`, containing:
 
-**It names the pass it judges, and it is rewritten rather than appended to.** This file holds the current verdict; the history of passes is in `log.md`. A second pass appended below the first leaves two standing verdicts with nothing saying which is live — and the one that goes stale is the one a reader meets first. Re-judging is cheap; a verdict that has to be dated against the commits to be understood is not.
+- pass or fail, readable without reading the body
+- what the feature changed
+- each criterion's verdict
+- every finding with its disposition
+- what was not checked
 
-Implementation defects go back to WORK — the ordinary loop, needing nobody's permission. A finding that would change what a criterion *means* goes back to ANALYZE via the human, because the criteria are what was confirmed.
+The human must be able to sign from this file alone. A file that gives the verdict without saying
+what it is a verdict on does not.
+
+Name in the file which pass this verdict judges. Rewrite the file each pass; do not append to it. Two verdicts standing in one file with nothing saying which is live is the thing this forbids. The history of passes goes in `log.md`, not here.
+
+Send implementation defects back to WORK yourself. Do not route one through the human, and do not make reopening that loop anyone's call. Send a finding that would change what a criterion *means* back to ANALYZE, through the human — those are the criteria that were confirmed, and only that route reaches them.
 
 ## Fresh eyes
 
-The verdict is established by a reader who did not write the work: a fresh-context agent, a different model family, or the human. How many and who is your call, matched to the work; that they did not write it is not. The author's account of the work is input to that reader, never evidence for it. Nobody signs off their own work.
+A reader who did not write the work establishes the verdict: a fresh-context agent, a different model family, or the human. How many, and which, is your call, matched to the work. That they did not write the work is not.
+
+Treat the author's account of the work as input to that reader, never as evidence for it.
+
+Nobody signs off their own work. The party that wrote it does not supply the verdict, and does not author the severities, the dispositions, or the list of what was not checked either.
 
 ## What must be true of the review
 
-- **Every criterion gets a verdict, and every verdict rests on evidence this review produced.** Re-run what can be run — the executor's green run is a claim, not evidence. Judge what must be judged against the criterion's own terms and the artifact itself, never against the author's report of it. What only a human can settle, leave to the human and say so.
+- **Every criterion gets a verdict, and every verdict rests on evidence this review produced.** Re-run what can be run. Judge the rest against the criterion's own terms and the artifact itself, not against the author's report of it. What only a human can settle, leave to the human and say so.
 - **No criterion is satisfied by a check nobody has seen fail.** If nothing on disk records that check failing before the work that made it pass, see it fail yourself or send the criterion back to WORK.
 - **The checks bite.** Take the most load-bearing criterion, break what it protects, and confirm its check catches it.
-- **Scope is answered both ways.** Name every changed file no step accounts for, and everything the criteria demand that is still missing. This question finds the worst defects; do not skip it.
-- **An artifact asserting facts about the repository is checked claim by claim.** Read the sources it cites first and form your own answer before reading the artifact; then give each material claim its own verdict against the line it rests on. "It reads correctly" is not an answer — that read passed four of four confidently wrong pages.
-- **Every verification the plan names is accounted for.** Read the plan's verifications against the log and against this review's own work: each was performed, or is recorded with the party it fell to — and where that party is you, it is performed here. One that appears in neither file was named by one stage, skipped by the next, and never reached a third.
-- **A correction the log records is a correction the plan carries.** Where the working log says a claim in the plan was found wrong and `plan.md` still makes it, that is a finding — the plan is what the next stage and the next session read, and a correction that reached only the log has not been made.
-- **What was not checked is listed plainly.** That list is for the human.
-- **Every finding carries a severity and an explicit disposition** — fixed, rejected with a reason, or deferred with a named condition. A finding that disappears is a process failure, and a severity class collapsed into one summary sentence is not a disposition.
+- **Scope is answered both ways.** Name every changed file no step accounts for, and everything the criteria demand that is still missing. Do not skip this.
+- **An artifact asserting facts about the repository is checked claim by claim.** Read the sources it cites and form your own answer before reading the artifact. Then give each material claim its own verdict against the line it rests on. "It reads correctly" is not an answer.
+- **Every verification the plan names is accounted for.** List them all. Give each one of three: performed in the log, performed here, or owed by a named party. Where that party is you, perform it here. One that appears in neither the log nor this review is a finding — it was named by one stage and skipped by the next.
+- **A correction the log records is a correction the plan carries.** Where the log says a claim in the plan was found wrong and `plan.md` still makes it, that is a finding.
+- **What was not checked is listed plainly.**
+- **Every finding carries a severity and an explicit disposition:** fixed, rejected with a reason, or deferred with a named condition. No finding disappears. A severity class collapsed into one summary sentence is not a disposition.
 - **Findings that keep arriving without the set shrinking mean the partition is wrong.** Report what is generating them as one finding, not the instances as many.
-- **Nothing is reported that traces to neither a criterion nor a check that could turn red** — a preferred alternative, a restatement of what the code does, a pre-existing defect this change did not touch.
+- **Report nothing that traces to neither a criterion nor a check that could turn red:** not a preferred alternative, not a restatement of what the code does, not a pre-existing defect this change did not touch.
 
 ## The human signs
 
 Show what changed, what was verified and how, every finding's disposition, and what was not checked.
 
-Done means the human signed — not tests green, not your own pass verdict. A criterion left for the human to settle stays open until they settle it: a gate the executed party can open is not a gate.
+Done means the human signed. Not tests green, not your own pass verdict. A criterion left for the human to settle stays open until they settle it.
 
-**The human may refuse to sign when** a verdict rests on the author's report instead of evidence the review produced, a criterion is called satisfied by a check never seen red, any finding has no disposition, or nothing says what was not checked.
+**The human may refuse to sign when** a verdict rests on the author's report instead of evidence this review produced, a criterion is called satisfied by a check never seen red, any finding has no disposition, or nothing says what was not checked.
