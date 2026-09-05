@@ -45,6 +45,19 @@ that names something missing rather than something wrong says what would close i
 absence of a thing is not an observation anyone can make: "no rule covers a second reset" closes on
 a stated rule, and until you say which, nobody can tell whether it was answered.
 
+**Before you write your own findings, walk the open items.** Every item still open on an earlier
+return gets a line in yours: closed, or still open and why. Name it by its identity, not by
+describing it again — a reader who has to decide whether your paragraph and an earlier paragraph
+are about the same thing is doing the judgement this list exists to remove.
+
+**Walk every return that still has an open item, not only the last one.** An item dropped at one
+round and re-raised later reads as new, and its count starts again — which is the one way an item
+can outlive the bound that is meant to catch it. The natural failure is not malice: a review
+organises around what it found, and an earlier item survives only where it happens to fit that
+shape. Three items were sent back on one real return and none of their identities appears in the
+next; two of the three could only be traced by comparing descriptions, and one could not be traced
+at all.
+
 **An item's identity never changes once raised.** If a later round decides two items are really
 one, it says so and both keep their own identities and their own counts; if one is really two, it
 raises new items beside it and the original stays open until the work that closes it is done.
