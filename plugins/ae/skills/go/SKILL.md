@@ -93,8 +93,8 @@ not after.
 
 The criteria have stopped moving; this is where they are confirmed.
 **If `<feature-dir>/returns/` holds any numbered file, move them into the next free
-`<feature-dir>/returns/superseded-N/` once the human confirms** — those returns were taken
-against criteria that are no longer the ones signed, and the bound counts returns against the
+`<feature-dir>/returns/superseded-N/` once the human confirms** — the items on those returns were
+raised against criteria that are no longer the ones signed, and the bound counts against the
 criteria in force.
 Present `acceptance.md` — that is the thing being confirmed. Show alongside it the questions
 the analysis named and how each was settled, and, when it named none, that it named none:
