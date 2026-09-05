@@ -486,8 +486,9 @@ be building a rig with nothing to put in it.
 ### Phase C — the re-entry contract on disk
 
 Give the feature directory enough structure that a fresh session can state
-position, next step and trustworthiness (§3.3). Includes the loop counter that
-currently lives only in conversation. **Depends on B**, whose split-session
+position, next step and trustworthiness (§3.3). The loop counter is done: it is
+the items on the return files in `<feature-dir>/returns/`, and no longer lives
+in conversation. **Depends on B**, whose split-session
 question is what makes disk the only channel. **Unblocks:** running any stage in
 its own session or in the background; also makes §3.4 detectable, because an
 invoked stage and a reconstructed one would leave different traces.
@@ -599,10 +600,11 @@ has to beat a measured baseline, not merely sound prudent.
 | The prose surface shrinks | Total lines across `plugins/ae/skills/*/SKILL.md` | 779 (from 8,457) | falling, or a stated reason |
 
 **The first counter has risen, and this is the stated reason it asks for.** 779 at the delete,
-**886** on 2026-09-04. Almost all of it is one stage: `work` went 58 → 101 carrying the rules
+**1148** on 2026-09-05. Almost all of it is one stage: `work` went 58 → 130 carrying the rules
 that make an iteration between work and review leave a trace on disk — the loop's count taken
-off `log.md` rather than held in a session, a superseded result marked where the earlier claim
-stands, a plan claim found false corrected in the plan rather than only the log. Each was
+off the return files a review leaves in `<feature-dir>/returns/` rather than held in a session,
+a superseded result marked where the earlier claim stands, a plan claim found false corrected in
+the plan rather than only the log. Each was
 written after a closed-book run failed without it. **That is the bargain this counter exists to
 make visible, not to forbid** — but it is now the largest single stage after `discuss`, and the
 next thing that grows it should be asked what it replaces.
