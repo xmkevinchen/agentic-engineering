@@ -115,12 +115,18 @@ back to step 1, and only through the human.
 
 ### Before sending it back, count
 
-**Before sending it back, count.** The same check failing the same way three times ends the
-loop: re-cut the step, or conclude the criterion is unmeetable and take it back to step 1.
-**Count over what `log.md` records, for the feature, across every session that has worked
-it** — never over what this session remembers. The count that lives in a session is reset by
-an ordinary resume, and a loop nobody is watching is exactly the one whose bound must survive
-the watcher leaving.
+**Before sending it back, count the returns — including the one you are about to make.** A
+return is review handing findings back to work. The third return ends the loop: re-cut the
+step, or conclude the criterion is unmeetable and take it back to step 1.
+
+**Count over the feature's files, never over what this session remembers.** The count that
+lives in a session is reset by an ordinary resume, and a loop nobody is watching is exactly
+the one whose bound must survive the watcher leaving. It is two numbers added:
+
+- one for each pass in `log.md` whose opening names the review findings that sent the work
+  back;
+- plus one if `review.md`'s standing verdict is a fail and `log.md` holds no pass later than
+  the pass of work that verdict says it judges.
 
 ### → HUMAN SIGNS completion
 
