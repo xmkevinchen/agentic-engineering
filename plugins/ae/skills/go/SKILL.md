@@ -125,12 +125,13 @@ back to step 1, and only through the human.
 **Before sending it back, count — and what you count is an item, not a return.** A return is
 review handing findings back to work, and it leaves a numbered file in
 `<feature-dir>/review/returns/`
-listing the items that failed, each with an identity. **An item still open on three consecutive
-returns ends the loop:** re-cut the step, or conclude the criterion is unmeetable and take it back
+listing the items that failed, each with an identity. **An item open on three returns
+ends the loop:** re-cut the step, or conclude the criterion is unmeetable and take it back
 to step 1.
 
 **Count over the files, never over what this session remembers.** For each item still open, count
-back through `review/returns/` and see how many consecutive returns have carried it. The count
+back through `review/returns/` and see how many have carried it — counting the one that raised
+it and every one since that did not close it. The count
 that lives
 in a session is reset by an ordinary resume, and a loop nobody is watching is exactly the one whose
 bound must survive the watcher leaving.
@@ -154,7 +155,7 @@ keeping.
 
 **Three shapes, and only one of them is this count's.**
 
-- **One item that will not close.** Three consecutive returns carrying it, and this count ends the
+- **One item that will not close.** Three returns carrying it, and this count ends the
   loop. That is what it is for.
 - **Items that close while the same trouble comes back wearing a new one.** Every item resolved,
   every round raising fresh ones from the same source. This count never fires — each item's run is
@@ -203,7 +204,7 @@ what a criterion *means* needs the human.
 - **A check refuses your input** — read what it expected against what it saw, fix, retry. Do
   not ask the human about mechanical refusals.
 - **One item, three returns running** — the bound is at step 5, where the loop is actually
-  taken, and what it counts is how many consecutive returns have carried the same open item,
+  taken, and what it counts is how many returns have carried the same open item,
   by the rule stated there. The count exists because that loop is unattended: nothing else is
   watching it repeat, so what ends it cannot be a judgement the loop makes about itself. It
   reads identities and never what an item says, so it is blind to the trouble that closes

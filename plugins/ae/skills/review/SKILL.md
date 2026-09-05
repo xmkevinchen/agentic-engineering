@@ -55,8 +55,9 @@ the criterion.** The identity is `N.k` — the return's number and the item's pl
 `3.2` is the second item raised on the third return: a token a later file repeats exactly, not a
 phrase someone has to recognise. The reason is what the next round is judged against, so it is
 written for a reader who was not here — not "the check is too narrow" but what it missed and how
-you know. **An item that names something missing rather than something wrong says what would
-close it**, because the absence of a thing is not an observation anyone can make: "no rule covers
+you know. **Every item says what would close it** — what someone would have to see to call it
+done. For an item naming something missing rather than something wrong this is the whole of it,
+because the absence of a thing is not an observation anyone can make: "no rule covers
 a second reset" closes on a stated rule, and until you say which, nobody can tell whether it was
 answered.
 
