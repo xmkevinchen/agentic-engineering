@@ -193,8 +193,9 @@ what a criterion *means* needs the human.
   counts returns and nothing inside them, so it cannot tell converging from stuck — the
   bullet below is what does. A loop that waits on a human is not this one — it advances only
   when they answer, and they can see they were asked.
-- **Several rounds each fixing something real, and the work does not shrink** — the trigger
-  is the rate, not the failures, and every round looks fine from inside. Stop and ask what is
+- **Several rounds each fixing something real, and the work does not shrink** — real to the
+  round that found it, which is why every round looks fine from inside; whether it was real
+  is what the next round keeps re-opening. The trigger is the rate, not the failures. Stop and ask what is
   *generating* these, then cut along that axis. That is a re-division, still inside the loop —
   not an escalation. Only a criterion that cannot be met however the work is divided leaves it.
 - **Blocked on a missing capability** — record it as blocked with what exactly would unblock
