@@ -24,9 +24,12 @@ turn red, send the plan back rather than inventing the missing check.
 
 Commits on the branch, and a working log at `<feature-dir>/log.md`.
 
-**The log is structured by pass.** The first pass under its own heading, and every pass after
-it under its own, opening with what sent the work back — the findings, as `review.md` states
-them. **A pass that supersedes an earlier pass's result says so at the earlier claim**, not
+**The log is structured by pass, and a pass heading reads `## Pass N`.** The first pass under
+its own heading, and every pass after it under its own, opening with what sent the work back —
+the findings, as `review.md` states them. The form is fixed rather than left to taste because
+the loop's bound counts these headings: a pass headed any other way is one the count cannot
+see, and the reader is left choosing between reading the log as uncountable and reading it as
+two. **A pass that supersedes an earlier pass's result says so at the earlier claim**, not
 only in the later pass. This file is a record, so a superseded green stays in it; a reader who
 can attribute both claims still cannot tell which is true, and sixty lines is enough to hide
 the correction.
