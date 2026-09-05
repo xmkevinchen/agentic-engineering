@@ -46,47 +46,74 @@ be refused is sent back now, not discovered three stages later.
 An `F-NNN-<slug>` as the argument is a resume: read what that directory already holds and
 enter at the first thing not done.
 
-**1 · Invoke `/ae:analyze` with the work item.**
-It may not deliver, three ways. *Material only the human has* loops rather than exits — pass
-each request on in the words it was made, add nothing, and put the answer back into the same
-step. The directory and `analysis.md` exist from the first pass, with the asks in `blocked_by:`
-and no `acceptance.md` yet, so the human can come back to `/ae:go F-NNN-<slug>` instead of the
-original request. *Nothing to do,
-or already decided the other way* closes the item — report what was found and stop, that is a
-result. *Several items, not one* replaces it — put the proposed cut to the human and run this
-step again on each piece they keep, one feature directory each. None of the three is a
-failure, and none of them is yours to work around. Otherwise read `<feature-dir>/analysis.md` and `<feature-dir>/acceptance.md`, and send it back
+### 1 · Analyze
+
+**Invoke `/ae:analyze` with the work item.**
+
+It may not deliver, in any one of three ways. None of the three is a failure, and none of them
+is yours to work around.
+
+- *Material only the human has* — this loops rather than exits. Pass each request on in the
+  words it was made, add nothing, and put the answer back into the same step. The directory and
+  `analysis.md` exist from the first pass, with the asks in `blocked_by:` and no `acceptance.md`
+  yet, so the human can come back to `/ae:go F-NNN-<slug>` instead of the original request.
+- *Nothing to do, or already decided the other way* — this closes the item. Report what was
+  found and stop. That is a result.
+- *Several items, not one* — this replaces it. Put the proposed cut to the human and run this
+  step again on each piece they keep, one feature directory each.
+
+Otherwise read `<feature-dir>/analysis.md` and `<feature-dir>/acceptance.md`, and send it back
 when a criterion has no falsifier and no judgement mark, or an answer rests on no evidence.
 
-**2 · Invoke `/ae:discuss` once per id in the analysis frontmatter's `discuss:` list** — an
-empty list is a decision already made, not an omission, and you do not second-guess it into a
-discussion. Each run settles one id. **Read the feature directory before you invoke anything: a
-`returned-<id>.md` means that id is back at step 1, not here** — a discussion that sent a
-question back does not want it re-run, it wants the analysis changed. Then read each decision record. Send it back when a question it
-opened is still open, when its reason cites nothing a reader can open, when it exists only
-in the conversation, when it changed what a criterion means without changing `acceptance.md` to
-match, or when one party argued both sides and the record does not say why no other was
-reachable. A decision that changes what a criterion means changes `acceptance.md`
-before the signature, not after.
+### 2 · Discuss
 
-**→ HUMAN CONFIRMS.** The criteria have stopped moving; this is where they are confirmed.
+**Invoke `/ae:discuss` once per id in the analysis frontmatter's `discuss:` list.** An empty
+list is a decision already made, not an omission, and you do not second-guess it into a
+discussion. Each run settles one id.
+
+**Read the feature directory before you invoke anything: a `returned-<id>.md` means that id is
+back at step 1, not here** — a discussion that sent a question back does not want it re-run, it
+wants the analysis changed.
+
+Then read each decision record. Send it back on any one of these counts:
+
+- a question it opened is still open;
+- its reason cites nothing a reader can open;
+- it exists only in the conversation;
+- it changed what a criterion means without changing `acceptance.md` to match;
+- one party argued both sides and the record does not say why no other was reachable.
+
+A decision that changes what a criterion means changes `acceptance.md` before the signature,
+not after.
+
+### → HUMAN CONFIRMS the criteria
+
+The criteria have stopped moving; this is where they are confirmed.
 Present `acceptance.md` — that is the thing being confirmed. Show alongside it the questions
 the analysis named and how each was settled, and, when it named none, that it named none:
 that judgement is the one most worth disagreeing with, and it is invisible unless shown.
 **Wait.** Planning does not start without it.
 
-**3 · Invoke `/ae:plan` with the feature directory.**
+### 3 · Plan
+
+**Invoke `/ae:plan` with the feature directory.**
 Then read `<feature-dir>/plan.md`. Send it back when a step names no check to turn red, or a
 step accounts for no criterion. The plan cites criteria by id; it does not restate them.
 
-**4 · Invoke `/ae:work` with the plan path.**
+### 4 · Work
+
+**Invoke `/ae:work` with the plan path.**
 Then read the commits and `<feature-dir>/log.md`. Send it back when a criterion's check was
 never seen red, or when files changed that no step accounts for.
 
-**5 · Invoke `/ae:review` with the plan path.**
+### 5 · Review
+
+**Invoke `/ae:review` with the plan path.**
 Then read `<feature-dir>/review.md`. Implementation defects go back to step 4 — the ordinary
 loop, needing nobody's permission. A finding that would change what a criterion *means* goes
 back to step 1, and only through the human.
+
+### Before sending it back, count
 
 **Before sending it back, count.** The same check failing the same way three times ends the
 loop: re-cut the step, or conclude the criterion is unmeetable and take it back to step 1.
@@ -94,6 +121,8 @@ loop: re-cut the step, or conclude the criterion is unmeetable and take it back 
 it** — never over what this session remembers. The count that lives in a session is reset by
 an ordinary resume, and a loop nobody is watching is exactly the one whose bound must survive
 the watcher leaving.
+
+### → HUMAN SIGNS completion
 
 **→ HUMAN SIGNS.** Show what changed, what was verified and how, every finding's
 disposition, and what was not checked. Done means the human signed — not tests green, not a
