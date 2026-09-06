@@ -36,9 +36,11 @@ The human must be able to sign from this file alone. A file that gives the verdi
 what it is a verdict on does not.
 
 A review that cannot reach some of what it must judge — the artifact lives somewhere this stage
-is not — is **blocked, not passed**: write `ended: blocked` in the frontmatter, say what exactly
-would unblock it, and judge everything else. Without the marker, a review that stopped for a
-reason and one whose run broke off leave the same file.
+is not — is **blocked, not passed**: write `ended: blocked` in the frontmatter with a
+`blocked_by:` carrying an id and one line for each thing waited on, say in the body what exactly
+would unblock each, and judge everything else. Without the marker, a review that stopped for a
+reason and one whose run broke off leave the same file; without the field, "blocked" is a word
+with nothing behind it.
 
 Name in the file which pass this verdict judges. Rewrite the file each pass; do not append to
 it. Two verdicts standing in one file with nothing saying which is live is the thing this

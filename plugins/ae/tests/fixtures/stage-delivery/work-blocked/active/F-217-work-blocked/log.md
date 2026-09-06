@@ -1,5 +1,7 @@
 ---
 ended: blocked
+blocked_by:
+  B1: the release host, which this stage cannot reach
 ---
 
 # Log

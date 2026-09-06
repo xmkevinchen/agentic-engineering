@@ -100,7 +100,9 @@ since a signed criterion is not yours to move. `ended: criterion-defective` in `
 
 **A method exists and a precondition of the world is absent** — the run has to happen somewhere
 this stage is not, or after something that has not happened yet. That one is **blocked, not
-unchecked**: say what exactly would unblock it, under `ended: blocked`. That is what the entry's
+unchecked**: say what exactly would unblock it, under `ended: blocked`, with a `blocked_by:`
+carrying an id and one line for each thing waited on and the detail in the body — the same two
+fields `analyze/SKILL.md` uses, for the same reason. That is what the entry's
 blocked-on-a-missing-capability rule already requires, and what the word "unchecked" quietly
 drops.
 

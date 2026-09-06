@@ -1,5 +1,7 @@
 ---
 ended: blocked
+blocked_by:
+  B1: the host holding the artifact AC2 judges
 verdict: FAIL — AC1 met; AC2 not judged, and a criterion nobody was equipped to check is
   unexamined rather than satisfied
 ---

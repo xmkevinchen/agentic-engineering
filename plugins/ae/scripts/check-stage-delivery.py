@@ -26,6 +26,9 @@ What it decides:
            `returned-<id>.md` sending it back. There is no `ended:` here: the filename already
            carries the control flow, which is why the name is fixed.
 
+  Every stage that can end `blocked` owes a `blocked_by:` saying what it waits on. Both skills
+  require that detail in words; until this rule reached them only ANALYZE had a field to carry it.
+
   PLAN     `plan.md` exists, its `ended:` — where it has one — names an ending PLAN has, and
            every signed criterion is cited in it. `ended: input-refused` is exempt from the
            citation rule: nothing was planned, which is the point of that ending.
@@ -216,6 +219,30 @@ def report_absent(stage, missing, problems):
         f"indistinguishable from a run that stopped halfway")
 
 
+def check_blocked_detail(stage, marker_path, front, ended, problems):
+    """`ended: blocked` owes a `blocked_by:` saying what would unblock it.
+
+    Both skills require the detail in so many words — "say what exactly would unblock it" — and
+    until this rule reached them, only ANALYZE had a field to carry it and a check that fired.
+    A `log.md` or `review.md` marked blocked and saying nothing about what it waits on is not
+    conforming, and the check was silent on it.
+    """
+    if ended != "blocked":
+        return
+    blocked_by = front.get("blocked_by") or {}
+    if not isinstance(blocked_by, dict):
+        shape = (blocked_by.shape if isinstance(blocked_by, Unreadable)
+                 else "a single line of text, not a mapping")
+        problems.append(
+            f"{stage}: {marker_path}: `blocked_by:` is {shape} — each blocker carries an id and "
+            f"one line, and without ids nothing can say which of them is still waiting")
+        return
+    if not blocked_by:
+        problems.append(
+            f"{stage}: {marker_path}: `ended: blocked` with no `blocked_by:` — the ending says "
+            f"the stage stopped waiting on something and nothing here says what would unblock it")
+
+
 def check_single_deliverable(stage, directory, problems):
     """PLAN, WORK and REVIEW each write one file, and it carries its own `ended:`.
 
@@ -228,7 +255,14 @@ def check_single_deliverable(stage, directory, problems):
     if text is None:
         report_absent(stage, path, problems)
         return None
-    return ending_value(stage, path, frontmatter(text), problems)
+    misplaced = frontmatter_misplaced(path, text)
+    if misplaced:
+        problems.append(f"{stage}: {misplaced}")
+        return None
+    front = frontmatter(text)
+    ended = ending_value(stage, path, front, problems)
+    check_blocked_detail(stage, path, front, ended, problems)
+    return ended
 
 
 def check_analyze(directory, problems):
@@ -270,10 +304,7 @@ def check_analyze(directory, problems):
             f"analyze: {analysis_path}: `blocked_by:` is {shape} — each blocker carries an id "
             f"and one line, and without ids nothing can say which of them is still waiting")
         blocked_by = {}
-    if ended == "blocked" and not blocked_by:
-        problems.append(
-            f"analyze: {analysis_path}: `ended: blocked` with an empty `blocked_by:` — the "
-            f"ending says it is waiting on the human and nothing says what for")
+    check_blocked_detail("analyze", analysis_path, front, ended, problems)
     # Only while `acceptance.md` is absent. A directory holding both files has delivered, and
     # `ended:` marks a stage that did not — so `blocked_by:` there is not an ending at all, it is
     # detail about criteria still moving, which `analyze/SKILL.md` never says to clear. Firing on
