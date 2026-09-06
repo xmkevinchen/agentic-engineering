@@ -75,9 +75,11 @@ it verifies those criteria.
 **Test a step by trying to split it in two.** It is too coarse when, in dependency order, the
 first part can land on the tree before the step and the second can land on the first; each part
 serves a criterion the other does not; and each of those criteria can be verified against the tree
-where its part lands. Where no such split exists, it is one step. Nothing here is about the
-project's suite: whether a commit lands green is `work/SKILL.md`'s, and a second standard named
-here is a second answer to the same question.
+where its part lands. Where no such split exists, it is one step. **A part serves a criterion when
+that criterion holds where the part lands**, not when it only makes the criterion reachable: a part
+that supplies a precondition and closes nothing is not a second step, it is the first half of one.
+Nothing here is about the project's suite: whether a commit lands green is `work/SKILL.md`'s, and a
+second standard named here is a second answer to the same question.
 
 **Coverage runs both ways.** Every criterion is served by at least one step, and no step builds
 something no criterion asks for.
