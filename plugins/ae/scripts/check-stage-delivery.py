@@ -556,7 +556,20 @@ def main(argv):
 
     directory, stage = pathlib.Path(argv[1]), argv[2]
     if not directory.is_dir():
-        print(f"{stage}: {directory}: no such feature directory")
+        # Two conditions call for opposite responses — correct the argument, or send the stage
+        # back — and this is the one message that names no defect, because it cannot see one yet.
+        # Which is exactly when the reader needs the distinction drawn for them: a runner given a
+        # path that resolved nowhere spent four commands working out which of the two it had.
+        if directory.parent.is_dir():
+            print(f"{stage}: {directory}: absent, while {directory.parent} exists — either the "
+                  f"stage wrote no feature directory at all, or it used a different id from the "
+                  f"one in this path. `ls {directory.parent}` says which, and they need opposite "
+                  f"answers: send the stage back, or correct the path.")
+        else:
+            print(f"{stage}: {directory}: no such path, and neither is {directory.parent} — "
+                  f"nothing here is a features root, so this is a path handed in wrong rather "
+                  f"than a stage that under-delivered. Correct the argument before sending any "
+                  f"stage back.")
         return 1
 
     problems = []

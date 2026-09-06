@@ -158,6 +158,23 @@ echo "A review that says it reached no verdict has not reached one"
 expect_bad review-verdict-tbd     review  review "review.md" verdict
 expect_bad review-verdict-negated review  review "review.md" verdict
 
+echo "An absent directory says which of two things it is"
+# A directory missing from a features root that exists, and a path that resolves nowhere, need
+# opposite answers — send the stage back, or fix the argument. Constructed rather than
+# fixtured: the case is a directory that is not there, which nothing can commit.
+absent_under_root=$(python3 "$CHECK" "$FIXTURES/analyze-delivered/active/F-999-never-written" analyze 2>&1)
+absent_root=$(python3 "$CHECK" "/nowhere-at-all/active/F-999-never-written" analyze 2>&1)
+case "$absent_under_root" in
+  *"stage wrote no feature directory"*"different id"*)
+    report pass "absent under a real features root reads as the stage's" ;;
+  *) report fail "absent under a real features root reads as the stage's" "$absent_under_root" ;;
+esac
+case "$absent_root" in
+  *"path handed in wrong"*)
+    report pass "a path resolving nowhere reads as the argument's" ;;
+  *) report fail "a path resolving nowhere reads as the argument's" "$absent_root" ;;
+esac
+
 echo "The message does not go away by being read"
 # The same directory twice: reported, then the named gap closed, then reported on again. This is
 # what "the missing part is completed before the next stage begins" rests on — the check is not
