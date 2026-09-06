@@ -43,9 +43,12 @@ written below as `<feature-dir>`; `/ae:analyze` creates it.
 ## Running it
 
 Invoke each stage's skill. After it returns, and before the next stage is invoked, run
+the check. `check-stage-delivery.py` ships beside this skill at `scripts/check-stage-delivery.py`
+under the plugin root — in a checkout of AE itself that is `plugins/ae/scripts/`, and in an
+installed copy it is under the installed plugin. Locate it once and reuse the path:
 
-```
-python3 plugins/ae/scripts/check-stage-delivery.py <feature-dir> <stage>
+```sh
+python3 <plugin-root>/scripts/check-stage-delivery.py <feature-dir> <stage>
 ```
 
 Its whole input is those two arguments. It never reads this conversation or the stage's own
