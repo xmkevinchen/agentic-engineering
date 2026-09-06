@@ -62,7 +62,13 @@ Everything that lands in the repository — code comments, commit messages, skil
 
 ## Git
 
-- **Feature branch** — all work on feature branches, PR to main. Branch naming: `feature/<slug>` or `fix/<slug>`
+- **One feature, one branch** — every feature gets its own, created where its work starts and named
+  for it: `feature/F-NNN-<slug>`, or `feature/<slug>` / `fix/<slug>` for work that is not a feature.
+  PR to main. The review stage judges everything committed since the feature started, and a branch
+  is what makes that range answerable — two features' commits on one branch turn it into guesswork.
+- **The working tree is shared, not per-session** — a second session committing to the same checkout
+  while a stage runs lands its commits inside that feature's range, which is the failure the rule
+  above exists to prevent. Give it its own `git worktree`, or wait.
 - Never push to remote unless explicitly approved by the user
 
 ## Design Principles
