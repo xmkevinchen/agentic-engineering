@@ -62,13 +62,22 @@ Everything that lands in the repository — code comments, commit messages, skil
 
 ## Git
 
-- **One feature, one branch** — every feature gets its own, created where its work starts and named
-  for it: `feature/F-NNN-<slug>`, or `feature/<slug>` / `fix/<slug>` for work that is not a feature.
-  PR to main. The review stage judges everything committed since the feature started, and a branch
-  is what makes that range answerable — two features' commits on one branch turn it into guesswork.
-- **The working tree is shared, not per-session** — a second session committing to the same checkout
-  while a stage runs lands its commits inside that feature's range, which is the failure the rule
-  above exists to prevent. Give it its own `git worktree`, or wait.
+- **One feature, one branch, and its own worktree** — every feature works in a `git worktree` on a
+  branch of its own, created where its work starts and named for it: `feature/F-NNN-<slug>`, or
+  `feature/<slug>` / `fix/<slug>` for work that is not a feature. The review stage judges everything
+  committed since the feature started, and a branch is what makes that range answerable — two
+  features' commits on one branch turn it into guesswork.
+- **The working tree is shared, not per-session** — which is why the worktree is not optional. Two
+  sessions in one checkout do not merely risk each other's commits: one measures a file the other is
+  rewriting, and both readings look normal. Observed, twice in one hour, in both directions. A lock
+  held by a person is not the answer either — it was stale both times it was issued, because the
+  interval between observing a quiet tree and writing to it belongs to whoever starts next.
+- **Inside its own worktree, a feature commits without asking.** Committing there reaches nobody
+  else's work, and a stage that has to stop for permission at every step cannot run unattended.
+- **A feature merges back into the branch it was cut from, once it has passed acceptance** — the
+  human's signature at the completion gate, not a green suite and not a pass verdict. Nothing else
+  merges it, and it merges nowhere else: a branch cut from another feature's head goes back there,
+  so the stack unwinds in the order it was built.
 - Never push to remote unless explicitly approved by the user
 
 ## Design Principles
