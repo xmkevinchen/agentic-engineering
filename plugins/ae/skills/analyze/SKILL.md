@@ -66,7 +66,7 @@ Write the directory and `analysis.md` on the first pass through that loop, holdi
 have and, for each thing you are waiting on, three things: **what is missing, why it is
 nowhere you can reach, and what having it would let you settle.** Those three go in the body.
 `blocked_by:` carries the id and one line, marking that the analysis is mid-loop; it is not
-itself the request.
+itself the request. `ended: blocked` goes with it.
 
 The middle clause is where this route polices itself: a blocker whose "why" thins out once
 written down was something to go and look at.
@@ -96,6 +96,7 @@ discuss:
   Q2: a second, when the analysis left two of them standing
 blocked_by:
   B1: what is missing, in one line
+ended: blocked
 ---
 ```
 
@@ -103,6 +104,25 @@ Every id has a section in the body, headed by that line and as long as it needs 
 line is how the list reads at a glance — at the gate where the human decides whether to argue
 with it. The section is where the thing is actually said, and the field's one-line shape never
 sets how long it runs.
+
+### `ended:`, when you stop without `acceptance.md`
+
+`acceptance.md` is absent for four reasons and three of them are endings this stage is entitled
+to. `ended:` says which one:
+
+| value | the ending |
+|---|---|
+| `blocked` | mid-loop on material only the human has |
+| `nothing-to-do` | no problem, or already decided the other way |
+| `not-one-item` | several items; the cut is named, the human picks |
+
+Write it whenever you stop without `acceptance.md`, and never when you deliver both files. The
+fourth reason is that the run broke off, and it writes nothing — which is exactly the point.
+Without the marker all four are one shape on disk, and no reader can tell a finished item from
+an abandoned one.
+
+`blocked_by:` goes on carrying the *detail* of the blocked ending. `ended:` says only *which*
+ending it was, which is what a reader and the check between stages both need first.
 
 ### The `discuss:` list
 
@@ -129,11 +149,12 @@ run, and those directories survive the return — they hold the findings that se
 Re-posing under the same id would hand the next discussion a count that is already spent, so its
 bound would fire before it had argued anything, and the record would have no objection to carry.
 
-### Why only these two are fields
+### Why only these three are fields
 
 The ids are what the runner acts on without reading prose: `discuss:` says how many times
-`/ae:discuss` runs and which section each run opens, and a `blocked_by:` still holding ids
-says this analysis is mid-loop rather than finished. Control flow is what earns a field.
+`/ae:discuss` runs and which section each run opens, a `blocked_by:` still holding ids
+says this analysis is mid-loop rather than finished, and `ended:` says whether this stage
+finished at all — the first thing the next stage has to know. Control flow is what earns a field.
 Nothing else here earns one — a criterion's property and falsifier are read by people, and
 people read prose.
 
@@ -199,11 +220,11 @@ Later stages cite criteria by id. Nobody copies them.
 ## Where the item does not go on as one
 
 **There is nothing to do** — no problem, or it was already decided the other way somewhere.
-Record what was found, close or re-aim the item, and stop. That is a result, and the cheapest
-one available.
+Record what was found in `analysis.md` under `ended: nothing-to-do`, close or re-aim the item,
+and stop. That is a result, and the cheapest one available.
 
 **It is not one item** — you can say what the problem is, and the answer is that it is
 several. The test is the second file: if two sets of criteria could each be signed and
-delivered without the other, this is two items. Name the cut, and what each piece would be
-done by, and stop. Which of them get worked, and whether that is even the right cut, is the
+delivered without the other, this is two items. Name the cut in `analysis.md` under
+`ended: not-one-item`, and what each piece would be done by, and stop. Which of them get worked, and whether that is even the right cut, is the
 human's: quietly narrowing or widening what was asked for is not yours.

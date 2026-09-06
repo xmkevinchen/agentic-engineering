@@ -193,6 +193,12 @@ pass verdict. A gate the executed party can open is not a gate.
   history is in version control for whoever actually needs it.
 - **Deliverables are files on disk, not messages.** If the conversation were lost, the next
   stage must be able to proceed from the files alone.
+- **A stage that ends without its full deliverable set says so in what it did write.** An
+  `ended:` field in the frontmatter of the deliverable it got as far as writing, naming which
+  ending it was; absent when the stage delivered. Each stage's own skill lists the values it
+  has, and none is invented here. Without it, a directory left by a legitimate stop and one
+  left by a run that broke off are the same shape on disk, and nobody — the next stage, the
+  human, or a check — can tell which happened.
 - **Done means the human signed.** Tests green, review passed, agent confident — none of these
   is completion. Only the signature is.
 
