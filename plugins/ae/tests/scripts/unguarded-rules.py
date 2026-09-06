@@ -9,6 +9,19 @@ It neuters one message-emitting statement at a time — every `problems.append(.
 rule nothing on disk keeps red: it may have been watched failing by hand when it was written,
 and nothing will notice when the next edit breaks it.
 
+**It never writes the file it is testing.** The mutants go to a copy under a temporary directory
+and the suite is pointed at that copy through `CHECK_UNDER_TEST`. Writing the real file made
+every concurrent reader of the tree wrong for the length of a run — a suite run, another sweep,
+someone checking a claim — which is not a crash-safety problem but a concurrency one, and the
+tree is shared.
+
+**It refuses to run unless the suite passes on the unmutated copy first.** Against a checker
+that is already broken — three sites left neutered by an interrupted run, say — every mutation
+fails because the baseline already fails, so nothing reads as unguarded and the report is
+`0 unguarded`: a clean bill of health at exactly the moment the checker is not clean. Measured,
+not reasoned: suite 59 passed 6 failed, tool 34 sites 0 unguarded, exit 0. A green baseline is
+the only thing that makes a red mutant mean anything.
+
 **Why this is mechanical rather than a list.** The list was the defect. Three passes running, a
 sweep enumerated from what the author had been working on came back complete and a reader found
 survivors in it — the same blind spot each time, because recall is what produced both the code
@@ -21,9 +34,12 @@ write. It says which ones nothing is watching; what to do about each is a judgem
 """
 
 import ast
+import os
 import pathlib
+import shutil
 import subprocess
 import sys
+import tempfile
 
 
 def message_sites(tree):
@@ -57,20 +73,33 @@ def main(argv):
         print(f"usage: {argv[0]} <checker.py> <suite.sh>", file=sys.stderr)
         return 2
 
-    checker, suite = pathlib.Path(argv[1]), pathlib.Path(argv[2])
+    checker, suite = pathlib.Path(argv[1]).resolve(), pathlib.Path(argv[2]).resolve()
     original = checker.read_text()
     lines = original.splitlines(keepends=True)
     sites = sorted(set(message_sites(ast.parse(original))))
 
-    unguarded = []
-    try:
+    with tempfile.TemporaryDirectory() as workspace:
+        copy = pathlib.Path(workspace) / checker.name
+        shutil.copy(checker, copy)
+        environment = {**os.environ, "CHECK_UNDER_TEST": str(copy)}
+
+        def suite_passes():
+            return subprocess.run([str(suite)], capture_output=True, text=True,
+                                  env=environment).returncode == 0
+
+        if not suite_passes():
+            print(f"{suite} does not pass against {checker} unmutated, so a mutant failing it "
+                  f"would say nothing. Fix that first — and check whether the file is one an "
+                  f"interrupted run left part-neutered, which is the shape that makes this tool "
+                  f"report every rule guarded.", file=sys.stderr)
+            return 2
+
+        unguarded = []
         for start, end in sites:
-            checker.write_text("".join(neutered(lines, start, end)))
-            run = subprocess.run([str(suite)], capture_output=True, text=True)
-            if run.returncode == 0:
+            copy.write_text("".join(neutered(lines, start, end)))
+            if suite_passes():
                 unguarded.append((start, lines[start - 1].strip()))
-    finally:
-        checker.write_text(original)
+            copy.write_text(original)
 
     for start, text in unguarded:
         print(f"{checker}:{start}: nothing in {suite.name} fails when this is deleted — {text}")

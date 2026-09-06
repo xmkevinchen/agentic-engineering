@@ -15,7 +15,9 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-CHECK="$ROOT/plugins/ae/scripts/check-stage-delivery.py"
+# The checker under test. `CHECK_UNDER_TEST` lets a caller point the suite at a copy, which is
+# how the mutation sweep runs without writing the file everyone else in the tree is reading.
+CHECK="${CHECK_UNDER_TEST:-$ROOT/plugins/ae/scripts/check-stage-delivery.py}"
 FIXTURES="$ROOT/plugins/ae/tests/fixtures/stage-delivery"
 
 passed=0
