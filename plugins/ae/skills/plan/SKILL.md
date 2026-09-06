@@ -22,6 +22,12 @@ directory.
 
 `<feature-dir>/plan.md`.
 
+**And nothing else.** This stage decides the method and does not carry it out: the work is the next
+stage's. Read whatever it takes, and run a check that already exists — the rule below requires it —
+but what this stage hands over is the tree it was given, plus `plan.md` and whatever a check wrote
+while it ran. A plan whose author already did part of the work is one nobody can read against what
+happened.
+
 ## Check the input before planning against it
 
 **Read `acceptance.md` first, and refuse it on either of two counts:**
