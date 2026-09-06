@@ -70,7 +70,7 @@ FEATURE_ID = re.compile(r"^(F-\d+)-")
 # both open lines in real acceptance files, and matching the bare id reported those as criteria
 # carrying no falsifier. A criterion written with no id at all is invisible here; see the
 # docstring.
-CRITERION = re.compile(r"^\*{0,2}(AC\d+)\s*[\u2014\u2013]\s")
+CRITERION = re.compile(r"^\*{0,2}(AC\d+)\s*[—–]\s")
 # The same line labelled with a separator the contract does not use. Prose that mentions an id
 # puts a word after it \u2014 "AC2 and AC4 are not omitted" \u2014 so punctuation is what separates a
 # criterion written the wrong way from a sentence, and a criterion written the wrong way is
@@ -219,6 +219,24 @@ def report_absent(stage, missing, problems):
         f"indistinguishable from a run that stopped halfway")
 
 
+def blockers(stage, marker_path, front, problems):
+    """The `blocked_by:` mapping, or None when it is there in a shape that carries no ids.
+
+    None rather than {} so a caller cannot go on to say the field is empty: a field nobody can
+    read and a field with nothing in it are different facts, and only one of them is the stage's
+    fault.
+    """
+    blocked_by = front.get("blocked_by")
+    if blocked_by is None or isinstance(blocked_by, dict):
+        return blocked_by or {}
+    shape = (blocked_by.shape if isinstance(blocked_by, Unreadable)
+             else "a single line of text, not a mapping")
+    problems.append(
+        f"{stage}: {marker_path}: `blocked_by:` is {shape} — each blocker carries an id and one "
+        f"line, and without ids nothing can say which of them is still waiting")
+    return None
+
+
 def check_blocked_detail(stage, marker_path, front, ended, problems):
     """`ended: blocked` owes a `blocked_by:` saying what would unblock it.
 
@@ -227,15 +245,8 @@ def check_blocked_detail(stage, marker_path, front, ended, problems):
     A `log.md` or `review.md` marked blocked and saying nothing about what it waits on is not
     conforming, and the check was silent on it.
     """
-    if ended != "blocked":
-        return
-    blocked_by = front.get("blocked_by") or {}
-    if not isinstance(blocked_by, dict):
-        shape = (blocked_by.shape if isinstance(blocked_by, Unreadable)
-                 else "a single line of text, not a mapping")
-        problems.append(
-            f"{stage}: {marker_path}: `blocked_by:` is {shape} — each blocker carries an id and "
-            f"one line, and without ids nothing can say which of them is still waiting")
+    blocked_by = blockers(stage, marker_path, front, problems)
+    if ended != "blocked" or blocked_by is None:
         return
     if not blocked_by:
         problems.append(
@@ -296,15 +307,8 @@ def check_analyze(directory, problems):
     # `ended:` says which ending; `blocked_by:` carries that ending's detail. They can disagree,
     # and the disagreement is the report — preferring one would decide which is true, and this
     # script has no way to know.
-    blocked_by = front.get("blocked_by") or {}
-    if not isinstance(blocked_by, dict):
-        shape = (blocked_by.shape if isinstance(blocked_by, Unreadable)
-                 else "a single line of text, not a mapping")
-        problems.append(
-            f"analyze: {analysis_path}: `blocked_by:` is {shape} — each blocker carries an id "
-            f"and one line, and without ids nothing can say which of them is still waiting")
-        blocked_by = {}
     check_blocked_detail("analyze", analysis_path, front, ended, problems)
+    blocked_by = blockers("analyze", analysis_path, front, []) or {}
     # Only while `acceptance.md` is absent. A directory holding both files has delivered, and
     # `ended:` marks a stage that did not — so `blocked_by:` there is not an ending at all, it is
     # detail about criteria still moving, which `analyze/SKILL.md` never says to clear. Firing on
@@ -499,7 +503,7 @@ def check_criteria(directory, problems):
             problems.append(
                 f"analyze: {path}:{number}: {found.group(1)} is labelled with "
                 f"{line[len(found.group(0)) - 2:len(found.group(0)) - 1]!r} where a criterion is "
-                f"written `{found.group(1)} \u2014 the property` — as written it is invisible to "
+                f"written `{found.group(1)} — the property` — as written it is invisible to "
                 f"every rule here, and a readable criterion elsewhere in the file hides that")
 
     blocks = criterion_blocks(text)

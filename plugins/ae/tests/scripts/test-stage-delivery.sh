@@ -61,8 +61,15 @@ expect_bad() {
 $out"
     return
   fi
+  # Match against the message with the fixture's own paths taken out. A needle that is also a
+  # word in the fixture directory's name is otherwise satisfied by the path the message prints,
+  # not by anything the message says — observed: `sequence` passing against a message that had
+  # stopped using the word, and `verdict` passing against a fixture directory called
+  # review-no-verdict-line. Paths outside the fixture root survive, which is the residual limit.
+  said=${out//$dir/}
+  said=${said//$FIXTURES/}
   for needle in "$@"; do
-    case "$out" in
+    case "$said" in
       *"$needle"*) ;;
       *) missing="$missing
   message never says: $needle" ;;
@@ -115,6 +122,8 @@ expect_bad discuss-empty-record   discuss  discuss Q1 decision-Q1.md empty
 echo "ANALYZE — a deliverable that exists and does not conform"
 expect_ok  analyze-criterion-judgement    analyze
 expect_ok  analyze-delivered-still-blocked analyze
+expect_ok  analyze-criterion-prose        analyze
+expect_bad analyze-ended-invented         analyze  analyze "is not an ending this stage has" done
 expect_bad analyze-id-collision           analyze  analyze F-240 "held by"
 expect_bad analyze-criterion-no-falsifier analyze  analyze acceptance.md AC2 falsifier
 expect_bad analyze-no-criterion-ids       analyze  analyze acceptance.md "no criterion id"
