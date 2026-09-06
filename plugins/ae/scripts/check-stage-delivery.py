@@ -65,18 +65,20 @@ ENDINGS = {
 STATE_DIRS = ("active", "paused", "done", "abandoned")
 FEATURE_ID = re.compile(r"^(F-\d+)-")
 # A criterion opens a block: the id at the start of a line, bold or not, then the dash that
-# separates it from the property, and the block runs to the next one. The dash is what keeps
+# separates it from the property, and the block runs to the next one. A markdown heading marker
+# may precede it: a criterion written `## AC1 — …` is a criterion, and reading it as none told a
+# reader the opposite of what was on disk. The dash is what keeps
 # ordinary prose out — "AC2 and AC4 are not omitted" and "AC1 and AC2 both passing does not"
 # both open lines in real acceptance files, and matching the bare id reported those as criteria
 # carrying no falsifier. A criterion written with no id at all is invisible here; see the
 # docstring.
-CRITERION = re.compile(r"^\*{0,2}(AC\d+)\s*[—–]\s")
+CRITERION = re.compile(r"^(?:#{1,6}\s+)?\*{0,2}(AC\d+)\s*[—–]\s")
 # The same line labelled with a separator the contract does not use. Prose that mentions an id
 # puts a word after it \u2014 "AC2 and AC4 are not omitted" \u2014 so punctuation is what separates a
 # criterion written the wrong way from a sentence, and a criterion written the wrong way is
 # unread rather than passed: without this it is invisible to every rule below, and one readable
 # criterion in the same file suppresses the catch-all that would otherwise notice.
-CRITERION_OFF_SHAPE = re.compile(r"^\*{0,2}(AC\d+)\s*[:\-]\s")
+CRITERION_OFF_SHAPE = re.compile(r"^(?:#{1,6}\s+)?\*{0,2}(AC\d+)\s*[:\-]\s")
 # either of the two things `analyze/SKILL.md` says a criterion must carry
 FALSIFIER_OR_JUDGEMENT = re.compile(r"falsifi|judgement|judgment", re.I)
 
@@ -509,8 +511,10 @@ def check_criteria(directory, problems):
     blocks = criterion_blocks(text)
     if not blocks:
         problems.append(
-            f"analyze: {path}: holds no criterion id — later stages cite criteria by id and "
-            f"nobody copies them, so there is nothing here for a plan, a log or a review to name")
+            f"analyze: {path}: holds no criterion id — a criterion is written "
+            f"`AC1 — the property`, optionally in bold or under a heading marker, and later "
+            f"stages cite criteria by that id because nobody copies them. Nothing here takes "
+            f"that form, so there is nothing for a plan, a log or a review to name")
         return
 
     for cid, block in blocks:
