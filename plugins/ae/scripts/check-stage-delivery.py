@@ -17,6 +17,10 @@ What it decides:
            `ended:` and `blocked_by:` are allowed to disagree, and the disagreement is reported
            rather than silently resolved: one says which ending, the other carries its detail.
 
+  DISCUSS  every id in the analysis's `discuss:` list has a `decision-<id>.md` settling it or a
+           `returned-<id>.md` sending it back. There is no `ended:` here: the filename already
+           carries the control flow, which is why the name is fixed.
+
   PLAN     `plan.md` exists, and its `ended:` — where it has one — names an ending PLAN has.
   WORK     the same, for `log.md`.
   REVIEW   the same, for `review.md`.
@@ -157,6 +161,44 @@ def check_analyze(directory, problems):
             f"other way")
 
 
+def check_discuss(directory, problems):
+    """The ids in the analysis minus the files on disk are the questions still outstanding.
+
+    A question is answered by `decision-<id>.md` or sent back by `returned-<id>.md`; either one
+    is a file, and an id with neither is a run that produced nothing where the analysis said one
+    was owed. There is no `ended:` here — the filename already carries the control flow.
+    """
+    analysis_path = directory / "analysis.md"
+    analysis = read(analysis_path)
+    if analysis is None:
+        problems.append(
+            f"discuss: {analysis_path}: absent — the ids this stage owes a record for are read "
+            f"from its `discuss:` list, and there is no list")
+        return
+
+    discuss = frontmatter(analysis).get("discuss")
+    if discuss is None:
+        problems.append(
+            f"discuss: {analysis_path}: no `discuss:` field — an empty list is a judgement with "
+            f"a reason behind it and is written `discuss: {{}}`; a missing one says nothing")
+        return
+    if not isinstance(discuss, dict):
+        problems.append(
+            f"discuss: {analysis_path}: `discuss:` is not a list of ids — nothing can tell which "
+            f"questions were named, so nothing can tell which are still outstanding")
+        return
+
+    for question in sorted(discuss):
+        if (directory / f"decision-{question}.md").is_file():
+            continue
+        if (directory / f"returned-{question}.md").is_file():
+            continue
+        problems.append(
+            f"discuss: {directory / f'decision-{question}.md'}: absent — the analysis names "
+            f"`{question}` and nothing on disk settles it or sends it back "
+            f"(`returned-{question}.md`)")
+
+
 def check_plan(directory, problems):
     check_single_deliverable("plan", directory, problems)
 
@@ -169,8 +211,8 @@ def check_review(directory, problems):
     check_single_deliverable("review", directory, problems)
 
 
-CHECKERS = {"analyze": check_analyze, "plan": check_plan, "work": check_work,
-            "review": check_review}
+CHECKERS = {"analyze": check_analyze, "discuss": check_discuss, "plan": check_plan,
+            "work": check_work, "review": check_review}
 
 COVERAGE = """Not decided here: whether an answer rests on evidence, whether a criterion means what
 its words say, whether a check named in a plan would actually turn red, or whether a verdict was

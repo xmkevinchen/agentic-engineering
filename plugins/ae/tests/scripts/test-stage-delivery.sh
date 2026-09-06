@@ -105,6 +105,12 @@ expect_ok  review-delivered          review
 expect_ok  review-blocked            review
 expect_bad review-interrupted        review review "review.md" ended: blocked
 
+echo "DISCUSS — the ids in the analysis minus the files on disk"
+expect_ok  discuss-delivered      discuss
+expect_ok  discuss-returned       discuss
+expect_ok  discuss-none           discuss
+expect_bad discuss-missing-record discuss  discuss Q2 decision-Q2.md
+
 echo
 printf '%d passed, %d failed\n' "$passed" "$failed"
 [ "$failed" -eq 0 ]
