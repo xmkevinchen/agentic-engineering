@@ -117,6 +117,12 @@ expect_bad analyze-id-collision           analyze  analyze F-240 "held by"
 expect_bad analyze-criterion-no-falsifier analyze  analyze acceptance.md AC2 falsifier
 expect_bad analyze-no-criterion-ids       analyze  analyze acceptance.md "no criterion id"
 
+echo "PLAN, WORK, REVIEW — a deliverable that exists and leaves a criterion unaccounted for"
+expect_bad plan-criterion-uncited   plan   plan   "plan.md"   AC3
+expect_bad work-criterion-unlogged  work   work   "log.md"    AC3
+expect_bad review-criterion-unjudged review review "review.md" AC3
+expect_bad review-no-verdict-line   review review "review.md" verdict
+
 echo
 printf '%d passed, %d failed\n' "$passed" "$failed"
 [ "$failed" -eq 0 ]

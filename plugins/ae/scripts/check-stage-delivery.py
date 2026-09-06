@@ -26,9 +26,11 @@ What it decides:
            `returned-<id>.md` sending it back. There is no `ended:` here: the filename already
            carries the control flow, which is why the name is fixed.
 
-  PLAN     `plan.md` exists, and its `ended:` — where it has one — names an ending PLAN has.
+  PLAN     `plan.md` exists, its `ended:` — where it has one — names an ending PLAN has, and
+           every signed criterion is cited in it. `ended: input-refused` is exempt from the
+           citation rule: nothing was planned, which is the point of that ending.
   WORK     the same, for `log.md`.
-  REVIEW   the same, for `review.md`.
+  REVIEW   the same, for `review.md`, plus a verdict in the frontmatter or the first few lines.
 
 What it does not decide, at any exit code: whether an answer rests on evidence, whether a
 criterion means what its words say, whether a check named in a plan would actually turn red, or
@@ -68,6 +70,15 @@ FEATURE_ID = re.compile(r"^(F-\d+)-")
 CRITERION = re.compile(r"^\*{0,2}(AC\d+)\s*[\u2014\u2013]\s")
 # either of the two things `analyze/SKILL.md` says a criterion must carry
 FALSIFIER_OR_JUDGEMENT = re.compile(r"falsifi|judgement|judgment", re.I)
+
+# an id mentioned anywhere in a deliverable, which is all "accounted for" can mean mechanically
+CRITERION_MENTION = r"\b{}\b"
+# A verdict is readable without reading the body when it is in the frontmatter or right at the
+# top. PASS and FAIL are matched in upper case only: these files write "pass 3" and "pass 1"
+# throughout their prose to mean a round of the loop, and a case-insensitive match reported a
+# verdict in a review that had none left in it at all.
+VERDICT_HEAD_LINES = 12
+VERDICT_IN_BODY = re.compile(r"(?i:\bverdict\b)|(?<![\w-])(?:PASS|FAIL)(?![\w-])")
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\s*?\n", re.S)
 TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
@@ -232,16 +243,66 @@ def check_discuss(directory, problems):
             f"(`returned-{question}.md`)")
 
 
+def check_criterion_coverage(stage, directory, problems):
+    """Every signed criterion is accounted for somewhere in the stage's deliverable.
+
+    Mentioning an id is all this can decide. Whether the account is any good — whether a step's
+    check would really turn red, whether a verdict rests on evidence — is not a thing a search
+    can answer, and reporting green on it would be the author's own account arriving by another
+    route. What it does catch is the criterion that is simply not there, which is the condition
+    `go/SKILL.md` already tells the session agent to send each of these back for.
+    """
+    acceptance = read(directory / "acceptance.md")
+    if acceptance is None:
+        problems.append(
+            f"{stage}: {directory / 'acceptance.md'}: absent — nothing says which criteria this "
+            f"stage owes an account of, so its coverage is unchecked rather than confirmed")
+        return
+
+    path = directory / MARKER_FILE[stage]
+    deliverable = read(path)
+    if deliverable is None:
+        return
+
+    for cid, _ in criterion_blocks(acceptance):
+        if not re.search(CRITERION_MENTION.format(cid), deliverable):
+            problems.append(
+                f"{stage}: {path}: never mentions {cid} — the human signed it and this "
+                f"deliverable leaves it unaccounted for")
+
+
 def check_plan(directory, problems):
-    check_single_deliverable("plan", directory, problems)
+    ended = check_single_deliverable("plan", directory, problems)
+    # `input-refused` is the one ending where nothing was planned at all: the criteria were sent
+    # back before any of them could be cited, so demanding citations would report a stage that
+    # obeyed its own refusal rule as if it had skipped work.
+    if ended != "input-refused":
+        check_criterion_coverage("plan", directory, problems)
 
 
 def check_work(directory, problems):
     check_single_deliverable("work", directory, problems)
+    check_criterion_coverage("work", directory, problems)
 
 
 def check_review(directory, problems):
     check_single_deliverable("review", directory, problems)
+    check_criterion_coverage("review", directory, problems)
+
+    path = directory / "review.md"
+    text = read(path)
+    if text is None:
+        return
+    front = frontmatter(text)
+    if isinstance(front.get("verdict"), str):
+        return
+    body = FRONTMATTER.sub("", text)
+    head = [line for line in body.splitlines() if line.strip()][:VERDICT_HEAD_LINES]
+    if not any(VERDICT_IN_BODY.search(line) for line in head):
+        problems.append(
+            f"review: {path}: no verdict in the frontmatter and none in its first "
+            f"{VERDICT_HEAD_LINES} lines — the human signs from this file, and a verdict they "
+            f"have to read the body to find is not readable without reading the body")
 
 
 def check_feature_id(directory, problems):
