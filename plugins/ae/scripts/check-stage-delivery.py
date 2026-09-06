@@ -84,7 +84,14 @@ CRITERION_MENTION = r"\b{}\b"
 # throughout their prose to mean a round of the loop, and a case-insensitive match reported a
 # verdict in a review that had none left in it at all.
 VERDICT_HEAD_LINES = 12
-VERDICT_IN_BODY = re.compile(r"(?i:\bverdict\b)|(?<![\w-])(?:PASS|FAIL)(?![\w-])")
+UPPER_VERDICT = re.compile(r"(?<![\w-])(?:PASS|FAIL)(?![\w-])")
+# The word `verdict` used as a label, and an outcome word to fill it. Matching the bare word was
+# the hole: "No verdict was reached." satisfied a rule that a verdict be present, which is the
+# same shape as the case-insensitive PASS that could not fail — a check reporting green on the
+# sentence that says the thing is absent.
+VERDICT_LABEL = re.compile(r"(?i)\bverdict\b\s*:")
+VERDICT_OUTCOME = re.compile(r"(?<![\w-])(?:pass(?:ed|es)?|fail(?:ed|s)?|signed|met)(?![\w-])",
+                             re.I)
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\s*?\n", re.S)
 TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
@@ -131,7 +138,10 @@ def frontmatter(text):
         if key is None:
             continue
         nested = NESTED_KEY.match(line)
-        if nested and isinstance(data.get(key), dict):
+        if isinstance(data.get(key), str):
+            # an indented line under a scalar is that scalar continuing, which is ordinary YAML
+            data[key] = f"{data[key]} {line.strip()}"
+        elif nested and isinstance(data.get(key), dict):
             data[key][nested.group(1)] = nested.group(2).strip()
         elif line.lstrip().startswith("- "):
             data[key] = Unreadable("a sequence of bare items (`- item`), not the `id: line` "
@@ -374,16 +384,29 @@ def check_review(directory, problems):
     text = read(path)
     if text is None:
         return
-    front = frontmatter(text)
-    if isinstance(front.get("verdict"), str):
+    declared = frontmatter(text).get("verdict")
+    if isinstance(declared, str):
+        if VERDICT_OUTCOME.search(declared):
+            return
+        problems.append(
+            f"review: {path}: `verdict: {declared[:40]}` names no outcome — the human signs from "
+            f"this file, and a placeholder standing where the verdict goes is not a verdict they "
+            f"can sign against")
         return
+
     body = FRONTMATTER.sub("", text)
     head = [line for line in body.splitlines() if line.strip()][:VERDICT_HEAD_LINES]
-    if not any(VERDICT_IN_BODY.search(line) for line in head):
-        problems.append(
-            f"review: {path}: no verdict in the frontmatter and none in its first "
-            f"{VERDICT_HEAD_LINES} lines — the human signs from this file, and a verdict they "
-            f"have to read the body to find is not readable without reading the body")
+    if any(UPPER_VERDICT.search(line) for line in head):
+        return
+    labelled = [line for line in head if VERDICT_LABEL.search(line)]
+    if any(VERDICT_OUTCOME.search(VERDICT_LABEL.split(line, 1)[-1]) for line in labelled):
+        return
+    problems.append(
+        f"review: {path}: no verdict in the frontmatter and none in its first "
+        f"{VERDICT_HEAD_LINES} lines — the human signs from this file, and a verdict they have "
+        f"to read the body to find is not readable without reading the body"
+        + (". A line here uses the word `verdict` and names no outcome, which is not one"
+           if labelled else ""))
 
 
 def check_feature_id(directory, problems):
