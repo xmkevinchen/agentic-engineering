@@ -57,6 +57,11 @@ why it is not the stage marking its own work. **A non-zero exit is not advice.**
 names, here, before going on: a stage that would be refused is sent back now, not discovered
 three stages later.
 
+**Closing it means invoking the stage again with what the check said** — not writing the missing
+part yourself, which makes you the author of a deliverable nobody then checks, and not going on.
+If the same gap survives that second run, stop and put it to the human: a stage that cannot
+deliver twice is not something a third attempt fixes.
+
 Exit 0 means no mechanical violation, not that the stage conformed. Then read the deliverable
 yourself against what the next stage would refuse it for, below.
 
