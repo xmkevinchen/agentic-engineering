@@ -145,6 +145,11 @@ expect_bad analyze-criterion-shape     analyze  analyze AC2 AC3 "is labelled wit
 expect_bad analyze-blocked-by-scalar   analyze  analyze "blocked_by:" mapping
 expect_bad analyze-frontmatter-not-first analyze analyze "byte 0"
 
+echo "A criterion the checker cannot read is uncounted wherever criteria are counted"
+expect_bad criterion-shape-unread-downstream plan   plan   "acceptance.md" AC2 AC3 "is labelled with"
+expect_bad criterion-shape-unread-downstream work   work   "acceptance.md" AC2 AC3 "is labelled with"
+expect_bad criterion-shape-unread-downstream review review "acceptance.md" AC2 AC3 "is labelled with"
+
 echo "A stage marked blocked says what it is blocked on"
 expect_bad work-blocked-nothing-stated   work   work   "log.md"    blocked_by:
 expect_bad review-blocked-nothing-stated review review "review.md" blocked_by:

@@ -26,8 +26,14 @@ What it decides:
            `returned-<id>.md` sending it back. There is no `ended:` here: the filename already
            carries the control flow, which is why the name is fixed.
 
-  Every stage that can end `blocked` owes a `blocked_by:` saying what it waits on. Both skills
-  require that detail in words; until this rule reached them only ANALYZE had a field to carry it.
+  Two rules are not any one stage's. **A rule belongs to the stage that can violate it, except a
+  rule about whether an input can be read at all — that one belongs to every stage whose own rule
+  reads that input**, because there an unreadable input does not make the stage wrong, it makes
+  this checker silent about it. By that split: every stage that can end `blocked` owes a
+  `blocked_by:` saying what it waits on, and every stage that counts criteria reports the
+  criterion lines it could not read. Everything else under ANALYZE stays there — the feature id,
+  the `ended:` pairing, the falsifier each criterion carries — because nothing downstream reads
+  them and only ANALYZE can get them wrong.
 
   PLAN     `plan.md` exists, its `ended:` — where it has one — names an ending PLAN has, and
            every signed criterion is cited in it. `ended: input-refused` is exempt from the
@@ -406,7 +412,7 @@ def check_criterion_coverage(stage, directory, problems):
     if deliverable is None:
         return
 
-    for cid, _ in criterion_blocks(acceptance):
+    for cid, _ in readable_criteria(stage, directory / "acceptance.md", acceptance, problems):
         if not re.search(CRITERION_MENTION.format(cid), deliverable):
             problems.append(
                 f"{stage}: {path}: never mentions {cid} — the human signed it and this "
@@ -492,18 +498,21 @@ def check_feature_id(directory, problems):
             f"more than one feature")
 
 
-def check_criteria(directory, problems):
-    """Every criterion carries an id later stages cite, and a falsifier or a judgement mark."""
-    path = directory / "acceptance.md"
-    text = read(path)
-    if text is None:
-        return
+def readable_criteria(stage, path, text, problems):
+    """The criteria in an acceptance file, reporting each line that could not be read as one.
 
+    Shared by ANALYZE, which owns the file, and by the three stages whose coverage rule counts
+    what is in it. **A rule belongs to the stage that can violate it, except a rule about
+    whether an input can be read at all — that one belongs to every stage whose own rule reads
+    that input.** There an unreadable line does not make the stage wrong; it makes this checker
+    silent about that stage, because a criterion it cannot see is one it does not count. Same
+    shape as a stage obliged to say what it waits on and given nowhere to write it.
+    """
     for number, line in enumerate(text.splitlines(), start=1):
         found = CRITERION_OFF_SHAPE.match(line)
         if found:
             problems.append(
-                f"analyze: {path}:{number}: {found.group(1)} is labelled with "
+                f"{stage}: {path}:{number}: {found.group(1)} is labelled with "
                 f"{line[len(found.group(0)) - 2:len(found.group(0)) - 1]!r} where a criterion is "
                 f"written `{found.group(1)} — the property` — as written it is invisible to "
                 f"every rule here, and a readable criterion elsewhere in the file hides that")
@@ -511,13 +520,21 @@ def check_criteria(directory, problems):
     blocks = criterion_blocks(text)
     if not blocks:
         problems.append(
-            f"analyze: {path}: holds no criterion id — a criterion is written "
+            f"{stage}: {path}: holds no criterion id — a criterion is written "
             f"`AC1 — the property`, optionally in bold or under a heading marker, and later "
             f"stages cite criteria by that id because nobody copies them. Nothing here takes "
             f"that form, so there is nothing for a plan, a log or a review to name")
+    return blocks
+
+
+def check_criteria(directory, problems):
+    """Every criterion carries a falsifier or a judgement mark. ANALYZE's alone: it writes them."""
+    path = directory / "acceptance.md"
+    text = read(path)
+    if text is None:
         return
 
-    for cid, block in blocks:
+    for cid, block in readable_criteria("analyze", path, text, problems):
         if not FALSIFIER_OR_JUDGEMENT.search(block):
             problems.append(
                 f"analyze: {path}: {cid} states no falsifier and is not marked judgement — "
