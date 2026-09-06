@@ -110,6 +110,7 @@ expect_ok  discuss-delivered      discuss
 expect_ok  discuss-returned       discuss
 expect_ok  discuss-none           discuss
 expect_bad discuss-missing-record discuss  discuss Q2 decision-Q2.md
+expect_bad discuss-empty-record   discuss  discuss Q1 decision-Q1.md empty
 
 echo "ANALYZE — a deliverable that exists and does not conform"
 expect_ok  analyze-criterion-judgement    analyze

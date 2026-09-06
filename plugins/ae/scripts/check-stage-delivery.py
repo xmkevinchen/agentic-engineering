@@ -324,9 +324,17 @@ def check_discuss(directory, problems):
         return
 
     for question in sorted(discuss):
-        if (directory / f"decision-{question}.md").is_file():
+        settled = directory / f"decision-{question}.md"
+        returned = directory / f"returned-{question}.md"
+        # An empty file is a filename, not a decision — and a filename is what carries the
+        # control flow here, so a touched one closes the id while saying nothing at all.
+        blank = [p for p in (settled, returned) if p.is_file() and not p.read_text().strip()]
+        if blank:
+            problems.append(
+                f"discuss: {blank[0]}: empty — a file settles or returns `{question}` by what is "
+                f"in it, and there is nothing in this one to read")
             continue
-        if (directory / f"returned-{question}.md").is_file():
+        if settled.is_file() or returned.is_file():
             continue
         problems.append(
             f"discuss: {directory / f'decision-{question}.md'}: absent — the analysis names "
