@@ -223,6 +223,13 @@ the thing it describes, never against another document. A data invariant is a st
 — an order whose total disagrees with its line items — and finding one is the plan's business,
 not this file's.
 
+**Where the deliverable is prose, a falsifier that quantifies over readers has no bottom.** "Every
+term the file depends on has a source in the file" cannot be satisfied, because prose defines words
+with other words: settle the term one reader names and the sentence that settled it carries a new
+one. Measured, on this repository's own plan stage — the term two of two readers named was defined,
+and the definition put an undefined word in the same syntactic slot. What is satisfiable is
+stability: **given the same named inputs, two authors reach the same verdict.** Write that.
+
 Later stages cite criteria by id. Nobody copies them.
 
 ## Where the item does not go on as one
