@@ -151,9 +151,18 @@ never seen red, or when files changed that no step accounts for.
 ### 5 · Review
 
 **Invoke `/ae:review` with the plan path.**
-Then read `<feature-dir>/review.md`. Implementation defects go back to step 4 — the ordinary
-loop, needing nobody's permission. A finding that would change what a criterion *means* goes
-back to step 1, and only through the human.
+Then read `<feature-dir>/review.md` and route on its verdict, which is written to be routed on:
+`fail` sends the open items back to step 4 — the ordinary loop, needing nobody's permission;
+`criterion-unsettled` goes to step 1 through the human, because what is in question is a
+criterion they signed; `pass` goes to the signing gate below. A review that ended `blocked`
+judged nothing to route on — close what it waited on and invoke it again.
+
+Within a `fail`, a finding that would change what a criterion *means* still goes back to step 1
+through the human, even though the rest of the items go to step 4.
+
+**Send it back when the verdict is not one of those three**, or when a criterion's verdict says
+only that it was read. A review that qualifies a pass in prose has left the next step to you to
+guess, and a criterion nobody ran a check against is a verification still owed, not a judgement.
 
 ### Before sending it back, count
 

@@ -133,6 +133,7 @@ expect_bad work-interrupted          work   work "log.md" ended: blocked
 
 expect_ok  review-delivered          review
 expect_ok  review-blocked            review
+expect_ok  review-criterion-unsettled review
 expect_bad review-interrupted        review review "review.md" ended: blocked
 
 echo "DISCUSS — the ids in the analysis minus the files on disk"
@@ -208,6 +209,8 @@ expect_bad analyze-frontmatter-not-first  discuss  discuss "byte 0"
 expect_bad discuss-no-field               discuss  discuss "no \`discuss:\` field"
 expect_bad discuss-scalar                 discuss  discuss "not a list of ids"
 expect_bad analyze-bad-dir-name           analyze  analyze "F-NNN-<slug>"
+expect_bad review-verdict-unroutable      review   review  "verdict: met" "no edge for another"
+expect_bad review-pass-qualified          review   review  "verdict: pass" "routes nowhere"
 
 # Two more the checker can print that no fixture directory reaches: a directory outside the four
 # state directories, and the usage line. Constructed, like the absent-directory cases.

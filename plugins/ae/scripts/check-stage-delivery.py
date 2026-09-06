@@ -101,8 +101,13 @@ UPPER_VERDICT = re.compile(r"(?<![\w-])(?:PASS|FAIL)(?![\w-])")
 # same shape as the case-insensitive PASS that could not fail — a check reporting green on the
 # sentence that says the thing is absent.
 VERDICT_LABEL = re.compile(r"(?i)\bverdict\b\s*:")
-VERDICT_OUTCOME = re.compile(r"(?<![\w-])(?:pass(?:ed|es)?|fail(?:ed|s)?|signed|met)(?![\w-])",
-                             re.I)
+VERDICT_OUTCOME = re.compile(
+    r"(?<![\w-])(?:pass(?:ed|es)?|fail(?:ed|s)?|signed|met|criterion-unsettled)(?![\w-])", re.I)
+# The three the entry has an edge for. A verdict outside this set names no next step, and one
+# qualified in prose — a pass "conditional on" something — is `criterion-unsettled` written so
+# that nothing can route on it.
+VERDICTS = ("pass", "fail", "criterion-unsettled")
+QUALIFIED = re.compile(r"(?i)\b(?:conditional(?:ly)? on|subject to|pending|provided that)\b")
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\s*?\n", re.S)
 TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
@@ -450,7 +455,21 @@ def check_review(directory, problems):
         return
     declared = frontmatter(text).get("verdict")
     if isinstance(declared, str):
-        if VERDICT_OUTCOME.search(declared):
+        # the leading word is the token the entry routes on; anything after it is prose for a
+        # reader, and a verdict that spells out its reason on the same line is still routable
+        bare = re.split(r"[^\w-]", declared.strip().strip("`*"), 1)[0].lower()
+        if bare not in VERDICTS and VERDICT_OUTCOME.search(declared):
+            problems.append(
+                f"review: {path}: `verdict: {declared[:40]}` is not one of "
+                f"{', '.join(VERDICTS)} — the entry routes on this word and has no edge for "
+                f"another")
+            return
+        if bare in VERDICTS:
+            if bare == "pass" and QUALIFIED.search(text):
+                problems.append(
+                    f"review: {path}: `verdict: pass` while the file qualifies it — a pass held "
+                    f"back on something is `criterion-unsettled`, which routes to the human, and "
+                    f"a qualification in prose routes nowhere")
             return
         problems.append(
             f"review: {path}: `verdict: {declared[:40]}` names no outcome — the human signs from "
