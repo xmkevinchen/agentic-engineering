@@ -123,6 +123,29 @@ expect_bad work-criterion-unlogged  work   work   "log.md"    AC3
 expect_bad review-criterion-unjudged review review "review.md" AC3
 expect_bad review-no-verdict-line   review review "review.md" verdict
 
+echo "The message does not go away by being read"
+# The same directory twice: reported, then the named gap closed, then reported on again. This is
+# what "the missing part is completed before the next stage begins" rests on — the check is not
+# an announcement the session agent can acknowledge past, it stays red until the file exists.
+work=$(mktemp -d)
+# the whole fixture, state directory and all: the checker resolves the features root from the
+# feature directory's parents, so a copy that keeps only the leaf is not the same input
+cp -R "$FIXTURES/analyze-interrupted-then-completed/." "$work/"
+under_test="$work/active/F-260-then-completed"
+before=$(python3 "$CHECK" "$under_test" analyze 2>&1); before_code=$?
+cp "$work/completion/acceptance.md" "$under_test/"
+after=$(python3 "$CHECK" "$under_test" analyze 2>&1); after_code=$?
+rm -rf "$work"
+if [ "$before_code" -eq 1 ] && [ "$after_code" -eq 0 ]; then
+  report pass "analyze-interrupted-then-completed: red until the named file exists, then green"
+else
+  report fail "analyze-interrupted-then-completed: red until the named file exists, then green" \
+    "before: exit $before_code
+$before
+after: exit $after_code
+$after"
+fi
+
 echo
 printf '%d passed, %d failed\n' "$passed" "$failed"
 [ "$failed" -eq 0 ]

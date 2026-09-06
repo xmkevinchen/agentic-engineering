@@ -42,9 +42,20 @@ written below as `<feature-dir>`; `/ae:analyze` creates it.
 
 ## Running it
 
-Invoke each stage's skill. After it returns, read its deliverable off disk and check it
-against what the next stage would refuse it for, below, before going on — a stage that would
-be refused is sent back now, not discovered three stages later.
+Invoke each stage's skill. After it returns, and before the next stage is invoked, run
+
+```
+python3 plugins/ae/scripts/check-stage-delivery.py <feature-dir> <stage>
+```
+
+Its whole input is those two arguments. It never reads this conversation or the stage's own
+account of what it wrote, which is why it can contradict a stage that reported success — and
+why it is not the stage marking its own work. **A non-zero exit is not advice.** Close what it
+names, here, before going on: a stage that would be refused is sent back now, not discovered
+three stages later.
+
+Exit 0 means no mechanical violation, not that the stage conformed. Then read the deliverable
+yourself against what the next stage would refuse it for, below.
 
 An `F-NNN-<slug>` as the argument is a resume: read what that directory already holds and
 enter at the first thing not done.

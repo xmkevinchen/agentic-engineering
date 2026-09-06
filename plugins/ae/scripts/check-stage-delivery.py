@@ -316,8 +316,9 @@ def check_feature_id(directory, problems):
     if directory.parent.name not in STATE_DIRS:
         problems.append(
             f"analyze: {directory}: does not sit under one of "
-            f"{', '.join(STATE_DIRS)}/, so nothing can tell which ids are already allocated and "
-            f"the uniqueness of this one is unchecked rather than confirmed")
+            f"{', '.join(s + '/' for s in STATE_DIRS)}, so nothing can tell which ids are "
+            f"already allocated and the uniqueness of this one is unchecked rather than "
+            f"confirmed")
         return
     found = FEATURE_ID.match(directory.name)
     if not found:
