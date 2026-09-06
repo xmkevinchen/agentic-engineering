@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Decide the method: cut the work into dependency-ordered steps against criteria the human has already signed, and name the check each step turns red."
+description: "Decide the method: cut the work into dependency-ordered steps against criteria the human has already signed, and name how each step verifies its criteria."
 argument-hint: "<feature-dir>"
 model: opus
 effort: high
@@ -97,4 +97,4 @@ in the plan rather than skipping the round silently.
 
 ## What the next stage may refuse it for
 
-A step that names no check to turn red. A step that serves no criterion.
+A step that names no verification for a criterion it serves. A step that serves no criterion.

@@ -139,8 +139,8 @@ that judgement is the one most worth disagreeing with, and it is invisible unles
 ### 3 · Plan
 
 **Invoke `/ae:plan` with the feature directory.**
-Then read `<feature-dir>/plan.md`. Send it back when a step names no check to turn red, or a
-step accounts for no criterion. The plan cites criteria by id; it does not restate them.
+Then read `<feature-dir>/plan.md`. Send it back when a step names no verification for a criterion
+it serves, or a step accounts for no criterion. The plan cites criteria by id; it does not restate them.
 
 ### 4 · Work
 
