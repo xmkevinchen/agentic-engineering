@@ -16,7 +16,9 @@ Decide how the work is cut into steps and how each criterion will be verified.
 ## Input
 
 `<feature-dir>/acceptance.md`, `<feature-dir>/analysis.md`, and any decision records in that
-directory.
+directory — **and the files the criteria and the steps are about, as they stand.** The split test
+below is a claim about trees, and a claim about a tree cannot be made out of the feature directory
+alone.
 
 ## Deliverable
 
@@ -67,8 +69,15 @@ it by hand. Never an automated check invented to avoid saying the last one.
 **The steps are a dependency-ordered stack.** Each step is one commit that closes on itself and
 depends only on the steps above it — that is what makes a failure attributable: ten
 self-closing commits say which one broke, one commit of ten changes says only that something did.
-Each step says what it does, which criteria it serves, which files it expects to touch, and
-which check it turns from red to green.
+Each step says what it does, which criteria it serves, which files it expects to touch, and how
+it verifies those criteria.
+
+**Test a step by trying to split it in two.** It is too coarse when, in dependency order, the
+first part can land on the tree before the step and the second can land on the first; each part
+serves a criterion the other does not; and each of those criteria can be verified against the tree
+where its part lands. Where no such split exists, it is one step. Nothing here is about the
+project's suite: whether a commit lands green is `work/SKILL.md`'s, and a second standard named
+here is a second answer to the same question.
 
 **Coverage runs both ways.** Every criterion is served by at least one step, and no step builds
 something no criterion asks for.
