@@ -16,6 +16,14 @@ judged against what you write here.
 The work item — **$ARGUMENTS**, free text, a `BL-NNN`, an `F-NNN-<slug>`, or a path to a file
 describing it — and the repository. Read the repository yourself before writing anything.
 
+**Your first act is the feature directory and an `analysis.md` holding the work item as it
+arrived** — before reading, before deciding anything, and whatever the item turns out to be.
+Every ending writes that directory anyway; this only fixes when. What it buys is the one thing
+no other stage needs: yours is the only stage with nothing upstream of it, so an ANALYZE that
+breaks off before writing leaves the work item nowhere but the conversation, and a resume has
+no argument to re-invoke you with. Written first, `/ae:go F-NNN-<slug>` always has something
+to read.
+
 **An `F-NNN-<slug>` is a resume, not a new item.** Open that directory and carry on from what it
 already holds: take up what `blocked_by:` is waiting on, and act on any `returned-<id>.md` it
 contains. Allocate no new id.
@@ -62,9 +70,9 @@ find out about; another question costs a message.
 
 ### While you are waiting on the human
 
-Write the directory and `analysis.md` on the first pass through that loop, holding what you
-have and, for each thing you are waiting on, three things: **what is missing, why it is
-nowhere you can reach, and what having it would let you settle.** Those three go in the body.
+The directory and `analysis.md` are already there. Add to them, for each thing you are waiting
+on, three things: **what is missing, why it is nowhere you can reach, and what having it would
+let you settle.** Those three go in the body.
 `blocked_by:` carries the id and one line, marking that the analysis is mid-loop; it is not
 itself the request. `ended: blocked` goes with it.
 

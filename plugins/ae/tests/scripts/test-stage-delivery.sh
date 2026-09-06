@@ -93,6 +93,7 @@ expect_ok  analyze-delivered      analyze
 expect_ok  analyze-blocked        analyze
 expect_ok  analyze-nothing-to-do  analyze
 expect_ok  analyze-not-one-item   analyze
+expect_bad analyze-empty-analysis analyze  analyze analysis.md empty "work item"
 expect_bad analyze-interrupted    analyze \
   analyze acceptance.md ended: nothing-to-do
 

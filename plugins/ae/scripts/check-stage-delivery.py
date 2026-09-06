@@ -292,7 +292,14 @@ def check_analyze(directory, problems):
     if analysis is None:
         problems.append(
             f"analyze: {analysis_path}: absent — the stage's own record of the problem is not on "
-            f"disk, so nothing here says the stage ran at all")
+            f"disk, so nothing here says the stage ran at all, and a resume has no work item to "
+            f"re-invoke the stage with")
+        return
+    if not analysis.strip():
+        problems.append(
+            f"analyze: {analysis_path}: empty — this file is written first and holds the work "
+            f"item as it arrived, so that a resume after a lost conversation has something to "
+            f"read. An empty one leaves the item nowhere but the conversation")
         return
 
     misplaced = frontmatter_misplaced(analysis_path, analysis)

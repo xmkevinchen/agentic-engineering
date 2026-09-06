@@ -64,6 +64,13 @@ run that fails on a different gap has closed the first one; run it again. A gap 
 had two goes at and not closed is not something a third fixes. A stage that keeps producing fresh
 gaps without shrinking is the rate bound under *When things go wrong*, not this.
 
+Re-invoking needs the stage's argument, and for every stage but ANALYZE that is a file the
+stage before it left. ANALYZE writes the feature directory and `analysis.md` as its first act
+so a resume has the work item too. **If even that is missing — nothing on disk and the work
+item only in a conversation you no longer have — stop and say so.** That is the one case where
+the instruction above cannot be carried out, and improvising past it means writing the
+deliverable yourself or going on, which are the two moves it forbids.
+
 Exit 0 means no mechanical violation, not that the stage conformed. Then read the deliverable
 yourself against what the next stage would refuse it for, below.
 
