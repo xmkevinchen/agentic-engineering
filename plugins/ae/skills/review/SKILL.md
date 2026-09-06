@@ -26,14 +26,33 @@ restatement of them and not the log's.
 
 `<feature-dir>/review.md`, containing:
 
-- pass or fail, readable without reading the body
+- the verdict — `pass`, `fail` or `criterion-unsettled` — readable without reading the body
 - what the feature changed
-- each criterion's verdict
+- each criterion's verdict, and what established it
 - every finding with its disposition
 - what was not checked
 
 The human must be able to sign from this file alone. A file that gives the verdict without saying
 what it is a verdict on does not.
+
+**The verdict is where the entry's next step comes from, so there are three and no others.**
+`pass` — nothing outstanding, and the human signs. `fail` — the open items go back to WORK.
+`criterion-unsettled` — a signed criterion has two readings and the verdict differs between them:
+name both, say which one the body judged against and what the verdict is under the other, and it
+goes to ANALYZE through the human. Anything else is a description, and the entry has no edge for
+it. A verdict qualified in prose — passing "subject to", "conditional on", "pending" — is
+`criterion-unsettled` written in a way the next stage cannot route on.
+
+**`criterion-unsettled` is a finding against a stage before this one, and names which.** A
+criterion reached the signature carrying two readings: ANALYZE writes the criteria and DISCUSS
+settles what is contested, so say which of them let it through and what there would have caught
+it. Reaching this verdict often is not care — it is a report that the stages upstream are handing
+over criteria nobody can judge, and the record is where that becomes visible.
+
+**A verdict reached by reading is a verification nobody ran, not a kind of verdict.** For each
+criterion say what established it: a command and what it printed, or a reading. Where it was a
+reading and something could have been run, name what would run it and why it was not — that is an
+obligation the next stage can pick up. "Read, not run" on its own is a party excusing itself.
 
 A review that cannot reach some of what it must judge — the artifact lives somewhere this stage
 is not — is **blocked, not passed**: write `ended: blocked` in the frontmatter with a

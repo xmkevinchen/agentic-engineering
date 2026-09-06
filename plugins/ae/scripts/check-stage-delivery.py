@@ -110,8 +110,9 @@ UPPER_VERDICT = re.compile(r"(?<![\w-])(?:PASS|FAIL)(?![\w-])")
 # same shape as the case-insensitive PASS that could not fail — a check reporting green on the
 # sentence that says the thing is absent.
 VERDICT_LABEL = re.compile(r"(?i)\bverdict\b\s*:")
-VERDICT_OUTCOME = re.compile(r"(?<![\w-])(?:pass(?:ed|es)?|fail(?:ed|s)?|signed|met)(?![\w-])",
-                             re.I)
+VERDICT_OUTCOME = re.compile(
+    r"(?<![\w-])(?:pass(?:ed|es)?|fail(?:ed|s)?|signed|met|criterion-unsettled)(?![\w-])",
+    re.I)
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\s*?\n", re.S)
 TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
