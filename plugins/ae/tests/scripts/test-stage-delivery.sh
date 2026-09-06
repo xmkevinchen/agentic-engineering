@@ -61,13 +61,17 @@ expect_bad() {
 $out"
     return
   fi
-  # Match against the message with the fixture's own paths taken out. A needle that is also a
-  # word in the fixture directory's name is otherwise satisfied by the path the message prints,
-  # not by anything the message says — observed: `sequence` passing against a message that had
-  # stopped using the word, and `verdict` passing against a fixture directory called
-  # review-no-verdict-line. Paths outside the fixture root survive, which is the residual limit.
-  said=${out//$dir/}
-  said=${said//$FIXTURES/}
+  # Match against the message with every path under the fixtures root taken out, not only the
+  # directory under test. A needle that is also a word in some fixture's path is otherwise
+  # satisfied by the path the message prints rather than by anything the message says — observed
+  # three times: `sequence` against a fixture named discuss-sequence, `verdict` against
+  # review-no-verdict-line, and `F-240` against the *sibling* holder the collision message names,
+  # which stripping only the directory under test left standing with its id intact.
+  # A file's basename stays: naming the deliverable is half of what these messages owe. A
+  # directory's does not, because that is where a feature id lives.
+  said=$(printf '%s' "$out" | sed -E \
+    -e "s|$FIXTURES[^ ,]*/([^ ,/]*\.md)|<dir>/\1|g" \
+    -e "s|$FIXTURES[^ ,]*|<dir>|g")
   for needle in "$@"; do
     case "$said" in
       *"$needle"*) ;;
