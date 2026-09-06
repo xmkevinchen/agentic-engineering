@@ -123,6 +123,12 @@ expect_bad work-criterion-unlogged  work   work   "log.md"    AC3
 expect_bad review-criterion-unjudged review review "review.md" AC3
 expect_bad review-no-verdict-line   review review "review.md" verdict
 
+echo "A shape the parser cannot read is unreadable, not empty"
+expect_bad discuss-sequence            discuss  discuss "discuss:" sequence
+expect_bad analyze-criterion-shape     analyze  analyze AC2 AC3 "is labelled with"
+expect_bad analyze-blocked-by-scalar   analyze  analyze "blocked_by:" mapping
+expect_bad analyze-frontmatter-not-first analyze analyze "byte 0"
+
 echo "The message does not go away by being read"
 # The same directory twice: reported, then the named gap closed, then reported on again. This is
 # what "the missing part is completed before the next stage begins" rests on — the check is not

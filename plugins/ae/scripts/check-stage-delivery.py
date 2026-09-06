@@ -68,6 +68,12 @@ FEATURE_ID = re.compile(r"^(F-\d+)-")
 # carrying no falsifier. A criterion written with no id at all is invisible here; see the
 # docstring.
 CRITERION = re.compile(r"^\*{0,2}(AC\d+)\s*[\u2014\u2013]\s")
+# The same line labelled with a separator the contract does not use. Prose that mentions an id
+# puts a word after it \u2014 "AC2 and AC4 are not omitted" \u2014 so punctuation is what separates a
+# criterion written the wrong way from a sentence, and a criterion written the wrong way is
+# unread rather than passed: without this it is invisible to every rule below, and one readable
+# criterion in the same file suppresses the catch-all that would otherwise notice.
+CRITERION_OFF_SHAPE = re.compile(r"^\*{0,2}(AC\d+)\s*[:\-]\s")
 # either of the two things `analyze/SKILL.md` says a criterion must carry
 FALSIFIER_OR_JUDGEMENT = re.compile(r"falsifi|judgement|judgment", re.I)
 
@@ -86,8 +92,30 @@ NESTED_KEY = re.compile(r"^[ \t]+([A-Za-z_][\w-]*):[ \t]*(.*)$")
 EMPTY_VALUES = ("", "{}", "[]", "null", "~")
 
 
+class Unreadable:
+    """A frontmatter value whose shape the parser does not recognise.
+
+    Not absent, and not empty. The distinction is the whole point: an unrecognised shape treated
+    as nothing-to-report is how one parser turns every rule downstream of it silent, and each of
+    those rules then reads as having looked and found nothing. `shape` says what was there
+    instead, in words a person can act on.
+    """
+
+    def __init__(self, shape):
+        self.shape = shape
+
+    def __bool__(self):
+        # never falls through an `or {}` into something a rule would iterate as if it were data
+        return True
+
+
 def frontmatter(text):
-    """Parse the leading `---` block into {key: str} and {key: {id: str}}. No yaml in stdlib."""
+    """Parse the leading `---` block into {key: str}, {key: {id: str}} and Unreadable values.
+
+    No yaml in stdlib, so the shapes this recognises are the ones the contract defines: a scalar,
+    an empty value, and a block mapping of `id: line`. Anything else indented under a key — a
+    sequence, most often — becomes Unreadable rather than an empty mapping.
+    """
     found = FRONTMATTER.match(text)
     if not found:
         return {}
@@ -100,10 +128,31 @@ def frontmatter(text):
             key, value = top.group(1), top.group(2).strip()
             data[key] = {} if value in EMPTY_VALUES else value
             continue
+        if key is None:
+            continue
         nested = NESTED_KEY.match(line)
-        if nested and key is not None and isinstance(data.get(key), dict):
+        if nested and isinstance(data.get(key), dict):
             data[key][nested.group(1)] = nested.group(2).strip()
+        elif line.lstrip().startswith("- "):
+            data[key] = Unreadable("a sequence of bare items (`- item`), not the `id: line` "
+                                   "mapping this field is defined as")
+        elif not isinstance(data.get(key), Unreadable):
+            data[key] = Unreadable(f"an indented line this parser cannot read as `id: value`: "
+                                   f"{line.strip()[:48]!r}")
     return data
+
+
+def frontmatter_misplaced(path, text):
+    """A `---` block that is not at byte 0, which means nothing reads it as frontmatter.
+
+    Worth its own report because the failure is silent and inverting: the fields inside are
+    simply not seen, so a file carrying `ended: blocked` is reported as carrying no `ended:` at
+    all — a message asserting the opposite of what the file says.
+    """
+    if FRONTMATTER.match(text) or not text.lstrip().startswith("---"):
+        return None
+    return (f"{path}: opens with a `---` block that does not start at byte 0 — it is preceded by "
+            f"blank space, so nothing reads it as frontmatter and every field in it is invisible")
 
 
 def criterion_blocks(text):
@@ -126,7 +175,16 @@ def read(path):
 def ending_value(stage, marker_path, front, problems):
     """Return the `ended:` value, reporting one that is not an ending this stage has."""
     ended = front.get("ended")
-    ended = None if isinstance(ended, dict) else ended
+    if isinstance(ended, Unreadable):
+        problems.append(f"{stage}: {marker_path}: `ended:` is {ended.shape}")
+        return None
+    if isinstance(ended, dict):
+        if ended == {} and "ended" in front:
+            problems.append(
+                f"{stage}: {marker_path}: `ended:` is present with no value — it names which "
+                f"ending this was, and a blank one names none of "
+                f"{' | '.join(ENDINGS[stage])}")
+        return None
     if ended and ended not in ENDINGS[stage]:
         problems.append(
             f"{stage}: {marker_path}: `ended: {ended}` is not an ending this stage has — "
@@ -174,6 +232,11 @@ def check_analyze(directory, problems):
             f"disk, so nothing here says the stage ran at all")
         return
 
+    misplaced = frontmatter_misplaced(analysis_path, analysis)
+    if misplaced:
+        problems.append(f"analyze: {misplaced}")
+        return
+
     front = frontmatter(analysis)
     ended = ending_value("analyze", analysis_path, front, problems)
 
@@ -190,6 +253,13 @@ def check_analyze(directory, problems):
     # and the disagreement is the report — preferring one would decide which is true, and this
     # script has no way to know.
     blocked_by = front.get("blocked_by") or {}
+    if not isinstance(blocked_by, dict):
+        shape = (blocked_by.shape if isinstance(blocked_by, Unreadable)
+                 else "a single line of text, not a mapping")
+        problems.append(
+            f"analyze: {analysis_path}: `blocked_by:` is {shape} — each blocker carries an id "
+            f"and one line, and without ids nothing can say which of them is still waiting")
+        blocked_by = {}
     if ended == "blocked" and not blocked_by:
         problems.append(
             f"analyze: {analysis_path}: `ended: blocked` with an empty `blocked_by:` — the "
@@ -221,7 +291,17 @@ def check_discuss(directory, problems):
             f"from its `discuss:` list, and there is no list")
         return
 
+    misplaced = frontmatter_misplaced(analysis_path, analysis)
+    if misplaced:
+        problems.append(f"discuss: {misplaced}")
+        return
+
     discuss = frontmatter(analysis).get("discuss")
+    if isinstance(discuss, Unreadable):
+        problems.append(
+            f"discuss: {analysis_path}: `discuss:` is {discuss.shape} — nothing here maps an id "
+            f"to a question, so the records this stage owes cannot be read off it")
+        return
     if discuss is None:
         problems.append(
             f"discuss: {analysis_path}: no `discuss:` field — an empty list is a judgement with "
@@ -344,6 +424,15 @@ def check_criteria(directory, problems):
     text = read(path)
     if text is None:
         return
+
+    for number, line in enumerate(text.splitlines(), start=1):
+        found = CRITERION_OFF_SHAPE.match(line)
+        if found:
+            problems.append(
+                f"analyze: {path}:{number}: {found.group(1)} is labelled with "
+                f"{line[len(found.group(0)) - 2:len(found.group(0)) - 1]!r} where a criterion is "
+                f"written `{found.group(1)} \u2014 the property` — as written it is invisible to "
+                f"every rule here, and a readable criterion elsewhere in the file hides that")
 
     blocks = criterion_blocks(text)
     if not blocks:
