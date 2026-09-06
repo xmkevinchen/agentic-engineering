@@ -194,15 +194,16 @@ def check_analyze(directory, problems):
         problems.append(
             f"analyze: {analysis_path}: `ended: blocked` with an empty `blocked_by:` — the "
             f"ending says it is waiting on the human and nothing says what for")
-    check_feature_id(directory, problems)
-    check_criteria(directory, problems)
-
     if blocked_by and ended != "blocked":
         marker = f"`ended: {ended}`" if ended else "no `ended:`"
         problems.append(
             f"analyze: {analysis_path}: `blocked_by:` holds {', '.join(sorted(blocked_by))} "
             f"while the file carries {marker} — a blocked analysis is mid-loop, not ended some "
             f"other way")
+
+    # beyond existence: the deliverable can be there and still not conform
+    check_feature_id(directory, problems)
+    check_criteria(directory, problems)
 
 
 def check_discuss(directory, problems):
