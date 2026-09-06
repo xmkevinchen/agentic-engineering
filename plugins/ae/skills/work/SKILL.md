@@ -19,8 +19,7 @@ Three things. The plan at **$ARGUMENTS**; the signed criteria in `<feature-dir>/
 anything, **the items still open on those returns** — that is what a review sent back, and it is
 the third thing this pass is working from rather than a file you may or may not go and read.
 **List that directory; do not take the set of returns from whatever handed you this task.** A
-return can be written after your task was, and then it is on disk and in nothing you were told —
-observed, with fifty-four seconds in it.
+return can be written after your task was, and then it is on disk and in nothing you were told.
 Reread all three from disk at the start of every step — never from memory, which compaction
 drops without saying so.
 

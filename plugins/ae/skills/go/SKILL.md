@@ -57,6 +57,13 @@ why it is not the stage marking its own work. **A non-zero exit is not advice.**
 names, here, before going on: a stage that would be refused is sent back now, not discovered
 three stages later.
 
+**First, read which kind of refusal it is.** A check that refuses your *input* — the path you
+gave it resolves nowhere — is the ordinary mechanical refusal under *When things go wrong*: read
+what it expected against what it saw, fix the argument, retry, and send no stage anywhere. Only a
+check reporting on a *deliverable* is what the rest of this governs. The script draws that line
+in its own messages and says which one you have; a reader who skips them will re-invoke a stage
+over a mistyped path.
+
 **Closing it means invoking the stage again with what the check said** — not writing the missing
 part yourself, which makes you the author of a deliverable nobody then checks, and not going on.
 **What sends it to the human is the same gap surviving, not the check failing twice.** A second
