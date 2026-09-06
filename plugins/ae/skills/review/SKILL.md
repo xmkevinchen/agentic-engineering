@@ -35,6 +35,11 @@ restatement of them and not the log's.
 The human must be able to sign from this file alone. A file that gives the verdict without saying
 what it is a verdict on does not.
 
+A review that cannot reach some of what it must judge — the artifact lives somewhere this stage
+is not — is **blocked, not passed**: write `ended: blocked` in the frontmatter, say what exactly
+would unblock it, and judge everything else. Without the marker, a review that stopped for a
+reason and one whose run broke off leave the same file.
+
 Name in the file which pass this verdict judges. Rewrite the file each pass; do not append to
 it. Two verdicts standing in one file with nothing saying which is live is the thing this
 forbids. The history of *passes* — which pass said what, and why a later one superseded it —

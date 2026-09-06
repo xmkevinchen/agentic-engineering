@@ -96,13 +96,17 @@ checked.
 **Record it, and route it by which of two states it is in.**
 
 **No method exists** — the criterion is defective. It goes back to analysis through the human,
-since a signed criterion is not yours to move.
+since a signed criterion is not yours to move. `ended: criterion-defective` in `log.md`.
 
 **A method exists and a precondition of the world is absent** — the run has to happen somewhere
 this stage is not, or after something that has not happened yet. That one is **blocked, not
-unchecked**: say what exactly would unblock it. That is what the entry's
+unchecked**: say what exactly would unblock it, under `ended: blocked`. That is what the entry's
 blocked-on-a-missing-capability rule already requires, and what the word "unchecked" quietly
 drops.
+
+Either way the stage stops with work outstanding, and the marker is what says so: a `log.md`
+that stops for a reason and one that stops because the run broke off are otherwise the same
+file.
 
 Never invent a substitute check, and never report either kind satisfied.
 

@@ -89,6 +89,22 @@ echo "AC4 — the artifact on disk decides, not an account of it"
 expect_bad analyze-interrupted-with-claiming-log analyze \
   analyze acceptance.md ended:
 
+echo "PLAN, WORK, REVIEW — the same distinction, one deliverable each"
+expect_ok  plan-delivered            plan
+expect_ok  plan-criterion-unplannable plan
+expect_ok  plan-check-green-first    plan
+expect_ok  plan-input-refused        plan
+expect_bad plan-interrupted          plan   plan "plan.md" ended: criterion-unplannable
+
+expect_ok  work-delivered            work
+expect_ok  work-blocked              work
+expect_ok  work-criterion-defective  work
+expect_bad work-interrupted          work   work "log.md" ended: blocked
+
+expect_ok  review-delivered          review
+expect_ok  review-blocked            review
+expect_bad review-interrupted        review review "review.md" ended: blocked
+
 echo
 printf '%d passed, %d failed\n' "$passed" "$failed"
 [ "$failed" -eq 0 ]

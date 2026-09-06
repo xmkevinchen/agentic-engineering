@@ -30,7 +30,10 @@ directory.
 - the evidence an answer rests on no longer holds — a criterion resting on a file that has since
   moved or gone was signed against a tree that no longer exists.
 
-Name what failed, and send it back to analyze through the human.
+Name what failed in `plan.md` under `ended: input-refused`, and send it back to analyze through
+the human. It is one paragraph and no steps — but writing it is what tells the next reader this
+stage refused its input, rather than leaving a directory shaped exactly like one whose planning
+broke off.
 
 Both are the entry's admission checks and the entry applies them, but this stage is reachable
 directly: arriving that way, there is nothing between a malformed analysis and a plan built on
@@ -43,7 +46,7 @@ is signed, so nobody else can move it. Name the id and what could not be planned
 against a standard you had to invent is how the standard drifts toward whatever gets built.
 
 Returning one criterion does not stop the others: plan the ones that can be planned, and say in
-the plan which were returned and what would unblock each.
+the plan which were returned and what would unblock each — under `ended: criterion-unplannable`.
 
 ## What must be true of the plan
 
@@ -66,7 +69,8 @@ something no criterion asks for.
 
 **No criterion rests on a check nobody has seen fail.** Where the check already exists, run it
 now — a first observed result of green stops the plan, because either the property already
-holds or the check is aimed at something other than the criterion. Where it does not exist yet,
+holds or the check is aimed at something other than the criterion. Say which check and which
+criterion, under `ended: check-green-first`. Where it does not exist yet,
 name the observation precisely enough that whoever writes it can watch it fail first.
 
 ## Before work starts

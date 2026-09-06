@@ -17,6 +17,10 @@ What it decides:
            `ended:` and `blocked_by:` are allowed to disagree, and the disagreement is reported
            rather than silently resolved: one says which ending, the other carries its detail.
 
+  PLAN     `plan.md` exists, and its `ended:` — where it has one — names an ending PLAN has.
+  WORK     the same, for `log.md`.
+  REVIEW   the same, for `review.md`.
+
 What it does not decide, at any exit code: whether an answer rests on evidence, whether a
 criterion means what its words say, whether a check named in a plan would actually turn red, or
 whether a verdict was reached honestly. Those are judgements, and a word-presence check that
@@ -32,11 +36,17 @@ import sys
 STAGES = ("analyze", "discuss", "plan", "work", "review")
 
 # the file each stage writes its ending marker into — whichever deliverable it did write
-MARKER_FILE = {"analyze": "analysis.md"}
+MARKER_FILE = {"analyze": "analysis.md", "plan": "plan.md", "work": "log.md",
+               "review": "review.md"}
 
-# `ended:` is present exactly when the stage ended without its full deliverable set, and its value
-# names which ending. Every value below is an ending the stage's own skill already states.
-ENDINGS = {"analyze": ("blocked", "nothing-to-do", "not-one-item")}
+# `ended:` is present when the stage ended without its full deliverable set, and its value names
+# which ending. Every value below is an ending the stage's own skill already states.
+ENDINGS = {
+    "analyze": ("blocked", "nothing-to-do", "not-one-item"),
+    "plan": ("criterion-unplannable", "check-green-first", "input-refused"),
+    "work": ("blocked", "criterion-defective"),
+    "review": ("blocked",),
+}
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\s*?\n", re.S)
 TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
@@ -68,31 +78,44 @@ def read(path):
     return path.read_text() if path.is_file() else None
 
 
-def check_ending(stage, marker_path, front, problems, missing):
-    """The `ended:` contract, shared by every stage that has one.
-
-    `missing` is the path of the deliverable the caller found absent, or None — observed on disk,
-    never taken from what the directory says about itself. It is named rather than described
-    because the message has to be enough to finish the missing part without running the stage
-    again, and "the remaining deliverable" is not.
-    """
-    allowed = ENDINGS[stage]
+def ending_value(stage, marker_path, front, problems):
+    """Return the `ended:` value, reporting one that is not an ending this stage has."""
     ended = front.get("ended")
     ended = None if isinstance(ended, dict) else ended
-
-    if missing and not ended:
-        problems.append(
-            f"{stage}: {missing}: absent, and {marker_path} carries no `ended:` — a legitimate "
-            f"ending writes `ended: {' | '.join(allowed)}` there, so without one this directory "
-            f"is indistinguishable from a run that stopped halfway")
-    elif ended and ended not in allowed:
+    if ended and ended not in ENDINGS[stage]:
         problems.append(
             f"{stage}: {marker_path}: `ended: {ended}` is not an ending this stage has — "
-            f"expected one of {' | '.join(allowed)}")
-    elif ended and not missing:
-        problems.append(
-            f"{stage}: {marker_path}: carries `ended: {ended}` while the full deliverable set is "
-            f"on disk — `ended:` marks a stage that ended short, so one of the two is wrong")
+            f"expected one of {' | '.join(ENDINGS[stage])}")
+        return None
+    return ended
+
+
+def report_absent(stage, missing, problems):
+    """A deliverable that is not on disk, and nothing on disk saying why.
+
+    The missing file is named rather than described: the message has to be enough to finish the
+    missing part without running the stage again, and "the remaining deliverable" is not.
+    """
+    problems.append(
+        f"{stage}: {missing}: absent, and nothing in this directory carries an `ended:` saying "
+        f"why — a legitimate ending writes `ended: {' | '.join(ENDINGS[stage])}` into the "
+        f"deliverable it did get as far as writing, so without one this directory is "
+        f"indistinguishable from a run that stopped halfway")
+
+
+def check_single_deliverable(stage, directory, problems):
+    """PLAN, WORK and REVIEW each write one file, and it carries its own `ended:`.
+
+    ANALYZE is the odd one out: its two files mean the marker lives in the file that survives
+    while the other is absent. Here the marker and the deliverable are the same file, so an
+    absent deliverable is an absent marker, and there is nowhere for the two to disagree.
+    """
+    path = directory / MARKER_FILE[stage]
+    text = read(path)
+    if text is None:
+        report_absent(stage, path, problems)
+        return None
+    return ending_value(stage, path, frontmatter(text), problems)
 
 
 def check_analyze(directory, problems):
@@ -107,15 +130,21 @@ def check_analyze(directory, problems):
         return
 
     front = frontmatter(analysis)
-    check_ending("analyze", analysis_path, front, problems,
-                 missing=None if acceptance_path.is_file() else acceptance_path)
+    ended = ending_value("analyze", analysis_path, front, problems)
+
+    # ANALYZE alone pairs the marker against a second file: `ended:` is present exactly when
+    # `acceptance.md` is not, so each direction of the mismatch is its own report.
+    if not acceptance_path.is_file() and not ended:
+        report_absent("analyze", acceptance_path, problems)
+    elif ended and acceptance_path.is_file():
+        problems.append(
+            f"analyze: {analysis_path}: carries `ended: {ended}` while {acceptance_path} is on "
+            f"disk — `ended:` marks a stage that stopped short, so one of the two is wrong")
 
     # `ended:` says which ending; `blocked_by:` carries that ending's detail. They can disagree,
     # and the disagreement is the report — preferring one would decide which is true, and this
     # script has no way to know.
     blocked_by = front.get("blocked_by") or {}
-    ended = front.get("ended")
-    ended = None if isinstance(ended, dict) else ended
     if ended == "blocked" and not blocked_by:
         problems.append(
             f"analyze: {analysis_path}: `ended: blocked` with an empty `blocked_by:` — the "
@@ -128,7 +157,20 @@ def check_analyze(directory, problems):
             f"other way")
 
 
-CHECKERS = {"analyze": check_analyze}
+def check_plan(directory, problems):
+    check_single_deliverable("plan", directory, problems)
+
+
+def check_work(directory, problems):
+    check_single_deliverable("work", directory, problems)
+
+
+def check_review(directory, problems):
+    check_single_deliverable("review", directory, problems)
+
+
+CHECKERS = {"analyze": check_analyze, "plan": check_plan, "work": check_work,
+            "review": check_review}
 
 COVERAGE = """Not decided here: whether an answer rests on evidence, whether a criterion means what
 its words say, whether a check named in a plan would actually turn red, or whether a verdict was
