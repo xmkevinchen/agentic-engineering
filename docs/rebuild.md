@@ -284,7 +284,10 @@ the floor cut and nothing after it.
 **`plan` and `review` have since been run closed-book** — three runs and one
 respectively, recorded outside this document. Each produced changes to the stage
 it exercised; what stands here is only that the claim above no longer covers them.
-**`work` remains unrun.**
+**`work` has since been run too** — once, closed-book, with this tree loaded as the plugin. It
+produced one defect in the stage text it exercised and no return: its review passed on the first
+pass, so the loop between work and review was never taken. What that run establishes and what it
+leaves open is in Phase A.
 
 **Next step.** Take feature directories that already hold an analysis and signed
 criteria, open fresh sessions, and run `plan` and `review` twice each with no
@@ -442,7 +445,8 @@ rule ambiguities, against zero from any scan over the same files. It also costs
 far less than it sounds for these three stages — no seat rounds.
 
 These three are not merely untested, they are undeveloped (§3.1) — so expect the
-runs to produce work, not a verdict. **`plan` and `review` are run; `work` is next.** **Unblocks:** any change to the working loop, including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
+runs to produce work, not a verdict. **All three have now been run; the loop between work and
+review has not.** **Unblocks:** any change to the working loop, including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
 treatment was changed substantially by it, and the placement rule from §3.2 can
 only be applied to stages whose real failures are known.
 
@@ -455,6 +459,13 @@ written. So this run is not a session handed `work/SKILL.md`: it is this tree
 becoming the loaded plugin, `/reload-plugins`, then one real `/ae:go` whose work
 stage goes round twice. Splitting it into two runs would spend the same setup
 twice and answer neither question better.
+
+**The first such run went one pass, so half of this is done.** Delivery as a loaded skill is
+answered, and it answered the placement question in a sharper form than §3.2 measured: the rule
+was three lines above the paragraph where the executor acted, and lost anyway — to a worked
+example beside it that did not have the shape the rule asked for. Distance was not the variable;
+the nearest concrete artifact was. **What is still owed is a run whose review returns at least
+once**, because that is the circulation Phase D tunes and no run has taken it.
 
 ### Phase B — make the controller, the monitor and the executing session a tested shape
 
