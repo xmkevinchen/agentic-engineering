@@ -16,6 +16,11 @@ What it decides:
            finished-and-closed directory and a run that stopped halfway are the same on disk.
            `ended:` and `blocked_by:` are allowed to disagree, and the disagreement is reported
            rather than silently resolved: one says which ending, the other carries its detail.
+           Beyond existence: the feature id is one no other directory in the same features root
+           holds, and every criterion carries a falsifier or a judgement mark. A criterion
+           written with no id at all is invisible here — real acceptance files open ordinary
+           paragraphs with bold text, so "a bold line is a criterion" would invent findings, and
+           there is no other structure to read. That gap is a job for the fresh eyes.
 
   DISCUSS  every id in the analysis's `discuss:` list has a `decision-<id>.md` settling it or a
            `returned-<id>.md` sending it back. There is no `ended:` here: the filename already
@@ -52,6 +57,18 @@ ENDINGS = {
     "review": ("blocked",),
 }
 
+STATE_DIRS = ("active", "paused", "done", "abandoned")
+FEATURE_ID = re.compile(r"^(F-\d+)-")
+# A criterion opens a block: the id at the start of a line, bold or not, then the dash that
+# separates it from the property, and the block runs to the next one. The dash is what keeps
+# ordinary prose out — "AC2 and AC4 are not omitted" and "AC1 and AC2 both passing does not"
+# both open lines in real acceptance files, and matching the bare id reported those as criteria
+# carrying no falsifier. A criterion written with no id at all is invisible here; see the
+# docstring.
+CRITERION = re.compile(r"^\*{0,2}(AC\d+)\s*[\u2014\u2013]\s")
+# either of the two things `analyze/SKILL.md` says a criterion must carry
+FALSIFIER_OR_JUDGEMENT = re.compile(r"falsifi|judgement|judgment", re.I)
+
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\s*?\n", re.S)
 TOP_KEY = re.compile(r"^([A-Za-z_][\w-]*):[ \t]*(.*)$")
 NESTED_KEY = re.compile(r"^[ \t]+([A-Za-z_][\w-]*):[ \t]*(.*)$")
@@ -76,6 +93,19 @@ def frontmatter(text):
         if nested and key is not None and isinstance(data.get(key), dict):
             data[key][nested.group(1)] = nested.group(2).strip()
     return data
+
+
+def criterion_blocks(text):
+    """Yield (id, block) for each criterion in an acceptance file, in file order."""
+    blocks, current = [], None
+    for line in text.splitlines():
+        found = CRITERION.match(line)
+        if found:
+            current = [found.group(1), [line]]
+            blocks.append(current)
+        elif current:
+            current[1].append(line)
+    return [(cid, "\n".join(lines)) for cid, lines in blocks]
 
 
 def read(path):
@@ -153,6 +183,9 @@ def check_analyze(directory, problems):
         problems.append(
             f"analyze: {analysis_path}: `ended: blocked` with an empty `blocked_by:` — the "
             f"ending says it is waiting on the human and nothing says what for")
+    check_feature_id(directory, problems)
+    check_criteria(directory, problems)
+
     if blocked_by and ended != "blocked":
         marker = f"`ended: {ended}`" if ended else "no `ended:`"
         problems.append(
@@ -209,6 +242,58 @@ def check_work(directory, problems):
 
 def check_review(directory, problems):
     check_single_deliverable("review", directory, problems)
+
+
+def check_feature_id(directory, problems):
+    """`F-NNN` is an id no feature has ever held, and retired ids are never reused.
+
+    Scanned across the four state directories of this feature's own features root, because that
+    is where every id this project has allocated lives. Observed failing in the other direction
+    once already: a directory was written as `F-001` while `F-089` was the high-water mark, and
+    the only thing that noticed was a person listing the directory for an unrelated reason.
+    """
+    if directory.parent.name not in STATE_DIRS:
+        problems.append(
+            f"analyze: {directory}: does not sit under one of "
+            f"{', '.join(STATE_DIRS)}/, so nothing can tell which ids are already allocated and "
+            f"the uniqueness of this one is unchecked rather than confirmed")
+        return
+    found = FEATURE_ID.match(directory.name)
+    if not found:
+        problems.append(
+            f"analyze: {directory}: is not named `F-NNN-<slug>`, so it carries no id for a later "
+            f"stage to cite and none for this check to compare")
+        return
+
+    root = directory.parent.parent
+    holders = sorted(str(p) for state in STATE_DIRS
+                     for p in root.joinpath(state).glob(f"{found.group(1)}-*") if p.is_dir())
+    if len(holders) > 1:
+        problems.append(
+            f"analyze: {directory}: the id {found.group(1)} is held by {len(holders)} "
+            f"directories — {', '.join(holders)} — and a citation of that id now resolves to "
+            f"more than one feature")
+
+
+def check_criteria(directory, problems):
+    """Every criterion carries an id later stages cite, and a falsifier or a judgement mark."""
+    path = directory / "acceptance.md"
+    text = read(path)
+    if text is None:
+        return
+
+    blocks = criterion_blocks(text)
+    if not blocks:
+        problems.append(
+            f"analyze: {path}: holds no criterion id — later stages cite criteria by id and "
+            f"nobody copies them, so there is nothing here for a plan, a log or a review to name")
+        return
+
+    for cid, block in blocks:
+        if not FALSIFIER_OR_JUDGEMENT.search(block):
+            problems.append(
+                f"analyze: {path}: {cid} states no falsifier and is not marked judgement — "
+                f"nobody can be held to it, and nothing says what would count as failing it")
 
 
 CHECKERS = {"analyze": check_analyze, "discuss": check_discuss, "plan": check_plan,

@@ -23,7 +23,7 @@ failed=0
 
 fixture_dir() {
   # a fixture holds exactly one feature directory, under whichever state directory it uses
-  find "$FIXTURES/$1" -mindepth 2 -maxdepth 2 -type d | head -1
+  find "$FIXTURES/$1" -mindepth 2 -maxdepth 2 -type d | sort | head -1
 }
 
 report() {
@@ -110,6 +110,12 @@ expect_ok  discuss-delivered      discuss
 expect_ok  discuss-returned       discuss
 expect_ok  discuss-none           discuss
 expect_bad discuss-missing-record discuss  discuss Q2 decision-Q2.md
+
+echo "ANALYZE — a deliverable that exists and does not conform"
+expect_ok  analyze-criterion-judgement    analyze
+expect_bad analyze-id-collision           analyze  analyze F-240 "held by"
+expect_bad analyze-criterion-no-falsifier analyze  analyze acceptance.md AC2 falsifier
+expect_bad analyze-no-criterion-ids       analyze  analyze acceptance.md "no criterion id"
 
 echo
 printf '%d passed, %d failed\n' "$passed" "$failed"
