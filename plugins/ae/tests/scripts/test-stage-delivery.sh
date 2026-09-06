@@ -114,6 +114,7 @@ expect_bad discuss-empty-record   discuss  discuss Q1 decision-Q1.md empty
 
 echo "ANALYZE — a deliverable that exists and does not conform"
 expect_ok  analyze-criterion-judgement    analyze
+expect_ok  analyze-delivered-still-blocked analyze
 expect_bad analyze-id-collision           analyze  analyze F-240 "held by"
 expect_bad analyze-criterion-no-falsifier analyze  analyze acceptance.md AC2 falsifier
 expect_bad analyze-no-criterion-ids       analyze  analyze acceptance.md "no criterion id"

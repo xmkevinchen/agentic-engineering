@@ -274,12 +274,18 @@ def check_analyze(directory, problems):
         problems.append(
             f"analyze: {analysis_path}: `ended: blocked` with an empty `blocked_by:` — the "
             f"ending says it is waiting on the human and nothing says what for")
-    if blocked_by and ended != "blocked":
+    # Only while `acceptance.md` is absent. A directory holding both files has delivered, and
+    # `ended:` marks a stage that did not — so `blocked_by:` there is not an ending at all, it is
+    # detail about criteria still moving, which `analyze/SKILL.md` never says to clear. Firing on
+    # it left a real directory with no repair: the message asked for `ended: blocked`, and adding
+    # it produced the opposite message. The only green route deleted the record of what the
+    # analysis was waiting on.
+    if blocked_by and ended != "blocked" and not acceptance_path.is_file():
         marker = f"`ended: {ended}`" if ended else "no `ended:`"
         problems.append(
             f"analyze: {analysis_path}: `blocked_by:` holds {', '.join(sorted(blocked_by))} "
-            f"while the file carries {marker} — a blocked analysis is mid-loop, not ended some "
-            f"other way")
+            f"while the file carries {marker} and {acceptance_path} is absent — a blocked "
+            f"analysis is mid-loop, not ended some other way")
 
     # beyond existence: the deliverable can be there and still not conform
     check_feature_id(directory, problems)
