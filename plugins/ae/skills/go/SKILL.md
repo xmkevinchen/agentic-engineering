@@ -146,7 +146,10 @@ step accounts for no criterion. The plan cites criteria by id; it does not resta
 
 **Invoke `/ae:work` with the plan path.**
 Then read the commits and `<feature-dir>/log.md`. Send it back when a criterion's check was
-never seen red, or when files changed that no step accounts for.
+never seen red, when files changed that no step accounts for, or when an item a return raised
+goes unmentioned in the log. The items are declared an input of WORK, and a deliverable silent
+about one of its own inputs has not accounted for it — the same standard the criteria are held
+to, and the symmetric half of what REVIEW already owes when it walks every item by identity.
 
 ### 5 · Review
 

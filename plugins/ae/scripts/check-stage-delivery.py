@@ -38,12 +38,16 @@ What it decides:
   PLAN     `plan.md` exists, its `ended:` — where it has one — names an ending PLAN has, and
            every signed criterion is cited in it. `ended: input-refused` is exempt from the
            citation rule: nothing was planned, which is the point of that ending.
-  WORK     the same, for `log.md`.
+  WORK     the same, for `log.md`, plus every item id `review/returns/` raises.
   REVIEW   the same, for `review.md`, plus a verdict in the frontmatter or the first few lines.
 
 What it does not decide, at any exit code: whether an answer rests on evidence, whether a
 criterion means what its words say, whether a check named in a plan would actually turn red, or
-whether a verdict was reached honestly. Those are judgements, and a word-presence check that
+whether a verdict was reached honestly. **Nor whether an `ended:` marker is true.** The marker is
+the stage's own account of how its run ended, and this reads only what is on disk — so a stage
+that stopped halfway and wrote `ended: nothing-to-do` is indistinguishable here from one that had
+nothing to do. What the marker buys is that the four endings stop looking alike; what it cannot
+buy is that the one written is the one that happened. Those are judgements, and a word-presence check that
 reported on them would be the author's own account of the work arriving by another route. They
 stay with the fresh eyes and the human gates. Exit 0 means "no mechanical violation found", not
 "the stage conformed".
@@ -90,6 +94,11 @@ FALSIFIER_OR_JUDGEMENT = re.compile(r"falsifi|judgement|judgment", re.I)
 
 # an id mentioned anywhere in a deliverable, which is all "accounted for" can mean mechanically
 CRITERION_MENTION = r"\b{}\b"
+# An item a review sent back, as its return heads it: `## 1.1 — …` or `### 5.2 — …`. The id is
+# the identity the return gave it, which is what makes "this pass engaged that item" answerable
+# without matching one prose description against another.
+RETURN_ITEM = re.compile(r"^#{2,4}\s+(\d+\.\d+)\b", re.M)
+RETURN_ITEM_MENTION = r"(?<![\d.]){}(?![\d.])"
 # A verdict is readable without reading the body when it is in the frontmatter or right at the
 # top. PASS and FAIL are matched in upper case only: these files write "pass 3" and "pass 1"
 # throughout their prose to mean a round of the loop, and a case-insensitive match reported a
@@ -435,9 +444,40 @@ def check_plan(directory, problems):
         check_criterion_coverage("plan", directory, problems)
 
 
+def check_return_items(directory, problems):
+    """Every item a review sent back is mentioned in the log that answers it.
+
+    `work/SKILL.md` declares the still-open items of `review/returns/` an input of WORK, and a
+    deliverable that never mentions one of its own declared inputs is not conforming. The same
+    shape as the acceptance-id rule and for the same reason: a pass that engaged an item and a
+    pass that never looked at it are otherwise identical on disk, and the id is the identity that
+    makes the difference readable without matching prose to prose.
+
+    Open and closed items alike, because a return's closed items are the ones that survive only
+    there and `review/SKILL.md` keeps them for exactly that. Whether the log's account of an item
+    is any good is not decidable here — only whether there is one.
+    """
+    returns = sorted((directory / "review" / "returns").glob("*.md"))
+    if not returns:
+        return
+    log_path = directory / "log.md"
+    log = read(log_path)
+    if log is None:
+        return
+
+    for path in returns:
+        for item in RETURN_ITEM.findall(path.read_text()):
+            if not re.search(RETURN_ITEM_MENTION.format(re.escape(item)), log):
+                problems.append(
+                    f"work: {log_path}: never mentions {item} — review raised it on "
+                    f"{path.relative_to(directory)} and this deliverable leaves it unaccounted "
+                    f"for")
+
+
 def check_work(directory, problems):
     check_single_deliverable("work", directory, problems)
     check_criterion_coverage("work", directory, problems)
+    check_return_items(directory, problems)
 
 
 def check_review(directory, problems):

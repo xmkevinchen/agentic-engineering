@@ -169,6 +169,9 @@ expect_bad criterion-shape-unread-downstream plan   plan   "acceptance.md" AC2 A
 expect_bad criterion-shape-unread-downstream work   work   "acceptance.md" AC2 AC3 "is labelled with"
 expect_bad criterion-shape-unread-downstream review review "acceptance.md" AC2 AC3 "is labelled with"
 
+echo "An item a review sent back is accounted for in the log that answers it"
+expect_bad work-return-item-unaccounted work work "log.md" 1.1 "1.md"
+
 echo "A stage marked blocked says what it is blocked on"
 expect_bad work-blocked-nothing-stated   work   work   "log.md"    blocked_by:
 expect_bad review-blocked-nothing-stated review review "review.md" blocked_by:
