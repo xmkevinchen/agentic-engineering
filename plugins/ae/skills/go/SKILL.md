@@ -203,6 +203,16 @@ that lives
 in a session is reset by an ordinary resume, and a loop nobody is watching is exactly the one whose
 bound must survive the watcher leaving.
 
+**A return carries an item toward this count only where a real attempt at it was possible.** Two
+conditions, both already readable from the files a return and a pass leave, with nothing new to
+write down: a return counts toward an item only if (a) `log.md` records a WORK pass that touched
+that item, by its identity, since the return before it — `work/SKILL.md` already requires the
+log to say, item by item, what a pass did with each one it was handed — and (b) that return's
+own stated routing for the item sent it to WORK, not to the human. A return following no such
+pass, or one whose routing for that item was to the human, carries the item forward unchanged,
+at the count it already had, however many returns that takes — an item nobody may work is not a
+candidate for "work could not close this," and neither is one no pass has yet reached.
+
 A feature with no `review/returns/` has taken no returns this bound can see. That is the honest
 answer for
 one worked before the files existed, and it starts from zero rather than pretending to a history
