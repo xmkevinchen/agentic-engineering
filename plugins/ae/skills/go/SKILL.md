@@ -53,6 +53,15 @@ degree, and paying the re-ingestion cost at every transition on that possibility
 trade this repository has made. `discuss`'s seats are the named case: independence from the
 deciding session's own framing is the property being bought, not "less pollution" in general.
 
+**A stage's completion is established by the actual return of the call used to invoke it —
+never by a person's or a script's own check of process state.** A `pgrep`, a `git status`, or a
+relayed "it looks done" is a guess about the tree at the instant it was taken, not a fact about
+the instant the next stage starts reading it; the return itself is the only signal that does not
+go stale between being observed and being acted on. **A stage must not end its own turn while a
+command it started is still writing to a tracked file** — a command backgrounded and left
+running outlives the turn that started it, so anything reading that file afterward, including
+the very next stage, can observe it mid-change with nothing marking that it is.
+
 Invoke each stage's skill. After it returns, and before the next stage is invoked, run
 the check. `check-stage-delivery.py` ships beside this skill at `scripts/check-stage-delivery.py`
 under the plugin root — in a checkout of AE itself that is `plugins/ae/scripts/`, and in an
@@ -193,6 +202,16 @@ it and every one since that did not close it. The count
 that lives
 in a session is reset by an ordinary resume, and a loop nobody is watching is exactly the one whose
 bound must survive the watcher leaving.
+
+**A return carries an item toward this count only where a real attempt at it was possible.** Two
+conditions, both already readable from the files a return and a pass leave, with nothing new to
+write down: a return counts toward an item only if (a) `log.md` records a WORK pass that touched
+that item, by its identity, since the return before it — `work/SKILL.md` already requires the
+log to say, item by item, what a pass did with each one it was handed — and (b) that return's
+own stated routing for the item sent it to WORK, not to the human. A return following no such
+pass, or one whose routing for that item was to the human, carries the item forward unchanged,
+at the count it already had, however many returns that takes — an item nobody may work is not a
+candidate for "work could not close this," and neither is one no pass has yet reached.
 
 A feature with no `review/returns/` has taken no returns this bound can see. That is the honest
 answer for

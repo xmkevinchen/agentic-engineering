@@ -18,7 +18,11 @@ Judge the delivered work against the acceptance criteria the human confirmed. No
 feature to review.
 
 Judge the feature's whole change: everything committed since the feature started, not just the
-last commit. Read it against the plan, the working log, and the criteria. The criteria are the
+last commit. **Where the range starts is the commit `log.md` records, not a guess** — never the
+commit author field, and never an inference from a session identifier: an author field is
+uninformative the moment two commits share one, and a session identifier names a session, not a
+feature, so it can agree with the true range by coincidence and still be the wrong thing to have
+read. Read it against the plan, the working log, and the criteria. The criteria are the
 ones the human signed, and `acceptance.md` is where you read them from — not the plan's
 restatement of them and not the log's.
 
