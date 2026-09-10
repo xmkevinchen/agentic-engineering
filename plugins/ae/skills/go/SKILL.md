@@ -53,6 +53,15 @@ degree, and paying the re-ingestion cost at every transition on that possibility
 trade this repository has made. `discuss`'s seats are the named case: independence from the
 deciding session's own framing is the property being bought, not "less pollution" in general.
 
+**A stage's completion is established by the actual return of the call used to invoke it —
+never by a person's or a script's own check of process state.** A `pgrep`, a `git status`, or a
+relayed "it looks done" is a guess about the tree at the instant it was taken, not a fact about
+the instant the next stage starts reading it; the return itself is the only signal that does not
+go stale between being observed and being acted on. **A stage must not end its own turn while a
+command it started is still writing to a tracked file** — a command backgrounded and left
+running outlives the turn that started it, so anything reading that file afterward, including
+the very next stage, can observe it mid-change with nothing marking that it is.
+
 Invoke each stage's skill. After it returns, and before the next stage is invoked, run
 the check. `check-stage-delivery.py` ships beside this skill at `scripts/check-stage-delivery.py`
 under the plugin root — in a checkout of AE itself that is `plugins/ae/scripts/`, and in an
