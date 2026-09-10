@@ -92,10 +92,13 @@ name the observation precisely enough that whoever writes it can watch it fail f
 
 ## Before work starts
 
-Have one reader who did not write the plan read it against `acceptance.md` and answer two
-questions: does any step build something no criterion asks for, and would any criterion still
-be unmet if every step passed? Fix what comes back. Where no such reader is available, say so
-in the plan rather than skipping the round silently.
+Have one reader who did not write the plan read it against `acceptance.md` and answer three
+questions: does any step build something no criterion asks for; would any criterion still be
+unmet if every step passed; and, for every file a step cites by path or by line, does the
+citation still resolve the way the plan says it does, against the tree as it stands when the
+read happens — named individually, not folded into a general impression that the plan looks
+current. Fix what comes back. Where no such reader is available, say so in the plan rather than
+skipping the round silently.
 
 ## What the next stage may refuse it for
 
