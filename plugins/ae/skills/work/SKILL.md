@@ -30,6 +30,12 @@ turn red, send the plan back rather than inventing the missing check.
 
 Commits on the branch, and a working log at `<feature-dir>/log.md`.
 
+**Before the first commit lands, `log.md` opens with the tree's `HEAD` at that instant** — one
+line, ahead of `## Pass 1`, naming the commit the feature's range starts from. `.ae/` is
+gitignored, so this line is the only place that fact survives; without it, review has no way to
+say which commits are the feature's own except guessing from an author field or a session
+identifier, and both are wrong for reasons `review/SKILL.md` states.
+
 **The log is structured by pass, and a pass heading reads `## Pass N`.** The first pass under
 its own heading, and every pass after it under its own, opening with what sent the work back —
 the findings, as `review.md` states them. The form is fixed so a reader can find a pass, not
