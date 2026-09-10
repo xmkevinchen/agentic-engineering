@@ -42,6 +42,17 @@ written below as `<feature-dir>`; `/ae:analyze` creates it.
 
 ## Running it
 
+**Stages run inline, in this session, by default — a stated trade, not a free one.** Inline
+carries every earlier stage's exploration, dead ends, and discarded framings forward as live
+context a later stage cannot fully discount no matter what it is told to read instead; an
+isolated stage cannot be influenced by content it never saw. What inline buys back is real: the
+files already read and the working state already established do not have to be re-ingested from
+nothing in a fresh session, and a subagent cannot pause on either human gate. Fork or spawn a
+stage only where the influence risk is specific enough to name — it may exist everywhere in some
+degree, and paying the re-ingestion cost at every transition on that possibility alone is not the
+trade this repository has made. `discuss`'s seats are the named case: independence from the
+deciding session's own framing is the property being bought, not "less pollution" in general.
+
 Invoke each stage's skill. After it returns, and before the next stage is invoked, run
 the check. `check-stage-delivery.py` ships beside this skill at `scripts/check-stage-delivery.py`
 under the plugin root — in a checkout of AE itself that is `plugins/ae/scripts/`, and in an
