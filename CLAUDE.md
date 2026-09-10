@@ -62,18 +62,28 @@ Everything that lands in the repository — code comments, commit messages, skil
 
 ## Git
 
-- **One feature, one branch, and its own worktree** — every feature works in a `git worktree` on a
-  branch of its own, created where its work starts and named for it: `feature/F-NNN-<slug>`, or
-  `feature/<slug>` / `fix/<slug>` for work that is not a feature. The review stage judges everything
-  committed since the feature started, and a branch is what makes that range answerable — two
-  features' commits on one branch turn it into guesswork.
-- **The working tree is shared, not per-session** — which is why the worktree is not optional. Two
-  sessions in one checkout do not merely risk each other's commits: one measures a file the other is
-  rewriting, and both readings look normal. Observed, twice in one hour, in both directions. A lock
-  held by a person is not the answer either — it was stale both times it was issued, because the
-  interval between observing a quiet tree and writing to it belongs to whoever starts next.
-- **Inside its own worktree, a feature commits without asking.** Committing there reaches nobody
-  else's work, and a stage that has to stop for permission at every step cannot run unattended.
+- **One feature, one branch, always.** Every feature works on a branch of its own, created where
+  its work starts and named for it: `feature/F-NNN-<slug>`, or `feature/<slug>` / `fix/<slug>` for
+  work that is not a feature. The review stage judges everything committed since the feature
+  started, and a branch is what makes that range answerable — two features' commits on one branch
+  turn it into guesswork. This part is never optional, worktree or not.
+- **A worktree is for concurrency, not a default every feature owes.** Give a feature its own
+  `git worktree` when something else could touch the same checkout while it runs — another
+  feature, another session, a background process — and skip it when nothing will: the branch alone
+  already answers "which commits are this feature's," and a worktree with nothing to isolate from
+  is ceremony. **The working tree is shared, not per-session, exactly when more than one thing is
+  using it** — that is the condition a worktree answers, not a property of every feature. Two
+  sessions in one checkout do not merely risk each other's commits: one measures a file the other
+  is rewriting, and both readings look normal. Observed, twice in one hour, in both directions. A
+  lock held by a person is not the answer either — it was stale both times it was issued, because
+  the interval between observing a quiet tree and writing to it belongs to whoever starts next. If
+  there is any real chance of a second thing touching the tree — including a delegated stage whose
+  own background writes could outlive its turn — take the worktree; the cost of one unneeded is far
+  smaller than the cost of a collision nobody was watching for.
+- **A feature committing without asking is about reach, not about worktrees.** Committing does not
+  need permission because it reaches nobody else's work — true inside an isolating worktree, and
+  equally true in the shared checkout when nothing else is using it at the time. A stage that has to
+  stop for permission at every step cannot run unattended either way.
 - **A feature merges back into the branch it was cut from, once it has passed acceptance** — the
   human's signature at the completion gate, not a green suite and not a pass verdict. Nothing else
   merges it, and it merges nowhere else: a branch cut from another feature's head goes back there,
