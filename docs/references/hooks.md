@@ -199,8 +199,9 @@ a one-time `/hooks` trust review, which a port must document.
 
 **Deliberately absent**: `prompt`/`agent` handler types (semantic checks stay
 in the review stage's own spawns — the path four benchmark runs validated),
-`PreToolUse` guards (no current need), `PostToolBatch`. Listed so their absence
-is a decision; adding one later means writing its probe first.
+`PostToolBatch`. Listed so their absence
+is a decision; adding one later means writing its probe first. `PreToolUse` was
+absent for the same reason until F-108 gave it one — see H3 below.
 
 **Probe-first.** H1's probe was performed and it held: plant the defect (marker
 present, stage deliverable absent) → the hook refused; remove the marker → zero
@@ -210,3 +211,69 @@ control scenario registering the identical hook plugin-globally, so a silent
 result could be told apart from a broken harness rather than read as "skill
 scoping does not work". **H2 remains unprobed**; the same discipline applies
 before it is registered.
+
+**H1, shipped (F-108, 2026-09-11).** `go/SKILL.md`'s frontmatter now carries the
+`Stop` hook described above, running `go-leash.sh`; the marker is
+`.ae-go-marker` under a feature directory, holding one line, `stage: <name>`.
+Re-probed against **CC 2.1.268** (H1's original probe above ran on 2.1.251) with
+the same method — plant the defect, watch the refusal, clear it, watch the
+silence — and it held. Two facts surfaced during that re-probe that were not
+on record before:
+
+- **A `Stop` hook that exits 2 while its own command errors internally is not
+  read as a refusal.** Measured directly: `go-leash.sh` invoked with
+  `check-stage-delivery.py` missing from its own directory (a fixture defect,
+  not a shipped condition — the two ship together) still exits 2 on the
+  script's own terms, but the host reported *"Hook script appears to be
+  missing... Treating as non-blocking"* and let the turn end. The distinction
+  the host is drawing is not documented anywhere found; empirically, it looks
+  for a specific failure shape (a traceback-like stderr, on this evidence) and
+  downgrades on sight of it, independent of the actual exit code. Practical
+  consequence: a hook script's own dependencies must ship in the same place it
+  runs from, or a real refusal can silently degrade to a pass.
+- **The consecutive-block override, exact text and knob, neither of which
+  appears in the official hooks reference** (checked directly against
+  `code.claude.com/docs/en/hooks.md` on 2026-09-11 — no mention of a block
+  count, an override, or the environment variable below). Observed verbatim,
+  twice, on CC 2.1.268: *"A hook blocked the turn from ending 9 consecutive
+  times — overriding and ending turn. For Stop/SubagentStop hooks, check
+  `stop_hook_active` in the input and return success while it's true. Set
+  `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` to raise this limit."* The digit observed
+  is **9**, not the "8-consecutive-block override" an earlier discussion round
+  cited as documented fact (`F-108`'s `discuss-Q1`) — that citation could not
+  be re-found in the current docs either, so treat the observed message,
+  verbatim, as what is known, and the digit as unconfirmed against any
+  contract (it may count attempts vs. blocks off by one, or the doc that named
+  8 may have since changed or never existed as described).
+
+**H3 — the invocation-order gate (`PreToolUse`, plugin-global; F-108,
+2026-09-11).** Matched on the `Skill` tool. `tool_input` on a `Skill` call
+carries `{"skill": "<plugin>:<name>", "args": "<argument string>"}` — measured
+directly (not documented, not assumed) against CC 2.1.268, closing the one
+unknown H1's own design left in the `documented` table above (`PreToolUse`'s
+`tool_input` shape was listed nowhere in the official reference for any tool).
+Refuses a stage's invocation when the stage before it in
+`analyze → [discuss] → plan → work → review` has a non-conforming deliverable,
+by the same delegation to `check-stage-delivery.py`. Confirmed, live: fires
+when Claude calls the `Skill` tool (from natural-language instruction or from
+another skill's own orchestration); does **not** fire when a human types the
+target skill's slash command directly — the same exemption `PreToolUse`
+carries generally, reconfirmed here rather than assumed from that general
+case. `PreToolUse` exit 2 is an unconditional refusal (per the enforcement
+table above), with no consecutive-block ceiling the way `Stop` has one.
+
+**A parser gap H1's re-probe found, unrelated to hooks and pre-dating F-108.**
+`go/SKILL.md`'s `description` field spanned three lines inside one pair of
+double quotes — valid YAML generally, but Claude Code's own frontmatter parser
+rejects it (`claude plugin validate`: *"YAML frontmatter failed to parse...
+At runtime this skill loads with empty metadata, all frontmatter fields
+silently dropped"*), confirmed live: a skill with this exact shape is
+unreachable by name through the `Skill` tool in one loading path, and — more
+narrowly — its `hooks:` block does not register even where the skill's own
+name still resolves through a different path. Confirmed present on the
+commit `F-108` branched from, so this is not something F-108 introduced.
+`go/SKILL.md`'s description was reflowed to a YAML folded block scalar
+(`>-`) to fix it, since that shape kept the source readable and validated
+clean; `review/SKILL.md` and `work/SKILL.md` carry the identical shape and the
+identical defect, unfixed here — out of scope for a change that never touches
+either file's content, tracked separately.
