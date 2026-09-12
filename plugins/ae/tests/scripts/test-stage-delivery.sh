@@ -137,12 +137,17 @@ expect_bad review-interrupted        review review "review.md" ended: blocked
 
 echo "REVIEW — the verdict is bound to a reader file, not merely pointed at one"
 expect_bad review-no-verdict-from                    review review "review.md" verdict_from
-expect_bad review-verdict-not-bound                  review review "review.md" verdict
+expect_bad review-verdict-not-bound                  review review "review.md" "does not match"
 expect_ok  review-verdict-bound                      review
 expect_bad review-reader-missing-receipt             review review "claude-subagent.md" agent_id
 expect_ok  review-reader-with-receipt                review
 expect_bad review-reader-cross-family-missing-receipt review review "cross-family.md" RECEIPT
 expect_ok  review-reader-cross-family-with-receipt   review
+expect_bad review-verdict-outside-readers            review review "review.md" "review/readers"
+expect_bad review-reader-file-absent                 review review "review.md" "absent or empty"
+expect_bad review-reader-file-empty                  review review "review.md" "absent or empty"
+expect_bad review-reader-kind-invalid                review review "mystery.md" "is not one of"
+expect_bad review-verdict-body-only                  review review "review.md" "not in frontmatter"
 
 echo "DISCUSS — the ids in the analysis minus the files on disk"
 expect_ok  discuss-delivered      discuss

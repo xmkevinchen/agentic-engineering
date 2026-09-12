@@ -496,7 +496,21 @@ def check_verdict_binding(directory, path, front, problems):
     REVIEW's unverified say-so in one file or two — the same defect either way. Checked only when
     a verdict was actually established above and the review did not end `blocked`: a blocked
     review has not reached the verdict this binds.
+
+    `verdict_from` is required to resolve strictly under `review/readers/` — never `review.md`
+    itself, never a parent traversal, never a path outside the feature directory. Without this a
+    review can name itself as its own reader (one file asserting its own independence) or point
+    at a file the rule was never meant to reach, and the check would report a bound verdict that
+    was never actually carried from anywhere.
     """
+    declared = front.get("verdict")
+    if not isinstance(declared, str) or not declared.strip():
+        problems.append(
+            f"review: {path}: the verdict is not in frontmatter — `verdict_from` can only bind "
+            f"a frontmatter `verdict:`, and a review stating its verdict only in body prose has "
+            f"nothing here for a reader file to be checked against")
+        return
+
     verdict_from = front.get("verdict_from")
     if not isinstance(verdict_from, str) or not verdict_from.strip():
         problems.append(
@@ -504,7 +518,19 @@ def check_verdict_binding(directory, path, front, problems):
             f"under review/readers/, and a review that names no reader is REVIEW's own "
             f"unverified say-so")
         return
-    reader_path = directory / verdict_from.strip()
+
+    readers_root = (directory / "review" / "readers").resolve()
+    reader_path = (directory / verdict_from.strip()).resolve()
+    try:
+        reader_path.relative_to(readers_root)
+    except ValueError:
+        problems.append(
+            f"review: {path}: `verdict_from: {verdict_from}` does not resolve under "
+            f"review/readers/ — a reader file has to sit in the one place this rule looks, or "
+            f"citing `review.md` itself (or anything else) would satisfy the letter of the check "
+            f"while carrying the verdict from nowhere")
+        return
+
     reader_text = read(reader_path)
     if not reader_text or not reader_text.strip():
         problems.append(
@@ -513,9 +539,7 @@ def check_verdict_binding(directory, path, front, problems):
         return
     reader_front = frontmatter(reader_text)
     reader_verdict = reader_front.get("verdict")
-    declared = front.get("verdict")
-    if not isinstance(declared, str) or not isinstance(reader_verdict, str) \
-            or declared.strip() != reader_verdict.strip():
+    if not isinstance(reader_verdict, str) or declared.strip() != reader_verdict.strip():
         problems.append(
             f"review: {path}: `verdict: {declared!r}` does not match `verdict: "
             f"{reader_verdict!r}` in {verdict_from} — the verdict is not carried from the cited "
