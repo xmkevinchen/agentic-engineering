@@ -5,6 +5,12 @@ The human confirms the acceptance criteria once they stop moving, and signs comp
 each stage's skill in turn. The argument is the work item itself, a path to a file describing
 it, or an existing F-NNN to resume."
 user-invocable: true
+hooks:
+  Stop:
+    - hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/scripts/go-leash.sh"
+          once: true
 ---
 
 # /ae:go — run the work item through the workflow
@@ -62,8 +68,10 @@ command it started is still writing to a tracked file** — a command background
 running outlives the turn that started it, so anything reading that file afterward, including
 the very next stage, can observe it mid-change with nothing marking that it is.
 
-Invoke each stage's skill. After it returns, and before the next stage is invoked, run
-the check. `check-stage-delivery.py` ships beside this skill at `scripts/check-stage-delivery.py`
+Invoke each stage's skill. **The instant it returns, before anything else — before reading its
+output, before deciding what it says — write `<feature-dir>/.ae-go-marker` holding one line,
+`stage: <name>`, naming the stage that just returned.** Then run the check. `check-stage-delivery.py`
+ships beside this skill at `scripts/check-stage-delivery.py`
 under the plugin root — in a checkout of AE itself that is `plugins/ae/scripts/`, and in an
 installed copy it is under the installed plugin. Locate it once and reuse the path:
 
@@ -76,6 +84,18 @@ account of what it wrote, which is why it can contradict a stage that reported s
 why it is not the stage marking its own work. **A non-zero exit is not advice.** Close what it
 names, here, before going on: a stage that would be refused is sent back now, not discovered
 three stages later.
+
+**Delete `<feature-dir>/.ae-go-marker` the instant this check exits `0`, and not before — never
+while it is still non-zero, and never in anticipation of it passing.** This is what makes
+`.ae-go-marker`'s mere presence, at the moment this session's turn ends, mean "a stage returned
+and this synchronous check has not yet cleared it" with nothing else it could mean. A `Stop`
+hook registered on this skill's own frontmatter reads exactly that marker if one is still there
+when your turn ends, and re-runs this same check to decide whether to let the turn end at all —
+it is the backstop for exactly the failure this paragraph and the one above already guard
+against by hand, never a second judgment about what "conforming" means. Skip the marker step
+for no stage, including one that legitimately ends with `ended: blocked` or another of a
+stage's own accepted endings: the check already treats those as passing, so a correctly-cleared
+marker never holds up a legitimate pause for the human.
 
 **First, read which kind of refusal it is.** A check that refuses your *input* — the path you
 gave it resolves nowhere — is the ordinary mechanical refusal under *When things go wrong*: read
