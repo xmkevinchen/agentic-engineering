@@ -1,7 +1,8 @@
 ---
 name: work
-description: "Execute the plan one step per commit, leaving on disk the evidence that each
-criterion's check can fail."
+description: >-
+  Execute the plan one step per commit, leaving on disk the evidence that each
+  criterion's check can fail.
 argument-hint: "<plan file path>"
 user-invocable: true
 effort: high
