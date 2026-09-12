@@ -365,6 +365,17 @@ which backend, which model, what failed, and that the file is not a seat's answe
 prevents is a silent gap, where a seat that failed and a seat nobody asked look identical, and the
 record then reports a challenge that never happened.
 
+**That rule can itself fail to run — the process holding the round can die before it writes even
+that placeholder — and a session resuming the pass then finds the same absence the rule exists to
+prevent.** Nothing on disk can tell that session whether the seat was never dispatched this round
+or was dispatched and produced nothing before whatever ran it stopped; a fresh, careful session
+given only the directory cannot make that call, and should not try. **It does not need to.** An
+absent seat file with no note at that path is read the same way regardless of which happened:
+the seat has not answered this round, and the resuming session dispatches it (or re-dispatches
+it) before treating the round as complete. Re-dispatching a seat that was, in fact, never
+reached costs nothing beyond the call; reading its absence as "nothing to add" or "this round is
+done" is the failure this exists to prevent. **Never infer completion from an absence.**
+
 **The same holds for an angle that was never asked.** A completed pass is four angle files, and the
 pass count is what ends a loop nobody is watching, so three absences that look like three losses
 corrupt the one number the bound reads. Write the file, say the angle was not run and what it
