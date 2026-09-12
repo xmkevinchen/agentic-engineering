@@ -1,8 +1,16 @@
 # Agentic Engineering Plugin Development
 
+<!-- BEGIN MANAGED: forgejo-workflow -->
+@project-management.md
+
+For tracked work, use `/forgejo:create`, `/forgejo:update`, `/forgejo:start`, `/forgejo:block`, or `/forgejo:close` as appropriate.
+Run `/forgejo:sync` on tracked-work session entry, before selection/mutation, and after changes.
+Treat `project-work.md` as a historical snapshot, never as authority or priority.
+<!-- END MANAGED: forgejo-workflow -->
+
 ## Language Convention
 
-All git-tracked files in this repository are written in English: `README.md`, `CHANGELOG.md`, every `SKILL.md`, agent definition files under `plugins/ae/agents/`, and everything under `docs/` (references, public-facing guides). Process artifacts under `.ae/` (gitignored — discussions, plans, reviews, analyses, milestones) may use whatever language is convenient for the working session; they never ship to the published repository. Local-only contributor notes (such as `CLAUDE.local.md` and files under `docs/decisions/`) follow the same convenience-language policy and are kept out of the repository.
+All git-tracked files in this repository are written in English: `README.md`, `CHANGELOG.md`, every `SKILL.md`, agent definition files under `plugins/ae/agents/`, and everything under `docs/` (references, public-facing guides). Process artifacts under `agent-memory/` (tracked in a separate private memory repository — discussions, plans, reviews, analyses, milestones) may use whatever language is convenient for the working session; they never ship to the published repository. Local-only contributor notes (such as `CLAUDE.local.md` and files under `docs/decisions/`) follow the same convenience-language policy and are kept out of the repository.
 
 ## Versioning
 
@@ -44,8 +52,8 @@ plugins/ae/             # The actual plugin
 
 Skill definitions and agent files occasionally cite the following internal terms. They are project artifacts, not external concepts:
 
-- **`F-NNN`** — a *feature* identifier. Features live under `.ae/features/{active,done,abandoned}/F-NNN-<slug>/` (gitignored process artifacts). When a SKILL.md says e.g. "F-019 cast-block protocol" it is naming a specific past feature that introduced the protocol now described.
-- **`BL-NNN`** — a *backlog item* identifier (idea / task / known gap). Backlog files live under `.ae/backlog/` (gitignored). When prose says "BL-076" it is citing the backlog entry that produced or motivated the surrounding behavior.
+- **`F-NNN`** — a *feature* identifier. Features live under `agent-memory/features/{active,done,abandoned}/F-NNN-<slug>/` (separately versioned process artifacts). When a SKILL.md says e.g. "F-019 cast-block protocol" it is naming a specific past feature that introduced the protocol now described.
+- **`BL-NNN`** — a *backlog item* identifier (idea / task / known gap). Backlog files live under `agent-memory/backlog/` (tracked in the memory repository). When prose says "BL-076" it is citing the backlog entry that produced or motivated the surrounding behavior.
 - **`Plan NNN`** — a *legacy plan number* from the pre-feature-directory era of this plugin's own self-development. Plans now live inside their feature dir; references to `Plan 0XX` in older prose mean "the historical plan record that established the behavior being described". They are archaeological references, not currently-tracked artifacts.
 - **`KL #N`** — a *knowledge-ladder* finding number; cited only in `plugins/ae/skills/review/SKILL.md` as part of a synthesis-quality check the reviewer applies.
 
@@ -56,7 +64,7 @@ These identifiers do not need to be resolved to understand what a skill does —
 Everything that lands in the repository — code comments, commit messages, skill/agent prose, tests, docs — describes the WORK, never the review conversation that shaped it:
 
 - **Code comments** state a constraint the code can't show; never where a finding came from. Review bookkeeping is noise the moment it merges.
-- **Commit messages** describe what the change did and why. **The test is resolvability: every identifier, file and fact a message names must be findable by someone who has only this repository.** `.ae/` is gitignored, so a criterion id (`AC3`), a feature or backlog id (`F-099`, `BL-247`), or a path under `.ae/` resolves to nothing for that reader — state the substance instead of the pointer. Review bookkeeping fails the same test from the other side: reviewer names, finding counts, severities and iteration counts describe the conversation, not the work, and no file records them. What a message *may* name is anything the repository holds — a path, a symbol, a measured number, a behaviour a reader can go and check.
+- **Commit messages** describe what the change did and why. **The test is resolvability: every identifier, file and fact a message names must be findable by someone who has only this repository.** `agent-memory/` is excluded from this code repository, so a criterion id (`AC3`), a feature or backlog id (`F-099`, `BL-247`), or a path under `agent-memory/` resolves to nothing for that reader — state the substance instead of the pointer. Review bookkeeping fails the same test from the other side: reviewer names, finding counts, severities and iteration counts describe the conversation, not the work, and no file records them. What a message *may* name is anything the repository holds — a path, a symbol, a measured number, a behaviour a reader can go and check.
 - **Skill/agent prose** may keep a terse provenance cite (`F-NNN`, `Plan NNN`, `BL-NNN` — see Internal terminology above); reviewer attribution goes.
 - Nothing enforces this mechanically. It is a writing rule, checked by whoever reads the diff; functional cross-family references (proxy agents, track names, family selection) are not violations of it.
 
@@ -120,3 +128,26 @@ Everything that lands in the repository — code comments, commit messages, skil
 - [docs/references/](docs/references/) — design rationale, plugin API, prompt patterns, AE↔CC contract surface
 
 Contributors actively running the AE-on-AE workflow can additionally maintain a local-only `CLAUDE.local.md` for AE-internal process detail (project-management model, feature directory layout, frontmatter schemas, autonomy boundary). That file is gitignored and never ships.
+
+## Code and agent-memory commits
+
+`agent-memory/` is this project's independent Git repository for AE stage artifacts. The parent
+code repository ignores it. `.ae` is a compatibility symlink to `agent-memory` for existing skills,
+scripts, historical references, and already-running sessions; use `agent-memory/` for new paths.
+
+Before every project code commit, inspect both repositories with `git status --short` and
+`git -C agent-memory status --short`. Update the related AE artifacts, then commit the task's
+memory changes in `agent-memory` and the code changes in the parent repository as one delivery.
+Stage explicit task-owned paths in each; a parent `git add` / `git commit` never commits the nested
+repository. Preserve other Agents' unrelated changes. If memory has no task-related changes,
+report that it was checked and unchanged; do not create an empty commit.
+
+Record both commit IDs in the delivery report. Git cannot atomically commit two repositories:
+if either commit fails, report the partial state and finish the missing commit before declaring
+completion. When pushing the delivery is authorized, push the memory commit and the code commit
+to their respective upstream branches and verify both; do not claim both were pushed after only one
+succeeds. Existing branch, review, merge, and deployment approval rules still apply.
+
+In a new checkout or worktree, ensure `agent-memory` resolves to the intended independent repository
+before writing; do not silently create an empty directory or assume another worktree's memory is
+shared. Use the project Issue ID / Feature ID and AE handoff contracts to select relevant artifacts.

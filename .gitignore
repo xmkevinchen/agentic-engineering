@@ -13,7 +13,8 @@ node_modules/
 .fastembed_cache/
 
 # Process artifacts (discussions, plans, reviews, analyses, knowledge notes)
-.ae/
+/.ae
+/agent-memory/
 
 # Local-only references (kept out of repo)
 docs/references/pipeline-quality-failure-cases.md
