@@ -144,6 +144,30 @@ Treat the author's account of the work as input to that reader, never as evidenc
 Nobody signs off their own work. The party that wrote it does not supply the verdict, and does
 not author the severities, the dispositions, or the list of what was not checked either.
 
+**The reader's own judgment lands on disk as its own file, and `review.md` carries its verdict
+rather than merely citing it.** Write the reader's returned judgment — verdict, severities,
+dispositions, unchecked-items list — to `<feature-dir>/review/readers/<name>.md`, with `verdict:`
+and a `reader_kind:` of `claude-subagent`, `cross-family`, or `human` in its own frontmatter. You
+write those two fields onto the file as you transcribe the reader's answer — the reader cannot
+see its own kind, the same reason `discuss/SKILL.md` has the coordinating party write a seat's
+`agent:`/`grant:` rather than the seat itself — and you write them from what the reader actually
+returned, never inventing or adjusting the verdict itself. `review.md`'s own frontmatter then
+carries `verdict_from: review/readers/<name>.md`, and its `verdict:` **is** that file's `verdict:`
+— carried, not restated. This is what a review naming a reader and a review whose verdict a
+reader actually produced stop looking alike on disk.
+
+**No carve-out for a human reader.** A human supplies the same `review/readers/<name>.md` file as
+any other reader; naming a human in `review.md` without one is not evidence they reviewed
+anything — it is the naming party's own unverified word, the same defect a self-written
+independence field would be.
+
+**Where a reader kind already has a receipt this repository can check, cite it — it costs
+nothing new.** A Claude subagent reader carries the `agent_id:` and `agent_transcript_path:` the
+host already writes without a hook (measured via `SubagentStop`). A cross-family reader run
+through `codex-seat.sh` carries the `[RECEIPT] ... call ok` line that script already verifies
+before printing an answer. Neither is required for a human reader, for whom no such mechanism
+exists.
+
 ## What must be true of the review
 
 - **Every criterion gets a verdict, and every verdict rests on evidence this review produced.**

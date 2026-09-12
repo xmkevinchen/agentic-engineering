@@ -3,8 +3,6 @@ verdict: PASS
 verdict_from: review/readers/human.md
 ---
 
-# Review — pass 1
+# Review
 
-**PASS.**
-
-AC1 — met. AC2 — met.
+AC1 — met, by reading.

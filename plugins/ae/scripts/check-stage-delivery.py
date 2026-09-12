@@ -39,7 +39,11 @@ What it decides:
            every signed criterion is cited in it. `ended: input-refused` is exempt from the
            citation rule: nothing was planned, which is the point of that ending.
   WORK     the same, for `log.md`, plus every item id `review/returns/` raises.
-  REVIEW   the same, for `review.md`, plus a verdict in the frontmatter or the first few lines.
+  REVIEW   the same, for `review.md`, plus a verdict in the frontmatter or the first few lines;
+           and, where a verdict was established and the review did not end `blocked`, that
+           `verdict_from:` names an existing reader file under `review/readers/` whose own
+           `verdict:` matches, and — for a `claude-subagent` or `cross-family` reader — that its
+           kind's existing receipt fields are present.
 
 What it does not decide, at any exit code: whether an answer rests on evidence, whether a
 criterion means what its words say, whether a check named in a plan would actually turn red, or
@@ -481,37 +485,102 @@ def check_work(directory, problems):
     check_return_items(directory, problems)
 
 
+READER_KINDS = ("claude-subagent", "cross-family", "human")
+RECEIPT_LINE = re.compile(r"\[RECEIPT\][^\n]*\bcall ok\b")
+
+
+def check_verdict_binding(directory, path, front, problems):
+    """`review.md`'s verdict is carried from a reader file, not merely pointed at one.
+
+    `F-110`'s falsifier: a review naming no reader, or citing one whose own verdict differs, is
+    REVIEW's unverified say-so in one file or two — the same defect either way. Checked only when
+    a verdict was actually established above and the review did not end `blocked`: a blocked
+    review has not reached the verdict this binds.
+    """
+    verdict_from = front.get("verdict_from")
+    if not isinstance(verdict_from, str) or not verdict_from.strip():
+        problems.append(
+            f"review: {path}: no `verdict_from:` — the verdict is not bound to a reader file "
+            f"under review/readers/, and a review that names no reader is REVIEW's own "
+            f"unverified say-so")
+        return
+    reader_path = directory / verdict_from.strip()
+    reader_text = read(reader_path)
+    if not reader_text or not reader_text.strip():
+        problems.append(
+            f"review: {path}: `verdict_from: {verdict_from}` names a file that is absent or "
+            f"empty at {reader_path}")
+        return
+    reader_front = frontmatter(reader_text)
+    reader_verdict = reader_front.get("verdict")
+    declared = front.get("verdict")
+    if not isinstance(declared, str) or not isinstance(reader_verdict, str) \
+            or declared.strip() != reader_verdict.strip():
+        problems.append(
+            f"review: {path}: `verdict: {declared!r}` does not match `verdict: "
+            f"{reader_verdict!r}` in {verdict_from} — the verdict is not carried from the cited "
+            f"reader, only pointed at it")
+        return
+
+    reader_kind = reader_front.get("reader_kind")
+    if reader_kind == "claude-subagent":
+        missing = [k for k in ("agent_id", "agent_transcript_path")
+                   if not isinstance(reader_front.get(k), str) or not reader_front.get(k).strip()]
+        if missing:
+            problems.append(
+                f"review: {reader_path}: `reader_kind: claude-subagent` but missing "
+                f"{', '.join(missing)} — a Claude subagent reader carries this without a hook, "
+                f"and its absence here is unaccounted for")
+    elif reader_kind == "cross-family":
+        if not RECEIPT_LINE.search(reader_text):
+            problems.append(
+                f"review: {reader_path}: `reader_kind: cross-family` but no `[RECEIPT] ... call "
+                f"ok` line — `codex-seat.sh` already emits this before printing an answer, and "
+                f"its absence here is unaccounted for")
+    elif reader_kind not in READER_KINDS:
+        problems.append(
+            f"review: {reader_path}: `reader_kind: {reader_kind!r}` is not one of "
+            f"{' | '.join(READER_KINDS)}")
+
+
 def check_review(directory, problems):
-    check_single_deliverable("review", directory, problems)
+    ended = check_single_deliverable("review", directory, problems)
     check_criterion_coverage("review", directory, problems)
 
     path = directory / "review.md"
     text = read(path)
     if text is None:
         return
-    declared = frontmatter(text).get("verdict")
+    front = frontmatter(text)
+    declared = front.get("verdict")
+    established = False
     if isinstance(declared, str):
         if VERDICT_OUTCOME.search(declared):
-            return
-        problems.append(
-            f"review: {path}: `verdict: {declared[:40]}` names no outcome — the human signs from "
-            f"this file, and a placeholder standing where the verdict goes is not a verdict they "
-            f"can sign against")
-        return
+            established = True
+        else:
+            problems.append(
+                f"review: {path}: `verdict: {declared[:40]}` names no outcome — the human signs "
+                f"from this file, and a placeholder standing where the verdict goes is not a "
+                f"verdict they can sign against")
+    else:
+        body = FRONTMATTER.sub("", text)
+        head = [line for line in body.splitlines() if line.strip()][:VERDICT_HEAD_LINES]
+        if any(UPPER_VERDICT.search(line) for line in head):
+            established = True
+        else:
+            labelled = [line for line in head if VERDICT_LABEL.search(line)]
+            if any(VERDICT_OUTCOME.search(VERDICT_LABEL.split(line, 1)[-1]) for line in labelled):
+                established = True
+            else:
+                problems.append(
+                    f"review: {path}: no verdict in the frontmatter and none in its first "
+                    f"{VERDICT_HEAD_LINES} lines — the human signs from this file, and a verdict "
+                    f"they have to read the body to find is not readable without reading the body"
+                    + (". A line here uses the word `verdict` and names no outcome, which is not "
+                       "one" if labelled else ""))
 
-    body = FRONTMATTER.sub("", text)
-    head = [line for line in body.splitlines() if line.strip()][:VERDICT_HEAD_LINES]
-    if any(UPPER_VERDICT.search(line) for line in head):
-        return
-    labelled = [line for line in head if VERDICT_LABEL.search(line)]
-    if any(VERDICT_OUTCOME.search(VERDICT_LABEL.split(line, 1)[-1]) for line in labelled):
-        return
-    problems.append(
-        f"review: {path}: no verdict in the frontmatter and none in its first "
-        f"{VERDICT_HEAD_LINES} lines — the human signs from this file, and a verdict they have "
-        f"to read the body to find is not readable without reading the body"
-        + (". A line here uses the word `verdict` and names no outcome, which is not one"
-           if labelled else ""))
+    if established and ended != "blocked":
+        check_verdict_binding(directory, path, front, problems)
 
 
 def check_feature_id(directory, problems):
