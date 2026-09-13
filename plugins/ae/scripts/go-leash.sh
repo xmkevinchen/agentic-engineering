@@ -20,9 +20,20 @@ set -u
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 AE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$SELF_DIR/.." && pwd)}"
 CHECKER="$AE_PLUGIN_ROOT/scripts/check-stage-delivery.py"
+READER="$AE_PLUGIN_ROOT/scripts/read-artifact-root.py"
 
 MARKER_NAME=".ae-go-marker"
-FEATURE_ROOTS=(".ae/features/active" ".ae/features/paused")
+
+# Same reader check-invocation-order.py uses, so the two hooks cannot resolve two different
+# roots for the same project. A malformed value refuses the stop outright, before scanning for
+# any marker -- guessing a root to scan under is exactly what a malformed value forbids.
+artifact_root="$(python3 "$READER" ".claude/pipeline.yml" 2>&1)"
+reader_status=$?
+if [ "$reader_status" -ne 0 ]; then
+  echo "$artifact_root" >&2
+  exit 2
+fi
+FEATURE_ROOTS=("$artifact_root/features/active" "$artifact_root/features/paused")
 
 markers=()
 for root in "${FEATURE_ROOTS[@]}"; do

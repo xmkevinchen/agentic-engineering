@@ -15,7 +15,12 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 READER="${READER_UNDER_TEST:-$ROOT/plugins/ae/scripts/read-artifact-root.py}"
 HOOK="${HOOK_UNDER_TEST:-$ROOT/plugins/ae/scripts/check-invocation-order.py}"
+LEASH="${LEASH_UNDER_TEST:-$ROOT/plugins/ae/scripts/go-leash.sh}"
 FIXTURES="$ROOT/plugins/ae/tests/fixtures/artifact-root"
+
+checksum_tree() {
+  find "$1" -type f -exec shasum {} \; | sort
+}
 
 passed=0
 failed=0
@@ -126,6 +131,52 @@ expect_hook "configured root: full configured-root path resolves the same incomp
   2 "$FIXTURES/hook-root-conflict" "ae:plan" "agent-memory/features/active/F-1-good"
 expect_hook "malformed root: refuses rather than guessing, before trying to resolve anything" \
   2 "$FIXTURES/hook-malformed-root" "ae:plan" "F-1-good" "artifact_root"
+
+before_checksum="$(checksum_tree "$FIXTURES")"
+
+expect_leash() {
+  local desc=$1 expected_code=$2 cwd=$3 out code missing=""
+  shift 3
+  out=$(cd "$cwd" && CLAUDE_PLUGIN_ROOT="$ROOT/plugins/ae" bash "$LEASH" 2>&1)
+  code=$?
+  if [ "$code" -ne "$expected_code" ]; then
+    report fail "$desc" "expected exit $expected_code, got $code
+$out"
+    return
+  fi
+  for needle in "$@"; do
+    case "$out" in
+      *"$needle"*) ;;
+      *) missing="$missing
+  says nothing about: $needle" ;;
+    esac
+  done
+  if [ -n "$missing" ]; then
+    report fail "$desc (message check)" "$missing
+full output: $out"
+    return
+  fi
+  report pass "$desc"
+}
+
+echo
+echo "== go-leash.sh =="
+expect_leash "default root, no config: marker under .ae resolves, incomplete work refuses" \
+  2 "$FIXTURES/leash-default" "work"
+expect_leash "configured root: marker under agent-memory resolves (not skipped for lack of .ae), incomplete work refuses" \
+  2 "$FIXTURES/leash-configured" "work"
+expect_leash "configured root, no marker anywhere: nothing in flight, exits clean" \
+  0 "$FIXTURES/leash-configured-empty"
+expect_leash "malformed root: refuses rather than guessing, before scanning for markers" \
+  2 "$FIXTURES/leash-malformed-root" "artifact_root"
+
+after_checksum="$(checksum_tree "$FIXTURES")"
+if [ "$before_checksum" = "$after_checksum" ]; then
+  report pass "AC5: running the whole root-flip sequence left every fixture file unchanged"
+else
+  report fail "AC5: running the whole root-flip sequence left every fixture file unchanged" \
+    "$(diff <(echo "$before_checksum") <(echo "$after_checksum"))"
+fi
 
 echo
 echo "passed=$passed failed=$failed"
