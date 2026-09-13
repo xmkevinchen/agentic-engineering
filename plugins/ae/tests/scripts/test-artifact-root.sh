@@ -83,10 +83,12 @@ expect_root "absent" ".ae"
 expect_root "no-key" ".ae"
 expect_root "configured" "agent-memory"
 expect_root "configured-trailing-slash" "agent-memory"
-expect_reject "malformed-empty" "artifact_root"
+expect_reject "malformed-empty" "artifact_root" "empty"
+expect_reject "malformed-empty-single-quote" "artifact_root" "empty"
+expect_reject "malformed-empty-comment-only" "artifact_root" "empty"
 expect_reject "malformed-absolute" "artifact_root" "/absolute/path"
 expect_reject "malformed-escape" "artifact_root" ".."
-expect_reject "malformed-mapping" "artifact_root"
+expect_reject "malformed-mapping" "artifact_root" "mapping"
 
 invoke_hook() {
   # $1=cwd $2=skill $3=args

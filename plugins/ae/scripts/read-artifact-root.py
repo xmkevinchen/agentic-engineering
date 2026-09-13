@@ -59,10 +59,13 @@ def resolve(path: str) -> str:
 
     value = _unquote_or_strip_comment(raw).strip()
 
-    if value[:1] in "{[":
-        raise Malformed(f"artifact_root: {raw!r} is a mapping or sequence, not a scalar path")
+    # Emptiness first: `value[:1]` on an empty string is `""`, and `"" in "{["` is True (an empty
+    # string is a substring of everything), so checking the mapping/sequence shape before
+    # emptiness misdiagnoses an empty value as "a mapping or sequence".
     if not value:
         raise Malformed("artifact_root: is present but empty")
+    if value[0] in "{[":
+        raise Malformed(f"artifact_root: {raw!r} is a mapping or sequence, not a scalar path")
 
     normalized = value.rstrip("/")
     if not normalized:
