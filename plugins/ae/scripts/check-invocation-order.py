@@ -16,6 +16,7 @@ Usage: reads the PreToolUse JSON payload from stdin. No CLI arguments.
 Exit 0 = allow the tool call. Exit 2 = refuse it (PreToolUse's own refusal exit code).
 """
 
+import importlib.util
 import json
 import pathlib
 import re
@@ -25,8 +26,23 @@ STAGE_ORDER = ["analyze", "discuss", "plan", "work", "review"]
 STAGES_WITH_PREDECESSOR = {"discuss", "plan", "work", "review"}
 STATE_DIRS = ("active", "paused", "done", "abandoned")
 
-FEATURE_PATH = re.compile(
-    r"\.ae/features/(?:active|paused|done|abandoned)/(F-\d+)-[^/\s]+")
+_reader_spec = importlib.util.spec_from_file_location(
+    "read_artifact_root", pathlib.Path(__file__).parent / "read-artifact-root.py")
+_reader = importlib.util.module_from_spec(_reader_spec)
+_reader_spec.loader.exec_module(_reader)
+
+
+class RootRefused(Exception):
+    """The configured `artifact_root:` is malformed; carries the reader's own message."""
+
+
+def resolve_root(project_dir):
+    try:
+        return _reader.resolve(str(project_dir / ".claude" / "pipeline.yml"))
+    except _reader.Malformed as e:
+        raise RootRefused(f"read-artifact-root: {e}") from e
+
+
 BARE_FEATURE_ID = re.compile(r"\bF-(\d+)\b")
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\s*?\n", re.S)
@@ -39,9 +55,16 @@ def find_project_dir():
     return pathlib.Path.cwd()
 
 
-def resolve_feature_dir(project_dir, args):
-    """Find the feature directory named in a stage invocation's argument string, or None."""
-    match = FEATURE_PATH.search(args)
+def resolve_feature_dir(project_dir, args, root):
+    """Find the feature directory named in a stage invocation's argument string, or None.
+
+    `root` is the project-relative artifact root already resolved by `read-artifact-root.py`
+    (`.ae` when unconfigured) — the only string either form of match is built against, so a
+    literal `.ae/...` in `args` no longer matches once a project configures something else.
+    """
+    feature_path = re.compile(
+        rf"{re.escape(root)}/features/(?:active|paused|done|abandoned)/(F-\d+)-[^/\s]+")
+    match = feature_path.search(args)
     if match:
         candidate = project_dir / match.group(0)
         return candidate if candidate.is_dir() else None
@@ -49,7 +72,7 @@ def resolve_feature_dir(project_dir, args):
     for m in BARE_FEATURE_ID.finditer(args):
         fid = f"F-{m.group(1)}"
         for state in STATE_DIRS:
-            hits = sorted((project_dir / ".ae" / "features" / state).glob(f"{fid}-*"))
+            hits = sorted((project_dir / root / "features" / state).glob(f"{fid}-*"))
             if len(hits) == 1 and hits[0].is_dir():
                 return hits[0]
     return None
@@ -112,7 +135,13 @@ def main():
         return 0
 
     project_dir = pathlib.Path(payload.get("cwd") or find_project_dir())
-    feature_dir = resolve_feature_dir(project_dir, args)
+    try:
+        root = resolve_root(project_dir)
+    except RootRefused as e:
+        sys.stderr.write(str(e) + "\n")
+        return 2
+
+    feature_dir = resolve_feature_dir(project_dir, args, root)
     if feature_dir is None:
         # No identifiable target: refusing here would be a guess, and AC7 covers a known
         # predecessor gap, not "the invocation was unparseable" — fail open.
