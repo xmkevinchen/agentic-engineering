@@ -34,8 +34,9 @@ ANALYZE → [DISCUSS] → ← you confirm the criteria
 ```
 
 Everything the run produces lives in one feature directory under
-`.ae/features/active/F-NNN-<slug>/` — `analysis.md`, the plan, the log, the review.
-If the conversation were lost, the next stage could proceed from those files alone.
+`<artifact_root>/features/active/F-NNN-<slug>/` — `analysis.md`, the plan, the log, the review.
+`<artifact_root>` is `.ae` unless `.claude/pipeline.yml` sets `artifact_root:` to something
+else. If the conversation were lost, the next stage could proceed from those files alone.
 
 You can also invoke a single stage directly — `/ae:plan <feature-dir>`,
 `/ae:review <plan-path>` — when you are resuming or redoing one part.
