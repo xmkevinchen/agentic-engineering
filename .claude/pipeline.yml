@@ -22,4 +22,4 @@ lint:
 cross_family:
   codex:      { seat: codex,  family: openai }
   gemini:     { seat: gemini, family: google }
-  qwen-local: { seat: openai-compat, family: qwen, host: local, endpoint: "http://127.0.0.1:8000/v1", model: "Qwen3.5-35B-A3B-8bit" }
+  qwen-local: { seat: openai-compat, family: qwen, host: local, endpoint: "http://127.0.0.1:8000/v1", model: "Qwen3.8-27B-8bit" }
