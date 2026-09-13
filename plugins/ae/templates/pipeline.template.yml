@@ -1,16 +1,20 @@
 # .claude/pipeline.yml — Agentic Engineering project config
 #
-# ONE thing reads this file automatically: the SessionStart hook
-# (`scripts/check-cross-family.sh`), which probes every entry under `cross_family:` and
-# warns about the ones that are configured but unreachable.
+# TWO things read this file automatically: the SessionStart hook
+# (`scripts/check-cross-family.sh`), which probes every entry under `cross_family:` and warns
+# about the ones that are configured but unreachable; and `scripts/read-artifact-root.py`,
+# read by the invocation-order and leash hooks and by ANALYZE, which resolves `artifact_root:`.
 #
 # `test`, `lint` and `typecheck` below are read by NOTHING. They are a convention — the
 # place a person or an agent looks up what this project's checks are called. Filling them
 # in does not cause any stage to run them, and no stage prompts you for them; a stage asks
 # you for a command when it needs one, or you tell it.
-#
-# Feature artifacts live under `.ae/features/{active,done,abandoned}/F-NNN-<slug>/`.
-# That layout is fixed, not configured here, and `.ae/` is gitignored at the project root.
+
+# --- Artifact Root ---
+# Where feature artifacts live: `<artifact_root>/features/{active,done,abandoned}/F-NNN-<slug>/`.
+# Project-relative, no leading `/` and no `..` segment. Absent means `.ae`, which is what an
+# existing project keeps getting if this key is never added.
+# artifact_root: agent-memory
 
 # --- Test, Lint & Typecheck (convention only — nothing reads these) ---
 test:
