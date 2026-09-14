@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Resolve the configured artifact root out of a pipeline.yml.
 
-One reader, used by every consumer that needs to know where feature artifacts live —
-`check-invocation-order.py`, `go-leash.sh`, and (as prose) `analyze/SKILL.md`. Follows
-`read-family-table.py`'s own rule: one parser, so two callers hand-rolling their own reading is
-not how this drifts apart.
+One reader, used by every consumer that needs to know where feature artifacts live — currently
+`analyze/SKILL.md` (as prose). Follows `read-family-table.py`'s own rule: one parser, so two
+callers hand-rolling their own reading is not how this drifts apart.
 
 Prints the resolved, project-relative root (no trailing slash) to stdout and exits 0. An absent
 file and an absent `artifact_root:` key both mean the default, `.ae`, and are not errors — that

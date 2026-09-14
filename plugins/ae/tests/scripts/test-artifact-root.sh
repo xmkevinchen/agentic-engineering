@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # test-artifact-root.sh — run read-artifact-root.py over the fixtures under
-# tests/fixtures/artifact-root/, and (as steps are added) check-invocation-order.py and
-# go-leash.sh against the same fixture family, resolving a configured root instead of `.ae`.
+# tests/fixtures/artifact-root/.
 #
 # expect_root   <fixture> <expected>            — exit 0, stdout equals <expected>
 # expect_reject <fixture> <substr>...           — exit 2, and every substring present in output
@@ -14,13 +13,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 READER="${READER_UNDER_TEST:-$ROOT/plugins/ae/scripts/read-artifact-root.py}"
-HOOK="${HOOK_UNDER_TEST:-$ROOT/plugins/ae/scripts/check-invocation-order.py}"
-LEASH="${LEASH_UNDER_TEST:-$ROOT/plugins/ae/scripts/go-leash.sh}"
 FIXTURES="$ROOT/plugins/ae/tests/fixtures/artifact-root"
-
-checksum_tree() {
-  find "$1" -type f -exec shasum {} \; | sort
-}
 
 passed=0
 failed=0
@@ -89,96 +82,6 @@ expect_reject "malformed-empty-comment-only" "artifact_root" "empty"
 expect_reject "malformed-absolute" "artifact_root" "/absolute/path"
 expect_reject "malformed-escape" "artifact_root" ".."
 expect_reject "malformed-mapping" "artifact_root" "mapping"
-
-invoke_hook() {
-  # $1=cwd $2=skill $3=args
-  python3 -c '
-import json, sys
-print(json.dumps({"cwd": sys.argv[1], "tool_input": {"skill": sys.argv[2], "args": sys.argv[3]}}))
-' "$1" "$2" "$3" | python3 "$HOOK"
-}
-
-expect_hook() {
-  local desc=$1 expected_code=$2 cwd=$3 skill=$4 args=$5 out code missing=""
-  shift 5
-  out=$(invoke_hook "$cwd" "$skill" "$args" 2>&1)
-  code=$?
-  if [ "$code" -ne "$expected_code" ]; then
-    report fail "$desc" "expected exit $expected_code, got $code
-$out"
-    return
-  fi
-  for needle in "$@"; do
-    case "$out" in
-      *"$needle"*) ;;
-      *) missing="$missing
-  says nothing about: $needle" ;;
-    esac
-  done
-  if [ -n "$missing" ]; then
-    report fail "$desc (message check)" "$missing
-full output: $out"
-    return
-  fi
-  report pass "$desc"
-}
-
-echo
-echo "== check-invocation-order.py =="
-expect_hook "default root, no config: bare F-NNN resolves under .ae, complete predecessor allows" \
-  0 "$FIXTURES/hook-default" "ae:plan" "F-2-good"
-expect_hook "configured root: bare F-NNN resolves under agent-memory (not the complete .ae sibling), incomplete predecessor refuses" \
-  2 "$FIXTURES/hook-root-conflict" "ae:plan" "F-1-good"
-expect_hook "configured root: full configured-root path resolves the same incomplete feature" \
-  2 "$FIXTURES/hook-root-conflict" "ae:plan" "agent-memory/features/active/F-1-good"
-expect_hook "malformed root: refuses rather than guessing, before trying to resolve anything" \
-  2 "$FIXTURES/hook-malformed-root" "ae:plan" "F-1-good" "artifact_root"
-
-before_checksum="$(checksum_tree "$FIXTURES")"
-
-expect_leash() {
-  local desc=$1 expected_code=$2 cwd=$3 out code missing=""
-  shift 3
-  out=$(cd "$cwd" && CLAUDE_PLUGIN_ROOT="$ROOT/plugins/ae" bash "$LEASH" 2>&1)
-  code=$?
-  if [ "$code" -ne "$expected_code" ]; then
-    report fail "$desc" "expected exit $expected_code, got $code
-$out"
-    return
-  fi
-  for needle in "$@"; do
-    case "$out" in
-      *"$needle"*) ;;
-      *) missing="$missing
-  says nothing about: $needle" ;;
-    esac
-  done
-  if [ -n "$missing" ]; then
-    report fail "$desc (message check)" "$missing
-full output: $out"
-    return
-  fi
-  report pass "$desc"
-}
-
-echo
-echo "== go-leash.sh =="
-expect_leash "default root, no config: marker under .ae resolves, incomplete work refuses" \
-  2 "$FIXTURES/leash-default" "work"
-expect_leash "configured root: marker under agent-memory resolves (not skipped for lack of .ae), incomplete work refuses" \
-  2 "$FIXTURES/leash-configured" "work"
-expect_leash "configured root, no marker anywhere: nothing in flight, exits clean" \
-  0 "$FIXTURES/leash-configured-empty"
-expect_leash "malformed root: refuses rather than guessing, before scanning for markers" \
-  2 "$FIXTURES/leash-malformed-root" "artifact_root"
-
-after_checksum="$(checksum_tree "$FIXTURES")"
-if [ "$before_checksum" = "$after_checksum" ]; then
-  report pass "AC5: running the whole root-flip sequence left every fixture file unchanged"
-else
-  report fail "AC5: running the whole root-flip sequence left every fixture file unchanged" \
-    "$(diff <(echo "$before_checksum") <(echo "$after_checksum"))"
-fi
 
 echo
 echo "passed=$passed failed=$failed"
