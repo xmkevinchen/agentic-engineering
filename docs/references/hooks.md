@@ -145,61 +145,11 @@ registration, prompt/agent handlers).
 4. **Anything from the `documented` table becomes load-bearing only after its
    own probe** — the same discipline that produced the enforcement table above.
 
-### AE's minimal hook set (designed 2026-08-28; H1 **probed** 2026-08-29, H2 still `unprobed`)
+### AE's minimal hook set (designed 2026-08-28)
 
-Two hooks, chosen against the deletion-first baseline — every additional hook
-must earn its place the way every surviving line does.
-
-**H1 — the done-leash (`Stop`; portable to Codex).** A ~20-line script: no
-in-flight run marker under the workflow's deliverable dir → instant exit 0;
-marker present but the declared stage's deliverable is missing on disk → exit 2
-with one sentence naming the missing file. This mechanizes the ground rule
-"deliverables are files on disk" at the exact moment completion is claimed.
-Fail-open by contract, so it is an accelerator; the rule itself lives in the
-workflow's gates. On Codex the same script ships with a three-line output shim
-(`continue: false`).
-
-**H1 was retired by F-116.** A hook can only ever refuse a specific action —
-it cannot invoke a different skill or route to a corrective next step, so the
-"what happens next" logic always had to live in the stage's own prose
-regardless of whether a hook also ran. Against that, `go-leash.sh` carried
-five uncorrected defects (catalogued in F-116's `analysis.md`): a hook
-erroring internally can be silently read by the host as "script missing,
-non-blocking" independent of its actual exit code (below); the host
-force-ends a turn after 9 consecutive `Stop` blocks with nothing marking that
-it happened (below); its marker carried no timestamp or owning-session id, so
-an orphaned one blocked every future turn indefinitely; its multi-marker
-refusal message hardcoded a project-specific git convention into
-supposedly project-agnostic plugin material; and its marker scan was
-artifact-root-wide rather than scoped to the turn it belonged to. The
-measurements below remain accurate, general facts about `Stop` hooks — kept
-as the record of why this one was retired, not as a description of a live
-mechanism's known rough edges.
-
-**H1's probe ran 2026-08-29 and the design holds. Nothing is built on it yet** —
-the throwaway skill and script used to measure it left with the run that made
-them; what survives is the measurement. On **CC 2.1.251**, nine scenarios:
-
-| measured | consequence |
-|---|---|
-| A `Stop` hook declared **only** in SKILL.md frontmatter fires, with a hook-free `plugin.json`. The skill was verifiably invoked — a token in its body reached a model request. | Skill-scoped registration works; design rule 2 is satisfiable. |
-| Its `decision: block` prevents the turn ending: parent model calls 2 → 3, and the reason reached the next request. | The leash can refuse. |
-| The second `Stop` firing carries `stop_hook_active: true`. | The loop guard exists; a script that ignores it can trap a session. |
-| The identical hook registered plugin-globally also fires and blocks. | Interpretability control, declared in advance — a silent result on the skill-scoped case would have been readable rather than ambiguous. |
-| A hook sleeping 10 s against a 1 s timeout: the turn ended anyway in 1,267 ms, the reason never reached the model. | **Fail-open confirmed, and observably different from a refusal** — the declared void condition "blocking and timing-out look the same" did not fire. |
-| In the hook process: `CLAUDE_PLUGIN_ROOT` set, `CLAUDE_PROJECT_DIR` set, **`CLAUDE_SKILL_DIR` unset**. | A script placed beside the skill and referenced that way is unreachable. Ship it under the plugin. |
-| A frontmatter `command:` written as the literal `${CLAUDE_PLUGIN_ROOT}/hook-entry.sh`, reachable by no other path, fired. | The host **does** expand the variable in a frontmatter command string. |
-| End to end: a script reading a run marker refused with its own sentence naming the missing file; a run with no marker produced no extra turn; a run whose deliverable was present produced no refusal. | The three states behave as designed. |
-
-Expectations and three void conditions were declared **before** any run.
-Evidence, per-scenario transcripts and re-run commands:
-`.ae/research/2026-08-28-done-leash/` (`verify.mjs` compares each observation
-against `EXPECTED.md`; exit 0 = every declared expectation held).
-
-**Still unresolved, and not relied on:** `claude-code-plugin-api.md:22` says a
-skill's hooks are active "only during skill execution" while this section says
-for the rest of the session. The probe ran in `-p`, which cannot separate the
-two, and the readings give opposite failure modes.
+Every additional hook must earn its place the way every surviving line does.
+Two were built and later retired (F-116) once each stage's own prose carried
+their logic directly; this section now holds only the one still-open design.
 
 **H2 — the freeze-watch (`FileChanged`; Claude Code only).** Matcher on the
 conventional deliverable filenames; fires when a file under a run dir whose
@@ -207,89 +157,15 @@ state says *criteria frozen* is edited. Cannot block by design — it is
 visibility, servicing the archived Kernel's first reopening event (tampering /
 staleness observed, not feared). The Codex fallback is the pull model the
 workflow prefers anyway: review re-verifies digests at consumption.
-
-**Registration.** Claude Code: the unified entry skill's frontmatter — active
-only for sessions that invoke it, `once`-capable. Codex: project
-`.codex/hooks.json` plus the marker-file guard, which reproduces
-zero-cost-when-idle by script instead of scope; non-managed hooks there require
-a one-time `/hooks` trust review, which a port must document.
+**Still unprobed**; probe before registering it, the same discipline that
+produced the enforcement table above.
 
 **Deliberately absent**: `prompt`/`agent` handler types (semantic checks stay
 in the review stage's own spawns — the path four benchmark runs validated),
-`PostToolBatch`. Listed so their absence
-is a decision; adding one later means writing its probe first. `PreToolUse` was
-absent for the same reason until F-108 gave it one — see H3 below.
+`PostToolBatch`, `PreToolUse`. Listed so their absence is a decision; adding
+one later means writing its probe first.
 
-**Probe-first.** H1's probe was performed and it held: plant the defect (marker
-present, stage deliverable absent) → the hook refused; remove the marker → zero
-interference; let it time out → the turn ended anyway. Same fixture method that
-produced the enforcement table, with one addition worth carrying forward — a
-control scenario registering the identical hook plugin-globally, so a silent
-result could be told apart from a broken harness rather than read as "skill
-scoping does not work". **H2 remains unprobed**; the same discipline applies
-before it is registered.
-
-**H1, shipped (F-108, 2026-09-11) — retired (F-116).** `go/SKILL.md`'s
-frontmatter carried the `Stop` hook described above, running `go-leash.sh`;
-the marker was `.ae-go-marker` under a feature directory, holding one line,
-`stage: <name>`. Neither exists any longer — see "H1 was retired by F-116"
-above for why. The re-probe below, and the two facts it surfaced, stand as
-the last real evidence gathered about this mechanism while it was live.
-Re-probed against **CC 2.1.268** (H1's original probe above ran on 2.1.251) with
-the same method — plant the defect, watch the refusal, clear it, watch the
-silence — and it held. Two facts surfaced during that re-probe that were not
-on record before:
-
-- **A `Stop` hook that exits 2 while its own command errors internally is not
-  read as a refusal.** Measured directly: `go-leash.sh` invoked with
-  `check-stage-delivery.py` missing from its own directory (a fixture defect,
-  not a shipped condition — the two ship together) still exits 2 on the
-  script's own terms, but the host reported *"Hook script appears to be
-  missing... Treating as non-blocking"* and let the turn end. The distinction
-  the host is drawing is not documented anywhere found; empirically, it looks
-  for a specific failure shape (a traceback-like stderr, on this evidence) and
-  downgrades on sight of it, independent of the actual exit code. Practical
-  consequence: a hook script's own dependencies must ship in the same place it
-  runs from, or a real refusal can silently degrade to a pass.
-- **The consecutive-block override, exact text and knob, neither of which
-  appears in the official hooks reference** (checked directly against
-  `code.claude.com/docs/en/hooks.md` on 2026-09-11 — no mention of a block
-  count, an override, or the environment variable below). Observed verbatim,
-  twice, on CC 2.1.268: *"A hook blocked the turn from ending 9 consecutive
-  times — overriding and ending turn. For Stop/SubagentStop hooks, check
-  `stop_hook_active` in the input and return success while it's true. Set
-  `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` to raise this limit."* The digit observed
-  is **9**, not the "8-consecutive-block override" an earlier discussion round
-  cited as documented fact (`F-108`'s `discuss-Q1`) — that citation could not
-  be re-found in the current docs either, so treat the observed message,
-  verbatim, as what is known, and the digit as unconfirmed against any
-  contract (it may count attempts vs. blocks off by one, or the doc that named
-  8 may have since changed or never existed as described).
-
-**H3 — the invocation-order gate (`PreToolUse`, plugin-global; F-108,
-2026-09-11) — retired (F-116).** Matched on the `Skill` tool. `tool_input` on
-a `Skill` call carries `{"skill": "<plugin>:<name>", "args": "<argument
-string>"}` — measured directly (not documented, not assumed) against CC
-2.1.268, closing the one unknown H1's own design left in the `documented`
-table above (`PreToolUse`'s `tool_input` shape was listed nowhere in the
-official reference for any tool). Refused a stage's invocation when the stage
-before it in `analyze → [discuss] → plan → work → review` had a
-non-conforming deliverable, by the same delegation to
-`check-stage-delivery.py`. Confirmed, live while it shipped: fired when
-Claude called the `Skill` tool (from natural-language instruction or from
-another skill's own orchestration); **never** fired when a human typed the
-target skill's slash command directly — the same exemption `PreToolUse`
-carries generally, reconfirmed here rather than assumed from that general
-case. `PreToolUse` exit 2 is an unconditional refusal (per the enforcement
-table above), with no consecutive-block ceiling the way `Stop` has one. **This
-is exactly why F-116 retired it**: a check that never fires on the slash-command
-path needs a prose self-check in the stage anyway to cover that path, which
-then has to carry the entire "what happens next" logic this hook could never
-provide either — making the hook a strictly weaker duplicate of what the
-stage's own prose now does unconditionally. `check-invocation-order.py` and
-`plugin.json`'s `PreToolUse` registration for it no longer exist.
-
-**A parser gap H1's re-probe found, unrelated to hooks and pre-dating F-108.**
+**A parser gap, unrelated to hooks.**
 `go/SKILL.md`'s `description` field spanned three lines inside one pair of
 double quotes — valid YAML generally, but Claude Code's own frontmatter parser
 rejects it (`claude plugin validate`: *"YAML frontmatter failed to parse...
