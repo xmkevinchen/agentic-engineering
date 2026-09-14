@@ -89,38 +89,16 @@ Invoke a single stage directly when you are resuming or redoing one part; otherw
 
 ## Agents
 
-18 agent roles in four directories. `/ae:go` and the stage skills spawn them by reading what
-each one says it is for; you can also ask for one by name in any session.
-
-### Review Agents — the quality gate
-| Agent | Focus |
-|-------|-------|
-| `architecture-reviewer` | Module boundaries, dependency direction, architectural consistency |
-| `code-reviewer` | Code quality, SOLID principles, security, testability |
-| `performance-reviewer` | Algorithms, DB queries, memory usage, I/O hot paths |
-| `security-reviewer` | Auth, injection, data protection, secrets management |
-
-### Research Agents — the knowledge layer
-| Agent | Focus |
-|-------|-------|
-| `archaeologist` | Deep-dive into existing code, trace dependencies and history |
-| `dependency-analyst` | Validate parallel feasibility, find hidden coupling |
-| `standards-expert` | Industry best practices and conventions comparison |
+8 agent roles, all under `plugins/ae/agents/workflow/`. `/ae:go` and the stage skills spawn them
+by reading what each one says it is for; you can also ask for one by name in any session.
 
 ### Workflow Agents — the runtime
 | Agent | Focus |
 |-------|-------|
-| `architect` | Step decomposition, parallel execution strategy |
-| `qa` | Post-step code review + cross-family validation |
 | `discuss-seat` | The same-family seat in the discuss stage's first two rounds |
 | `codex-proxy` | The OpenAI seat — drives the `codex exec` CLI as a subprocess it owns |
 | `gemini-proxy` | The Google seat, over the bundled MCP server |
 | `openai-compat-proxy` | Any OpenAI-compatible backend — endpoint, model and family per call |
-
-### Engineering Agents — the implementer
-| Agent | Focus |
-|-------|-------|
-| `minimal-change-engineer` | Minimum-viable diffs; refuses scope creep |
 
 ### Doodlestein Agents — the challenge layer
 | Agent | Focus |
@@ -199,11 +177,8 @@ fixed, not configured.
 plugins/ae/
   .claude-plugin/plugin.json      # Plugin manifest, MCP servers, SessionStart hook
   skills/                         # 6 skills — the entry plus five stages
-  agents/                         # 18 agents
-    review/                       #   4 review agents
-    research/                     #   3 research agents
-    workflow/                     #   10 workflow agents (incl. proxies + Doodlestein)
-    engineering/                  #   1 implementer
+  agents/                         # 8 agents
+    workflow/                     #   8 workflow agents (proxies, discuss-seat, Doodlestein)
   scripts/                        # Session-start probe, its reader, the Codex seat runner, the test runner
   mcp-servers/                    # Bundled Gemini + OpenAI-compatible servers
   templates/pipeline.template.yml
