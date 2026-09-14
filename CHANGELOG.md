@@ -72,8 +72,8 @@ found none stating who judged the work or whether that party differed from WORK'
   `cross-family`, or `human`) and, for a Claude subagent, the real `agent_id:`/
   `agent_transcript_path:` receipt the host already writes. `review.md`'s own `verdict:` must
   literally equal that file's `verdict:` via a `verdict_from:` pointer — carried, not restated.
-- A mechanical check (`unguarded-rules.py` plus fixtures) verifies every message-emitting site in
-  `check-stage-delivery.py` is guarded against unverified self-report. Review of this feature
+- A mechanical check (`unguarded-rules.py` plus fixtures) verified every message-emitting site in
+  `check-stage-delivery.py` was guarded against unverified self-report. Review of this feature
   itself found and a second pass confirmed-fixed three path-containment bypasses in how
   `verdict_from:` was resolved (self-citation, `../` traversal, an absolute path escaping the
   repo).
@@ -85,8 +85,8 @@ What this does not close, named as a residual: on the `reader_kind: human` branc
 check still only compares two files' `verdict:` values, both writable by one unisolated session
 in one turn — an actual human-identity check is not built here.
 
-Contributors: a stage's own future REVIEW pass must supply a `review/readers/<name>.md` file, or
-`check-stage-delivery.py`'s review check refuses it.
+Contributors: a stage's own future REVIEW pass must supply a `review/readers/<name>.md` file, per
+`review/SKILL.md`'s own convention.
 
 ### A discuss pass interrupted mid-way looked identical to one that finished — F-111
 
