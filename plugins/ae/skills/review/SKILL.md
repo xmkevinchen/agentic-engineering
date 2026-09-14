@@ -27,6 +27,29 @@ read. Read it against the plan, the working log, and the criteria. The criteria 
 ones the human signed, and `acceptance.md` is where you read them from — not the plan's
 restatement of them and not the log's.
 
+## Running this stage
+
+This stage benefits from `independent-top-level-session` — see
+`docs/references/capability-contract.md` for what that means and how it is declared. If your
+context documents a binding for it, run this stage there, handing off the plan path explicitly.
+If no binding is documented anywhere in context, run this stage inline exactly as the rest of
+this file describes — nothing here is a precondition, and finding no binding is not a reason to
+pause or ask.
+
+**When this stage does run as `independent-top-level-session`, its own investigation starts from
+the feature's signed `acceptance.md` and the tree's current state — never from a resumed or
+forked continuation of WORK's own session or context.** This is additive to *Fresh eyes* below,
+not a replacement for it: that section's requirement — that the verdict itself comes from a
+reader who did not write the work — holds regardless of whether this stage runs inline or
+isolated. What this adds is narrower and comes first: even reaching the point of judging
+anything, this stage's own reading of the diff and the log must not begin from WORK's own
+accumulated reasoning about what it tried and why.
+
+**The same session-spanning rule `work/SKILL.md` states holds here too:** do not start this
+stage's own turn until you hold a confirmed signal — never an elapsed-time guess — that WORK's
+own turn has fully finished. `go/SKILL.md`'s existing version of this rule does not reach a
+separately-spawned session, for the same reason stated in `work/SKILL.md`.
+
 ## Deliverable
 
 `<feature-dir>/review.md`, containing:
