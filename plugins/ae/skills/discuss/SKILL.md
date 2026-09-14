@@ -20,6 +20,18 @@ nothing.
 The analysis, and one id from its `discuss:` list. Settle the question under that heading, not a
 neighbouring one you find more interesting.
 
+## Check the analysis before discussing it
+
+Before spawning anything, read `analysis.md`. Refuse it — write `<feature-dir>/returned-<id>.md`
+and stop, without running round one — on either of two counts:
+
+- it is absent, or its frontmatter cannot be read (not parseable, or not starting at byte 0);
+- the id this run was given is not a key in its `discuss:` mapping.
+
+Both are the same reason "What goes out" below already names — `material the analysis needed to
+cite and did not` — not a premise that failed once argued. A question this stage cannot even read
+off the analysis has nothing to argue yet.
+
 ## Deliverable
 
 One decision record at `<feature-dir>/decision-<id>.md`, named for the `discuss:` id this run
