@@ -2,7 +2,7 @@
 
 ## 0.16.0 (2026-09-14)
 
-Six features accumulated since 0.15.0, bundled into one release rather than bumped one at a
+Eight features accumulated since 0.15.0, bundled into one release rather than bumped one at a
 time — none of them alone changed what a user runs, and together they close a stage-handoff
 gap, add real enforcement to two rules that had none, and make two things configurable that
 were hardcoded. No breaking changes in this release.
@@ -32,31 +32,22 @@ What this does not close: whether a stage confined to its own context can still 
 seats, and a citation already sitting in a stable, unedited file rather than newly added — both
 left for later.
 
-### A `Stop` hook that catches a stage ending its turn without a conforming deliverable — F-108
+### `go/SKILL.md`'s frontmatter `description` field was silently dropped by the host's own parser — F-108
 
-`check-stage-delivery.py` already decided mechanically whether a stage's output conformed, but
-nothing forced it to run — a session could skip it, forget it, or point it at the wrong path, and
-nothing would catch that.
+A multi-line, double-quoted YAML scalar in `description:` is valid YAML generally, but Claude
+Code's own frontmatter parser rejected it — dropping the file's entire frontmatter, hooks
+included, at runtime, with no visible error.
 
-- **`plugins/ae/scripts/go-leash.sh`**, a `Stop` hook on `go/SKILL.md`'s own frontmatter, refuses
-  to let a turn end while an in-flight marker names a stage whose deliverable doesn't conform.
-- **`plugins/ae/scripts/check-invocation-order.py`**, a plugin-global `PreToolUse` hook on the
-  `Skill` tool, refuses to invoke a stage whose predecessor's deliverable doesn't conform —
-  covers both `/ae:go`-driven and directly-invoked stage calls.
-- **A real defect this feature's own live test surfaced and fixed in passing**: `go/SKILL.md`'s
-  frontmatter `description` was a multi-line double-quoted YAML scalar, which Claude Code's
-  parser silently rejected — dropping the file's entire frontmatter, hooks included, at runtime.
-  Reflowed to a folded block scalar (`>-`).
+- **`go/SKILL.md`**: `description` reflowed to a YAML folded block scalar (`>-`), which keeps the
+  source readable and validates clean.
 
-What this does not close, named rather than dropped: a human typing a stage's slash command
-directly bypasses both mechanisms — `PreToolUse` doesn't fire on a typed command, and no `Stop`
-hook is registered unless `/ae:go`'s own frontmatter was loaded that session. `review/SKILL.md`
-and `work/SKILL.md` carry the identical frontmatter defect `go/SKILL.md` had — tracked
-separately (see F-109).
+`review/SKILL.md` and `work/SKILL.md` carried the identical defect — tracked separately
+(see F-109).
 
-Contributors: a `Stop` hook fails open on its own timeout or error, and the host silently
-overrides a blocking `Stop` after a fixed number of consecutive blocks in one turn (measured
-against live CC 2.1.268) — a hook is an accelerant here, never the sole enforcement of a rule.
+This feature also built two hooks (a `Stop` hook and a plugin-global `PreToolUse` hook) to catch
+a stage ending its turn without a conforming deliverable; both, and the checker script they
+delegated to, were replaced within this same release by self-checks in each stage's own prose
+(see F-116).
 
 ### `review/SKILL.md` and `work/SKILL.md` carried the same frontmatter defect `go/SKILL.md` had — F-109
 
@@ -118,9 +109,8 @@ git repo, reached only through a `.ae -> agent-memory` compatibility symlink, be
 AE could be told to use a different root.
 
 - **`plugins/ae/scripts/read-artifact-root.py`** is now the one place `artifact_root:` in
-  `.claude/pipeline.yml` is parsed, consulted by `check-invocation-order.py`, `go-leash.sh`, and
-  `analyze/SKILL.md`'s feature-directory-creation instruction. Absent the setting, `.ae` remains
-  the default with unchanged behavior.
+  `.claude/pipeline.yml` is parsed, consulted by `analyze/SKILL.md`'s feature-directory-creation
+  instruction. Absent the setting, `.ae` remains the default with unchanged behavior.
 - `pipeline.template.yml` and `docs/quickstart.md` no longer claim the layout is fixed.
 - A second, independent instance of the same underlying pattern — `cross_family.enabled` in
   `pipeline.yml` is parsed but never consulted before dispatching a discuss-stage seat — was
@@ -154,6 +144,32 @@ isolation rests partly on the feature's own author's self-reported control run; 
 reviewer's attempt to reproduce that specific control hit an account-wide usage limit and,
 separately, a stale plugin cache, rather than completing it. Signed off accepting the gap; the
 exact recipe to close it is on record for whoever picks it up.
+
+### Stage-handoff enforcement moved from two hooks into each stage's own prose — F-116
+
+F-108's two hooks — `go-leash.sh` (a `Stop` hook) and `check-invocation-order.py` (a
+plugin-global `PreToolUse` hook), both delegating to a 731-line checker script — could only
+ever refuse an action, never route to a corrective next step, and `check-invocation-order.py`
+never fired when a human typed a stage's slash command directly: the one path where routing
+mattered most.
+
+- All three deleted, along with `plugin.json`'s `PreToolUse` registration and the test suite
+  that existed only to exercise them.
+- **`discuss/SKILL.md`, `work/SKILL.md`, `review/SKILL.md`** each gain a "Check the … before …"
+  section — the same shape `plan/SKILL.md` already had — stating what their own predecessor's
+  deliverable must show on disk and what to do when it doesn't, in that stage's own existing
+  vocabulary (`returned-<id>.md`; refuse and re-invoke `/ae:plan`; fold into an ordinary `fail`).
+- **`go/SKILL.md`**: the `.ae-go-marker` mechanism and its `Stop` hook registration are gone,
+  replaced by one table naming, for each of the four stages with a predecessor, what its
+  self-check refuses on and what happens next.
+- **`docs/references/hooks.md`** no longer describes either retired hook, and now holds only
+  the measured/documented research report on Claude Code's and Codex's own hook mechanisms —
+  nothing built on top of that research.
+
+What this does not close: a check the deleted script performed — that every id in a signed
+`discuss:` list has a decision or return record before PLAN runs — has no home in the new
+design. Narrow in practice (the normal `/ae:go` sequencing already prevents the bad state), and
+`plan/SKILL.md` was explicitly out of scope for this change; disclosed rather than fixed.
 
 ## 0.15.0 (2026-09-01)
 
