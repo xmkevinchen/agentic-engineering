@@ -6,12 +6,6 @@ description: >-
   each stage's skill in turn. The argument is the work item itself, a path to a file describing
   it, or an existing F-NNN to resume.
 user-invocable: true
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/go-leash.sh"
-          once: true
 ---
 
 # /ae:go — run the work item through the workflow
@@ -69,48 +63,27 @@ command it started is still writing to a tracked file** — a command background
 running outlives the turn that started it, so anything reading that file afterward, including
 the very next stage, can observe it mid-change with nothing marking that it is.
 
-Invoke each stage's skill. **The instant it returns, before anything else — before reading its
-output, before deciding what it says — write `<feature-dir>/.ae-go-marker` holding one line,
-`stage: <name>`, naming the stage that just returned.** Then run the check. `check-stage-delivery.py`
-ships beside this skill at `scripts/check-stage-delivery.py`
-under the plugin root — in a checkout of AE itself that is `plugins/ae/scripts/`, and in an
-installed copy it is under the installed plugin. Locate it once and reuse the path:
+Invoke each stage's skill. **Each stage checks its own predecessor's deliverable as the first
+thing it does, in its own skill's prose, and reports what it found through that stage's own
+existing ending vocabulary** — there is nothing here to run and nothing here to clear between
+invoking one stage and the next. Read what a stage reports the way the per-stage routing below
+already tells you to, exactly as you already do for every other reason a stage might not have
+delivered.
 
-```sh
-python3 <plugin-root>/scripts/check-stage-delivery.py <feature-dir> <stage>
-```
+| stage | its own self-check refuses when its predecessor's deliverable... | it leaves on disk | next |
+|---|---|---|---|
+| `discuss` | `analysis.md` is unreadable, or does not list the id this run was given | `<feature-dir>/returned-<id>.md` | back to step 1, through the human |
+| `plan` | `acceptance.md` does not conform (unchanged — see `plan/SKILL.md`'s own "Check the input before planning against it") | `ended: input-refused` in `plan.md` | back to step 1, through the human |
+| `work` | `plan.md` does not mechanically conform | nothing written; no commit lands | re-invoke `/ae:plan`, then retry `/ae:work` — not a review-loop return, does not count toward the three-returns bound (`### Before sending it back, count`, below `5 · Review`) |
+| `review` | `log.md` does not mechanically conform | an ordinary `fail` verdict, with the gap as the next `review/returns/` item | back to step 4 — ordinary loop, no human needed |
 
-Its whole input is those two arguments. It never reads this conversation or the stage's own
-account of what it wrote, which is why it can contradict a stage that reported success — and
-why it is not the stage marking its own work. **A non-zero exit is not advice.** Close what it
-names, here, before going on: a stage that would be refused is sent back now, not discovered
-three stages later.
-
-**Delete `<feature-dir>/.ae-go-marker` the instant this check exits `0`, and not before — never
-while it is still non-zero, and never in anticipation of it passing.** This is what makes
-`.ae-go-marker`'s mere presence, at the moment this session's turn ends, mean "a stage returned
-and this synchronous check has not yet cleared it" with nothing else it could mean. A `Stop`
-hook registered on this skill's own frontmatter reads exactly that marker if one is still there
-when your turn ends, and re-runs this same check to decide whether to let the turn end at all —
-it is the backstop for exactly the failure this paragraph and the one above already guard
-against by hand, never a second judgment about what "conforming" means. Skip the marker step
-for no stage, including one that legitimately ends with `ended: blocked` or another of a
-stage's own accepted endings: the check already treats those as passing, so a correctly-cleared
-marker never holds up a legitimate pause for the human.
-
-**First, read which kind of refusal it is.** A check that refuses your *input* — the path you
-gave it resolves nowhere — is the ordinary mechanical refusal under *When things go wrong*: read
-what it expected against what it saw, fix the argument, retry, and send no stage anywhere. Only a
-check reporting on a *deliverable* is what the rest of this governs. The script draws that line
-in its own messages and says which one you have; a reader who skips them will re-invoke a stage
-over a mistyped path.
-
-**Closing it means invoking the stage again with what the check said** — not writing the missing
-part yourself, which makes you the author of a deliverable nobody then checks, and not going on.
-**What sends it to the human is the same gap surviving, not the check failing twice.** A second
-run that fails on a different gap has closed the first one; run it again. A gap the stage has now
-had two goes at and not closed is not something a third fixes. A stage that keeps producing fresh
-gaps without shrinking is the rate bound under *When things go wrong*, not this.
+**Closing a refusal means invoking the stage that produced the bad deliverable again with what
+was wrong** — not writing the missing part yourself, which makes you the author of a deliverable
+nobody then checks, and not going on. **What sends it to the human is the same gap surviving a
+second attempt, not a first refusal on its own.** A stage that closes what it was sent back for
+on the next pass has closed it; a stage that produces a fresh gap instead has not, and a stage
+that keeps producing fresh gaps without shrinking is the rate bound under *When things go
+wrong*, not this.
 
 Re-invoking needs the stage's argument, and for every stage but ANALYZE that is a file the
 stage before it left. ANALYZE writes the feature directory and `analysis.md` as its first act
@@ -118,9 +91,6 @@ so a resume has the work item too. **If even that is missing — nothing on disk
 item only in a conversation you no longer have — stop and say so.** That is the one case where
 the instruction above cannot be carried out, and improvising past it means writing the
 deliverable yourself or going on, which are the two moves it forbids.
-
-Exit 0 means no mechanical violation, not that the stage conformed. Then read the deliverable
-yourself against what the next stage would refuse it for, below.
 
 An `F-NNN-<slug>` as the argument is a resume: read what that directory already holds and
 enter at the first thing not done.
@@ -185,7 +155,9 @@ it serves, or a step accounts for no criterion. The plan cites criteria by id; i
 
 ### 4 · Work
 
-**Invoke `/ae:work` with the plan path.**
+**Invoke `/ae:work` with the plan path.** If work refuses to start because `plan.md` itself does
+not conform — see `work/SKILL.md`'s own check — close that by re-invoking `/ae:plan`, then invoke
+`/ae:work` again; that is a distinct route from the one below and does not count toward it.
 Then read the commits and `<feature-dir>/log.md`. Send it back when a criterion's check was
 never seen red, when files changed that no step accounts for, or when an item a return raised
 goes unmentioned in the log. The items are declared an input of WORK, and a deliverable silent
