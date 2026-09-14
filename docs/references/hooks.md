@@ -159,6 +159,23 @@ Fail-open by contract, so it is an accelerator; the rule itself lives in the
 workflow's gates. On Codex the same script ships with a three-line output shim
 (`continue: false`).
 
+**H1 was retired by F-116.** A hook can only ever refuse a specific action —
+it cannot invoke a different skill or route to a corrective next step, so the
+"what happens next" logic always had to live in the stage's own prose
+regardless of whether a hook also ran. Against that, `go-leash.sh` carried
+five uncorrected defects (catalogued in F-116's `analysis.md`): a hook
+erroring internally can be silently read by the host as "script missing,
+non-blocking" independent of its actual exit code (below); the host
+force-ends a turn after 9 consecutive `Stop` blocks with nothing marking that
+it happened (below); its marker carried no timestamp or owning-session id, so
+an orphaned one blocked every future turn indefinitely; its multi-marker
+refusal message hardcoded a project-specific git convention into
+supposedly project-agnostic plugin material; and its marker scan was
+artifact-root-wide rather than scoped to the turn it belonged to. The
+measurements below remain accurate, general facts about `Stop` hooks — kept
+as the record of why this one was retired, not as a description of a live
+mechanism's known rough edges.
+
 **H1's probe ran 2026-08-29 and the design holds. Nothing is built on it yet** —
 the throwaway skill and script used to measure it left with the run that made
 them; what survives is the measurement. On **CC 2.1.251**, nine scenarios:
@@ -212,9 +229,12 @@ result could be told apart from a broken harness rather than read as "skill
 scoping does not work". **H2 remains unprobed**; the same discipline applies
 before it is registered.
 
-**H1, shipped (F-108, 2026-09-11).** `go/SKILL.md`'s frontmatter now carries the
-`Stop` hook described above, running `go-leash.sh`; the marker is
-`.ae-go-marker` under a feature directory, holding one line, `stage: <name>`.
+**H1, shipped (F-108, 2026-09-11) — retired (F-116).** `go/SKILL.md`'s
+frontmatter carried the `Stop` hook described above, running `go-leash.sh`;
+the marker was `.ae-go-marker` under a feature directory, holding one line,
+`stage: <name>`. Neither exists any longer — see "H1 was retired by F-116"
+above for why. The re-probe below, and the two facts it surfaced, stand as
+the last real evidence gathered about this mechanism while it was live.
 Re-probed against **CC 2.1.268** (H1's original probe above ran on 2.1.251) with
 the same method — plant the defect, watch the refusal, clear it, watch the
 silence — and it held. Two facts surfaced during that re-probe that were not
@@ -247,20 +267,27 @@ on record before:
   8 may have since changed or never existed as described).
 
 **H3 — the invocation-order gate (`PreToolUse`, plugin-global; F-108,
-2026-09-11).** Matched on the `Skill` tool. `tool_input` on a `Skill` call
-carries `{"skill": "<plugin>:<name>", "args": "<argument string>"}` — measured
-directly (not documented, not assumed) against CC 2.1.268, closing the one
-unknown H1's own design left in the `documented` table above (`PreToolUse`'s
-`tool_input` shape was listed nowhere in the official reference for any tool).
-Refuses a stage's invocation when the stage before it in
-`analyze → [discuss] → plan → work → review` has a non-conforming deliverable,
-by the same delegation to `check-stage-delivery.py`. Confirmed, live: fires
-when Claude calls the `Skill` tool (from natural-language instruction or from
-another skill's own orchestration); does **not** fire when a human types the
+2026-09-11) — retired (F-116).** Matched on the `Skill` tool. `tool_input` on
+a `Skill` call carries `{"skill": "<plugin>:<name>", "args": "<argument
+string>"}` — measured directly (not documented, not assumed) against CC
+2.1.268, closing the one unknown H1's own design left in the `documented`
+table above (`PreToolUse`'s `tool_input` shape was listed nowhere in the
+official reference for any tool). Refused a stage's invocation when the stage
+before it in `analyze → [discuss] → plan → work → review` had a
+non-conforming deliverable, by the same delegation to
+`check-stage-delivery.py`. Confirmed, live while it shipped: fired when
+Claude called the `Skill` tool (from natural-language instruction or from
+another skill's own orchestration); **never** fired when a human typed the
 target skill's slash command directly — the same exemption `PreToolUse`
 carries generally, reconfirmed here rather than assumed from that general
 case. `PreToolUse` exit 2 is an unconditional refusal (per the enforcement
-table above), with no consecutive-block ceiling the way `Stop` has one.
+table above), with no consecutive-block ceiling the way `Stop` has one. **This
+is exactly why F-116 retired it**: a check that never fires on the slash-command
+path needs a prose self-check in the stage anyway to cover that path, which
+then has to carry the entire "what happens next" logic this hook could never
+provide either — making the hook a strictly weaker duplicate of what the
+stage's own prose now does unconditionally. `check-invocation-order.py` and
+`plugin.json`'s `PreToolUse` registration for it no longer exist.
 
 **A parser gap H1's re-probe found, unrelated to hooks and pre-dating F-108.**
 `go/SKILL.md`'s `description` field spanned three lines inside one pair of
