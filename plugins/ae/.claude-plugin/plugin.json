@@ -1,6 +1,6 @@
 {
   "name": "ae",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Agentic Engineering workflow for Claude Code. Every check seen failing first, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
   "author": {
     "name": "ckai"

@@ -1,5 +1,160 @@
 # Changelog
 
+## 0.16.0 (2026-09-14)
+
+Six features accumulated since 0.15.0, bundled into one release rather than bumped one at a
+time — none of them alone changed what a user runs, and together they close a stage-handoff
+gap, add real enforcement to two rules that had none, and make two things configurable that
+were hardcoded. No breaking changes in this release.
+
+### Four handoffs whose artifact didn't carry what the next stage needed from it — F-107
+
+`go/SKILL.md` decided a stage had finished by guessing from process state — `pgrep`, `git
+status` — rather than reading the actual return of the call that invoked it; a real incident had
+WORK and REVIEW both live and writing to the same file at once. Three smaller gaps sat beside it:
+the loop-bound counter counted a return WORK never had a real chance to act on as if it had;
+PLAN's fresh-eyes read never checked whether a plan's own file/line citations still resolved; and
+REVIEW had no reliable way to find where a feature's commit range started, short of guessing from
+an author field or a session identifier — both wrong for reasons now stated in `review/SKILL.md`
+itself.
+
+- **`go/SKILL.md`**: a stage's completion is the actual return of the call that invoked it, never
+  a polled process check; the loop-bound only counts a return against an item after a real WORK
+  attempt at that item, not merely after WORK ran.
+- **`plan/SKILL.md`**: the fresh-eyes read gains a third question — does every file/line citation
+  in the plan still resolve against the tree as it stands.
+- **`work/SKILL.md`**: `log.md` must open with the tree's starting `HEAD`, recorded before the
+  first commit lands.
+- **`review/SKILL.md`**: reads that `HEAD` line to fix the commit range, rather than an author
+  field or a session identifier.
+
+What this does not close: whether a stage confined to its own context can still spawn its own
+seats, and a citation already sitting in a stable, unedited file rather than newly added — both
+left for later.
+
+### A `Stop` hook that catches a stage ending its turn without a conforming deliverable — F-108
+
+`check-stage-delivery.py` already decided mechanically whether a stage's output conformed, but
+nothing forced it to run — a session could skip it, forget it, or point it at the wrong path, and
+nothing would catch that.
+
+- **`plugins/ae/scripts/go-leash.sh`**, a `Stop` hook on `go/SKILL.md`'s own frontmatter, refuses
+  to let a turn end while an in-flight marker names a stage whose deliverable doesn't conform.
+- **`plugins/ae/scripts/check-invocation-order.py`**, a plugin-global `PreToolUse` hook on the
+  `Skill` tool, refuses to invoke a stage whose predecessor's deliverable doesn't conform —
+  covers both `/ae:go`-driven and directly-invoked stage calls.
+- **A real defect this feature's own live test surfaced and fixed in passing**: `go/SKILL.md`'s
+  frontmatter `description` was a multi-line double-quoted YAML scalar, which Claude Code's
+  parser silently rejected — dropping the file's entire frontmatter, hooks included, at runtime.
+  Reflowed to a folded block scalar (`>-`).
+
+What this does not close, named rather than dropped: a human typing a stage's slash command
+directly bypasses both mechanisms — `PreToolUse` doesn't fire on a typed command, and no `Stop`
+hook is registered unless `/ae:go`'s own frontmatter was loaded that session. `review/SKILL.md`
+and `work/SKILL.md` carry the identical frontmatter defect `go/SKILL.md` had — tracked
+separately (see F-109).
+
+Contributors: a `Stop` hook fails open on its own timeout or error, and the host silently
+overrides a blocking `Stop` after a fixed number of consecutive blocks in one turn (measured
+against live CC 2.1.268) — a hook is an accelerant here, never the sole enforcement of a rule.
+
+### `review/SKILL.md` and `work/SKILL.md` carried the same frontmatter defect `go/SKILL.md` had — F-109
+
+The multi-line double-quoted `description:` field F-108 found and fixed in `go/SKILL.md` was
+also present in these two files, silently dropping their frontmatter — including `model:`/
+`effort:` — at runtime. Same fix, reflowed to a folded block scalar, applied to both.
+
+While fixing it, a live test found that a criterion assuming skill-level `model:`/`effort:`
+frontmatter actually changes the host's per-invocation behavior does not hold: a real
+`PreToolUse` payload showed `effort: medium` on an `ae:work` call declaring `effort: high`. That
+question — does skill-level `model:`/`effort:` do anything at all — was struck from this
+feature's own criteria mid-WORK and spun out to Forgejo #34, not answered here.
+
+### REVIEW's "fresh eyes" rule had no way to check whether it was followed — F-110
+
+`review/SKILL.md` required the verdict to come from someone who didn't write the work, but
+nothing enforced or even recorded this — reading real `review.md` files from recent features
+found none stating who judged the work or whether that party differed from WORK's own.
+
+- **A `review/readers/<name>.md` convention**: the actual reader's verdict, severities, and
+  dispositions are written to their own file, carrying `reader_kind:` (`claude-subagent`,
+  `cross-family`, or `human`) and, for a Claude subagent, the real `agent_id:`/
+  `agent_transcript_path:` receipt the host already writes. `review.md`'s own `verdict:` must
+  literally equal that file's `verdict:` via a `verdict_from:` pointer — carried, not restated.
+- A mechanical check (`unguarded-rules.py` plus fixtures) verifies every message-emitting site in
+  `check-stage-delivery.py` is guarded against unverified self-report. Review of this feature
+  itself found and a second pass confirmed-fixed three path-containment bypasses in how
+  `verdict_from:` was resolved (self-citation, `../` traversal, an absolute path escaping the
+  repo).
+
+Breaking: `review.md` files written before this convention (F-106 through F-109 above) do not
+carry a `review/readers/` file — not retroactively fixed.
+
+What this does not close, named as a residual: on the `reader_kind: human` branch, the mechanical
+check still only compares two files' `verdict:` values, both writable by one unisolated session
+in one turn — an actual human-identity check is not built here.
+
+Contributors: a stage's own future REVIEW pass must supply a `review/readers/<name>.md` file, or
+`check-stage-delivery.py`'s review check refuses it.
+
+### A discuss pass interrupted mid-way looked identical to one that finished — F-111
+
+`/ae:discuss` had no stated rule for what a resuming session should conclude when a seat's answer
+file or a round's angle file was simply absent — it couldn't tell "never dispatched" from
+"dispatched, produced nothing, then stopped." One rule added to `discuss/SKILL.md`: a resuming
+session facing an absent file dispatches or re-dispatches it before treating the round complete,
+never inferring completion from an absence. Verified live, twice, against two independently-built
+fixtures in two Claude Code sessions with no shared context — both reached the identical
+conclusion and the identical next action.
+
+What this does not close, stated in `acceptance.md`: whether `BL-241` (background-session-per-
+stage) should be built — this feature is the prerequisite that question needs, not an answer to
+it (see F-114 below for where that question went next).
+
+### AE's feature-artifact root was hardcoded to `.ae` in four places — F-112
+
+AE and its sibling project both actually keep their artifacts in an independent `agent-memory`
+git repo, reached only through a `.ae -> agent-memory` compatibility symlink, because nothing in
+AE could be told to use a different root.
+
+- **`plugins/ae/scripts/read-artifact-root.py`** is now the one place `artifact_root:` in
+  `.claude/pipeline.yml` is parsed, consulted by `check-invocation-order.py`, `go-leash.sh`, and
+  `analyze/SKILL.md`'s feature-directory-creation instruction. Absent the setting, `.ae` remains
+  the default with unchanged behavior.
+- `pipeline.template.yml` and `docs/quickstart.md` no longer claim the layout is fixed.
+- A second, independent instance of the same underlying pattern — `cross_family.enabled` in
+  `pipeline.yml` is parsed but never consulted before dispatching a discuss-stage seat — was
+  found during analysis and filed separately (Forgejo #36) rather than folded in.
+- A real bug in the new reader's own malformed-value check (an empty string is a substring of
+  everything in Python, so an empty `artifact_root:` was misdiagnosed as "a mapping or sequence"
+  instead of "empty") was found in review and fixed in the same pass, with regression fixtures
+  for the exact shapes that triggered it.
+
+### The stages had no way to say they'd benefit from their own session, without hardcoding a mechanism — F-114
+
+A prior attempt at this (since abandoned) baked a specific host mechanism into `go/SKILL.md`'s
+own permanent prose and was rejected for it. This one instead states a reusable pattern:
+
+- **`docs/references/capability-contract.md`**: a skill names a capability and the property it
+  needs, never a mechanism; a project's or user's own `CLAUDE.md`/`AGENTS.md` states the binding,
+  in ordinary prose, no schema required; absent a binding, the skill's existing default applies
+  unchanged — isolation is an accelerant, never a precondition.
+- `work/SKILL.md` and `review/SKILL.md` each declare needing `independent-top-level-session`
+  under this pattern. `review/SKILL.md` additionally requires that, when isolated, its own
+  investigation — not only the verdict F-110 already covers — starts fresh from `acceptance.md`
+  and the tree, never resumed from WORK's own session.
+- Verified against three real, live closed-book executions: no binding present → both stages ran
+  inline, no error; binding present with the new text → WORK and REVIEW each opened their own
+  session, confirmed never both mid-turn against the tree from raw session-transcript timestamps
+  (91 seconds apart, zero overlap); same binding, text reverted → zero spontaneous isolation.
+
+One criterion carries a disclosed, not hidden, residual gap: the claim that this feature's own
+text — not the project's pre-existing binding's standing instruction alone — is what causes the
+isolation rests partly on the feature's own author's self-reported control run; an independent
+reviewer's attempt to reproduce that specific control hit an account-wide usage limit and,
+separately, a stale plugin cache, rather than completing it. Signed off accepting the gap; the
+exact recipe to close it is on record for whoever picks it up.
+
 ## 0.15.0 (2026-09-01)
 
 ### The OpenAI seat calls the Codex CLI directly, and its receipt now claims only what a file can back — F-099
