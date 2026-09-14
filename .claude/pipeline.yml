@@ -1,5 +1,13 @@
 # .claude/pipeline.yml — Agentic Engineering (self-hosted)
 
+# --- Artifact Root ---
+# Feature artifacts live under <artifact_root>/features/{active,done,abandoned}/F-NNN-<slug>/.
+# This project already keeps that tree in the independent `agent-memory` repo and only reached
+# it before via a `.ae -> agent-memory` compatibility symlink (F-112 exists because that
+# symlink was a workaround, not a real setting). Setting this makes agent-memory the real,
+# declared root instead of an implicit target of a symlink AE itself couldn't see.
+artifact_root: agent-memory
+
 test:
   # The whole deterministic suite: the structural skill-frontmatter check plus every shell
   # test under tests/scripts/. Running only the frontmatter check would leave a red
