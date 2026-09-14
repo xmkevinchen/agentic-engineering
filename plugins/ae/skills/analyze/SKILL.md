@@ -91,9 +91,8 @@ you cannot yet state.
 A feature directory `<root>/features/active/F-NNN-<slug>/` — `F-NNN` an id no feature has ever
 held, retired ids never reused — holding two files. `<root>` is `.ae` unless the project's
 `.claude/pipeline.yml` sets `artifact_root:` to something else; run
-`python3 <plugin-root>/scripts/read-artifact-root.py` to get it (`<plugin-root>` the same
-plugin root `go/SKILL.md` already resolves for `check-stage-delivery.py`) rather than assuming
-`.ae`.
+`python3 <plugin-root>/scripts/read-artifact-root.py` to get it (`<plugin-root>` resolved the same
+way `discuss/SKILL.md` resolves it for `check-composite.py`) rather than assuming `.ae`.
 
 ### `analysis.md`
 

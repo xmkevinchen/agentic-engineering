@@ -27,6 +27,29 @@ read. Read it against the plan, the working log, and the criteria. The criteria 
 ones the human signed, and `acceptance.md` is where you read them from — not the plan's
 restatement of them and not the log's.
 
+## Check the log before judging it
+
+This is the first action of whichever session actually runs this stage — inline, or the
+`independent-top-level-session` the next section describes. It reads only files on disk, so it
+runs correctly wherever the stage itself ends up running, and it runs before any verdict is
+reached.
+
+`log.md` is WORK's deliverable, so a defect in it is WORK's to answer for, not something to read
+around and judge past. **Fold it into an ordinary `fail` verdict — with the gap itself as the
+next numbered item on `review/returns/` — rather than reaching a verdict from evidence that is
+not there to read, on any of:**
+
+- `log.md` is absent, empty, or its frontmatter cannot be read (not parseable, or not starting at
+  byte 0);
+- it carries an `ended:` value that is not one WORK has (`blocked` | `criterion-defective`);
+- a criterion signed in `acceptance.md` is never mentioned anywhere in it;
+- an item raised on any file under `review/returns/` is never mentioned anywhere in it — the
+  items are a declared input of WORK, and a log silent about one of its own inputs has not
+  accounted for it.
+
+This is the ordinary `fail` route, not a new one: the item it opens is counted exactly like any
+other open item by whatever counts them, and needs no human step.
+
 ## Running this stage
 
 This stage benefits from `independent-top-level-session` — see

@@ -36,10 +36,9 @@ Every dependency below is classified into one of four failure modes. The class d
 ## Hook enforcement and design surface
 
 Moved to [`hooks.md`](hooks.md) — the consolidated hooks reference: the measured
-enforcement table (CC 2.1.247), the official-semantics cross-check, the Codex
-convergence table, the standing design rules, and the workflow's minimal hook
-set. Dependencies #2/#3 above cover only *registration*; `hooks.md` is the
-authority on *what a firing hook can do*.
+enforcement table (CC 2.1.247), the official-semantics cross-check, and the
+Codex convergence table. Dependencies #2/#3 above cover only *registration*;
+`hooks.md` is the authority on *what a firing hook can do*.
 
 ## BL-023 closure evidence
 

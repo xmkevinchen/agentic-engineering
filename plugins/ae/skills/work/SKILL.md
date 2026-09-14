@@ -27,6 +27,31 @@ drops without saying so.
 Do not execute criteria the human has not confirmed. If a step names nothing that would
 turn red, send the plan back rather than inventing the missing check.
 
+## Check the plan before executing it
+
+This is the first action of whichever session actually runs this stage — inline, or the
+`independent-top-level-session` the next section describes. It reads only files on disk, so it
+runs correctly wherever the stage itself ends up running, and it runs before any commit lands.
+
+**Refuse to execute `plan.md` — no commit, nothing else read as though it were usable — on any
+of:**
+
+- it is absent, empty, or its frontmatter cannot be read (not parseable, or not starting at byte
+  0);
+- it carries an `ended:` value that is not one PLAN has (`criterion-unplannable` |
+  `check-green-first` | `input-refused`);
+- **unless** it carries `ended: input-refused` — a criterion signed in `acceptance.md` that
+  `plan.md` never mentions anywhere. A criterion PLAN sent back under `ended:
+  criterion-unplannable` is still named there, alongside what would unblock it, so this only
+  fires on a criterion the plan is silent about entirely.
+
+**Close the gap by re-invoking `/ae:plan`, naming what failed — not by writing the missing part
+yourself and not by executing around it.** This needs no human step: a plan that does not
+mechanically conform is a defect in the method, not a change to what a criterion means. It is a
+different route from the criterion-level `ended: criterion-defective` / `ended: blocked` below,
+which is for a criterion this stage cannot check once real execution has already started against
+a plan that does conform.
+
 ## Running this stage
 
 This stage benefits from `independent-top-level-session` — see

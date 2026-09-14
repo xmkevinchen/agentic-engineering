@@ -1,7 +1,0 @@
----
-discuss: {}
----
-
-# Analysis
-
-Stated.

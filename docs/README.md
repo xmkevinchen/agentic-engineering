@@ -18,7 +18,7 @@
 | [`quickstart.md`](quickstart.md) | Getting started with the shipped plugin. |
 | [`workflow-graph.html`](workflow-graph.html) | The stage graph as designed — five stage skills, two human gates, the return edges, and what each stage may refuse. Open it in a browser. |
 | [`discuss-graph.html`](discuss-graph.html) | The discuss stage drawn on its own: three rounds, the seats, and where the loop ends. |
-| [`references/hooks.md`](references/hooks.md) | Hooks: measured enforcement, official semantics, Codex convergence, AE's minimal set. |
+| [`references/hooks.md`](references/hooks.md) | Hooks: measured enforcement, official semantics, Codex convergence. |
 | [`references/cc-plugin-contract.md`](references/cc-plugin-contract.md) | Host dependencies and mitigations. |
 | [`references/claude-code-plugin-api.md`](references/claude-code-plugin-api.md) | Host API facts. |
 | [`references/cross-family-rationale.md`](references/cross-family-rationale.md) | Why cross-family review exists; the capability is kept. |

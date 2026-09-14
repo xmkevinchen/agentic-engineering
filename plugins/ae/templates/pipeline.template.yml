@@ -1,9 +1,10 @@
 # .claude/pipeline.yml — Agentic Engineering project config
 #
-# TWO things read this file automatically: the SessionStart hook
+# ONE thing reads this file automatically: the SessionStart hook
 # (`scripts/check-cross-family.sh`), which probes every entry under `cross_family:` and warns
-# about the ones that are configured but unreachable; and `scripts/read-artifact-root.py`,
-# read by the invocation-order and leash hooks and by ANALYZE, which resolves `artifact_root:`.
+# about the ones that are configured but unreachable. `artifact_root:` is read on demand, by
+# `/ae:analyze` running `scripts/read-artifact-root.py` (currently `analyze/SKILL.md`, as prose,
+# is the one place this happens) when it creates a feature directory.
 #
 # `test`, `lint` and `typecheck` below are read by NOTHING. They are a convention — the
 # place a person or an agent looks up what this project's checks are called. Filling them
