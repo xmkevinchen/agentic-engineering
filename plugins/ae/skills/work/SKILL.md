@@ -27,6 +27,23 @@ drops without saying so.
 Do not execute criteria the human has not confirmed. If a step names nothing that would
 turn red, send the plan back rather than inventing the missing check.
 
+## Running this stage
+
+This stage benefits from `independent-top-level-session` — see
+`docs/references/capability-contract.md` for what that means and how it is declared. If your
+context documents a binding for it, run this stage there, handing off the plan path and the
+signed criteria explicitly. If no binding is documented anywhere in context, run this stage
+inline exactly as the rest of this file describes — nothing here is a precondition, and finding
+no binding is not a reason to pause or ask.
+
+**When this stage does run as `independent-top-level-session`, one rule holds regardless of what
+the binding turns out to be:** do not start this stage's own turn until you hold a confirmed
+signal — never an elapsed-time guess — that whatever last held the tree has fully finished its
+own turn. `go/SKILL.md`'s existing rule against ending a turn while a backgrounded command still
+writes to the tree is keyed to the orchestrator synchronously awaiting this stage's return; that
+mechanism does not reach a separately-spawned session, so this restates the requirement directly
+here rather than assuming it still applies.
+
 ## Deliverable
 
 Commits on the branch, and a working log at `<feature-dir>/log.md`.
