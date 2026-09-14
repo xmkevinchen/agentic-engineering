@@ -148,8 +148,7 @@ registration, prompt/agent handlers).
 ### AE's minimal hook set (designed 2026-08-28)
 
 Every additional hook must earn its place the way every surviving line does.
-Two were built and later retired (F-116) once each stage's own prose carried
-their logic directly; this section now holds only the one still-open design.
+This section holds the one still-open design.
 
 **H2 — the freeze-watch (`FileChanged`; Claude Code only).** Matcher on the
 conventional deliverable filenames; fires when a file under a run dir whose
