@@ -3,8 +3,8 @@
 <!-- BEGIN MANAGED: forgejo-work -->
 Repository: `ckai/agentic-engineering`
 Snapshot status: observed
-Last successful fetch: 2026-09-12T20:29:00Z
-Last attempt: 2026-09-12T20:29:00Z
+Last successful fetch: 2026-09-14T18:13:14Z
+Last attempt: 2026-09-14T18:13:14Z
 
 Historical snapshot only. Refresh live before selection or mutation.
 Next is a candidate set; display order is not priority.
@@ -15,7 +15,7 @@ None.
 
 ## Next
 
-- #14 — /ae:go 的 re-entry 契约：从磁盘能恢复到什么程度
+None.
 
 ## Blocked
 
@@ -25,8 +25,9 @@ Unclassified open Issues: none.
 
 ## Board Sync
 
-Status: pending
-Board not checked in this refresh.
+Status: synced
+Checked at: 2026-09-14T18:15:07Z
+Verified via browser: Backlog/Ready/In Progress/Blocked all show 0 cards (matches 21 open Issues all workflow/backlog, and no ready/in-progress/blocked Issues). Done retains #24, #33, #14. #25 has no Project association (issue sidebar shows &quot;No project&quot;) and was never on this board, so no card move was needed or made — not added, per the rule against enrolling every historical closed Issue.
 <!-- END MANAGED: forgejo-work -->
 
 ## Preserved pre-sync content (historical)
