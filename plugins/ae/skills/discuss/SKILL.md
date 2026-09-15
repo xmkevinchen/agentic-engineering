@@ -106,6 +106,14 @@ evidence. That is the failure this stage exists to prevent.
 `ae:workflow:codex-proxy`, `ae:workflow:gemini-proxy` and `ae:workflow:openai-compat-proxy` each
 hold a seat on another family, and each reports plainly when its backend is not there.
 
+**Before dispatching any of them, check whether the project actually wants that family.** Run
+`python3 <plugin-root>/scripts/read-family-table.py --enabled-only` (`.claude/pipeline.yml`'s
+default path, same plugin-root resolution `check-composite.py` already uses below) and dispatch
+only a family whose entry appears in that output — an absent table means every family is enabled
+by default, but a family explicitly marked `enabled: false` is skipped, not merely logged.
+`check-cross-family.sh`'s own `SessionStart` diagnostic is unaffected; this is a second, separate
+consumer of the same table.
+
 **There is no ranking among seats.** Take whoever clears both counts, and more than one where you
 can: seats answer blind, and two blind answers tend to bring different things rather than the same
 thing twice.
@@ -277,6 +285,11 @@ failing?** Both halves are load-bearing.
   three is for, and it re-enters at round one.
 - A finding against the **question's** premise says the thing being asked was not worth asking.
   That ends the loop.
+- A finding that is real but changes neither the decision recorded nor what PLAN can do with it
+  is **non-blocking**: write it into the record as a deferred finding with the condition that
+  would reopen it, and do not spawn another round over it. The bar is that exact test — does it
+  change the decision, or change what PLAN can do with it — not a fresh judgment call each time;
+  a finding that fails either half of the test stays in the two branches above.
 - "This may not hold" is not "this does not hold". A finding that names an unconfirmed
   precondition and proposes a hedge is improving the answer, not returning the question.
 
@@ -291,12 +304,13 @@ wrong, another has an improvement that would survive — the return wins and the
 Carry the surviving findings into `returned-<id>.md` alongside it: they were not answered, and
 ANALYZE re-posing the question is what decides whether they still apply.
 
-**Everything that is not a return re-enters at round one. There is no third class.** A finding that
-the remaining disagreement is a preference rather than a fact is not an exit, and neither is one you
-cannot place; both re-enter, and the record is where a preference lands. A finding that survives has
-changed what is being asked, and the changed question earns the same independent answering the first
-one got. Closing out again over a composite no seat has seen uncorrelated tests the new version more
-weakly than the old one was tested.
+**Everything that is not a return, and not non-blocking by the test above, re-enters at round
+one.** A finding that the remaining disagreement is a preference rather than a fact is not an
+exit on its own — it re-enters unless it also passes the non-blocking test, and the record is
+where a preference lands either way. A finding that survives and is not deferred as non-blocking
+has changed what is being asked, and the changed question earns the same independent answering
+the first one got. Closing out again over a composite no seat has seen uncorrelated tests the new
+version more weakly than the old one was tested.
 
 **A correction round that shows the question was posed wrong takes the same exit, tag and all,
 rather than advancing into a close-out over a question that should not have been asked. It does not

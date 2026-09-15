@@ -232,8 +232,10 @@ commit; judging the rest, once, over the feature's whole change, is here. Report
 ordinary finding with a severity and disposition, same as any other — not a new category.
 - **Scope is answered both ways.** Name every changed file no step accounts for, and everything
 the criteria demand that is still missing. Do not skip this.
-- **An artifact asserting facts about the repository is checked claim by claim.** Read the
-sources it cites and form your own answer before reading the artifact. Then give each material
+- **An artifact asserting facts is checked claim by claim, whatever those facts are about.**
+Not only facts about the repository — a date, a figure, a quote, anything the deliverable claims
+is true of something outside itself. Read the sources it cites (a primary source outside the
+repository counts) and form your own answer before reading the artifact. Then give each material
 claim its own verdict against the line it rests on. "It reads correctly" is not an answer.
 - **Every verification the plan names is accounted for.** List them all. Give each one of three:
 performed in the log, performed here, or owed by a named party. Where that party is you, perform
