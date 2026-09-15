@@ -3,8 +3,8 @@
 <!-- BEGIN MANAGED: forgejo-work -->
 Repository: `ckai/agentic-engineering`
 Snapshot status: observed
-Last successful fetch: 2026-09-14T18:13:14Z
-Last attempt: 2026-09-14T18:13:14Z
+Last successful fetch: 2026-09-15T02:22:00Z
+Last attempt: 2026-09-15T02:22:00Z
 
 Historical snapshot only. Refresh live before selection or mutation.
 Next is a candidate set; display order is not priority.
@@ -25,9 +25,8 @@ Unclassified open Issues: none.
 
 ## Board Sync
 
-Status: synced
-Checked at: 2026-09-14T18:15:07Z
-Verified via browser: Backlog/Ready/In Progress/Blocked all show 0 cards (matches 21 open Issues all workflow/backlog, and no ready/in-progress/blocked Issues). Done retains #24, #33, #14. #25 has no Project association (issue sidebar shows &quot;No project&quot;) and was never on this board, so no card move was needed or made — not added, per the rule against enrolling every historical closed Issue.
+Status: pending
+Board not checked in this refresh.
 <!-- END MANAGED: forgejo-work -->
 
 ## Preserved pre-sync content (historical)
