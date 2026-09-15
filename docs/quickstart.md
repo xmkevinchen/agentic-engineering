@@ -73,6 +73,23 @@ to `.claude/pipeline.yml` and fill in two things:
 Both are optional. Without the file, the session-start probe reports that it found no
 `cross_family` table, and a stage asks you for a command when it needs one.
 
+### Capability declarations (optional)
+
+`work` and `review` can each run as an independent session instead of inline, when your own
+`CLAUDE.md` or `AGENTS.md` documents how to open one on your setup. AE never requires this —
+absent any such note, every stage runs inline exactly as shown above.
+
+To opt in, add a line like this to your own `CLAUDE.md`/`AGENTS.md`, naming whatever your own
+setup actually provides:
+
+> When a task needs an independent top-level session, use `<your own tool or convention>`.
+
+One AE contributor's own personal configuration — not part of this repository, a private,
+machine-local file — already uses this shape; see
+[`docs/references/capability-contract.md`](references/capability-contract.md) for that citation
+and the full pattern: how a skill states a need, how you state a binding, and what happens when
+you don't.
+
 ## Cross-family review
 
 Three model families are reachable: Claude (the session itself), Codex as a `codex exec`
