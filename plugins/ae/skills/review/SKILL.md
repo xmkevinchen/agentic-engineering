@@ -225,6 +225,11 @@ check failing before the work that made it pass, see it fail yourself or send th
 to WORK.
 - **The checks bite.** Take the most load-bearing criterion, break what it protects, and confirm
 its check catches it.
+- **The judged half of code quality is this stage's, not WORK's.** Testability, extensibility,
+and whether the change was cut at a reasonable size are not commands anyone can run — WORK runs
+the project's mechanical checks (`.claude/pipeline.yml`'s `test:`/`lint:`/`typecheck:`) per
+commit; judging the rest, once, over the feature's whole change, is here. Report each as an
+ordinary finding with a severity and disposition, same as any other — not a new category.
 - **Scope is answered both ways.** Name every changed file no step accounts for, and everything
 the criteria demand that is still missing. Do not skip this.
 - **An artifact asserting facts about the repository is checked claim by claim.** Read the

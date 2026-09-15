@@ -100,10 +100,15 @@ looking for superseded values in the first kind, and do not edit them out of the
 ## What must be true of it
 
 - **One step, one commit.** The message says what changed and why, and the project's
-  checks are green when it lands.
+  checks are green when it lands. Find them at `.claude/pipeline.yml`'s `test:`/`lint:`/
+  `typecheck:` `command:` fields when the project has filled them in; where a field is empty
+  or the file doesn't exist, ask the human for the command rather than inventing one or
+  skipping the check silently.
 - **Every check was seen failing before the work that made it pass.** Watching it go red
-  first is one way; planting a defect once it is green is another. A check that already
-  passed before the change is too loose — fix the check.
+  first is one way; planting a defect once it is green, watching it fail, then removing the
+  defect again before the commit lands is another — the commit that lands still needs the
+  check green, same as every other commit. A check that already passed before the change is
+  too loose — fix the check.
 - **The log carries the evidence, not the conversation.** For each criterion: the check
   that was run and what it said when it failed; for a criterion that is judged rather
   than run, where the thing to be judged lives. Review must be able to re-run or
@@ -113,6 +118,14 @@ looking for superseded values in the first kind, and do not edit them out of the
   the same open item. What needs them is the
   judged bound beside it, which triggers on whether the work *shrinks*: a session that hits
   the same red four times and writes it up once reads as convergence it did not have.
+- **The same fix attempted three times, unchanged, stops and does something different on the
+  fourth.** This is about inside one WORK invocation, not the cross-return rate bound above:
+  a criterion whose check still fails after three attempts at the same approach does not get a
+  fourth identical one. Something observable changes — state a different approach in the log
+  before trying it, or stop and flag the criterion as needing reconsideration (to the human, or
+  by naming it for `discuss`) rather than to yet another attempt at the same thing. Three, to
+  match this project's own three-strike shape elsewhere, not derived from a real run yet — treat
+  as a starting cap, adjust it once one is observed to actually fire.
 - **Nothing lands in a commit unaccounted for** — either the step it belongs to, or the
   review finding it answers. Anything else is reverted, or the reason it belongs is
   recorded.

@@ -85,10 +85,15 @@ second standard named here is a second answer to the same question.
 something no criterion asks for.
 
 **No criterion rests on a check nobody has seen fail.** Where the check already exists, run it
-now — a first observed result of green stops the plan, because either the property already
-holds or the check is aimed at something other than the criterion. Say which check and which
-criterion, under `ended: check-green-first`. Where it does not exist yet,
-name the observation precisely enough that whoever writes it can watch it fail first.
+now. A first observed result of green means one of two things, and they call for opposite
+moves: either the property already holds and there is nothing to plan here — stop, say which
+check and which criterion, under `ended: check-green-first` — or the work is meant to leave the
+check green throughout, which is the defining shape of a refactor or a performance change. That
+second case is not a stop condition: plan it normally, and name in the step that its check must
+be watched green-then-still-green across the change, with a defect planted and removed as the
+step's own red-then-green evidence (`work/SKILL.md`'s "planting a defect" method). Where the
+check does not exist yet, name the observation precisely enough that whoever writes it can watch
+it fail first.
 
 ## Before work starts
 
