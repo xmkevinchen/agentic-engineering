@@ -251,6 +251,15 @@ what is generating them as one finding, not the instances as many.
 preferred alternative, not a restatement of what the code does, not a pre-existing defect this
 change did not touch.
 
+## Carry two things past this feature
+
+**Append, never overwrite, to `<root>/standing-notes.md`** — the one deliverable in this workflow
+that accumulates across features rather than holding only current truth, so the next feature does
+not start from zero on what an earlier one left open. Two additions, each a dated one-liner naming
+this feature's id: this pass's "what was not checked" list, under `## Unchecked`; and any finding
+disposed as deferred, with its reopening condition, under `## Deferred`. Where the file does not
+exist yet, create it with those two headings.
+
 ## The human signs
 
 Show what changed, what was verified and how, every finding's disposition, and what was not checked.
