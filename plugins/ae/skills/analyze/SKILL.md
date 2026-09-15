@@ -3,7 +3,6 @@ name: analyze
 description: "Work out what the problem is and what would count as done, with evidence behind both. Creates the feature directory, the analysis, and the acceptance criteria the human signs."
 argument-hint: "<BL-NNN> | <F-NNN-slug, to resume a blocked one> | <feature description>"
 user-invocable: true
-effort: high
 ---
 
 # /ae:analyze — name the problem, and define what done means

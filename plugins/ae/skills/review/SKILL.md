@@ -4,8 +4,6 @@ description: >-
   Judge the delivered work against the criteria the human signed, through a reader
   who did not write it. The signature that completes a feature is the human's, not this verdict.
 argument-hint: "<plan file path>"
-model: opus
-effort: xhigh
 user-invocable: true
 ---
 

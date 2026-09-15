@@ -5,7 +5,6 @@ description: >-
   criterion's check can fail.
 argument-hint: "<plan file path>"
 user-invocable: true
-effort: high
 ---
 
 # /ae:work — execute the plan, one step per commit

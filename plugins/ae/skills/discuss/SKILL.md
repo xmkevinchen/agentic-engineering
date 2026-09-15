@@ -2,8 +2,6 @@
 name: discuss
 description: "Settle one contested design decision into a record /ae:plan can consume — the options, the choice, the reason, and what would reopen it."
 argument-hint: "<feature-dir> and one id from its discuss: list, or a discuss-<id>/ directory to resume>"
-model: opus
-effort: high
 user-invocable: true
 ---
 

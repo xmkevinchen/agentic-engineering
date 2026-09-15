@@ -2,8 +2,6 @@
 name: plan
 description: "Decide the method: cut the work into dependency-ordered steps against criteria the human has already signed, and name how each step verifies its criteria."
 argument-hint: "<feature-dir>"
-model: opus
-effort: high
 user-invocable: true
 ---
 
