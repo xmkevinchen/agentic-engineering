@@ -63,9 +63,6 @@ file alone.
   assumption together with what would retract it.
 - It names who produced what — one clause per option, per correction, per close-out finding.
   Argue what came back like anything else, and invent nothing to fill a slot nobody answered.
-  This attribution is what makes the stage falsifiable: across enough features it can be read off
-  whether an outside party ever changed a decision, and if the answer is never, the seats below
-  should go.
 
 ## The shape of a pass
 
