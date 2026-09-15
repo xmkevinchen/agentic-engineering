@@ -3,8 +3,8 @@
 <!-- BEGIN MANAGED: forgejo-work -->
 Repository: `ckai/agentic-engineering`
 Snapshot status: observed
-Last successful fetch: 2026-09-15T02:22:00Z
-Last attempt: 2026-09-15T02:22:00Z
+Last successful fetch: 2026-09-15T04:04:30Z
+Last attempt: 2026-09-15T04:04:30Z
 
 Historical snapshot only. Refresh live before selection or mutation.
 Next is a candidate set; display order is not priority.
