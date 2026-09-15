@@ -1,8 +1,10 @@
-# Rebuilding AE — why, what the minimum is, and what comes next
+# Rebuilding AE — why, and what it does not claim
 
-> **Status: current.** This is the top-level account of the rebuild: the evidence
-> that started it, the state of the tree today, and the ordered work still to do.
-> Where a document under [`history/`](history/README.md) contradicts this one,
+> **Status: current.** This is the top-level account of why the rebuild
+> happened: the evidence that started it, and the limits of what it
+> established. What is missing and what is planned next live in this
+> project's own Forgejo issues and board, not here — see §2. Where a
+> document under [`history/`](history/README.md) contradicts this one,
 > that document is the history and this one is current.
 
 ## The one-sentence version
@@ -16,12 +18,15 @@ rule per past incident, 98% of it never repeated — rather than a **program**. 
 law is only load-bearing if someone reads it at the moment of decision. A
 controlled experiment tested whether anyone did, and a **182-line** workflow
 reproduced the same results on the same work. The prose went from 8,457 lines to
-**779** at the delete, and stands at **886** today — see the counter in §4 for why it rose.
+**779** at the delete, measured once, dated to the delete itself — the tree's
+current line count is the tree's own business, not a number this document
+carries and re-measures.
 
-**Two things this document is not.** It is not a report on finished work — §3
-lists eight things known to be missing, and three of the five stages have never
-been run by a session that did not write them. And it is not a claim that the
-minimum has been found; what §2 describes is a first cut at one, still untested.
+**Two things this document is not.** It is not a report on finished work — the
+project's own issues track what is known to be missing, and this document does
+not. And it is not a claim that the minimum has been found — what shipped at
+the delete was a first cut, still being tested by the work that has happened
+since.
 
 ---
 
@@ -51,9 +56,9 @@ disposition reached for on nearly every one of them was to add or amend a
 document. Most of them should have been deletions, and became deletions only when
 a person said so.
 
-**Observed.** 24 skills, 8,457 lines — the peak reachable in git history, and the
-figure every counter in §4 is measured against — against 141 structural controls (69 typed
-refusal codes in the deterministic Kernel plus 72 executable check scripts).
+**Observed.** 24 skills, 8,457 lines — the peak reachable in git history — against
+141 structural controls (69 typed refusal codes in the deterministic Kernel plus
+72 executable check scripts).
 A text analysis put the prose at 98% non-repeating and only ~11% conditional
 logic. The single densest line in the review skill was 2,329 characters.
 
@@ -141,7 +146,9 @@ one question supplied in the prompt.
    present, and the largest block — 8,000 lines of frozen corpus and 90 fixtures —
    guarded the archived Kernel. A scan proving the words are on disk is not
    evidence that anything obeyed them, and it turns every rewording into
-   maintenance. Those are gone; see §4, Phase A, for what replaced them.
+   maintenance. Those are gone; what replaced them is this repository's own
+   current tree, not documented here — the tree is its own current state, and
+   a second copy of it in this file is the thing that goes stale.
 
 **Honest limits (unknowns, not conclusions).** n = 3, all with known answers.
 Genuinely exploratory work — the shape AE ultimately serves — was **not** tested.
@@ -197,448 +204,19 @@ or rules. Under these semantics that buys cost without control.
 
 ---
 
-## 2 · What the minimum currently is
+## 2 · Current state and what's next
 
-The delete was executed as a **factoring**, not a purge: the core workflow was
-kept, the satellites left, and the prose that described coordination went with the
-coordination.
-
-**Read this section as a position, not a result.** Nothing here establishes that
-779 lines is the right number, that the six skills are the right six, or that what
-survived survived on merit rather than on nobody having questioned it yet. Several
-things that looked load-bearing all year turned out to be reachable from nothing
-at all once the question *what loads this?* was asked of them one by one.
-
-### 2.1 What is in the tree today
-
-| | Before | Now |
-|---|---|---|
-| Skills | 24 | **6** |
-| Lines of skill prose | 8,457 | **886** |
-| Longest single line in a skill | 2,329 chars | **633 chars** |
-
-The six:
-
-| Skill | What it is |
-|---|---|
-| [`go`](../plugins/ae/skills/go/SKILL.md) | The entry. The stage order, the rules every stage obeys, and the two human stops. It invokes the stage skills rather than restating them. |
-| [`analyze`](../plugins/ae/skills/analyze/SKILL.md) | Is the problem real, and what does *done* mean? Creates the feature directory, the analysis and the acceptance criteria. |
-| [`discuss`](../plugins/ae/skills/discuss/SKILL.md) | Settles one contested decision into a record the plan can consume, using seats from more than one model family. |
-| [`plan`](../plugins/ae/skills/plan/SKILL.md) | Cuts dependency-ordered steps against criteria already signed, and names the check each step turns red. |
-| [`work`](../plugins/ae/skills/work/SKILL.md) | One step, one commit, every check seen failing first. |
-| [`review`](../plugins/ae/skills/review/SKILL.md) | Judges the delivered work against the frozen criteria. The completion gate. |
-
-Alongside them: 18 agent definitions, two bundled MCP servers, and five scripts
-under `plugins/ae/scripts/` — every one of which now has a live caller: the
-session-start probe and its family-table reader, the Codex seat runner, the
-composite check the discuss stage runs, and the skill-frontmatter check.
-
-### 2.2 What was kept, and on what grounds
-
-- **The two human gates and the deliverable-on-disk rule** — the experiment's
-  finding was that these, not the prose, were carrying the control.
-- **The executable checks** — the measured capital. They now get an execution
-  path in review rather than a prose instruction to run them.
-- **Cross-family seats** — kept for a documented reason, not as polish:
-  self-preference and same-family bias in model-as-judge are established in the
-  literature ([`references/cross-family-rationale.md`](references/cross-family-rationale.md)).
-  What went is the coordination protocol that had grown around them.
-- **The close-out readers** — four deliberately-designed adversarial prompts.
-  Their value was in the prompts; see §3.6 for the gap they currently sit in.
-
-### 2.3 What left, and where it went
-
-The coordination protocol, the telemetry layer, the knowledge graph, the
-project-management surfaces and the ad-hoc tools were removed from the plugin
-along with the documents that described them. The prose case law is not
-destroyed: it is in git history, and a rule returns **only as structure or spec
-when something real hits it again**.
-
-### 2.4 The asymmetry worth noticing
-
-`discuss` is 381 of the 886 lines — **43% of all remaining prose in one stage**.
-That is not an oversight, and it is not a virtue either. It is the only stage
-that has been run repeatedly by sessions that did not write it, and every one of
-those runs added something. The other three working stages total 145 lines and
-have had no such treatment. §3.1 is the direct consequence.
+Not here. The tree is its own current state, and the open gaps and the roadmap
+are exactly the two things that go stale fastest in a document like this one —
+this section used to carry both, and rewriting it on almost every working day
+was itself evidence the rebuild it describes was diagnosing. What is missing
+and what is planned next are tracked as this project's own Forgejo issues and
+project board (see `project-management.md`), which carry status natively
+instead of a paragraph nobody updates.
 
 ---
 
-## 3 · What is known to be missing
-
-Each item below was **observed**, not predicted. They are the input to the
-roadmap in §4.
-
-### 3.1 Three of the five stages are cut to the floor and undeveloped
-
-**Plain-language version.** `plan`, `work` and `review` were reduced during the
-delete and have not been worked on since. They are not finished stages that
-happen to be untested — they are a floor nobody has built back up on evidence.
-
-**Observed.** `discuss` went through three rounds of real development after the
-delete and was run six times by fresh sessions given nothing but the skill; those
-runs produced five genuine defects and two rule ambiguities, and the stage is 351
-lines. `plan` (39), `work` (58) and `review` (48) — 145 lines together — received
-the floor cut and nothing after it.
-
-**`plan` and `review` have since been run closed-book** — three runs and one
-respectively, recorded outside this document. Each produced changes to the stage
-it exercised; what stands here is only that the claim above no longer covers them.
-**`work` has since been run too** — once, closed-book, with this tree loaded as the plugin. It
-produced one defect in the stage text it exercised and no return: its review passed on the first
-pass, so the loop between work and review was never taken. What that run establishes and what it
-leaves open is in Phase A.
-
-**Next step.** Take feature directories that already hold an analysis and signed
-criteria, open fresh sessions, and run `plan` and `review` twice each with no
-hints beyond the skill file. Cost is far below a discuss run: no seat rounds.
-
-**Purpose.** There is no reason to believe the untested three are cleaner than
-the tested one — the difference in line count measures attention, not economy.
-Hardening the loop before running them is hardening an untested foundation.
-
-### 3.2 A rule off the execution path is not followed
-
-**Plain-language version.** Where a rule sits in the file decides whether it is
-obeyed — more than how clearly it is written.
-
-**Observed.** One requirement sat 199 lines away from the paragraph where the
-executor acts. Across two features and twelve produced files it was followed
-**zero times**. Four rules written *inside* the acting paragraph were followed
-**6 of 6** across six independent executions — same model, same file.
-
-**The rule this yields.** Default to **prevention over checking**: if a rule can
-only be caught after the fact, it is probably in the wrong place. Ask first
-whether the executor can see it at the moment it acts; add a check second.
-
-### 3.3 Nothing on disk says how far a run got
-
-**Plain-language version.** The workflow's resume story exists only in the
-conversation.
-
-**Observed.** An analysis naming three questions should produce three discussion
-runs; the only thing driving that loop is the running agent remembering how many
-are left. Nothing on disk says "three named, one settled, two outstanding". A
-compaction or a restart loses the count with no signal. Partial states — a stage
-stopped midway, a seat that never returned, a synthesis written but not frozen —
-have no defined appearance on disk either.
-
-**Next step.** Define the re-entry contract: a session that has never
-participated, given only the feature directory, must be able to say **where the
-run got to, what happens next, and which artifacts are not trustworthy.**
-
-**Purpose.** This is a hard prerequisite for running stages in separate sessions —
-once a stage runs elsewhere, disk is the *only* channel left.
-
-### 3.4 The entry can be re-derived instead of invoked
-
-**Observed.** The entry's own opening rule is that a stage's behavior lives in
-that stage's skill and must be invoked, not re-derived. In an observed run, the
-entry loaded and the analyze stage was then executed from what the session
-remembered — the stage skill was never read. **The output was correct, which is
-the problem:** nothing distinguishes an invoked stage from a reconstructed one.
-
-### 3.5 The acceptance criteria have no non-author reader
-
-**Observed.** The ground rule "the author of a thing never reviews it alone" is
-honored for the plan (a reader who did not write it) and for the delivered work
-(review is fresh eyes). It is skipped for `acceptance.md` — written by the
-analysis, then signed. That file is the standard everything downstream is judged
-against, and the signature freezes it. It is the highest-leverage artifact in the
-workflow and the only one that reaches a human unargued-with — when `discuss` runs,
-the seats attack the criteria on the way through; when it names no question,
-nothing does.
-
-**The disposition is not to add a reader**, and §4 records why: a check that misses
-something is a defect in that check, not a licence for another one in front of it.
-If criteria reach the human wrong, the repair is in the analysis stage that
-produced them.
-
-### 3.6 The agent definitions describe a world that moved
-
-**Observed.**
-
-- The four adversarial close-out readers are reached from exactly one place: the
-  third round of the discuss stage. No other stage has a close-out at all, and
-  whether that is right has never been decided — it is where they happened to
-  land.
-- Three frontmatter fields were set across the definitions that appear in no
-  published list of supported fields and are read by nothing — one of them
-  measured absent from a spawned agent's context entirely. All three are gone
-  now, and a suite check fails if any returns. They came in together from an
-  external agent collection, were classified as *tolerated* on import, and were
-  then promoted to a prescribed pattern and copied across thirteen files.
-- Parts of the definitions still describe a coordination layer whose behavior has
-  changed underneath them.
-
-### 3.7 The relay contract is verified for one family only
-
-**Observed.** The OpenAI seat now runs its backend as a subprocess it owns and
-refuses to certify a turn it cannot back with a file. The other two seats carry
-the same relay contract with **no artifact independent of the relaying agent** —
-undocumented and untested, rather than measured to be sound. Separately, nothing
-in the workflow currently notices a seat citing `file:line` for text that is not
-there.
-
-### 3.8 The process artifacts have no remote
-
-**Observed.** Feature directories, backlog and discussion records are gitignored
-local state. This has already cost a full loss once, when a machine went. The
-requirement was never "do not version-control it" — it was "not on the public
-remote", which is a statement about *which* remote.
-
----
-
-### 3.9 The shape the evaluation method depends on is itself unvalidated
-
-**Plain-language version.** The method adopted for developing this plugin — a
-controller session directing a run in a separate session and watching it — has
-never been put through a deliberate test. It is being relied on before it has
-been shown to work.
-
-**Observed.** One discuss pass has been driven this way, in a background session
-watched from another, and it completed: two seat rounds, a composite, four
-close-out readers, a handoff, no intervention, and the write boundary held. What
-also happened is the part worth keeping: **all three of the watching session's
-monitoring checks were broken**, and in the same way. A liveness probe used a
-command that requires a terminal, so it always failed and reported the run dead on
-the first loop. A completion probe watched for a file that appeared, vanished and
-reappeared. And an earlier monitor was still running when a second was started, so
-two of them reported the same events.
-
-**The rule that falls out.** Silence and success are indistinguishable, and so are
-"the condition did not happen" and "my probe cannot see it". **Before arming a
-monitor, make its condition fire once on purpose. A condition that cannot be made
-to fire is not a monitor.**
-
-**One property of the shape is now measured.** The loop *edit a skill → reload →
-re-run the same input → compare* discriminates — the same input before and after a
-six-line change produced a materially different artifact. What that costs and what
-it requires of the harness is in `CLAUDE.md`'s *Run before deciding*.
-
-**What is still unknown.** Whether a stage confined to its own context can still
-spawn the seats it needs; what the controller owes the run and what it must not
-do; and how a run that stops halfway appears on disk to whoever picks it up
-(§3.3). Those three decide whether stages can be split across sessions at all.
-
-**Purpose.** This is not a nice-to-have on the roadmap: every other phase is now
-evaluated through this shape, so a fault in it is a fault in the evidence for
-everything else.
-
----
-
-## 4 · The roadmap
-
-Ordered by dependency, not by appeal. Each phase names what unblocks the next.
-
-### Phase A — run what was never run *(prerequisite for everything after it)*
-
-Run `plan`, `work` and `review` closed-book, at least twice each, and fix what
-falls out.
-
-**Closed-book means: a fresh session, given only the skill file and the work
-item, with no hint about the rules it is supposed to follow — driven by a second
-session that watches what it does and writes down where it went wrong.** That
-pairing is the evaluation method, and it is the one that has actually produced
-findings: six such runs of the discuss stage yielded five genuine defects and two
-rule ambiguities, against zero from any scan over the same files. It also costs
-far less than it sounds for these three stages — no seat rounds.
-
-These three are not merely untested, they are undeveloped (§3.1) — so expect the
-runs to produce work, not a verdict. **All three have now been run; the loop between work and
-review has not.** **Unblocks:** any change to the working loop, including Phase D. **Why first:** §3.1 and §3.2 — the one stage that got this
-treatment was changed substantially by it, and the placement rule from §3.2 can
-only be applied to stages whose real failures are known.
-
-**The `work` run carries a second job, and it decides how it must be staged.**
-Every measurement behind §3.2 — zero of twelve for a distant rule, six of six for
-rules inside the acting paragraph — was taken with the text handed to a session as
-a **file**. Whether placement behaves the same way when the same words arrive as a
-**loaded skill** is untested, and §3.2 is now the basis for where rules get
-written. So this run is not a session handed `work/SKILL.md`: it is this tree
-becoming the loaded plugin, `/reload-plugins`, then one real `/ae:go` whose work
-stage goes round twice. Splitting it into two runs would spend the same setup
-twice and answer neither question better.
-
-**The first such run went one pass, so half of this is done.** Delivery as a loaded skill is
-answered, and it answered the placement question in a sharper form than §3.2 measured: the rule
-was three lines above the paragraph where the executor acted, and lost anyway — to a worked
-example beside it that did not have the shape the rule asked for. Distance was not the variable;
-the nearest concrete artifact was. **What is still owed is a run whose review returns at least
-once**, because that is the circulation Phase D tunes and no run has taken it.
-
-### Phase B — make the controller, the monitor and the executing session a tested shape
-
-Phase A runs inside this shape, and the shape has never been deliberately tested
-(§3.9). Three things to settle, in this order, because each is cheap and gates the
-next: **a monitor is armed only after its condition has been made to fire on
-purpose**; the controller's contract is written down — what it owes a run, and
-what it must never do while one is in flight; and it is established whether a
-stage confined to its own context can still spawn the seats it needs, since that
-one experiment decides whether stages can be split across sessions at all.
-
-**Before building any of it, compare against the host's own version.** A
-controller directing workers in separate contexts, with a channel back, *is* Agent
-Teams in principle — the coordination layer this rebuild deleted. Rebuilding it by
-hand under a new name, at the same cost and with fewer measurements behind it,
-is the obvious way for this phase to go wrong. What the host already provides:
-addressable agents, mailboxes on disk, an idle notification, and shared task
-state. What is already recorded against it: `TeamCreate` and `TeamDelete` stopped
-existing several host versions ago and `team_name` is accepted-but-ignored; only
-the main conversation may subscribe to an idle notice, so a worker cannot wait on
-another worker; and on one occasion two named teammates finished and their
-results reached nobody, which is the opposite of the documented behaviour. What
-was deleted was never the host mechanism — it was the *protocol prose* AE had
-grown around it. So the question this phase answers is which parts of the shape
-the host already does, and what the remainder actually is.
-
-**One data point exists.** The shape was exercised in this repository on
-2026-09-01: five workers spawned from one controlling session, each with a role,
-a reading list and one question, reporting back through the host's own channel.
-All five delivered and their findings were acted on. The single mechanical limit
-hit was a result-size cap that silently truncated the longer reports, which was
-only visible because the controller noticed the reports ended mid-sentence and
-asked again — an instance of the §3.9 rule, arriving from the other side.
-
-**Why second, not first:** Phase A can be driven by hand while this is being
-settled, and doing so is how its faults surface. Running it *before* Phase A would
-be building a rig with nothing to put in it.
-
-### Phase C — the re-entry contract on disk
-
-Give the feature directory enough structure that a fresh session can state
-position, next step and trustworthiness (§3.3). The loop counter is done: it is
-the items on the return files in `<feature-dir>/review/returns/`, and no longer lives
-in conversation. **Depends on B**, whose split-session
-question is what makes disk the only channel. **Unblocks:** running any stage in
-its own session or in the background; also makes §3.4 detectable, because an
-invoked stage and a reconstructed one would leave different traces.
-
-### Phase D — the harness loop between plan, work and review
-
-Only after A. The three stages hand work to each other and take it back —
-review returns defects to work, an unmeetable criterion goes back through
-analyze — and that circulation has never been tuned against a real run, because
-there has never been one. **Whatever Phase A turns up will change what this
-should be**, which is the whole reason it sits here rather than earlier: tuning a
-loop over three stages nobody has executed is tuning against a guess.
-
-### Phase E — re-examine whether the 18 agent definitions should exist
-
-Last, and the question is not how to repair them. It is how many of them there
-should be, and the answer may be far fewer.
-
-**The evidence pointing that way is already in §1.4.** Across the three benchmark
-runs the whole experiment spawned four agents, all of them *generic* subagents
-given a role, a reading list and one question in the prompt. The specialised
-definitions were consulted once and passed over: casting the role at spawn time
-sufficed. Meanwhile the definitions have been the single richest source of
-defects found by inspection — dead routing to a role that does not exist,
-instructions to wait for a message that cannot arrive, descriptions naming a
-coordination layer that is gone, three frontmatter keys that reached nothing.
-
-**So the question to put to each one is not "is it correct?" but "what does this
-definition do that a role named in the spawn prompt would not?"** Where the answer
-is nothing, the definition is a file to maintain in exchange for a habit.
-Something is likely to survive that question — the cross-family seats carry real
-backend mechanics, and the close-out readers are deliberately designed prompts —
-but the burden should sit on keeping, not on cutting.
-
-**Depends on:** A and B, which change what a stage hands an agent and whether an
-agent runs in its own session at all. Deciding the roster before that is deciding
-against a moving target.
-
-### A better way to reach another model family — probably no path
-
-Not a phase, because the expected answer is that there is no route to find. It is
-recorded so the next person does not spend the search again.
-
-**The constraint is structural: every cross-family answer arrives through an agent
-that relays it, and a relaying agent can produce a complete, well-formed answer
-without ever calling the backend.** That has happened here — a seat skipped the
-step that loads its backend tools, never called Gemini, and returned a full
-cross-family review under the Google label. Nothing downstream could tell.
-
-Everything tried sits somewhere on that same line:
-
-- **A bundled MCP server** puts the transport under our control and leaves the
-  relay exactly where it was: the proxy agent still speaks for the backend.
-- **A subprocess the seat owns** — the current OpenAI path — is the best available,
-  and only because the CLI writes a rollout file the seat did not author, so a
-  claim can be checked against something. That is a property of that one vendor's
-  CLI, not a technique that generalises. Gemini emits nothing comparable.
-- **The vendor's own plugin for this host** was examined and cannot serve as a
-  backend at all: it ships slash commands and a subagent, no MCP surface, and a
-  subagent cannot invoke a slash command or nest another subagent.
-- **The host** offers no primitive for it. Another family is not a participant it
-  knows about; it is something an agent shells out to.
-
-**So the honest disposition is to stop looking for a better call, and to make the
-weakness legible instead**: a record naming a seat that has no artifact
-independent of its relay says so, and the reader discounts it. Reopen only if a
-backend ships something a relay cannot forge, or the host gains a first-class
-notion of a foreign model.
-
-### An independent round before a human signs — rejected
-
-Recorded because the reasoning generalises, not because the item is pending.
-
-The proposal was that nothing should reach a human signature without a party that
-did not produce it having looked. That rule already holds at two of the three
-signature points — a reader checks the plan against the criteria, and review is
-fresh eyes by definition — and the gap is the third: when the analysis names no
-contested question, nothing independent touches the criteria before the human
-signs them.
-
-**It is still rejected, on the rule that answers this whole class of proposal:**
-
-> **A check that misses something is a defect in that check. It is not a licence
-> to add another check in front of it.**
-
-If criteria are reaching the human wrong, the thing to repair is whatever should
-have caught it — the analysis stage's own premise work, or the reader the plan
-stage already has. Adding a round because an existing round is weak is how a
-process acquires layers, each one justified by the weakness of the last, and §1.1
-is the record of where that arrives.
-
-Two things make this instance weaker still. **The observation came from reading
-the files, not from a run** — under the working rule that evidence comes from a
-stage executed by a session that did not write it, an inspection finding proposing
-a new stage is the least-supported kind of proposal there is. And **the current
-flow is already at its minimum**: two human stops and five stages, which is what
-the experiment behind this rebuild measured as sufficient. Something added to that
-has to beat a measured baseline, not merely sound prudent.
-
-### Standing, not phased
-
-- **Back up the process artifacts** to a private remote (§3.8). Independent of
-  everything above; the only reason it is not Phase A is that it changes no
-  shipped behavior.
-- **The counters**, re-measured on any change to the prose surface:
-
-| Goal | Counter | At the delete | Target |
-|---|---|---|---|
-| The prose surface shrinks | Total lines across `plugins/ae/skills/*/SKILL.md` | 779 (from 8,457) | falling, or a stated reason |
-| No rule is unreadable | Longest single line in any `SKILL.md` | 411 (from 2,329) | falling |
-| A person waits for a signature, never a repair | Times the process pulled a person in to finish work it did not finish | — | zero |
-
-**The first counter has risen, and the stated reason is the one this document already gives.** The
-rules that make a loop between work and review leave a trace on disk were each written after a
-closed-book run failed without them. That is the bargain the counter exists to make visible rather
-than to forbid — and the next thing that grows it should be asked what it replaces.
-
-### Deferred, with the condition that would unfreeze each
-
-| Deferred | Unfreezes when |
-|---|---|
-| The Kernel — `git checkout v1-kernel-archive`, which holds it whole | A named observed event requires it — an acceptance that was wrongly granted, or a second party that can call AE's completion path. Not before. |
-| Project-management surfaces | Never inside this scope; they belong to a separate plugin if wanted at all. |
-| A knowledge graph | Never within this scope. No path to acceptance may depend on it. |
-| A machine interface for external agents | Out of scope. Named so its absence is a decision rather than an omission. |
-
----
-
-## 5 · What this rebuild does not claim
+## 3 · What this rebuild does not claim
 
 - **It cannot establish that a model followed prose.** It can establish that a
   rule cannot be silently dropped, and that a command ran and what it returned.
@@ -651,7 +229,8 @@ than to forbid — and the next thing that grows it should be asked what it repl
   nobody knew the answer to in advance — not a branch name and not a line count.
 - **The rebuild is not finished, and the shrinking is not the finish.** Deleting
   what nothing reached was the cheap half. The half that decides whether any of
-  this was worth doing is §4 Phase A: running the stages that have never been run.
+  this was worth doing is running the stages that have never been run —
+  tracked, like everything else still open, in the project's own issues now.
 - **Nothing here should be patched into shape.** Where this document or the
   workflow is wrong, the repair is to cut and re-derive, not to add a rule
   covering the case — and least of all by running AE over AE to produce that rule.
