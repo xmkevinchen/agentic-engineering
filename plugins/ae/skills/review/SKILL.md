@@ -185,6 +185,13 @@ did not write the work is not.
 
 Treat the author's account of the work as input to that reader, never as evidence for it.
 
+**The same boundary covers every document a prior stage produced, not only the work's own
+account.** `plan.md`'s restatement of the criteria is already inadmissible (`review:24-26`
+above); `log.md` is the author's account named in the line above. `analysis.md` is neither — it
+predates the work and is written by the party that wrote the criteria, not the party that wrote
+the work — and the same rule applies to it by the same reasoning: read it if it helps, never let
+it settle what the work must do. The signed criteria come from `acceptance.md` alone.
+
 Nobody signs off their own work. The party that wrote it does not supply the verdict, and does
 not author the severities, the dispositions, or the list of what was not checked either.
 
@@ -221,6 +228,10 @@ and say so.
 - **No criterion is satisfied by a check nobody has seen fail.** If nothing on disk records that
 check failing before the work that made it pass, see it fail yourself or send the criterion back
 to WORK.
+- **Each criterion's verdict names its basis.** `basis: acceptance.md` when the criterion's own
+text settled it; `basis: acceptance.md, context: <file>` when an upstream document — `plan.md`,
+`log.md`, `analysis.md` — additionally informed the reading, naming which. A verdict giving
+neither is not checkable against what it actually rested on.
 - **The checks bite.** Take the most load-bearing criterion, break what it protects, and confirm
 its check catches it.
 - **The judged half of code quality is this stage's, not WORK's.** Testability, extensibility,
