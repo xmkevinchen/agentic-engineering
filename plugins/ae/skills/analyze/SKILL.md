@@ -171,8 +171,7 @@ people read prose.
 ### `acceptance.md`
 
 What done means, and nothing else. It is a separate file because it is the thing the human
-signs, and because it is the entire input to the fresh eyes that later judge whether the work
-met it: anything about how the conclusion was reached would stop them being fresh.
+signs.
 
 These criteria are not frozen when you write them. Discussion can still change one, which is
 what discussion is for. The human confirms the file after that. From then on, changing a
