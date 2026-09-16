@@ -228,6 +228,10 @@ and say so.
 - **No criterion is satisfied by a check nobody has seen fail.** If nothing on disk records that
 check failing before the work that made it pass, see it fail yourself or send the criterion back
 to WORK.
+- **Each criterion's verdict names its basis.** `basis: acceptance.md` when the criterion's own
+text settled it; `basis: acceptance.md, context: <file>` when an upstream document — `plan.md`,
+`log.md`, `analysis.md` — additionally informed the reading, naming which. A verdict giving
+neither is not checkable against what it actually rested on.
 - **The checks bite.** Take the most load-bearing criterion, break what it protects, and confirm
 its check catches it.
 - **The judged half of code quality is this stage's, not WORK's.** Testability, extensibility,
