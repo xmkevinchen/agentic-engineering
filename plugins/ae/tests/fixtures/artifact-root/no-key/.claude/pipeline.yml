@@ -1,4 +1,0 @@
-test:
-  command: ""
-cross_family:
-  codex: { seat: codex, family: openai }
