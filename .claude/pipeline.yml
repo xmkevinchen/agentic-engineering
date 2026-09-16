@@ -9,9 +9,9 @@
 artifact_root: agent-memory
 
 test:
-  # The whole deterministic suite: the structural skill-frontmatter check plus every shell
-  # test under tests/scripts/. Running only the frontmatter check would leave a red
-  # mechanism test invisible to the gate.
+  # The structural skill-frontmatter check: every SKILL.md's leading frontmatter block
+  # is well-formed (single '---'-fenced block, one 'name:' matching its directory, no
+  # misspelled 'user_invocable' key).
   command: "sh plugins/ae/scripts/check-skill-frontmatter.sh"
 
 lint:

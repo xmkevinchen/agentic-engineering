@@ -34,11 +34,10 @@ plugins/ae/             # The actual plugin
 │   ├── go/SKILL.md     #   the entry: runs a work item through the stages
 │   ├── analyze|discuss|plan|work|review/SKILL.md
 │   └── ...
-├── agents/             # Subagents (ae:workflow:architect, etc.)
-│   ├── review/ research/ workflow/ engineering/
+├── agents/             # Subagents (ae:workflow:codex-proxy, etc.)
+│   └── workflow/       #   proxies, discuss-seat, Doodlestein
 ├── scripts/            # The session-start probe, its reader, the Codex seat runner, the test runner
 ├── mcp-servers/        # Bundled MCP servers (Gemini, OpenAI-compatible)
-├── v1/                 # The Phase 1 Kernel, built against its own frozen Contract
 └── templates/          # pipeline.yml template
 ```
 
