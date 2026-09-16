@@ -1,1 +1,0 @@
-../scripts/graph-render-docs.py

@@ -1,7 +1,7 @@
 {
   "name": "ae",
-  "version": "0.14.2",
-  "description": "Agentic Engineering workflow for Claude Code. Multi-agent TDD, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
+  "version": "0.16.0",
+  "description": "Agentic Engineering workflow for Claude Code. Every check seen failing first, cross-family review (Claude + Codex + Gemini), structured planning and analysis.",
   "author": {
     "name": "ckai"
   },
@@ -13,8 +13,7 @@
     "code-review",
     "cross-family",
     "multi-agent",
-    "workflow-automation",
-    "agent-teams"
+    "workflow-automation"
   ],
   "userConfig": {
     "gemini_flash_model": {
@@ -53,12 +52,6 @@
     "./output-styles/ae-compact.md"
   ],
   "mcpServers": {
-    "codex": {
-      "command": "codex",
-      "args": [
-        "mcp-server"
-      ]
-    },
     "gemini": {
       "command": "bash",
       "args": [
@@ -84,16 +77,6 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-cross-family.sh"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/trace-rotate.sh"
           }
         ]
       }

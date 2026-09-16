@@ -1,8 +1,18 @@
 # Claude Code Plugin API Reference
 
-Stable API reference for AE plugin development. Covers frontmatter fields, feature flags, security boundaries, and platform capabilities available to plugins.
+Host API reference for AE plugin development: frontmatter fields, feature flags, security
+boundaries, and platform capabilities available to plugins.
 
-Source: Claude Code source analysis (Discussion 021, 2026-04-04).
+> **Two things to hold while reading.** First, **this describes the host, not AE.** A
+> capability documented here is one Claude Code offers — not one AE uses. The sections on the
+> team system and on teammate-only tools are the clearest case: AE creates no teams and calls
+> none of those tools, so they are background on the platform, never a description of this
+> plugin's surface. What AE actually depends on is
+> [`cc-plugin-contract.md`](cc-plugin-contract.md).
+>
+> Second, **the host drifts.** Rows carry their own measurement dates where one was taken;
+> anything undated comes from a 2026-04-04 source reading and should be re-verified before it
+> is made load-bearing.
 
 ---
 
@@ -33,16 +43,48 @@ Source: Claude Code source analysis (Discussion 021, 2026-04-04).
 | `description` | string | — | Description shown in agent selection (required) |
 | `tools` | string[] | — | Tool whitelist. Supports `*` wildcard |
 | `disallowedTools` | string[] | — | Tool denylist (applied after whitelist) |
-| `skills` | string[] | — | Skills preloaded into agent context |
+| `skills` | string[] | — | Documented as preloading the **full skill content**, not only the description. **Measured on a plugin agent: it did not.** A spawn with `skills: [ae:discuss]` reported only the one-line description every skill gets anyway. Likely stripped for plugin agents like the fields below; untested for project/user agents. Do not rely on it here |
 | `model` | string | inherit | Model override |
-| `effort` | string/int | default | Reasoning effort |
+| `effort` | string | inherit | Effort while this subagent is active; overrides the session level. `low`, `medium`, `high`, `xhigh`, `max` — availability depends on the model. Not rendered into the agent's own context, so an agent cannot report what it was given |
 | `maxTurns` | int | unlimited | Maximum execution turns. Prevents runaway agents |
 | `background` | boolean | false | Default to background execution |
 | `isolation` | string | — | `worktree` (git worktree) or `remote` |
 | `initialPrompt` | string | — | Prefix injected into first user turn (slash commands work) |
 | `memory` | string | — | Persistent memory scope: `user`, `project`, or `local` |
 | `color` | string | — | Display color in team UI |
-| `omitClaudeMd` | boolean | false | Skip loading CLAUDE.md into agent context (~1000 tokens saved) |
+
+### There is no per-agent way to keep CLAUDE.md out
+
+An agent definition cannot decline the instruction files. A subagent receives every level of the
+CLAUDE.md hierarchy the main conversation loads — `~/.claude/CLAUDE.md`, project rules,
+`CLAUDE.local.md`, managed policy — and **only the built-in `Explore` and `Plan` agents skip it**.
+The same is true of the parent session's git snapshot, which `Explore` and `Plan` also skip and
+which `includeGitInstructions: false` disables session-wide.
+
+The only exclusion mechanism is `claudeMdExcludes` in settings, which filters by path for the whole
+session rather than per agent.
+
+**`vibe` is not a field at all.** It is a convention of an external agent collection that
+arrived with a vendored definition, was classified as tolerated on import, and was then copied
+onto thirteen definitions as if it were a pattern. Measured 2026-08-31 by spawning a seat and
+asking it to report its own context verbatim: **no line beginning `vibe:` appears anywhere in
+it.** Deleted from every definition.
+`emoji`, from the same collection, went with it.
+
+**`omitClaudeMd` is not effective for plugin agents, and is not in the published field list.**
+It was listed in this table and was once set in seven agent definitions here; all seven were
+cleaned up, and a suite check now asserts that no definition sets it. What is established: the
+key exists in the Claude Code binary, so the code knows the name; it appears in no published list
+of supported frontmatter fields; and a plugin agent that sets it still received the whole CLAUDE.md
+hierarchy, verified by spawning one and asking what it had been given.
+
+What is **not** established: whether it works for project or user agents. This repository's agents
+are all plugin agents, and plugin agents already have fields stripped silently — see the section
+below. That is the likeliest explanation and it is untested. Removed from the table above because
+setting it here does nothing; do not re-add it without a spawn that demonstrates an effect.
+
+Source: `https://code.claude.com/docs/en/sub-agents.md`, "What loads at startup" and the
+frontmatter table; `https://code.claude.com/docs/en/memory.md` for `claudeMdExcludes`.
 
 ### Fields Silently Ignored for Plugin Agents (Security Boundary)
 
@@ -50,8 +92,13 @@ Plugin agents **cannot** set:
 - `permissionMode` — only built-in and project agents
 - `hooks` — per-agent hooks restricted to built-in/project
 - `mcpServers` — inline MCP server declarations restricted
+- `skills` — **measured, not documented**: a plugin agent setting `skills` received only the
+  one-line description every skill gets regardless. Whether it is stripped here specifically, or
+  simply does not do what its description says, was not separable by that probe
 
-These fields are stripped without error during plugin agent loading.
+These fields are stripped without error during plugin agent loading. **That silence is the hazard**
+— a field that does nothing looks identical to a field that works, which is how `omitClaudeMd`
+survived in seven definitions and in this table. Measure a field on a spawn before trusting it.
 
 ## plugin.json Fields
 
@@ -73,9 +120,18 @@ These fields are stripped without error during plugin agent loading.
 
 ### userConfig Mechanism
 
-User sets values at plugin install time. Values become environment variables:
-- Config key `cross_family_primary` → `CLAUDE_PLUGIN_OPTION_CROSS_FAMILY_PRIMARY`
-- Accessible by hooks, MCP servers, and agent prompts at runtime
+User sets values at plugin install time. Values are *documented* to become environment
+variables:
+- Config key `gemini_flash_model` → `CLAUDE_PLUGIN_OPTION_GEMINI_FLASH_MODEL`
+- Documented as accessible to hooks, MCP servers, and agent prompts at runtime
+
+**Measured 2026-08-16, and it does not hold for a default.** An option the user never
+configured exports nothing, even though `plugin.json` declares a default for it; both
+bundled servers therefore read the option in-process with their own fallback. Whether a
+*configured* option materialises is untested. Do not build on the declared default, and
+never reference a `${CLAUDE_PLUGIN_OPTION_*}` from a manifest `env` block — those are
+validated at install time and an unresolved one rejects the whole server. See
+[`cc-plugin-contract.md`](cc-plugin-contract.md) dependency #4.
 
 ## Hook System
 
@@ -118,7 +174,7 @@ User sets values at plugin install time. Values become environment variables:
 
 Format: `mcp__<normalizedServerName>__<normalizedToolName>`
 
-Example: AE's Codex MCP server → `mcp__plugin_ae_codex__codex`
+Example: AE's Gemini MCP server → `mcp__plugin_ae_gemini__chat`
 
 ### Tool Metadata
 
@@ -148,7 +204,7 @@ Same-name `agentType` at higher priority fully replaces the lower. Projects can 
 
 | Variable | Description | AE Relevance |
 |----------|-------------|--------------|
-| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | Enable Agent Teams | **Required** for 10/17 AE skills |
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | Enable Agent Teams | **None.** AE creates no teams: the stage skills spawn ordinary subagents and synthesize in the session. It was once required by ten skills, all since removed |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | Per-API-call max tokens | High |
 | `CLAUDE_CODE_SUBAGENT_MODEL` | Global subagent model override | Medium (prefer per-agent `model`) |
 | `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | Disable auto memory writes | High (worktree isolation) |
@@ -160,10 +216,10 @@ Same-name `agentType` at higher priority fully replaces the lower. Projects can 
 
 | Gate | Default | Impact on AE |
 |------|---------|--------------|
-| `tengu_amber_flint` | true | Agent Teams kill-switch — if disabled, 10/17 AE skills fail |
+| `tengu_amber_flint` | true | Agent Teams kill-switch — no longer reaches AE, which creates no teams |
 | `tengu_slim_subagent_claudemd` | true | Subagents receive slimmed CLAUDE.md — AE rules may be trimmed |
 
-## Team System
+## Team System *(host capability — AE creates no teams and uses none of this)*
 
 - Team config: `~/.claude/teams/{team_name}/config.json`
 - Mailbox: `~/.claude/teams/{team_name}/inboxes/{agent_name}.json` (file-backed + lockfile)
@@ -190,7 +246,7 @@ Skills exceeding 5K tokens are truncated after compaction. Critical instructions
 
 Exceeding → content persisted to disk, model sees first 2000 bytes as preview.
 
-## Teammate-Only Tools
+## Teammate-Only Tools *(host capability — AE spawns no teammates)*
 
 These tools are exclusively available to agents spawned as teammates (via TeamCreate):
 `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate`, `SendMessage`

@@ -1,1 +1,0 @@
-../scripts/graph-page-check.py

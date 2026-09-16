@@ -36,7 +36,7 @@ AGENTS="$AE_PLUGIN_ROOT/agents/workflow"
 # those are different trees. Deriving the project from this file's own location finds
 # `<plugin-cache>/.claude/pipeline.yml`, which never exists — so every installed user would be
 # told their families were not checked. A SessionStart hook runs with the project as its
-# working directory, which is how `next-bl-id.sh` already locates this same file.
+# working directory.
 PIPELINE=""
 for cand in "${AE_PIPELINE:-}" ".claude/pipeline.yml" "$SELF_DIR/../../../.claude/pipeline.yml"; do
   [ -n "$cand" ] && [ -f "$cand" ] && { PIPELINE="$cand"; break; }
@@ -98,18 +98,6 @@ run_probe() { # $1 = probe string; returns probe's status, or 124 if it hit the 
   return "$rc"
 }
 
-# Agent Teams flag — not family-specific, so it stays here.
-SETTINGS_FILE="$HOME/.claude/settings.json"
-AGENT_TEAMS=false
-if [ -f "$SETTINGS_FILE" ]; then
-  if command -v jq &>/dev/null; then
-    [ -n "$(jq -r '.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS // empty' "$SETTINGS_FILE" 2>/dev/null)" ] && AGENT_TEAMS=true
-  elif grep -q 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS' "$SETTINGS_FILE" 2>/dev/null; then
-    AGENT_TEAMS=true
-  fi
-fi
-[ "$AGENT_TEAMS" = false ] && ISSUES+=("Agent Teams not enabled — most ae commands require it. Add to ~/.claude/settings.json: { \"env\": { \"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS\": \"1\" } }")
-
 if [ -n "$PIPELINE" ] && [ -f "$READER" ] && command -v python3 &>/dev/null; then
   entries="$(python3 "$READER" "$PIPELINE" --enabled-only 2>/dev/null)"
   while IFS= read -r e; do
@@ -153,12 +141,6 @@ fi
 
 if [ ${#ISSUES[@]} -gt 0 ]; then
   for issue in "${ISSUES[@]}"; do echo "[ae] WARNING: $issue" >&2; done
-fi
-
-# Cleanup orphan lockdirs from prior SIGKILL'd hook executions. 5min stale threshold —
-# write-trace.sh's critical section is < 1s; anything older is an orphan.
-if [ -d "$HOME/.ae/traces" ]; then
-  find "$HOME/.ae/traces" -maxdepth 1 -name '*.lockdir' -type d -mmin +5 -exec rmdir {} \; 2>/dev/null
 fi
 
 exit 0

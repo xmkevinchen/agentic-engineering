@@ -1,5 +1,201 @@
 # Changelog
 
+## 0.16.0 (2026-09-14)
+
+Eight features accumulated since 0.15.0, bundled into one release rather than bumped one at a
+time — none of them alone changed what a user runs, and together they close a stage-handoff
+gap, add real enforcement to two rules that had none, and make two things configurable that
+were hardcoded. No breaking changes in this release.
+
+### Four handoffs whose artifact didn't carry what the next stage needed from it — F-107
+
+`go/SKILL.md` decided a stage had finished by guessing from process state — `pgrep`, `git
+status` — rather than reading the actual return of the call that invoked it; a real incident had
+WORK and REVIEW both live and writing to the same file at once. Three smaller gaps sat beside it:
+the loop-bound counter counted a return WORK never had a real chance to act on as if it had;
+PLAN's fresh-eyes read never checked whether a plan's own file/line citations still resolved; and
+REVIEW had no reliable way to find where a feature's commit range started, short of guessing from
+an author field or a session identifier — both wrong for reasons now stated in `review/SKILL.md`
+itself.
+
+- **`go/SKILL.md`**: a stage's completion is the actual return of the call that invoked it, never
+  a polled process check; the loop-bound only counts a return against an item after a real WORK
+  attempt at that item, not merely after WORK ran.
+- **`plan/SKILL.md`**: the fresh-eyes read gains a third question — does every file/line citation
+  in the plan still resolve against the tree as it stands.
+- **`work/SKILL.md`**: `log.md` must open with the tree's starting `HEAD`, recorded before the
+  first commit lands.
+- **`review/SKILL.md`**: reads that `HEAD` line to fix the commit range, rather than an author
+  field or a session identifier.
+
+What this does not close: whether a stage confined to its own context can still spawn its own
+seats, and a citation already sitting in a stable, unedited file rather than newly added — both
+left for later.
+
+### `go/SKILL.md`'s frontmatter `description` field was silently dropped by the host's own parser — F-108
+
+A multi-line, double-quoted YAML scalar in `description:` is valid YAML generally, but Claude
+Code's own frontmatter parser rejected it — dropping the file's entire frontmatter, hooks
+included, at runtime, with no visible error.
+
+- **`go/SKILL.md`**: `description` reflowed to a YAML folded block scalar (`>-`), which keeps the
+  source readable and validates clean.
+
+`review/SKILL.md` and `work/SKILL.md` carried the identical defect — tracked separately
+(see F-109).
+
+This feature also built two hooks (a `Stop` hook and a plugin-global `PreToolUse` hook) to catch
+a stage ending its turn without a conforming deliverable; both, and the checker script they
+delegated to, were replaced within this same release by self-checks in each stage's own prose
+(see F-116).
+
+### `review/SKILL.md` and `work/SKILL.md` carried the same frontmatter defect `go/SKILL.md` had — F-109
+
+The multi-line double-quoted `description:` field F-108 found and fixed in `go/SKILL.md` was
+also present in these two files, silently dropping their frontmatter — including `model:`/
+`effort:` — at runtime. Same fix, reflowed to a folded block scalar, applied to both.
+
+While fixing it, a live test found that a criterion assuming skill-level `model:`/`effort:`
+frontmatter actually changes the host's per-invocation behavior does not hold: a real
+`PreToolUse` payload showed `effort: medium` on an `ae:work` call declaring `effort: high`. That
+question — does skill-level `model:`/`effort:` do anything at all — was struck from this
+feature's own criteria mid-WORK and spun out to Forgejo #34, not answered here.
+
+### REVIEW's "fresh eyes" rule had no way to check whether it was followed — F-110
+
+`review/SKILL.md` required the verdict to come from someone who didn't write the work, but
+nothing enforced or even recorded this — reading real `review.md` files from recent features
+found none stating who judged the work or whether that party differed from WORK's own.
+
+- **A `review/readers/<name>.md` convention**: the actual reader's verdict, severities, and
+  dispositions are written to their own file, carrying `reader_kind:` (`claude-subagent`,
+  `cross-family`, or `human`) and, for a Claude subagent, the real `agent_id:`/
+  `agent_transcript_path:` receipt the host already writes. `review.md`'s own `verdict:` must
+  literally equal that file's `verdict:` via a `verdict_from:` pointer — carried, not restated.
+- A mechanical check (`unguarded-rules.py` plus fixtures) verified every message-emitting site in
+  `check-stage-delivery.py` was guarded against unverified self-report. Review of this feature
+  itself found and a second pass confirmed-fixed three path-containment bypasses in how
+  `verdict_from:` was resolved (self-citation, `../` traversal, an absolute path escaping the
+  repo).
+
+Breaking: `review.md` files written before this convention (F-106 through F-109 above) do not
+carry a `review/readers/` file — not retroactively fixed.
+
+What this does not close, named as a residual: on the `reader_kind: human` branch, the mechanical
+check still only compares two files' `verdict:` values, both writable by one unisolated session
+in one turn — an actual human-identity check is not built here.
+
+Contributors: a stage's own future REVIEW pass must supply a `review/readers/<name>.md` file, per
+`review/SKILL.md`'s own convention.
+
+### A discuss pass interrupted mid-way looked identical to one that finished — F-111
+
+`/ae:discuss` had no stated rule for what a resuming session should conclude when a seat's answer
+file or a round's angle file was simply absent — it couldn't tell "never dispatched" from
+"dispatched, produced nothing, then stopped." One rule added to `discuss/SKILL.md`: a resuming
+session facing an absent file dispatches or re-dispatches it before treating the round complete,
+never inferring completion from an absence. Verified live, twice, against two independently-built
+fixtures in two Claude Code sessions with no shared context — both reached the identical
+conclusion and the identical next action.
+
+What this does not close, stated in `acceptance.md`: whether `BL-241` (background-session-per-
+stage) should be built — this feature is the prerequisite that question needs, not an answer to
+it (see F-114 below for where that question went next).
+
+### AE's feature-artifact root was hardcoded to `.ae` in four places — F-112
+
+AE and its sibling project both actually keep their artifacts in an independent `agent-memory`
+git repo, reached only through a `.ae -> agent-memory` compatibility symlink, because nothing in
+AE could be told to use a different root.
+
+- **`plugins/ae/scripts/read-artifact-root.py`** is now the one place `artifact_root:` in
+  `.claude/pipeline.yml` is parsed, consulted by `analyze/SKILL.md`'s feature-directory-creation
+  instruction. Absent the setting, `.ae` remains the default with unchanged behavior.
+- `pipeline.template.yml` and `docs/quickstart.md` no longer claim the layout is fixed.
+- A second, independent instance of the same underlying pattern — `cross_family.enabled` in
+  `pipeline.yml` is parsed but never consulted before dispatching a discuss-stage seat — was
+  found during analysis and filed separately (Forgejo #36) rather than folded in.
+- A real bug in the new reader's own malformed-value check (an empty string is a substring of
+  everything in Python, so an empty `artifact_root:` was misdiagnosed as "a mapping or sequence"
+  instead of "empty") was found in review and fixed in the same pass, with regression fixtures
+  for the exact shapes that triggered it.
+
+### The stages had no way to say they'd benefit from their own session, without hardcoding a mechanism — F-114
+
+A prior attempt at this (since abandoned) baked a specific host mechanism into `go/SKILL.md`'s
+own permanent prose and was rejected for it. This one instead states a reusable pattern:
+
+- **`docs/references/capability-contract.md`**: a skill names a capability and the property it
+  needs, never a mechanism; a project's or user's own `CLAUDE.md`/`AGENTS.md` states the binding,
+  in ordinary prose, no schema required; absent a binding, the skill's existing default applies
+  unchanged — isolation is an accelerant, never a precondition.
+- `work/SKILL.md` and `review/SKILL.md` each declare needing `independent-top-level-session`
+  under this pattern. `review/SKILL.md` additionally requires that, when isolated, its own
+  investigation — not only the verdict F-110 already covers — starts fresh from `acceptance.md`
+  and the tree, never resumed from WORK's own session.
+- Verified against three real, live closed-book executions: no binding present → both stages ran
+  inline, no error; binding present with the new text → WORK and REVIEW each opened their own
+  session, confirmed never both mid-turn against the tree from raw session-transcript timestamps
+  (91 seconds apart, zero overlap); same binding, text reverted → zero spontaneous isolation.
+
+One criterion carries a disclosed, not hidden, residual gap: the claim that this feature's own
+text — not the project's pre-existing binding's standing instruction alone — is what causes the
+isolation rests partly on the feature's own author's self-reported control run; an independent
+reviewer's attempt to reproduce that specific control hit an account-wide usage limit and,
+separately, a stale plugin cache, rather than completing it. Signed off accepting the gap; the
+exact recipe to close it is on record for whoever picks it up.
+
+### Stage-handoff enforcement moved from two hooks into each stage's own prose — F-116
+
+F-108's two hooks — `go-leash.sh` (a `Stop` hook) and `check-invocation-order.py` (a
+plugin-global `PreToolUse` hook), both delegating to a 731-line checker script — could only
+ever refuse an action, never route to a corrective next step, and `check-invocation-order.py`
+never fired when a human typed a stage's slash command directly: the one path where routing
+mattered most.
+
+- All three deleted, along with `plugin.json`'s `PreToolUse` registration and the test suite
+  that existed only to exercise them.
+- **`discuss/SKILL.md`, `work/SKILL.md`, `review/SKILL.md`** each gain a "Check the … before …"
+  section — the same shape `plan/SKILL.md` already had — stating what their own predecessor's
+  deliverable must show on disk and what to do when it doesn't, in that stage's own existing
+  vocabulary (`returned-<id>.md`; refuse and re-invoke `/ae:plan`; fold into an ordinary `fail`).
+- **`go/SKILL.md`**: the `.ae-go-marker` mechanism and its `Stop` hook registration are gone,
+  replaced by one table naming, for each of the four stages with a predecessor, what its
+  self-check refuses on and what happens next.
+- **`docs/references/hooks.md`** no longer describes either retired hook, and now holds only
+  the measured/documented research report on Claude Code's and Codex's own hook mechanisms —
+  nothing built on top of that research.
+
+What this does not close: a check the deleted script performed — that every id in a signed
+`discuss:` list has a decision or return record before PLAN runs — has no home in the new
+design. Narrow in practice (the normal `/ae:go` sequencing already prevents the bad state), and
+`plan/SKILL.md` was explicitly out of scope for this change; disclosed rather than fixed.
+
+## 0.15.0 (2026-09-01)
+
+### The OpenAI seat calls the Codex CLI directly, and its receipt now claims only what a file can back — F-099
+
+The seat reached Codex through `codex mcp-server`. Upstream has withdrawn that transport in favour of the app server and a Claude Code plugin of its own; on this project it had also hung once for 47 minutes with no error, no timeout and no way for the seat to give up, and it carried no model in its response — which is how two model names that do not exist were reported by a proxy and then carried as fact through four later artifacts.
+
+**Breaking.** The `codex` entry is gone from `mcpServers`, so `mcp__plugin_ae_codex__codex` and `mcp__plugin_ae_codex__codex-reply` no longer exist. If you named either in the `tools:` frontmatter of your own agent, add the server back to your own `.mcp.json` — the vendor keeps the subcommand documented for existing integrations:
+
+```json
+"codex": { "command": "codex", "args": ["mcp-server"] }
+```
+
+There is no replacement tool name to point at. The vendor's own Claude Code plugin ships no MCP server at all — it is slash commands and a subagent over an experimental app-server protocol, none of which a subagent like this seat can reach.
+
+- **The seat runs `codex exec` as a subprocess, through `scripts/codex-seat.sh`.** Four things are silently wrong when that call is assembled by hand, so the script pins them: the `exec` subcommand (plain `codex` forwards to the interactive CLI and ignores `--sandbox`), `--sandbox read-only`, a bound enforced by its own watchdog rather than `timeout`, which is not present on every machine — and `< /dev/null`, because `codex exec` reads stdin to EOF *even when the prompt is an argument*. An inherited open stdin hangs the call with no error, and piped stdin is appended to the prompt as a `<stdin>` block, which is a silent edit to a question the seat is forbidden to add to.
+- **A receipt is refused rather than guessed.** The script exits non-zero, saying which gate failed, when the bound fires, when no thread id appears, when stdout carries an error item, when no rollout resolves the thread, when the rollout says the call did not go through `codex exec`, or when the effort in force disagrees with the effort asked for.
+- **The field is `model_requested`, and the name is exact.** `turn_context.model` records what the CLI *asked for*, written at turn start — a call naming a model that does not exist still writes it there and answers nothing. No artifact on disk says which model *served* a response. What does catch a substitution is stdout, which the seat owns now that it owns the subprocess: Codex compares the server's reported model against the requested one and emits a reroute event on any divergence, and that event is never written to the rollout. So the seat refuses to certify a turn whose stdout carries an error item at all, rather than matching wording that changes without notice.
+- **The backend has a shell.** Under `--sandbox read-only` it reads the repository and runs commands, so it verifies what it cites instead of asking the proxy to. `codex exec resume` is not used and should not be: it has no `--sandbox` flag, does not inherit the session's, and silently escalates to `workspace-write`.
+- **The two-exchange continuation is gone**, along with `codex-reply`. `/ae:discuss` retired cross-round session lifetime some time ago — rounds spawn fresh and hand work forward on disk — so the seat documented an exchange the stage no longer performs.
+- **`docs/cross-family-review.md` is deleted rather than rewritten.** Nothing linked to it; its own header claimed agents referenced it instead of hardcoding tool names, while both proxies hardcoded; it omitted the `openai-compat` seat entirely; and every Codex invocation in it reached the withdrawn transport. The tool tables it duplicated live in the proxy definitions, which is where they were being read from anyway.
+
+What this does **not** close, stated because the gap is narrower than it looks. The fault this fixes had two authors: a relay that invented a quotation, and a backend that wrote a wrong line number for a file it could open. Moving to a subprocess the seat owns addresses the first and does nothing about the second — the backend miscited a file under the new transport too. Nothing in the workflow currently notices a seat citing `file:line` for text that is not there. And this is retired for the OpenAI seat only: `gemini-proxy` and `openai-compat-proxy` carry the same relay contract with no artifact independent of the relaying agent, which is undocumented and untested rather than measured to be sound.
+
+Contributors: agent definitions and the MCP manifest are read at session start, so a restart is required after upgrading before the seat picks up the new path. A rollout stamped `originator: codex_exec` is how you tell the new path ran; `codex_cli_rs` means it did not.
+
 ## 0.14.2 (2026-08-14)
 
 ### The Gemini bridge stops installing packages at session start, and a cross-family verdict now has to show its work — F-080
