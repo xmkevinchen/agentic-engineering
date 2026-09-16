@@ -185,6 +185,13 @@ did not write the work is not.
 
 Treat the author's account of the work as input to that reader, never as evidence for it.
 
+**The same boundary covers every document a prior stage produced, not only the work's own
+account.** `plan.md`'s restatement of the criteria is already inadmissible (`review:24-26`
+above); `log.md` is the author's account named in the line above. `analysis.md` is neither — it
+predates the work and is written by the party that wrote the criteria, not the party that wrote
+the work — and the same rule applies to it by the same reasoning: read it if it helps, never let
+it settle what the work must do. The signed criteria come from `acceptance.md` alone.
+
 Nobody signs off their own work. The party that wrote it does not supply the verdict, and does
 not author the severities, the dispositions, or the list of what was not checked either.
 
