@@ -3,8 +3,8 @@
 <!-- BEGIN MANAGED: forgejo-work -->
 Repository: `ckai/agentic-engineering`
 Snapshot status: observed
-Last successful fetch: 2026-09-16T02:55:00Z
-Last attempt: 2026-09-16T02:55:00Z
+Last successful fetch: 2026-09-16T03:04:30Z
+Last attempt: 2026-09-16T03:04:30Z
 
 Historical snapshot only. Refresh live before selection or mutation.
 Next is a candidate set; display order is not priority.
@@ -34,14 +34,13 @@ Board not checked in this refresh.
 By design, the sync writer's managed block above never lists `workflow/backlog` issues —
 "Backlog stays remote." This section is a manual, unmanaged convenience listing as of
 2026-09-16; re-run `/forgejo:sync` and re-copy by hand if it goes stale, or just read Forgejo
-directly. Both remaining open issues carry only the `workflow/backlog` label — neither is
-`ready`. (#27, #26, #8 and #12 — previously listed here — were closed as not-planned on
-2026-09-15; see their closing comments for the reasoning.)
+directly. The one remaining open issue carries only the `workflow/backlog` label — not `ready`.
+(#27, #26, #8, #12 and #15 — previously listed here — were closed as not-planned on 2026-09-15;
+see their closing comments for the reasoning.)
 
 - #16 — 拿 codex-plugin-cc 的运行时跟我们自己的 seat 路径逐条比 (prior-art comparison, marked
-  不急/not urgent)
-- #15 — plan → work → review 的 ReAct loop 强化 (idea; depends on closed-book runs of
-  plan/work/review first)
+  不急/not urgent; kept open on request over closing — small, read-only, not superseded, unlike
+  the five closed above)
 
 ## Preserved pre-sync content (historical)
 
